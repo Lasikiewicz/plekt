@@ -53,9 +53,9 @@
     "full-page": "A full-page frame, used only as a crop source."
   },
   "live": {
-    "playback": "Needs live sessions: the script starts playback on a local test server first and stops it after.",
+    "playback": "Needs live sessions: start muted playback in a local test media app first and stop it after, then pass --live=playback.",
     "dismissed-up-next": "Needs a dismissed Up Next item: the script dismisses one, captures, then adds that one back.",
-    "manual-review-item": "Needs a pending Manual Watch review item.",
+    "manual-review-item": "Needs a pending Manual Watch review item: mark an episode played in a local test media app if none is waiting, then pass --live=manual-review-item.",
     "sync-issue": "Needs at least one current sync issue."
   },
   "commonSources": {
@@ -227,13 +227,16 @@
         "modern-light"
       ],
       "route": "/",
-      "state": "Dashboard; the first row of Up Next cards scrolled into view. A resume card shows its progress bar above the Watch now apps.",
+      "state": "Up Next rail including the heading, a resume card with progress, and Watch now links. Temporarily disable Allow part watched items here in the upper panel options so the resume card remains in this rail, then restore the original setting after capture.",
       "framing": {
         "type": "element",
         "target": {
-          "css": "#upNextPanel"
+          "css": "#upNextDashboardSection"
         },
-        "padding": 0
+        "padding": 0,
+        "through": {
+          "css": "#upNextPanel"
+        }
       },
       "automation": "auto",
       "sources": [
@@ -245,20 +248,32 @@
       "sizes": {
         "dark": {
           "width": 1231,
-          "height": 136
+          "height": 172
         },
         "light": {
           "width": 1231,
-          "height": 136
+          "height": 172
         },
         "modern-dark": {
           "width": 1231,
-          "height": 136
+          "height": 172
         },
         "modern-light": {
           "width": 1231,
-          "height": 136
+          "height": 172
         }
+      },
+      "steps": [
+        {
+          "waitFor": "#upNextPanel .part-watched-progress-fill"
+        },
+        {
+          "wait": 3000
+        }
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 900
       }
     },
     "dashboard-up-next-dismissed": {
@@ -272,7 +287,7 @@
         "modern-light"
       ],
       "route": "/",
-      "state": "Open Dismissed Up Next from the Up Next rail controls so the dialog with Add back and Add all back shows. Opened by #upNextDismissedButton; needs at least one dismissed item (20 were dismissed on 30 September 2026; only if none exist, the script dismisses one first and adds it back afterwards). Never press Add all back.",
+      "state": "Open Dismissed Up Next with at least two dismissed shows, so Add back and Add all back are visible. The operator restores only the two temporary items individually after capture; never press Add all back.",
       "framing": {
         "type": "viewport"
       },
@@ -992,19 +1007,19 @@
       "sizes": {
         "dark": {
           "width": 1231,
-          "height": 392
+          "height": 201
         },
         "light": {
           "width": 1231,
-          "height": 392
+          "height": 201
         },
         "modern-dark": {
           "width": 1231,
-          "height": 392
+          "height": 201
         },
         "modern-light": {
           "width": 1231,
-          "height": 392
+          "height": 201
         }
       }
     },
@@ -1045,7 +1060,15 @@
           "width": 1440,
           "height": 683
         }
-      }
+      },
+      "steps": [
+        {
+          "waitFor": "[data-playlist-rail] .playlist-move-control"
+        },
+        {
+          "wait": 2000
+        }
+      ]
     },
     "playlists-cards": {
       "pages": [
@@ -1099,8 +1122,12 @@
         "modern-dark",
         "modern-light"
       ],
-      "route": "/sync-activity",
+      "route": "/manual-watch-review",
       "state": "Manual Watch review open with a provider-marked episode waiting for a decision. Needs a pending review item; decide nothing.",
+      "viewport": {
+        "width": 2560,
+        "height": 1290
+      },
       "framing": {
         "type": "viewport"
       },
@@ -1191,7 +1218,10 @@
       "framing": {
         "type": "element",
         "target": {
-          "css": ".sync-activity-issues"
+          "css": "#syncActivitySummary"
+        },
+        "through": {
+          "css": "#syncActivityRows .sync-activity-group-row"
         },
         "padding": 0
       },
@@ -1202,14 +1232,25 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1260,
-          "height": 144
+          "width": 1231,
+          "height": 206
         },
         "light": {
-          "width": 1260,
-          "height": 144
+          "width": 1231,
+          "height": 206
         }
-      }
+      },
+      "steps": [
+        {
+          "click": "[data-sync-activity-failed-toggle]"
+        },
+        {
+          "waitFor": "[data-sync-activity-failed-toggle][aria-pressed=true]"
+        },
+        {
+          "wait": 2000
+        }
+      ]
     },
     "movie-detail-page": {
       "pages": [
@@ -2140,7 +2181,21 @@
           "width": 1440,
           "height": 683
         }
-      }
+      },
+      "steps": [
+        {
+          "click": ".actions-tools-trigger"
+        },
+        {
+          "wait": 600
+        },
+        {
+          "click": ".actions-tools-panel >> text=Fix Match"
+        },
+        {
+          "wait": 1500
+        }
+      ]
     },
     "fix-match-focus": {
       "pages": [
@@ -2505,19 +2560,19 @@
       "sizes": {
         "dark": {
           "width": 1231,
-          "height": 683
+          "height": 672
         },
         "light": {
           "width": 1231,
-          "height": 683
+          "height": 672
         },
         "modern-dark": {
           "width": 1231,
-          "height": 683
+          "height": 672
         },
         "modern-light": {
           "width": 1231,
-          "height": 683
+          "height": 672
         }
       }
     },
@@ -3890,23 +3945,20 @@
         "modern-light"
       ],
       "route": "/settings/restore",
-      "state": "Settings restore page at scroll top with Local Plembfin Restore expanded, showing the passphrase field and the stored full backups. Change nothing.",
+      "state": "Local Watch History Restore expanded with stored backups and Merge into existing state / Replace existing state choices. Restore nothing.",
       "framing": {
         "type": "element",
         "target": {
-          "css": "[data-settings-panel='backups']:not(.hidden)"
+          "css": "#local-watch-history-restore"
         },
         "padding": 0
       },
       "steps": [
         {
-          "click": "#local-plembfin-restore > summary"
+          "click": "#local-watch-history-restore summary"
         },
         {
-          "waitFor": "#local-plembfin-restore[open]"
-        },
-        {
-          "wait": 1500
+          "wait": 800
         }
       ],
       "automation": "auto",
@@ -3918,20 +3970,20 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 530
+          "width": 713,
+          "height": 423
         },
         "light": {
-          "width": 1231,
-          "height": 530
+          "width": 713,
+          "height": 423
         },
         "modern-dark": {
-          "width": 1231,
-          "height": 530
+          "width": 713,
+          "height": 423
         },
         "modern-light": {
-          "width": 1231,
-          "height": 530
+          "width": 713,
+          "height": 423
         }
       }
     },
@@ -4150,7 +4202,7 @@
         "modern-light"
       ],
       "route": "/settings/tools",
-      "state": "Tools page; the Guided Setup control showing the resumable onboarding flow.",
+      "state": "Tools page with the Reopen Onboarding control visible in the top bar; do not open or change setup.",
       "framing": {
         "type": "viewport"
       },

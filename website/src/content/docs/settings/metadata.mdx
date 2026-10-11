@@ -3,7 +3,7 @@ title: Metadata
 description: Configure metadata providers and refresh cached TMDB and TVDB information.
 category: Settings
 order: 5.5
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -33,7 +33,7 @@ configuration response.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-providers-dark.png"
   lightSrc="/assets/app-captures/settings-metadata-providers-light.png"
-  alt="Plembfin Metadata Providers settings showing provider cards and connection state"
+  alt="Plekt Metadata Providers settings showing provider cards and connection state"
   caption="Provider cards define which sources can enrich titles, episodes, ratings, and artwork."
 />
 
@@ -54,7 +54,7 @@ missing provider key affects enrichment and artwork; it does not delete the loca
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-refresh-dark.png"
   lightSrc="/assets/app-captures/settings-metadata-refresh-light.png"
-  alt="Plembfin Metadata settings showing refresh controls for the local archive"
+  alt="Plekt Metadata settings showing refresh controls for the local archive"
   caption="Refresh Metadata revalidates cached provider data after configuration or enrichment changes."
 />
 
@@ -66,7 +66,7 @@ key, changing provider configuration, or recovering from an incomplete metadata 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-refresh-tmdb-dark.png"
   lightSrc="/assets/app-captures/settings-metadata-refresh-tmdb-light.png"
-  alt="Plembfin Metadata settings showing the TMDB refresh action"
+  alt="Plekt Metadata settings showing the TMDB refresh action"
   caption="TMDB refresh covers movie and show details, artwork, cast, trailers, and related content."
 />
 
@@ -79,14 +79,14 @@ focused refresh when only one title is wrong.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-refresh-tvdb-dark.png"
   lightSrc="/assets/app-captures/settings-metadata-refresh-tvdb-light.png"
-  alt="Plembfin Metadata settings showing the TVDB refresh action"
+  alt="Plekt Metadata settings showing the TVDB refresh action"
   caption="TVDB refresh covers series structure, season and episode data, air dates, and TV artwork."
 />
 
 TVDB refresh covers TV series details, season and episode schedules, air dates, and TV artwork.
 It is the structural source for TV numbering and upcoming-episode data.
 
-After a corrected TV match, Plembfin performs the focused metadata refresh and warms the
+After a corrected TV match, Plekt performs the focused metadata refresh and warms the
 corresponding poster, backdrop, and logo cache before the updated show details are returned.
 
 Refresh jobs may take time on a large archive. Keep [Logs](/docs/settings/logs/) available and

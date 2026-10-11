@@ -645,7 +645,6 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Dashboard rendering | `modules/dashboard.js` |
 | Modern-style-only dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout) and the compact Recently watched rows | `modules/dashboard-modern.js` |
 | Modern backdrop artwork behind cards on every page | `modules/card-art.js` |
-| Dashboard webhook port banner (startup port advisory, dismissable per findings text) | `modules/webhook-port-banner.js` |
 | Posters only on the library and media pages: a clicked poster opens its card in place | `modules/page-card-open.js` |
 | History, Posters only: episode, date and app overlaid on each poster | `modules/history-poster-overlay.js` |
 | Shared media identity/deduplication | `modules/media-records.js` |

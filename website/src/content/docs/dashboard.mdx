@@ -3,7 +3,7 @@ title: Dashboard
 description: Read live playback, the mixed Up Next queue, and durable watch history from one screen.
 category: Dashboard and libraries
 order: 3
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/dashboard.js
@@ -63,7 +63,7 @@ the item is restored.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-dark.png"
   lightSrc="/assets/app-captures/dashboard-light.png"
-  alt="Plembfin dashboard showing the order of Now Playing, Up Next, and history rows"
+  alt="Plekt dashboard showing the order of Now Playing, Up Next, and history rows"
   caption="The dashboard order keeps live sessions, continuation, and completed history distinct."
 />
 
@@ -94,7 +94,7 @@ drawn over each title's backdrop artwork, and the page takes the backdrop of the
 <ScreenshotFigure
   darkSrc="/assets/app-captures/global-search-dark.png"
   lightSrc="/assets/app-captures/global-search-light.png"
-  alt="Plembfin Dashboard global search showing Ted Lasso matches from TMDB and TheTVDB"
+  alt="Plekt Dashboard global search showing Ted Lasso matches from TMDB and TheTVDB"
   caption="Global Search is opened from the Dashboard sidebar and groups local and provider matches by type."
 />
 
@@ -117,7 +117,7 @@ or Jellyfin.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/now-playing-dark.png"
   lightSrc="/assets/app-captures/now-playing-light.png"
-  alt="Plembfin Now Playing panel showing live sessions with their source and playback position"
+  alt="Plekt Now Playing panel showing live sessions with their source and playback position"
   caption="Each live session identifies its source and current position; with nothing playing, the panel is headed Up Next and features part watched and Up Next items."
 />
 
@@ -128,7 +128,7 @@ To use it:
 3. Check the source badge, position, and duration.
 4. Select the title to open its media details when you need more actions.
 
-Plembfin refreshes active sessions independently of the normal scheduled sync: the poll is
+Plekt refreshes active sessions independently of the normal scheduled sync: the poll is
 more frequent while something is playing, and opening the Dashboard or returning to a
 background tab requests a fresh snapshot immediately.
 
@@ -147,7 +147,7 @@ once and applies to the whole server:
 <ScreenshotFigure
   darkSrc="/assets/app-captures/now-playing-options-modern-dark.png"
   lightSrc="/assets/app-captures/now-playing-options-modern-light.png"
-  alt="Plembfin Now Playing panel with its options open, showing two allow checkboxes and an item count"
+  alt="Plekt Now Playing panel with its options open, showing two allow checkboxes and an item count"
   caption="The cog beside the panel heading sets which items can fill Now Playing and how many it holds."
 />
 
@@ -165,7 +165,7 @@ If a session never appears, follow
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-up-next-dark.png"
   lightSrc="/assets/app-captures/dashboard-up-next-light.png"
-  alt="Plembfin dashboard Up Next row showing current resume cards with provider Watch now links"
+  alt="Plekt dashboard Up Next row showing current resume cards with provider Watch now links"
   caption="Up Next presents the current continuation queue with provider availability and Watch now links."
 />
 
@@ -191,16 +191,16 @@ item in Plex, Emby, or Jellyfin when a connected server can provide one. A cache
 resume card remains useful without a provider connection.
 
 When **Sync Up Next to media apps** is enabled in [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning),
-Plembfin queues one coalesced background push whenever the unified queue changes. Additions,
+Plekt queues one coalesced background push whenever the unified queue changes. Additions,
 reorderings, and resume-progress changes are sent to Plex Continue Watching, Emby Continue
-Watching, and Jellyfin Next Up. The push never removes an item just because Plembfin's queue
+Watching, and Jellyfin Next Up. The push never removes an item just because Plekt's queue
 does not list it: an item leaves a media app only when you clear its progress or remove it in
-Plembfin, and the sync message reports how many app-only items were left in place. The worker
+Plekt, and the sync message reports how many app-only items were left in place. The worker
 uses the latest queue and continues even when the Dashboard is closed. Use **Sync Up Next** for
 an explicit immediate push; turning the setting off leaves those provider lists unchanged while
-Plembfin's own Up Next view remains available.
+Plekt's own Up Next view remains available.
 
-If a provider feed fails, Plembfin keeps the last good observation and shows a compact
+If a provider feed fails, Plekt keeps the last good observation and shows a compact
 source-status message instead of deleting the queue. An offline server is skipped by the push
 and a new push is queued as soon as it answers again. The builder deduplicates matching resume
 and next-up observations, keeps shows that share a title but have different TMDB or TVDB ids
@@ -215,25 +215,25 @@ then dispatches through the normal sync path.
 ### Dismiss and restore an Up Next item
 
 **Remove from Up Next** is the dismissal action. When a show has two cards because of a
-rewatch, Plembfin asks whether to hide only that card's season or the whole show; a hidden
-season appears as its own entry in the dismissed list. After you confirm it, Plembfin hides the card
+rewatch, Plekt asks whether to hide only that card's season or the whole show; a hidden
+season appears as its own entry in the dismissed list. After you confirm it, Plekt hides the card
 immediately, clears its local resume progress, marks it unwatched, and records the dismissal on
 the server. The dismissal therefore applies to the same account on every device rather than only
 the browser where it was made. Plex Continue Watching and Emby Resume also receive a native
 removal when the matching item is available; Jellyfin Next Up is a calculated feed with no
-per-item removal endpoint, so Plembfin keeps the local queue authoritative while that feed catches
+per-item removal endpoint, so Plekt keeps the local queue authoritative while that feed catches
 up.
 
 When one or more items are dismissed, the count button beside the **Up Next** heading opens
 **Dismissed Up Next**, which shows up to six cards per row on wide screens. Choose **Add back** for one item or **Add all back** to restore the cards;
-Plembfin then pushes the restored queue to the connected media apps. A dismissal is a “not now”
+Plekt then pushes the restored queue to the connected media apps. A dismissal is a “not now”
 choice, not a permanent delete: the item can return automatically after newer genuine playback
 progress is recorded.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-up-next-dismissed-dark.png"
   lightSrc="/assets/app-captures/dashboard-up-next-dismissed-light.png"
-  alt="Plembfin Dismissed Up Next dialog showing Add back and Add all back actions"
+  alt="Plekt Dismissed Up Next dialog showing Add back and Add all back actions"
   caption="Dismissed Up Next keeps the cross-device removal state visible and makes restoration explicit."
 />
 
@@ -258,7 +258,7 @@ The bottom rows are the recent durable completed-watch archive.
 
 They are not a list of active files on a media server.
 
-A title appears after Plembfin has recorded a watch event.
+A title appears after Plekt has recorded a watch event.
 
 - The **TV Shows** row shows one full card per episode. With **Posters only** on (Modern
   style), consecutive watches of one show fold into a single poster with an "N episodes"
@@ -274,14 +274,14 @@ a previous watch.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-history-tv-dark.png"
   lightSrc="/assets/app-captures/dashboard-history-tv-light.png"
-  alt="Plembfin Dashboard TV Shows recently watched row showing completed episode cards"
+  alt="Plekt Dashboard TV Shows recently watched row showing completed episode cards"
   caption="TV Shows history groups recently completed episode events by their show and episode identity."
 />
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-history-movies-dark.png"
   lightSrc="/assets/app-captures/dashboard-history-movies-light.png"
-  alt="Plembfin Dashboard Movies recently watched row showing completed movie cards"
+  alt="Plekt Dashboard Movies recently watched row showing completed movie cards"
   caption="Movies history keeps recent completed movie events in the same compact Card View rail."
 />
 

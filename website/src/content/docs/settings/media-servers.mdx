@@ -3,7 +3,7 @@ title: Media servers
 description: Connect Plex, Emby, and Jellyfin and verify that each server can exchange watch state.
 category: Settings
 order: 5.2
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -32,7 +32,7 @@ setup is preferred; manual fields remain available as a fallback.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-media-servers-plex-dark.png"
   lightSrc="/assets/app-captures/settings-media-servers-plex-light.png"
-  alt="Plembfin Plex media-server settings showing account, token, enable, test, and save controls"
+  alt="Plekt Plex media-server settings showing account, token, enable, test, and save controls"
   caption="Plex uses the account flow when possible and exposes manual credentials as a fallback."
 />
 
@@ -59,14 +59,14 @@ rules.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-media-servers-emby-dark.png"
   lightSrc="/assets/app-captures/settings-media-servers-emby-light.png"
-  alt="Plembfin Emby media-server settings card showing a configured Emby connection"
+  alt="Plekt Emby media-server settings card showing a configured Emby connection"
   caption="The Emby card shows the configured connection state; expand it in the app to edit the server URL, credentials, and test controls."
 />
 
 Emby setup uses the server URL and account exchange to obtain a user-scoped token. Manual setup
 is available when account setup cannot be used.
 
-After saving, test the server from Plembfin's host and configure the webhook events in
+After saving, test the server from Plekt's host and configure the webhook events in
 [Integrations](/docs/integrations/#emby).
 
 ## Jellyfin
@@ -74,7 +74,7 @@ After saving, test the server from Plembfin's host and configure the webhook eve
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-media-servers-jellyfin-dark.png"
   lightSrc="/assets/app-captures/settings-media-servers-jellyfin-light.png"
-  alt="Plembfin Jellyfin media-server settings card showing a configured Jellyfin connection"
+  alt="Plekt Jellyfin media-server settings card showing a configured Jellyfin connection"
   caption="The Jellyfin card shows the configured connection state; expand it in the app to use Quick Connect or edit manual credentials."
 />
 
@@ -96,7 +96,7 @@ manual secret; saving manual setup changes the provider back to manual mode.
 
 If a connection test fails:
 
-1. Confirm the URL is reachable from the machine running Plembfin.
+1. Confirm the URL is reachable from the machine running Plekt.
 2. Confirm the selected server and user can access the library.
 3. Save the connection and run **Test** again.
 4. Send one playback event.

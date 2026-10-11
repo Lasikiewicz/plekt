@@ -1,9 +1,9 @@
 export const site = {
-  name: "Plembfin",
-  title: "Plembfin - The local brain for your media stack.",
+  name: "Plekt",
+  title: "Plekt - The local brain for your media stack.",
   description:
-    "Plembfin is the self-hosted source of truth that tracks what you watch, remembers canonical state locally, auto-syncs Plex, Emby, Jellyfin, Trakt, and keeps private media choices close at hand.",
-  url: "https://plembfin.com",
+    "Plekt is the self-hosted source of truth that tracks what you watch, remembers canonical state locally, auto-syncs Plex, Emby, Jellyfin, Trakt, and keeps private media choices close at hand.",
+  url: "https://plekt.net",
   repository: "https://github.com/Lasikiewicz/plembfin",
   support: "https://github.com/sponsors/Lasikiewicz",
   repositoryDocs: "https://github.com/Lasikiewicz/plembfin/tree/main/docs",
@@ -73,11 +73,11 @@ export const featureStories = [
   {
     id: "sync",
     title: "One watch. Every screen.",
-    text: "Plembfin keeps a local canonical record of watched state, resume progress, and rewatches, then distributes the right change to every connected service.",
+    text: "Plekt keeps a local canonical record of watched state, resume progress, and rewatches, then distributes the right change to every connected service.",
     bullets: ["Two-way watched and unwatched sync", "Cross-platform resume progress", "Rewatch history without duplicate noise"],
     imageDark: "/assets/app-captures/dashboard-cleared-dark.png",
     imageLight: "/assets/app-captures/dashboard-cleared-light.png",
-    imageAlt: "Plembfin dashboard showing the watch archive across TV and movie history",
+    imageAlt: "Plekt dashboard showing the watch archive across TV and movie history",
     link: "/docs/concepts/",
     linkLabel: "Understand the sync model",
   },
@@ -88,7 +88,7 @@ export const featureStories = [
     bullets: ["Now Playing refreshes within seconds", "Mixed Up Next with provider availability and Watch Now links", "History, calendar, and useful statistics"],
     imageDark: "/assets/app-captures/now-playing-dark.png",
     imageLight: "/assets/app-captures/now-playing-light.png",
-    imageAlt: "Plembfin Now Playing view showing three active playback sessions",
+    imageAlt: "Plekt Now Playing view showing three active playback sessions",
     link: "/docs/dashboard/",
     linkLabel: "Read the dashboard guide",
   },
@@ -99,7 +99,7 @@ export const featureStories = [
     bullets: ["Poster-first movie and TV libraries", "TMDB and TheTVDB enrichment", "Collections, people, reviews, and deep links"],
     imageDark: "/assets/app-captures/tvshows-dark.png",
     imageLight: "/assets/app-captures/tvshows-light.png",
-    imageAlt: "Plembfin TV Shows library with poster grids, watch progress, and filters",
+    imageAlt: "Plekt TV Shows library with poster grids, watch progress, and filters",
     link: "/docs/libraries/",
     linkLabel: "Browse libraries and actions",
   },
@@ -110,7 +110,7 @@ export const featureStories = [
     bullets: ["Trending movie and TV rails", "Movie, TV, and genre filters", "Open a title, rate it, watchlist it, or add it to a playlist"],
     imageDark: "/assets/app-captures/discover-dark.png",
     imageLight: "/assets/app-captures/discover-light.png",
-    imageAlt: "Plembfin Discover page showing trending movie and TV rails",
+    imageAlt: "Plekt Discover page showing trending movie and TV rails",
     link: "/docs/discover/",
     linkLabel: "Explore Discover",
   },
@@ -121,25 +121,25 @@ export const featureStories = [
     bullets: ["Save movies and shows for later", "Rate movies, shows, and episodes from one to ten", "Build playlists and sync them to Plex, Emby, or Jellyfin"],
     imageDark: "/assets/app-captures/watchlist-dark.png",
     imageLight: "/assets/app-captures/watchlist-light.png",
-    imageAlt: "Plembfin Watchlist page showing saved media cards and personal actions",
+    imageAlt: "Plekt Watchlist page showing saved media cards and personal actions",
     link: "/docs/watchlist/",
     linkLabel: "Open the Watchlist guide",
   },
   {
     id: "ownership",
     title: "Keep every change explainable.",
-    text: "A local archive is only useful when you can understand what happened. Plembfin keeps source, destination, outcome, and retry context close to the record.",
+    text: "A local archive is only useful when you can understand what happened. Plekt keeps source, destination, outcome, and retry context close to the record.",
     bullets: ["Per-destination delivery results", "Targeted retries instead of blind full syncs", "Operational evidence for recovery work"],
     imageDark: "/assets/app-captures/sync-activity-focused-dark.png",
     imageLight: "/assets/app-captures/sync-activity-focused-light.png",
-    imageAlt: "Plembfin Sync Activity view showing events, sources, and delivery state",
+    imageAlt: "Plekt Sync Activity view showing events, sources, and delivery state",
     link: "/docs/sync-tools/",
     linkLabel: "Read the sync activity guide",
   },
 ];
 
 export const comparison = {
-  columns: ["Plembfin", "A public tracking hub"],
+  columns: ["Plekt", "A public tracking hub"],
   rows: [
     {
       label: "Primary focus",
@@ -196,7 +196,7 @@ export const docsNav = [
       {
         slug: "getting-started",
         label: "Getting started",
-        description: "Install Plembfin and complete the first-run setup.",
+        description: "Install Plekt and complete the first-run setup.",
         children: [
           { id: "before-you-install", label: "Before you install" },
           { id: "install-with-docker-compose", label: "Install with Docker Compose" },
@@ -211,12 +211,12 @@ export const docsNav = [
   },
   {
     label: "Understand the app",
-    description: "Learn how Plembfin turns events into a durable local archive.",
+    description: "Learn how Plekt turns events into a durable local archive.",
     items: [
       {
         slug: "concepts",
         label: "The sync model",
-        description: "How Plembfin becomes the local source of truth.",
+        description: "How Plekt becomes the local source of truth.",
         children: [
           { id: "the-canonical-record", label: "The canonical record" },
           { id: "the-event-lifecycle", label: "The event lifecycle" },
@@ -545,7 +545,7 @@ export const docsNav = [
       {
         slug: "watch-progress-not-syncing",
         label: "Watch progress not syncing",
-        description: "Trace one watch event from its source through Plembfin to the destination.",
+        description: "Trace one watch event from its source through Plekt to the destination.",
       },
       {
         slug: "troubleshooting",
@@ -578,7 +578,7 @@ export const docsNav = [
 
 // The documentation sidebar mirrors the product shell. App-level pages stay
 // prominent, while the focused guide links sit beneath Movies, TV Shows, and
-// Settings just as their related views do in Plembfin.
+// Settings just as their related views do in Plekt.
 export const docsSidebarNav = [
   { id: "dashboard", label: "Dashboard", slug: "dashboard" },
   {
@@ -627,6 +627,8 @@ export const docsSidebarNav = [
     slug: "guides",
     children: [
       { slug: "getting-started", label: "Getting started" },
+      { slug: "upgrading-from-plembfin", label: "Upgrading from Plembfin" },
+      { slug: "moving-to-port-5056", label: "Moving to port 5056" },
       { slug: "concepts", label: "The sync model" },
       { slug: "navigation", label: "Navigation and global controls" },
       { slug: "media-details", label: "Media details and actions" },
@@ -649,6 +651,8 @@ export const docsSidebarNav = [
 export const docsPageNav = [
   { slug: "guides", label: "Guides" },
   { slug: "getting-started", label: "Getting started" },
+  { slug: "upgrading-from-plembfin", label: "Upgrading from Plembfin" },
+  { slug: "moving-to-port-5056", label: "Moving to port 5056" },
   { slug: "concepts", label: "The sync model" },
   { slug: "navigation", label: "Navigation and global controls" },
   { slug: "dashboard", label: "Dashboard" },

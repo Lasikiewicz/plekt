@@ -3,7 +3,7 @@ title: Manual Watch review
 description: Resolve uncertain watch events, correct provider state, and recheck stale reviews.
 category: Sync and maintain
 order: 6.5
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/manual-watch-review.js
@@ -23,15 +23,15 @@ screenshots:
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
 Manual Watch review is the decision queue for watch events that do not have a reliable
-completion time. It keeps Plembfin from assigning an invented date and gives you a focused
+completion time. It keeps Plekt from assigning an invented date and gives you a focused
 place to confirm, correct, or dismiss the event.
 
 ## How the review queue works
 
 Enable **Require review** in [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning).
 When Plex, Emby, or Jellyfin reports a provider-side watched flag without enough timing
-information, Plembfin keeps the event pending and shows **Manual Watch review** in the
-sidebar. This includes an item that Plembfin currently considers unwatched: the provider
+information, Plekt keeps the event pending and shows **Manual Watch review** in the
+sidebar. This includes an item that Plekt currently considers unwatched: the provider
 event is held for a decision instead of being silently rejected or sent on to the other
 media servers. The link is shown while there are decisions to make, including when a new
 item is flagged after you already decided an earlier review.
@@ -39,7 +39,7 @@ item is flagged after you already decided an earlier review.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/manual-watch-review-dark.png"
   lightSrc="/assets/app-captures/manual-watch-review-light.png"
-  alt="Plembfin Manual Watch review showing a provider-marked episode waiting for a decision"
+  alt="Plekt Manual Watch review showing a provider-marked episode waiting for a decision"
   caption="Manual Watch review keeps a provider-marked episode visible with the surrounding season context before confirmation."
 />
 
@@ -68,10 +68,10 @@ instead of guessing when two shows share the title. The sidebar count matches th
 
 ## Correct provider state
 
-Choose **Confirm** to record the watch in Plembfin and send the normal watched-state
-correction to the connected providers. Until that decision, Plembfin does not propagate the
+Choose **Confirm** to record the watch in Plekt and send the normal watched-state
+correction to the connected providers. Until that decision, Plekt does not propagate the
 provider's watched flag. Choose **Dismiss & mark unwatched** when the provider event was
-wrong; Plembfin clears the local review and corrects the provider state before closing the
+wrong; Plekt clears the local review and corrects the provider state before closing the
 item.
 
 Use the show-level buttons when every pending episode in a group should receive the same
@@ -82,8 +82,8 @@ a new one.
 ## Recheck status
 
 Use **Recheck status** when a watch was already handled in another client or the queue looks
-stale. Plembfin rereads its canonical watch state and the pending review queue, then removes
-items that are already marked watched in Plembfin. This keeps provider leftovers from appearing
+stale. Plekt rereads its canonical watch state and the pending review queue, then removes
+items that are already marked watched in Plekt. This keeps provider leftovers from appearing
 as decisions that still need action. Library imports also skip items that are already watched,
 and pending reviews that local state already answers are closed automatically.
 

@@ -1,9 +1,9 @@
 ---
 title: Backups and operations
-description: Keep Plembfin recoverable with backups, safe imports, hardening, and routine maintenance.
+description: Keep Plekt recoverable with backups, safe imports, hardening, and routine maintenance.
 category: Sync and maintain
 order: 6
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - docs/backups.md
   - docs/watch-history-backups.md
@@ -31,7 +31,7 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-Plembfin is designed to run on hardware you control.
+Plekt is designed to run on hardware you control.
 
 Treat the local data volume, admin credentials, provider tokens, and webhook secret as
 valuable operational data.
@@ -39,16 +39,16 @@ valuable operational data.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-dark.png"
   lightSrc="/assets/app-captures/dashboard-light.png"
-  alt="Plembfin dashboard overview for a locally operated instance"
+  alt="Plekt dashboard overview for a locally operated instance"
   caption="Routine operations protect the instance behind the app: its archive, connections, backups, and maintenance tools."
 />
 
 ## Backups
 
-Plembfin supports two local backup families:
+Plekt supports two local backup families:
 
 - **Watch-history backups** include history, playstate, and resume markers.
-- **Full Plembfin backups** are encrypted and include settings, keys, credentials, history,
+- **Full Plekt backups** are encrypted and include settings, keys, credentials, history,
   Watchlist, Ratings, Playlists, and other instance state.
 
 Each has its own schedule, retention, and **Back Up Now** action.
@@ -58,14 +58,14 @@ The remote backup option can mirror either type to Backblaze B2 on its own sched
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-backup-local-dark.png"
   lightSrc="/assets/app-captures/settings-backup-local-light.png"
-  alt="Plembfin Local backups settings showing watch-history and encrypted instance backup controls"
+  alt="Plekt Local backups settings showing watch-history and encrypted instance backup controls"
   caption="Local backups separates the watch-history archive from the encrypted full-instance backup."
 />
 
 <ScreenshotFigure
     darkSrc="/assets/app-captures/settings-backup-remote-dark.png"
     lightSrc="/assets/app-captures/settings-backup-remote-light.png"
-  alt="Plembfin Remote backups settings showing the Backblaze B2 destination controls"
+  alt="Plekt Remote backups settings showing the Backblaze B2 destination controls"
   caption="Remote backups sends the selected backup family to an enabled Backblaze B2 destination."
 />
 
@@ -76,7 +76,7 @@ A scheduled job cannot stop to ask a human for a passphrase.
 
 Store the passphrase separately from the backup file.
 
-Full Plembfin backup/export includes the canonical Watchlist and its non-secret Plex sync
+Full Plekt backup/export includes the canonical Watchlist and its non-secret Plex sync
 state. Restoring it invalidates remote observations and requires another safe-union snapshot
 before delivery resumes. Watch-history-only backups do not include Watchlist or personal
 rating data.
@@ -86,7 +86,7 @@ rating data.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-restore-watch-history-dark.png"
   lightSrc="/assets/app-captures/settings-restore-watch-history-light.png"
-  alt="Plembfin Restore settings showing watch-history restore scope and merge or replace controls"
+  alt="Plekt Restore settings showing watch-history restore scope and merge or replace controls"
   caption="Restore makes the watch-history scope and merge-versus-replace choice explicit before confirmation."
 />
 
@@ -112,7 +112,7 @@ the last good backup first.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-connections-trakt-dark.png"
   lightSrc="/assets/app-captures/settings-connections-trakt-light.png"
-  alt="Plembfin Trakt connection settings showing the import controls"
+  alt="Plekt Trakt connection settings showing the import controls"
   caption="Trakt history imports start from the Trakt connection card."
 />
 
@@ -126,7 +126,7 @@ years of history.
 Run a dry run before a write pass.
 
 For a newly connected or rebuilt library, use import followed by a deliberate full sync when
-you want the current Plembfin archive replayed to that server.
+you want the current Plekt archive replayed to that server.
 
 Do not use a full sync as the first response to an unexplained mismatch.
 
@@ -148,7 +148,7 @@ Once a week or after an upgrade:
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-general-account-dark.png"
   lightSrc="/assets/app-captures/settings-general-account-light.png"
-  alt="Plembfin General Account settings showing administrator credential controls"
+  alt="Plekt General Account settings showing administrator credential controls"
   caption="Security begins with the administrator account, then extends to the data volume, network, and integration secrets."
 />
 
@@ -161,7 +161,7 @@ Once a week or after an upgrade:
 - Keep the webhook URL private because the token may be in its query string.
 - Remove private-list titles and runtime/build details before sharing screenshots or logs.
 
-Plembfin applies password hashing, signed sessions, rate limits, security headers, and
+Plekt applies password hashing, signed sessions, rate limits, security headers, and
 authenticated routes.
 
 These controls reduce risk.
@@ -173,7 +173,7 @@ They do not replace host, network, or media-server security.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-index-focused-dark.png"
   lightSrc="/assets/app-captures/settings-index-focused-light.png"
-  alt="Plembfin Settings landing page used to confirm the running release"
+  alt="Plekt Settings landing page used to confirm the running release"
   caption="After an update, confirm the installed version in the About card and check the operational views."
 />
 
@@ -189,10 +189,10 @@ review Sync Activity for unexpected failures.
 
 ## PWA and local operation
 
-Plembfin is installable as a Progressive Web App on supported desktop and mobile browsers.
+Plekt is installable as a Progressive Web App on supported desktop and mobile browsers.
 
 The browser is a client to your self-hosted instance.
 
-The scheduler and provider requests still run on the Plembfin host.
+The scheduler and provider requests still run on the Plekt host.
 
 [Review the Settings groups](/docs/settings/) or [start with troubleshooting](/docs/troubleshooting/).

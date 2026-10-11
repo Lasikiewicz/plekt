@@ -1,5 +1,9 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="8" fill="#0B0F12"/>
-  <path d="M18 22h22a8 8 0 0 1 0 16H24" fill="none" stroke="#4B96E6" stroke-width="5" stroke-linecap="round"/>
-  <path d="M46 42H24a8 8 0 0 1 0-16h16" fill="none" stroke="#10B981" stroke-width="5" stroke-linecap="round"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs>
+    <linearGradient id="il" x1="0" x2="1"><stop offset="0" stop-color="#19E3C0"/><stop offset="1" stop-color="#0FB89A"/></linearGradient>
+    <linearGradient id="ir" x1="0" x2="1"><stop offset="0" stop-color="#3B9BFF"/><stop offset="1" stop-color="#1565D8"/></linearGradient>
+    <mask id="im" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><path transform="translate(17 17) scale(0.5)" d="M0 0H46a14 14 0 0 1 14 14V25a14 14 0 0 1-14 14H19V60H0Z" fill="#000" stroke="#000" stroke-width="7" stroke-linejoin="round"/></mask>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#0B0F12"/><g>
+    <g mask="url(#im)"><path d="M2 32L21 17L18 26H32V38H18L21 47Z" fill="url(#il)"/><path d="M2 32L21 17L18 26H32V38H18L21 47Z" fill="url(#ir)" transform="translate(64 0) scale(-1 1)"/></g>
+    <path transform="translate(17 17) scale(0.5)" d="M0 0H46a14 14 0 0 1 14 14V25a14 14 0 0 1-14 14H19V60H0ZM19 16V23H43a3.5 3.5 0 0 0 0-7Z" fill="#FFFFFF" fill-rule="evenodd"/>
+  </g></svg>

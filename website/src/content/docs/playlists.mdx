@@ -3,7 +3,7 @@ title: Playlists
 description: Collect movies and TV shows into ordered playlists and keep them in sync with Plex, Emby, and Jellyfin.
 category: Media and discovery
 order: 3.33
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/playlists.js
@@ -28,7 +28,7 @@ import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
 Playlists are ordered collections of movies, TV episodes, or both. You pick the titles
 yourself, or let an [automatic playlist](#automatic-playlists) fill itself from a rule. A
-playlist can stay in Plembfin only, or sync to any connected Plex, Emby, or Jellyfin server.
+playlist can stay in Plekt only, or sync to any connected Plex, Emby, or Jellyfin server.
 Playlists never change watched state.
 
 ## Open Playlists
@@ -36,7 +36,7 @@ Playlists never change watched state.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/playlists-dark.png"
   lightSrc="/assets/app-captures/playlists-light.png"
-  alt="Plembfin Playlists page showing playlist rails with app badges, item counts, and Options menus"
+  alt="Plekt Playlists page showing playlist rails with app badges, item counts, and Options menus"
   caption="Each playlist is a rail with its type, synced apps, item count, and an Options menu."
 />
 
@@ -48,13 +48,13 @@ Each heading shows:
 
 - the playlist type: **Movies**, **TV**, or **Mixed**;
 - an app badge for each app it syncs to. Hover a badge for its status: synced, waiting for
-  the first sync, failed, or not found. **Plembfin only** means no app is selected;
+  the first sync, failed, or not found. **Plekt only** means no app is selected;
 - the item count, and an **Auto** tag on automatic playlists;
 - an **Options** menu with **Edit** and **Delete**.
 
 The page updates itself when a scheduled sync changes a playlist.
 
-When an app holds items Plembfin could not identify, a note under the heading says how many.
+When an app holds items Plekt could not identify, a note under the heading says how many.
 Those items stay in that app untouched.
 
 ## Create a playlist
@@ -66,7 +66,7 @@ Those items stay in that app untouched.
    them, or turn it off to keep them.
 4. On **Apps**, tick the apps to sync to. Only connected apps can be ticked; see
    [Settings → Media servers](/docs/settings/media-servers/). Leave every app unticked to
-   keep the playlist in Plembfin only.
+   keep the playlist in Plekt only.
 
 ## Automatic playlists
 
@@ -83,11 +83,11 @@ Talk and news shows, and library titles not yet matched to TMDB, IMDb, or TVDB, 
 An automatic playlist can be Movies or TV, not Mixed. A TV one holds the next episode to watch
 of each show.
 
-Plembfin checks the rule every hour. A new playlist shows **Checking the rule** until its
+Plekt checks the rule every hour. A new playlist shows **Checking the rule** until its
 titles arrive. The **Options** menu adds **Info** (the full rule), **Refresh now**, and
 **Stop updating**.
 
-Automatic playlists are sent one way, from Plembfin to the apps. With **Remove items once
+Automatic playlists are sent one way, from Plekt to the apps. With **Remove items once
 watched** on, watched titles leave the playlist. With it off, a watched TV show moves on to
 its next episode at the next sync.
 
@@ -95,31 +95,31 @@ its next episode at the next sync.
 
 Choose **Import from apps** beside **New playlist** to bring in playlists made in Plex, Emby,
 or Jellyfin. The dialog lists each app's playlists with their item count and a type guess.
-When a name matches an existing Plembfin playlist, choose **Merge** to add to it or **Import
+When a name matches an existing Plekt playlist, choose **Merge** to add to it or **Import
 separately** to keep a second playlist.
 
 ## How app sync works
 
 - Each app's copy holds only titles in that app's library. A title the app lacks stays in
-  the Plembfin playlist with a **Missing from** note (a **Missing** badge on posters) and
+  the Plekt playlist with a **Missing from** note (a **Missing** badge on posters) and
   joins the app's copy once it arrives.
 - TV and Mixed playlists hold individual episodes, not whole shows.
-- The app playlists follow Plembfin's order, and moves made in an app are read back.
-- A Plembfin edit syncs a few seconds later. A background pass also runs every 5 minutes.
+- The app playlists follow Plekt's order, and moves made in an app are read back.
+- A Plekt edit syncs a few seconds later. A background pass also runs every 5 minutes.
 
 ### Changes made in an app
 
-Plembfin also picks up changes made to the playlist inside an app:
+Plekt also picks up changes made to the playlist inside an app:
 
-- A title added in the app is added in Plembfin and to the other selected apps.
-- A title removed in the app is removed in Plembfin, but only while the app's library still
+- A title added in the app is added in Plekt and to the other selected apps.
+- A title removed in the app is removed in Plekt, but only while the app's library still
   has it. A title that left the library stays, marked **Missing from** that app.
 - Removing one episode of a synced show keeps that episode out on later syncs.
 - A playlist deleted in the app is deleted everywhere and moves to
   [Recently deleted](#recently-deleted).
 
 A failed or empty read from an app never counts as a removal. When one sync would remove
-many titles at once, or an app reports several playlists deleted at once, Plembfin
+many titles at once, or an app reports several playlists deleted at once, Plekt
 holds the change and shows a banner above the rail. Choose **Confirm** to apply it or
 **Discard** to restore the app's copy.
 
@@ -128,7 +128,7 @@ holds the change and shows a banner above the rail. Choose **Confirm** to apply 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-action-row-dark.png"
   lightSrc="/assets/app-captures/media-action-row-light.png"
-  alt="Plembfin media detail action row with the playlist action"
+  alt="Plekt media detail action row with the playlist action"
   caption="The playlist action on a movie or TV detail page opens the playlist chooser."
 />
 
@@ -149,7 +149,7 @@ into a single poster.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/playlists-cards-dark.png"
   lightSrc="/assets/app-captures/playlists-cards-light.png"
-  alt="Plembfin playlist cards with the Move pill"
+  alt="Plekt playlist cards with the Move pill"
   caption="Drag a card to reorder it on desktop, or use its Move pill on a touch screen."
 />
 
@@ -171,9 +171,9 @@ Automatic playlists follow their rule, so their cards cannot be dragged or moved
 ## Recently deleted
 
 The **Recently deleted** button (with a count) appears while a deleted playlist is waiting.
-It opens a list showing who deleted each playlist (Plembfin or an app) and when.
+It opens a list showing who deleted each playlist (Plekt or an app) and when.
 
-- **Restore** brings the playlist back in Plembfin and in every app it synced to.
+- **Restore** brings the playlist back in Plekt and in every app it synced to.
 - **Delete permanently** removes it for good. It cannot be undone.
 - **Delete all permanently** clears the whole list after one confirmation.
 

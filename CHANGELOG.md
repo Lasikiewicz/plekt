@@ -1,14 +1,69 @@
 # Changelog
 
-Release history for Plembfin. This file covers published releases on `main` only -
+Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
+
+## v2.0.0 - 11 October 2026
+
+This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/
+
+[Visit the Plekt website](https://plekt.net)
+
+### New Features
+
+#### Settings
+
+- Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names
+
+#### Sync & connection recovery
+
+- Rename the app to Plekt
+- New Plekt wordmark in the sidebar, sign-in, setup and About pages, in dark and light, with the old logo's heavier lettering and diagonal cut
+- New app icon for the browser tab, home screen and Windows, with a dark background that fills the icon on phones
+- New icon for the app's own entries in watch rows and Force Sync
+- The app, sign-in, setup, About pages and browser tab now say Plekt throughout
+- Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header
+- New backups are named plekt-backup and plekt-watch-history; backups made earlier still restore, still appear in lists and still count toward retention
+- Remote backup retention orders files by the date in their name, so older-named files are removed first
+- New installs store data in plekt.db; an existing plembfin.db is kept and used
+- Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change
+- The Windows installer moves an existing Plembfin service and data folder to the Plekt names
+- The default published port moves from 5055 to 5056 (set with PLEKT_PUBLISHED_PORT). Move guide: https://plekt.net/docs/moving-to-port-5056/
+- In-app help links point to plekt.net
+- Audit history payloads are size-limited so the database grows more slowly, and unexpected process errors are handled more safely
+- Choose a dashboard port during Windows installation or upgrade, with the setting applied to the service, tray, shortcuts, and optional firewall rule.
+
+### Bug Fixes
+
+#### Up Next & watch-state
+
+- Refresh watch history and Up Next when the dashboard opens, showing loading or unavailable feedback until fresh server data arrives.
+- Refresh Resume and Up Next after focus or connectivity returns, and sort resume cards by the latest parsed progress update.
+
+#### Sync & provider recovery
+
+- Refresh dashboard data and avoid Seerr port conflict
+- Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.
+- Use SHA-256 poster-cache IDs and re-key existing cache rows without losing stored artwork.
+- Check SQLite integrity before a full restore and explain recovery options when the database is corrupt.
+- Retry an episode mutation once after refreshing stale series indexes for Plex, Emby, and Jellyfin.
+- Show the final provider reason when a destination is skipped in Sync Activity.
+- Start media details at the top of their scroll area.
+
+### Tweaks
+
+#### Sync & connection recovery
+
+- Set separate retention periods for local and remote full backups.
+- Default backup retention to seven days.
+- Plembfin is now Plekt. Docker users: change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt, keep the same tag, volumes and settings. Both old image names receive updates for at least six months after this release.
 
 ## v1.3.1 - 30 September 2026
 
 This update speeds up page loading and server recovery, tidies dashboard cards with a per-library Posters only setting, and makes playback, Up Next and Trakt sync more accurate.
 
-[Visit the Plembfin website](https://plembfin.com)
+[Visit the Plekt website](https://plembfin.com)
 
 ### Bug Fixes
 
@@ -44,7 +99,7 @@ This update speeds up page loading and server recovery, tidies dashboard cards w
 
 This update adds the Modern style, two-way playlist sync with Plex, Emby, and Jellyfin, automatic playlists, and stacked watched runs, fixes large backups and restores, and makes loading faster throughout.
 
-[Visit the Plembfin website](https://plembfin.com)
+[Visit the Plekt website](https://plembfin.com)
 
 ### New Features
 
@@ -104,7 +159,7 @@ This update adds the Modern style, two-way playlist sync with Plex, Emby, and Je
 
 This update keeps shows that share a title apart, makes Up Next sync with Plex, Emby and Jellyfin more reliable, syncs rating changes made on any service, and adds a Watch-State Aliases repair card.
 
-[Visit the Plembfin website](https://plembfin.com)
+[Visit the Plekt website](https://plembfin.com)
 
 ### New Features
 
@@ -152,7 +207,7 @@ This update keeps shows that share a title apart, makes Up Next sync with Plex, 
 
 This hotfix improves Plembfin's watch-state review, mobile media navigation, and playback refresh reliability.
 
-[Visit the Plembfin website](https://plembfin.com)
+[Visit the Plekt website](https://plembfin.com)
 
 ### Bug Fixes
 

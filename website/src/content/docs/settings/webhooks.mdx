@@ -3,7 +3,7 @@ title: Webhooks
 description: Configure platform event senders and protect the webhook endpoint with its secret.
 category: Settings
 order: 5.3
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -26,14 +26,14 @@ Webhooks contains the sender setup guides and the secret used to authenticate in
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-webhooks-setup-dark.png"
   lightSrc="/assets/app-captures/settings-webhooks-setup-light.png"
-  alt="Plembfin Webhooks setup guides for Plex, Emby, and Jellyfin"
+  alt="Plekt Webhooks setup guides for Plex, Emby, and Jellyfin"
   caption="Setup Guides explains the sender-specific event switches and endpoint details."
 />
 
 Use the platform-specific setup guidance for Plex, Emby, or Jellyfin. Configure the sender to
-reach the Plembfin host and include the authentication value exactly as shown by the app.
+reach the Plekt host and include the authentication value exactly as shown by the app.
 
-Plex normally uses Plembfin's realtime WebSocket notification channel. Emby and Jellyfin use their
+Plex normally uses Plekt's realtime WebSocket notification channel. Emby and Jellyfin use their
 webhook integrations for playback events, with scheduled polling providing reconciliation.
 
 After configuring a sender, play a short portion of a known title and confirm both a new
@@ -44,14 +44,14 @@ History row and a Sync Activity result.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-webhooks-secret-dark.png"
   lightSrc="/assets/app-captures/settings-webhooks-secret-light.png"
-  alt="Plembfin Webhook Secret settings card for the generated token and rotation controls"
+  alt="Plekt Webhook Secret settings card for the generated token and rotation controls"
   caption="The Webhook Secret card keeps the generated token and rotation controls together; expand it in the app when you need to copy or rotate the secret."
 />
 
 Copy the complete generated URL when the sender cannot set a custom header. In that mode the
 secret is carried in the query string as `?token=...`.
 
-When the sender supports headers, use `X-Plembfin-Webhook-Secret` or the accepted
+When the sender supports headers, use `X-Plekt-Webhook-Secret` (the older `X-Plembfin-Webhook-Secret` still works) or the accepted
 `Authorization: Bearer` form exactly as shown by the guide.
 
 To rotate the secret:

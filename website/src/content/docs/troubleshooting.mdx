@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Start with the symptom, confirm the source of truth, and take the smallest safe action.
 category: Fix a problem
 order: 7
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - docs/troubleshooting.md
   - docs/webhooks.md
@@ -61,7 +61,7 @@ delivery, or display.
 
 The dashboard tells you what is visible now.
 
-Sync Activity tells you what Plembfin believes happened.
+Sync Activity tells you what Plekt believes happened.
 
 Logs explains why a request failed.
 
@@ -71,7 +71,7 @@ Logs explains why a request failed.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/sync-activity-focused-dark.png"
   lightSrc="/assets/app-captures/sync-activity-focused-light.png"
-  alt="Plembfin Sync Activity view used to diagnose source and destination results"
+  alt="Plekt Sync Activity view used to diagnose source and destination results"
   caption="Use the event row, destination result, and reason to choose the next action."
 />
 
@@ -89,14 +89,14 @@ Use this order for almost every issue:
 <ScreenshotFigure
   darkSrc="/assets/app-captures/now-playing-dark.png"
   lightSrc="/assets/app-captures/now-playing-light.png"
-  alt="Plembfin Now Playing panel showing live sessions"
-  caption="A live session in Now Playing confirms that active playback is reaching Plembfin; with nothing playing the panel is headed Up Next."
+  alt="Plekt Now Playing panel showing live sessions"
+  caption="A live session in Now Playing confirms that active playback is reaching Plekt; with nothing playing the panel is headed Up Next."
 />
 
 1. Confirm you are on [Dashboard → Now Playing](/docs/dashboard/#now-playing) and that the
    player is still active.
 2. Check the media-server connection under [Settings → Media servers](/docs/settings/media-servers/).
-3. Confirm the Plembfin host can reach the server URL, not just the browser.
+3. Confirm the Plekt host can reach the server URL, not just the browser.
 4. Reopen the Dashboard or return to it from another tab to request an immediate refresh,
    then inspect [Settings → Logs](/docs/settings/logs/) if the session is still missing.
 5. Check the active-session TTL under [Settings → Sync → Sync Tuning](/docs/settings/sync/#sync-tuning).
@@ -111,26 +111,26 @@ event setup](/docs/integrations/#media-servers).
 ## Media-server connection failures
 
 If **Up Next** shows **Jellyfin connection unavailable**, or the equivalent notice for Plex or
-Emby, Plembfin keeps the saved Up Next items visible while it retries the affected server in the
+Emby, Plekt keeps the saved Up Next items visible while it retries the affected server in the
 background. The notice appears within about a minute of the server going offline. A connection
 problem does not delete your local watch history or clear the rail: an offline server is stood
 down briefly instead of being retried on every lookup, skipped by the Up Next push, and cards
-only that server can confirm keep their Watch now links, even across a Plembfin restart.
+only that server can confirm keep their Watch now links, even across a Plekt restart.
 
 1. Select **Retry Connection** beside the notice.
 2. Check the server URL and credentials under [Settings → Media servers](/docs/settings/media-servers/).
-3. Confirm the Plembfin host can reach the media server. Test the URL from the machine running
-   Plembfin, not only from the browser.
+3. Confirm the Plekt host can reach the media server. Test the URL from the machine running
+   Plekt, not only from the browser.
 4. After two unsuccessful retries, select **Help** beside the retry action to return to this
    guide, then check the provider-specific setup and the recent error in [Settings → Logs](/docs/settings/logs/).
 
 For Jellyfin, confirm that the server is running, the configured URL is reachable from the
-Plembfin container or host, the API key or user token is current, and the user can read the
+Plekt container or host, the API key or user token is current, and the user can read the
 libraries used by Up Next. If the server was moved or its reverse-proxy path changed, update the
 connection URL and retry.
 
-When the connection recovers, Plembfin queues an Up Next push straight away. Refresh the
-dashboard; Plembfin replaces the saved snapshot with
+When the connection recovers, Plekt queues an Up Next push straight away. Refresh the
+dashboard; Plekt replaces the saved snapshot with
 the latest provider response; until then, avoid marking an item watched solely because the
 provider rail is unavailable.
 
@@ -139,7 +139,7 @@ provider rail is unavailable.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-up-next-dark.png"
   lightSrc="/assets/app-captures/dashboard-up-next-light.png"
-  alt="Plembfin dashboard Up Next rail showing resume progress and continuation actions"
+  alt="Plekt dashboard Up Next rail showing resume progress and continuation actions"
   caption="Use the Up Next card's progress and actions to decide whether to resume, clear, or complete the item."
 />
 
@@ -165,13 +165,13 @@ actionable; confirmed metadata without a title is displayed as **No title provid
 <ScreenshotFigure
   darkSrc="/assets/app-captures/discover-dark.png"
   lightSrc="/assets/app-captures/discover-light.png"
-  alt="Plembfin Discover page showing current movie and TV feeds"
+  alt="Plekt Discover page showing current movie and TV feeds"
   caption="Discover needs a working TMDB connection before it can populate its rails."
 />
 
 1. Open [Settings → Metadata](/docs/settings/metadata/) and confirm that a valid TMDB API key is configured.
 2. Return to **Discover**, choose **Movies & TV**, and press **Refresh**.
-3. If the page reports that the server route is missing, restart Plembfin so the current
+3. If the page reports that the server route is missing, restart Plekt so the current
    build is serving `/api/discover`.
 4. If TMDB is rate-limited or unavailable, wait and use **Try again** rather than changing
    local watch state.
@@ -185,7 +185,7 @@ or watch history has been deleted.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/watchlist-dark.png"
   lightSrc="/assets/app-captures/watchlist-light.png"
-  alt="Plembfin Watchlist page showing saved media cards"
+  alt="Plekt Watchlist page showing saved media cards"
   caption="Watchlist, Ratings, and Playlists are separate from watched-state sync."
 />
 
@@ -196,7 +196,7 @@ or watch history has been deleted.
 4. For a playlist, check that the title is not already marked **Added** in the chooser. If
    it is missing from an app's copy, look for a **Missing from** note or a held-change
    banner; see [How app sync works](/docs/playlists/#how-app-sync-works).
-5. If the action fails for every title, restart the current Plembfin build and inspect
+5. If the action fails for every title, restart the current Plekt build and inspect
    [Settings → Logs](/docs/settings/logs/) for the Watchlist, Ratings, or Playlists request.
 
 These actions do not create a watch event. Check **History** and **Sync Activity** only when
@@ -211,7 +211,7 @@ Plex. Use **Sync now** or the panel's retry action after correcting the provider
 <ScreenshotFigure
   darkSrc="/assets/app-captures/fix-match-dark.png"
   lightSrc="/assets/app-captures/fix-match-light.png"
-  alt="Plembfin Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback"
+  alt="Plekt Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback"
   caption="Before choosing a match, compare the returned artwork and year with the title you actually own."
 />
 
@@ -260,7 +260,7 @@ The complete action reference is [Fix Match](/docs/media-details/#fix-match).
 <ScreenshotFigure
   darkSrc="/assets/app-captures/library-poster-menu-dark.png"
   lightSrc="/assets/app-captures/library-poster-menu-light.png"
-  alt="Plembfin movie poster card with the shared three-dot quick-actions menu open"
+  alt="Plekt movie poster card with the shared three-dot quick-actions menu open"
   caption="The menu is attached to the poster card; close it and retry from the card if an action does not respond."
 />
 
@@ -290,7 +290,7 @@ For the full list of menu actions and their effects, see [the shared library con
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-appearance-dark.png"
   lightSrc="/assets/app-captures/media-appearance-light.png"
-  alt="Plembfin Appearance menu on a media detail page showing optional content switches"
+  alt="Plekt Appearance menu on a media detail page showing optional content switches"
   caption="Media-detail Appearance options only hide or show Logo Art, Cast Members, Trailers & Clips, Reviews, Images, and Related Shows."
 />
 
@@ -327,7 +327,7 @@ Verify the detail page after the operation completes.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-refresh-dark.png"
   lightSrc="/assets/app-captures/settings-metadata-refresh-light.png"
-  alt="Plembfin Refresh Metadata settings section showing the TMDB and TVDB refresh controls"
+  alt="Plekt Refresh Metadata settings section showing the TMDB and TVDB refresh controls"
   caption="Choose the provider-specific refresh that owns the missing field; TMDB and TVDB are separate operations."
 />
 
@@ -367,7 +367,7 @@ The full procedure is [Refresh all metadata](/docs/settings/#refresh-all-metadat
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-webhooks-setup-dark.png"
   lightSrc="/assets/app-captures/settings-webhooks-setup-light.png"
-  alt="Plembfin Webhooks setup section showing the sender configuration for Plex, Emby, and Jellyfin"
+  alt="Plekt Webhooks setup section showing the sender configuration for Plex, Emby, and Jellyfin"
   caption="Check the provider-specific sender setup before diagnosing a missing watched event."
 />
 
@@ -407,7 +407,7 @@ destination is different from a failed delivery.
 
 ## Resume progress did not carry over
 
-Confirm that the source emitted the position fields Plembfin needs:
+Confirm that the source emitted the position fields Plekt needs:
 
 - Plex: lifecycle events with `viewOffset` and `duration` where available.
 - Emby: `PlaybackPositionTicks` or `PositionTicks`.
@@ -429,7 +429,7 @@ See [watched state and resume progress](/docs/concepts/#watched-state-and-resume
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-providers-dark.png"
   lightSrc="/assets/app-captures/settings-metadata-providers-light.png"
-  alt="Plembfin Metadata Providers settings section showing provider configuration status"
+  alt="Plekt Metadata Providers settings section showing provider configuration status"
   caption="Confirm the provider needed for the missing field is configured before refreshing metadata."
 />
 
@@ -448,7 +448,7 @@ See [metadata and artwork providers](/docs/integrations/#metadata-and-artwork-pr
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-webhooks-secret-dark.png"
   lightSrc="/assets/app-captures/settings-webhooks-secret-light.png"
-  alt="Plembfin Webhook Secret settings section showing webhook authentication guidance"
+  alt="Plekt Webhook Secret settings section showing webhook authentication guidance"
   caption="Use the current secret URL or accepted header form shown in Webhook Secret."
 />
 
@@ -469,18 +469,18 @@ See [Webhooks](/docs/settings/#webhooks) and the provider-specific [integration 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-connections-trakt-dark.png"
   lightSrc="/assets/app-captures/settings-connections-trakt-light.png"
-  alt="Plembfin Trakt connection settings section showing the single-bridge configuration"
+  alt="Plekt Trakt connection settings section showing the single-bridge configuration"
   caption="Trakt should have one intentional bridge; disable competing Trakt writers before retrying."
 />
 
-1. Make Plembfin the only Trakt bridge.
+1. Make Plekt the only Trakt bridge.
 2. Disable Emby and Jellyfin Trakt plugins.
 3. Disable their scheduled Trakt tasks.
 4. Wait for existing queued work to finish.
-5. Correct the title once in Plembfin.
+5. Correct the title once in Plekt.
 6. Watch Sync Activity for another writer before retrying.
 
-A second writer can reapply older state after Plembfin has already corrected it.
+A second writer can reapply older state after Plekt has already corrected it.
 
 For an episode-level Trakt `not_found` result, open the show group in Sync Activity and use
 [Fix show match & retry all](/docs/sync-tools/#trakt-show-match-repair). If the show is not
@@ -493,7 +493,7 @@ Read [Trakt setup](/docs/integrations/#trakt) for the intended ownership model.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-index-focused-dark.png"
   lightSrc="/assets/app-captures/settings-index-focused-light.png"
-  alt="Plembfin Settings landing page showing the settings groups"
+  alt="Plekt Settings landing page showing the settings groups"
   caption="Use the relevant Settings group instead of resetting the whole instance when one value will not save."
 />
 
@@ -512,7 +512,7 @@ instead of resetting the whole instance.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-general-integrity-dark.png"
   lightSrc="/assets/app-captures/settings-general-integrity-light.png"
-  alt="Plembfin System Integrity settings section showing diagnostic controls"
+  alt="Plekt System Integrity settings section showing diagnostic controls"
   caption="System Integrity is the first app-level check for scheduler and service-health problems."
 />
 
@@ -540,7 +540,7 @@ causes it.
 1. On Docker Desktop for macOS or Windows, move `/data` from a folder bind mount to a
    named volume. See [Docker Desktop on macOS or Windows](/docs/getting-started/#docker-desktop-on-macos-or-windows).
 2. Restore your latest backup into the new volume.
-3. Never open `plembfin.db` from the host while the container is running.
+3. Never open the database file (`plekt.db`, or `plembfin.db` on an older install) from the host while the container is running.
 
 Linux hosts are not affected.
 
@@ -549,7 +549,7 @@ Linux hosts are not affected.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-restore-watch-history-dark.png"
   lightSrc="/assets/app-captures/settings-restore-watch-history-light.png"
-  alt="Plembfin Restore settings section showing watch-history restore controls"
+  alt="Plekt Restore settings section showing watch-history restore controls"
   caption="Restore the local archive first, then verify it before replaying changes to connected services."
 />
 
@@ -562,4 +562,4 @@ If a bulk operation produced unexpected unwatches:
 5. Review destination scope before sending anything back out.
 6. Reconnect or repair one destination at a time.
 
-For implementation-level details, use the [technical troubleshooting source on GitHub](https://github.com/Lasikiewicz/plembfin/blob/main/docs/troubleshooting.md).
+For implementation-level details, use the [technical troubleshooting source on GitHub](https://github.com/Lasikiewicz/plekt/blob/main/docs/troubleshooting.md).

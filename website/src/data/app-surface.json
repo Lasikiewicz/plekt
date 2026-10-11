@@ -1,5 +1,17 @@
 [
   {
+    "id": "upgrading-from-plembfin",
+    "label": "Upgrading from Plembfin to Plekt",
+    "docSlug": "upgrading-from-plembfin",
+    "sourcePaths": ["README.md", "docs/development.md", "packaging/windows/README.md", "packaging/windows/Plekt.iss", "server/src/utils/brandEnv.js"]
+  },
+  {
+    "id": "moving-to-port-5056",
+    "label": "Moving to port 5056",
+    "docSlug": "moving-to-port-5056",
+    "sourcePaths": ["README.md", "docker-compose.yml", "packaging/windows/Plekt.iss", "server/src/utils/webhookPortCheck.js"]
+  },
+  {
     "id": "dashboard",
     "label": "Dashboard",
     "docSlug": "dashboard",

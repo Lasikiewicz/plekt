@@ -1,9 +1,9 @@
 ---
 title: Restore
-description: Restore watch history or a full encrypted Plembfin backup from local or remote storage.
+description: Restore watch history or a full encrypted Plekt backup from local or remote storage.
 category: Settings
 order: 5.8
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/tools-backups.js
@@ -21,7 +21,7 @@ screenshots:
 
 import ScreenshotFigure from "../../../components/ScreenshotFigure.astro";
 
-Restore recovers Watch History or a full Plembfin backup from a local file or configured remote
+Restore recovers Watch History or a full Plekt backup from a local file or configured remote
 storage. Always inspect the source, preview, and scope before confirming.
 
 
@@ -30,28 +30,28 @@ storage. Always inspect the source, preview, and scope before confirming.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-restore-focused-dark.png"
   lightSrc="/assets/app-captures/settings-restore-focused-light.png"
-  alt="Plembfin Restore settings showing local watch-history and full-backup sources"
+  alt="Plekt Restore settings showing local watch-history and full-backup sources"
   caption="The Restore page puts local watch-history and full-instance sources before the restore preview."
 />
 
-Choose the local source, select **Watch History** or **Plembfin**, review the preview, and choose
+Choose the local source, select **Watch History** or **Plekt**, review the preview, and choose
 the merge or replacement behavior offered by the dialog.
 
 **Merge into existing state** adds the backup's watched items without touching other watched
 items on connected apps. **Replace existing state** clears current watched items on each
 connected app, then reapplies only the backup set.
 
-## Remote restore
-
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-restore-merge-replace-dark.png"
   lightSrc="/assets/app-captures/settings-restore-merge-replace-light.png"
-  alt="Plembfin Restore settings showing merge and replace restore choices"
-  caption="The restore preview makes merge-versus-replace scope explicit before confirmation."
+  alt="Plekt Restore settings showing merge and replace restore choices"
+  caption="Local Watch History Restore lets you choose merge or replace before restoring a stored backup."
 />
 
+## Remote restore
+
 Choose a configured remote destination, select the backup family, and review the file and scope
-before confirming. A full Plembfin restore requires its encryption passphrase.
+before confirming. A full Plekt restore requires its encryption passphrase.
 
 Safe restore sequence:
 

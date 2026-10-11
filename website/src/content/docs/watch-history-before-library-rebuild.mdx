@@ -3,7 +3,7 @@ title: "Protect watch history before a media-library rebuild"
 description: Back up watched state and resume progress, then restore it carefully after a server or library rebuild.
 category: Sync and maintain
 order: 6.1
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - website/src/content/docs/settings/backup.mdx
   - website/src/content/docs/settings/restore.mdx
@@ -19,42 +19,42 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-*Plembfin steps checked against v1.3.1 on 2 October 2026.*
+*Plekt steps checked against v1.3.1 on 2 October 2026.*
 
 A library rebuild can change item identifiers or temporarily remove titles. Before replacing a server, reinstalling its operating system, or rescanning a library, make a fresh backup and decide how much state the restored data should change.
 
 ## Before the rebuild
 
-1. **Protect Plembfin's data directory.** Confirm the Docker `/data` volume is mapped to storage that will survive the rebuild. Recreating a container does not recreate the data it stored.
-2. **Create a Watch History backup.** In Plembfin, open [Settings → Backup → Local](/docs/settings/backup/#local-backups) and choose **Back Up Now** under Watch History. This backup contains watched state, playstate, and resume progress. A full encrypted Plembfin backup includes broader instance data and should be handled as a secret.
+1. **Protect Plekt's data directory.** Confirm the Docker `/data` volume is mapped to storage that will survive the rebuild. Recreating a container does not recreate the data it stored.
+2. **Create a Watch History backup.** In Plekt, open [Settings → Backup → Local](/docs/settings/backup/#local-backups) and choose **Back Up Now** under Watch History. This backup contains watched state, playstate, and resume progress. A full encrypted Plekt backup includes broader instance data and should be handled as a secret.
 3. **Verify the backup.** Check its timestamp and size in the backup list. Keep a copy outside the machine or disk being rebuilt. Use the dry-run action to validate the Watch History file and review the expected changes without writing them.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-backup-local-dark.png"
   lightSrc="/assets/app-captures/settings-backup-local-light.png"
-  alt="Plembfin Backup settings showing local Watch History backup controls"
+  alt="Plekt Backup settings showing local Watch History backup controls"
   caption="Create a fresh Watch History backup before changing the media server or library."
 />
 
 ## After the rebuild
 
-1. Reconnect the rebuilt server in Plembfin and confirm that the intended server and account are selected.
+1. Reconnect the rebuilt server in Plekt and confirm that the intended server and account are selected.
 2. Let the library finish scanning. Titles may need to be rematched if identifiers or episode details changed.
 3. Open [Settings → Restore → Local](/docs/settings/restore/#local-restore), select the Watch History backup, and review the preview before confirming.
 4. Choose the restore behavior deliberately:
    - **Merge into existing state** adds the backup's watched items to connected apps while leaving their other watched items alone.
    - **Replace existing state** marks watched items in connected apps as unwatched, then reapplies only the backup's watched set. Use it only when those apps should match the backup exactly.
-5. When restore finishes, check a small sample of films, episodes, and resume positions in Plembfin and the provider. Review [Sync Activity](/docs/sync-tools/) for destination failures before normal syncing resumes.
+5. When restore finishes, check a small sample of films, episodes, and resume positions in Plekt and the provider. Review [Sync Activity](/docs/sync-tools/) for destination failures before normal syncing resumes.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-restore-merge-replace-dark.png"
   lightSrc="/assets/app-captures/settings-restore-merge-replace-light.png"
-  alt="Plembfin Restore settings showing the merge and replace choices"
+  alt="Plekt Restore settings showing the merge and replace choices"
   caption="Choose merge or replace based on which watched items should remain on each connected app."
 />
 
 ## What the backup can recover
 
-Plembfin can restore watch history and resume progress it retained in a backup. It cannot recreate state that was never captured. If Plembfin was not in use before the rebuild, check whether Plex, Jellyfin, Trakt, Tautulli, or another backup has an export that can be imported; available data and matching depend on that source.
+Plekt can restore watch history and resume progress it retained in a backup. It cannot recreate state that was never captured. If Plekt was not in use before the rebuild, check whether Plex, Jellyfin, Trakt, Tautulli, or another backup has an export that can be imported; available data and matching depend on that source.
 
-Never publish a backup file. Watch History backups contain personal viewing history, and full Plembfin backups can contain settings and credentials. Read the [Backup guide](/docs/settings/backup/), [Restore guide](/docs/settings/restore/), and [Operations guide](/docs/operations/#backups) for the current interface and recovery details.
+Never publish a backup file. Watch History backups contain personal viewing history, and full Plekt backups can contain settings and credentials. Read the [Backup guide](/docs/settings/backup/), [Restore guide](/docs/settings/restore/), and [Operations guide](/docs/operations/#backups) for the current interface and recovery details.

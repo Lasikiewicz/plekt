@@ -1,0 +1,95 @@
+---
+title: Moving to port 5056
+description: Move an existing Plembfin install to Plekt's new default port 5056, or keep the old port, with Docker, Unraid, Windows, and webhook steps.
+category: Start here
+order: 3
+sourceVersion: "2.0.0"
+sourcePaths:
+  - README.md
+  - docker-compose.yml
+  - packaging/windows/Plekt.iss
+  - server/src/utils/webhookPortCheck.js
+---
+
+Plekt's default port is now **5056**. It was 5055. The port moved so Plekt can run alongside
+Seerr, which uses 5055. Nothing changes inside the container: Docker still listens on 5055
+internally, so only the host port you open in the browser changes.
+
+You can move to 5056, or keep your old port. Either works. The steps below cover each
+install type.
+
+Updating an existing Plembfin instance? Start with
+[Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) to protect its data and settings.
+
+## Before you start
+
+- Take a backup in [Backups and operations](/docs/operations/).
+- Note the host port your install uses today (5055 for most installs).
+- Note every webhook that points at Plekt, including Jellyfin, Emby, and Plex senders.
+
+## Docker Compose
+
+Change the port mapping and tell Plekt which host port to expect:
+
+```yaml
+services:
+  plekt:
+    image: plembfin/plekt:latest
+    container_name: plekt
+    ports:
+      - "5056:5055"
+    environment:
+      PLEKT_PUBLISHED_PORT: "5056"
+```
+
+Run `docker compose up -d`, then open `http://localhost:5056`.
+
+To keep port 5055, leave the mapping as `"5055:5055"` and set `PLEKT_PUBLISHED_PORT` to
+`"5055"`.
+
+### Image names
+
+Plekt publishes under the new image names. Your existing image keeps receiving releases for at
+least six months after the rebrand, so you can move when it suits you:
+
+- `plembfin/plekt` on Docker Hub, or `ghcr.io/lasikiewicz/plekt` on GitHub Container Registry
+- old names: `plembfin/plembfin` and `ghcr.io/lasikiewicz/plembfin`
+
+Keep the same tag, volume, and settings when you change the image name.
+
+## Unraid
+
+In the Plekt container template, map host port **5056** to container port **5055**. Keep the
+container port at 5055. Open `http://<unraid-ip>:5056` afterwards.
+
+To keep the old port, leave the host port at 5055 and set `PLEKT_PUBLISHED_PORT` to `5055`.
+
+## Windows
+
+The Plekt installer asks which dashboard port to use during install or upgrade. Its default is
+5056. Choose the port you want, then check the address in the browser after the upgrade.
+The private-network firewall rule follows the port you choose.
+
+If you use a shortcut or bookmark, update it to the new address.
+
+## Node.js
+
+Start Plekt with `npm start`. It listens on 5056 by default. To keep 5055, run
+`PORT=5055 npm start` (bash) or `$env:PORT=5055; npm start` (PowerShell).
+
+## Webhooks
+
+Plekt cannot change the port your media servers send to. Update each sender:
+
+- **Jellyfin:** in the Webhook plugin, change the URL to port 5056.
+- **Emby and Plex:** change the webhook URL in their settings to port 5056.
+
+Plekt reads `PLEKT_PUBLISHED_PORT` when it starts, so restart Plekt after changing that value.
+If you keep port 5055, set `PLEKT_PUBLISHED_PORT` to `5055`. Check the configured sender URLs
+and send a test webhook after an update; the dashboard does not display a port reminder.
+
+## Checking the move
+
+1. Open the new address and sign in.
+2. Open **Settings → Connections** and confirm Plex, Emby, and Jellyfin still connect.
+3. Trigger a test webhook from one media server and confirm it appears in **Sync activity**.

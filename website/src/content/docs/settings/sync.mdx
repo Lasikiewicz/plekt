@@ -3,7 +3,7 @@ title: Sync
 description: Tune synchronization, run controlled repair tools, and review delivery history.
 category: Settings
 order: 5.6
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -38,14 +38,14 @@ screenshots:
 import ScreenshotFigure from "../../../components/ScreenshotFigure.astro";
 
 Sync brings together timing controls, watched-state repair actions, private-list and rating sync,
-cross-platform diagnostics, and the history of dispatches made by Plembfin.
+cross-platform diagnostics, and the history of dispatches made by Plekt.
 
 ## Sync tuning
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-tuning-dark.png"
   lightSrc="/assets/app-captures/settings-sync-tuning-light.png"
-  alt="Plembfin Sync Tuning settings showing watched-flag policy, playback thresholds, sync timing, and Up Next provider sync"
+  alt="Plekt Sync Tuning settings showing watched-flag policy, playback thresholds, sync timing, and Up Next provider sync"
   caption="Sync Tuning combines watched-flag policy, playback thresholds, sync timing, and the Up Next provider-sync toggle."
 />
 
@@ -55,25 +55,25 @@ kept:
 - **Watched Threshold (%)** sets the playback percentage required to record a watch.
 - **Minimum Resume Position (sec)** prevents very short pauses from becoming resume markers.
 - **Active Session TTL (min)** controls when an inactive Now Playing session is considered stale.
-- **Outbound Request Timeout (sec)** controls how long Plembfin waits for a media-server response.
+- **Outbound Request Timeout (sec)** controls how long Plekt waits for a media-server response.
 - **Fast Local-Network Sync** removes most outbound pacing delays for bulk sync operations.
   Enable it only when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local
-  network as Plembfin. It is not safe for servers reached over the public internet.
+  network as Plekt. It is not safe for servers reached over the public internet.
 
 Change one value at a time, save it, and verify the next event in Sync Activity.
 
 ## Up Next provider sync
 
-The **Sync Up Next to media apps** toggle is on by default. When it is enabled, Plembfin pushes
+The **Sync Up Next to media apps** toggle is on by default. When it is enabled, Plekt pushes
 the unified Up Next queue to Plex Continue Watching, Emby Continue Watching, and Jellyfin Next
 Up without removing anything already there. An item leaves a media app only when you clear its
-progress or remove it in Plembfin.
+progress or remove it in Plekt.
 
 Queue additions, removals, reorderings, and resume-progress changes queue one coalesced
 background push using the latest queue content. The push runs through the worker even when the
 Dashboard is closed. Use the Dashboard's **Sync Up Next** action when you need an immediate
 push instead of waiting for the background worker. Turn the toggle off when those provider lists
-should remain unchanged; Plembfin's own Up Next view remains available.
+should remain unchanged; Plekt's own Up Next view remains available.
 
 Provider feed failures retain the last successful observation and do not clear the local queue.
 For the target mapping and native-rail behavior, see [Dashboard → Up Next](/docs/dashboard/#up-next).
@@ -98,7 +98,7 @@ Trakt cannot identify a show.
 Personal Rating Sync is independent of watched-state synchronization and is disabled by
 default. The single **Sync personal ratings** toggle enables two-way reconciliation for
 personal movie, TV-show, and episode ratings across connected Plex, Emby, Jellyfin, and Trakt
-accounts. Plembfin remains the conflict authority: a change made directly on one service syncs
+accounts. Plekt remains the conflict authority: a change made directly on one service syncs
 out to the others unless a local edit is genuinely newer.
 
 The first complete snapshot imports provider ratings. Later complete snapshots reconcile
@@ -113,7 +113,7 @@ score.
 ## Plex Watchlist Sync
 
 Plex Watchlist Sync is also independent and disabled by default. The single **Sync watchlist
-with Plex** toggle keeps Plembfin's local canonical movie/show Watchlist aligned with Plex's
+with Plex** toggle keeps Plekt's local canonical movie/show Watchlist aligned with Plex's
 account-level Universal Watchlist. Emby and Jellyfin are not watchlist providers.
 
 The first run takes a safe union of the local and Plex lists. Later complete snapshots
@@ -130,7 +130,7 @@ and on the Plex step in [Onboarding](/docs/settings/tools/#reopen-onboarding).
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-tools-dark.png"
   lightSrc="/assets/app-captures/settings-sync-tools-light.png"
-  alt="Plembfin Sync Tools settings showing repair, source-of-truth, and import controls"
+  alt="Plekt Sync Tools settings showing repair, source-of-truth, and import controls"
   caption="Sync Tools separates recent repair, local push, and additive import directions."
 />
 
@@ -141,7 +141,7 @@ Use these actions deliberately and keep a current backup before library-wide ope
 Checks recent watched items for missing or incomplete local records and repairs data that can be
 resolved safely.
 
-### Set Plembfin as Source of Truth
+### Set Plekt as Source of Truth
 
 Pushes the local canonical watched state and resume positions to one selected server or all
 connected destinations. Review the preview before confirming because this can overwrite remote
@@ -149,7 +149,7 @@ state.
 
 ### Import Watched Status
 
-Pulls watched state from one selected server or all connected destinations into Plembfin. It does
+Pulls watched state from one selected server or all connected destinations into Plekt. It does
 not send changes out or remove remote state.
 
 ## Sync issues and match report
@@ -157,8 +157,8 @@ not send changes out or remove remote state.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/sync-activity-issues-focused-dark.png"
   lightSrc="/assets/app-captures/sync-activity-issues-focused-light.png"
-  alt="Plembfin Sync Activity showing current sync issues, failed groups, and the Issues only filter"
-  caption="Sync Activity keeps destination failures and cross-platform match issues visible for review and retry."
+  alt="Plekt Sync Activity showing current sync issues, failed groups, and the Issues only filter"
+  caption="Issues only filters Sync Activity to current problems and shows the issue and media-group counts beside the failed groups."
 />
 
 Sync Activity's **Issues only** view shows dispatches that could not reach a destination, while
