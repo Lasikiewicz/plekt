@@ -4,7 +4,7 @@
 // default) and the apps to sync to, with only its own app ticked. Smart
 // playlists are counted, not listed. playlists.js passes its helpers in, so
 // this module imports only utils.
-import { escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.2.2";
+import { escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.3.0";
 
 const APP_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
 const APP_ORDER = ["plex", "emby", "jellyfin"];

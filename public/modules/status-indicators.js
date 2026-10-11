@@ -1,5 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.2";
-import { state, elements } from "./state.js?v=1.3.1.2.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.3.0";
+import { state, elements } from "./state.js?v=1.3.1.3.0";
 
 const REVIEW_POLL_MS = 30000;
 

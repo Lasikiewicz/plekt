@@ -1,10 +1,88 @@
 {
   "baseVersion": "1.3.1",
-  "build": 2,
-  "version": "1.3.1.2.0",
-  "updatedAt": "2026-10-05T23:12:17.325Z",
+  "build": 3,
+  "version": "1.3.1.3.0",
+  "updatedAt": "2026-10-11T13:26:14.197Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 3,
+      "version": "1.3.1.3.0",
+      "shortVersion": "1.3.1.3.0",
+      "date": "2026-10-11T13:26:14.197Z",
+      "commit": "09f2af95a19c6b978fd96a6a3f947caf0277cd51",
+      "message": "Feature - Rename the app to Plekt",
+      "author": "Lasikiewicz",
+      "details": [
+        "Feature: Rename the app to Plekt",
+        "Feature: New Plekt wordmark in the sidebar, sign-in, setup and About pages, in dark and light, with the old logo's heavier lettering and diagonal cut",
+        "Feature: New app icon for the browser tab, home screen and Windows, with a dark background that fills the icon on phones",
+        "Feature: New icon for the app's own entries in watch rows and Force Sync",
+        "Feature: The app, sign-in, setup, About pages and browser tab now say Plekt throughout",
+        "Feature: Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names",
+        "Feature: Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header",
+        "Feature: New backups are named plekt-backup and plekt-watch-history; backups made earlier still restore, still appear in lists and still count toward retention",
+        "Feature: Remote backup retention orders files by the date in their name, so older-named files are removed first",
+        "Feature: New installs store data in plekt.db; an existing plembfin.db is kept and used",
+        "Feature: Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change",
+        "Feature: The Windows installer moves an existing Plembfin service and data folder to the Plekt names",
+        "Feature: The default published port moves from 5055 to 5056 (set with PLEKT_PUBLISHED_PORT), and a banner warns when a Jellyfin webhook still targets the old port",
+        "Feature: In-app help links point to plekt.net",
+        "Feature: Audit history payloads are size-limited so the database grows more slowly, and unexpected process errors are handled more safely"
+      ],
+      "sections": {
+        "newFeatures": [
+          "Rename the app to Plekt",
+          "New Plekt wordmark in the sidebar, sign-in, setup and About pages, in dark and light, with the old logo's heavier lettering and diagonal cut",
+          "New app icon for the browser tab, home screen and Windows, with a dark background that fills the icon on phones",
+          "New icon for the app's own entries in watch rows and Force Sync",
+          "The app, sign-in, setup, About pages and browser tab now say Plekt throughout",
+          "Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names",
+          "Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header",
+          "New backups are named plekt-backup and plekt-watch-history; backups made earlier still restore, still appear in lists and still count toward retention",
+          "Remote backup retention orders files by the date in their name, so older-named files are removed first",
+          "New installs store data in plekt.db; an existing plembfin.db is kept and used",
+          "Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change",
+          "The Windows installer moves an existing Plembfin service and data folder to the Plekt names",
+          "The default published port moves from 5055 to 5056 (set with PLEKT_PUBLISHED_PORT), and a banner warns when a Jellyfin webhook still targets the old port",
+          "In-app help links point to plekt.net",
+          "Audit history payloads are size-limited so the database grows more slowly, and unexpected process errors are handled more safely"
+        ],
+        "majorBugFixes": [],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [
+          {
+            "title": "Settings",
+            "details": [
+              "Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names"
+            ]
+          },
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Rename the app to Plekt",
+              "New Plekt wordmark in the sidebar, sign-in, setup and About pages, in dark and light, with the old logo's heavier lettering and diagonal cut",
+              "New app icon for the browser tab, home screen and Windows, with a dark background that fills the icon on phones",
+              "New icon for the app's own entries in watch rows and Force Sync",
+              "The app, sign-in, setup, About pages and browser tab now say Plekt throughout",
+              "Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header",
+              "New backups are named plekt-backup and plekt-watch-history; backups made earlier still restore, still appear in lists and still count toward retention",
+              "Remote backup retention orders files by the date in their name, so older-named files are removed first",
+              "New installs store data in plekt.db; an existing plembfin.db is kept and used",
+              "Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change",
+              "The Windows installer moves an existing Plembfin service and data folder to the Plekt names",
+              "The default published port moves from 5055 to 5056 (set with PLEKT_PUBLISHED_PORT), and a banner warns when a Jellyfin webhook still targets the old port",
+              "In-app help links point to plekt.net",
+              "Audit history payloads are size-limited so the database grows more slowly, and unexpected process errors are handled more safely"
+            ]
+          }
+        ],
+        "majorBugFixes": [],
+        "tweaks": []
+      }
+    },
     {
       "build": 2,
       "version": "1.3.1.2.0",
@@ -122,5 +200,5 @@
       }
     }
   ],
-  "shortVersion": "1.3.1.2.0"
+  "shortVersion": "1.3.1.3.0"
 }

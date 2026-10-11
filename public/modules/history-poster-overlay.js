@@ -1,4 +1,4 @@
-import { escapeAttribute, escapeHtml, formatDate, sourceBadgeHtml } from "./utils.js?v=1.3.1.2.2";
+import { escapeAttribute, escapeHtml, formatDate, sourceBadgeHtml } from "./utils.js?v=1.3.1.3.0";
 
 // History poster overlay (plan/archive/theme-styles/plan.md, step 15). With
 // Posters only on, every folded History poster (grid, list and cards views)

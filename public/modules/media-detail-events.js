@@ -1,9 +1,9 @@
-import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=1.3.1.2.2";
-import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource } from "./utils.js?v=1.3.1.2.2";
-import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=1.3.1.2.2";
-import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=1.3.1.2.2";
-import { movieBySlugOrId } from "./media-routing.js?v=1.3.1.2.2";
-import { ifLoaded, lazyExport, loadRouteModules, loadedRouteModule } from "./route-modules.js?v=1.3.1.2.2";
+import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=1.3.1.3.0";
+import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource } from "./utils.js?v=1.3.1.3.0";
+import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=1.3.1.3.0";
+import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=1.3.1.3.0";
+import { movieBySlugOrId } from "./media-routing.js?v=1.3.1.3.0";
+import { ifLoaded, lazyExport, loadRouteModules, loadedRouteModule } from "./route-modules.js?v=1.3.1.3.0";
 
 // This module wires document-wide handlers that the dashboard and library
 // pages use too, so it loads with the shell. Its route modules are therefore

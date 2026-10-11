@@ -35,8 +35,8 @@ to each other - Plekt remembers what you've watched and keeps everyone in sync.
 
 ## Formerly Plembfin
 
-This checkout contains the unreleased rebrand. New image/repository names and
-`plekt.net` documentation links must be verified before the rebrand is published.
+This alpha cycle is the Plekt rebrand. The new image and repository names and the
+`plekt.net` documentation links are checked before each stable release.
 
 Plekt is the same app with a new name. Existing Docker installs only need to change
 `ghcr.io/lasikiewicz/plembfin` to `ghcr.io/lasikiewicz/plekt`, or
@@ -199,7 +199,8 @@ include the current release version and cycle number (for example, `1.3.1 Build 
 [`docs/development.md`](docs/development.md) for how the three channels relate.
 
 Tagged releases are also on Docker Hub as `plembfin/plekt:latest` (and
-`plembfin/plekt:<version>`), the same image as the GHCR `:latest`. The `alpha` and
+`plembfin/plekt:<version>`), the same image as the GHCR `:latest`. The earlier
+`plembfin/plembfin` Docker Hub name is still published alongside it. The `alpha` and
 `develop` channels are published to GHCR only.
 
 To run a different channel, swap the `image:` tag in the Docker Compose example below -
