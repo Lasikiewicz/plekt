@@ -4329,6 +4329,31 @@
         ]
       ]
     },
+    "changelog.develop.json": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "\"Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\",",
+          1
+        ],
+        [
+          "\"Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header\",",
+          1
+        ],
+        [
+          "\"New installs store data in plekt.db; an existing plembfin.db is kept and used\",",
+          1
+        ],
+        [
+          "\"Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change\",",
+          1
+        ],
+        [
+          "\"The Windows installer moves an existing Plembfin service and data folder to the Plekt names\",",
+          1
+        ]
+      ]
+    },
     "public/modules/utils.js": {
       "reason": "internal",
       "lines": [
@@ -4346,6 +4371,10 @@
         ],
         [
           "if (normalized === \"plembfin\") return \"Plekt\";",
+          1
+        ],
+        [
+          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=1.3.1.2.2\";",
           1
         ],
         [
