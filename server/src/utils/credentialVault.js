@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import { CREDENTIAL_KEY_PATH } from "../paths.js";
 import { db } from "../db.js";
+import { brandEnv } from "./brandEnv.js";
 
 export const CREDENTIAL_VAULT_VERSION = 1;
 const KEY_BYTES = 32;
@@ -21,12 +22,12 @@ function decodeEnvironmentKey(value) {
   const input = String(value || "").trim();
   if (!input) return null;
   const key = /^[a-f\d]{64}$/i.test(input) ? Buffer.from(input, "hex") : Buffer.from(input, "base64url");
-  if (key.length !== KEY_BYTES) throw new Error("PLEMBFIN_CREDENTIAL_KEY must encode exactly 32 bytes (64 hex characters or base64url)");
+  if (key.length !== KEY_BYTES) throw new Error("PLEKT_CREDENTIAL_KEY must encode exactly 32 bytes (64 hex characters or base64url)");
   return key;
 }
 
 export function loadCredentialKey({ keyPath = CREDENTIAL_KEY_PATH, database = db, env = process.env } = {}) {
-  const environmentKey = decodeEnvironmentKey(env.PLEMBFIN_CREDENTIAL_KEY);
+  const environmentKey = decodeEnvironmentKey(brandEnv("CREDENTIAL_KEY", env));
   if (environmentKey) return environmentKey;
 
   let key = null;
@@ -41,7 +42,7 @@ export function loadCredentialKey({ keyPath = CREDENTIAL_KEY_PATH, database = db
   }
 
   if (encryptedCredentialsExist(database)) {
-    throw new Error("Credential key is missing while encrypted media credentials exist; restore credential.key or set PLEMBFIN_CREDENTIAL_KEY");
+    throw new Error("Credential key is missing while encrypted media credentials exist; restore credential.key or set PLEKT_CREDENTIAL_KEY");
   }
 
   const generatedKey = crypto.randomBytes(KEY_BYTES);

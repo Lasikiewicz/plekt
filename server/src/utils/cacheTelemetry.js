@@ -8,12 +8,14 @@
 // records the rebuild itself: which cache, how long it took, and which
 // generation change it was for.
 //
-// Set PLEMBFIN_DEBUG_CACHE_REBUILDS=1 to log one line per rebuild (visible in
+// Set PLEKT_DEBUG_CACHE_REBUILDS=1 to log one line per rebuild (visible in
 // Settings → Logs via the diagnostic logger), in the same style as
-// PLEMBFIN_DEBUG_OUTBOUND. The counters below are always collected: they cost
+// PLEKT_DEBUG_OUTBOUND. The counters below are always collected: they cost
 // one timestamp pair per rebuild, never per row.
 
-const DEBUG_CACHE_REBUILDS = ["1", "true"].includes(String(process.env.PLEMBFIN_DEBUG_CACHE_REBUILDS || "").toLowerCase());
+import { brandEnv } from "./brandEnv.js";
+
+const DEBUG_CACHE_REBUILDS = ["1", "true"].includes(String(brandEnv("DEBUG_CACHE_REBUILDS") || "").toLowerCase());
 
 const RECENT_REBUILD_LIMIT = 200;
 

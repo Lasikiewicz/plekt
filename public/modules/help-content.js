@@ -1,5 +1,5 @@
-import { getWebhookToken } from "./auth.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=1.3.1.1.2";
+import { getWebhookToken } from "./auth.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=1.3.1.2.1";
 
 function snippet(code, language = "text") {
   const trimmed = String(code).trim();
@@ -24,7 +24,7 @@ export function adminTokenGuide() {
       <ol style="display: grid; gap: var(--space-2); margin: 0; padding-left: 1.2rem; line-height: 1.5; font-size: 0.82rem; color: var(--text);">
         <li><b>Default credentials:</b> Username is <code>admin</code> on first run. If <code>ADMIN_PASSWORD</code> isn't set, a random password is generated and printed once to the server console.</li>
         <li><b>Environment overrides:</b> Set <code>ADMIN_USERNAME</code> and <code>ADMIN_PASSWORD</code> as environment variables (for example, in <code>docker-compose.yml</code>) to override a fresh install.</li>
-        <li><b>In-app management:</b> Once you change credentials in Settings, Plembfin manages them itself and stops reading the environment variables.</li>
+        <li><b>In-app management:</b> Once you change credentials in Settings, Plekt manages them itself and stops reading the environment variables.</li>
         <li><b>Webhook secrets:</b> A separate secret token, not this password, is what secures webhooks. Rotate it any time without affecting your admin login.</li>
       </ol>
     </div>
@@ -73,7 +73,7 @@ export function embyCredentialGuide() {
         <li>Click the gear icon in the top right to access <b>Server Settings</b>.</li>
         <li>In the left-hand sidebar, scroll down to the <b>Advanced</b> section and click <b>API Keys</b>.</li>
         <li>Click the <b>New API Key</b> button.</li>
-        <li>Enter an app name identifier, for example <code>Plembfin Tracker</code>, and click OK.</li>
+        <li>Enter an app name identifier, for example <code>Plekt Tracker</code>, and click OK.</li>
         <li>Copy the newly generated long character string from the table.</li>
       </ol>
       <h3>Finding your EMBY_USER_ID</h3>
@@ -102,7 +102,7 @@ export function jellyfinCredentialGuide() {
         <li>Open your Jellyfin Dashboard using an administrator profile.</li>
         <li>Select the <b>Dashboard</b> menu option under the <b>Administration</b> section.</li>
         <li>Scroll down the left settings panel until you reach the <b>Advanced</b> header and select <b>API Keys</b>.</li>
-        <li>Click the <code>+</code> icon button to generate a token. Name it <code>Plembfin Bridge</code>.</li>
+        <li>Click the <code>+</code> icon button to generate a token. Name it <code>Plekt Bridge</code>.</li>
         <li>Instantly copy the resulting string.</li>
       </ol>
       <h3>Finding your JELLYFIN_USER_ID</h3>
@@ -120,8 +120,8 @@ export function traktBridgeGuide() {
   return `
     <div class="credential-guide" style="display: grid; gap: var(--space-3);">
       <div class="guide-callout">
-        <b>Let Plembfin be the only Trakt bridge</b>
-        <p style="margin: var(--space-1) 0 0;">The live connection reads and writes Trakt directly. A watched or unwatched change made in Trakt, Plex, Emby, Jellyfin, or Plembfin is then distributed to every other connected service. Running an Emby or Jellyfin Trakt plugin at the same time creates a second writer and can restore stale state.</p>
+        <b>Let Plekt be the only Trakt bridge</b>
+        <p style="margin: var(--space-1) 0 0;">The live connection reads and writes Trakt directly. A watched or unwatched change made in Trakt, Plex, Emby, Jellyfin, or Plekt is then distributed to every other connected service. Running an Emby or Jellyfin Trakt plugin at the same time creates a second writer and can restore stale state.</p>
       </div>
 
       <details class="sync-tool-details" open>
@@ -131,8 +131,8 @@ export function traktBridgeGuide() {
         </summary>
         <div class="tool-item-row" style="display: grid; gap: var(--space-2);">
           <ol>
-            <li>Choose <b>Connect Trakt</b>. Plembfin uses its built-in Trakt device application, so normal users do not need Trakt VIP or their own API application.</li>
-            <li>Visit the displayed Trakt activation link, enter the device code, and approve access. Plembfin encrypts your access and refresh tokens at rest.</li>
+            <li>Choose <b>Connect Trakt</b>. Plekt uses its built-in Trakt device application, so normal users do not need Trakt VIP or their own API application.</li>
+            <li>Visit the displayed Trakt activation link, enter the device code, and approve access. Plekt encrypts your access and refresh tokens at rest.</li>
             <li>A server administrator can replace the built-in application with <code>TRAKT_CLIENT_ID</code> and <code>TRAKT_CLIENT_SECRET</code>. If it is unavailable, a Trakt VIP developer can expand <b>Use a personal Trakt app</b>.</li>
           </ol>
         </div>
@@ -147,19 +147,19 @@ export function traktBridgeGuide() {
           <ul>
             <li><b>Emby:</b> disable the Trakt plugin or remove its authorization, then disable every Trakt scheduled task. Turning off only scheduled history is insufficient because realtime scrobbling can still write.</li>
             <li><b>Jellyfin:</b> choose <b>De-authorize Device</b> in the Trakt plugin, or disable the plugin. At minimum turn off live scrobbling, instant watched/unwatched, and both watched-state scheduled tasks.</li>
-            <li>Plex needs no plugin. Plembfin sends Plex changes to Trakt itself.</li>
+            <li>Plex needs no plugin. Plekt sends Plex changes to Trakt itself.</li>
           </ul>
         </div>
       </details>
 
       <div class="guide-callout">
         <b>Choose the first-connection mode</b>
-        <p style="margin: var(--space-1) 0 0;"><b>Use “Start from current state”</b> when your media servers already have watch history, or you are not sure which service is complete. Plembfin records Trakt's current state as a baseline without sending existing Trakt watches to Plex, Emby, or Jellyfin. Future changes still sync.</p>
-        <p style="margin: var(--space-1) 0 0;"><b>Use “Import all existing Trakt watched state”</b> when Trakt is your trusted source, your other servers are new or empty, or you are migrating to Plembfin. It imports Trakt's existing history and queues matching items as watched on your connected servers.</p>
-        <p style="margin: var(--space-1) 0 0;">This imports watched state, not every historical play date into each media server. Plembfin keeps Trakt play dates and rewatches in its own history, while Plex, Emby, and Jellyfin typically receive watched/unwatched updates.</p>
+        <p style="margin: var(--space-1) 0 0;"><b>Use “Start from current state”</b> when your media servers already have watch history, or you are not sure which service is complete. Plekt records Trakt's current state as a baseline without sending existing Trakt watches to Plex, Emby, or Jellyfin. Future changes still sync.</p>
+        <p style="margin: var(--space-1) 0 0;"><b>Use “Import all existing Trakt watched state”</b> when Trakt is your trusted source, your other servers are new or empty, or you are migrating to Plekt. It imports Trakt's existing history and queues matching items as watched on your connected servers.</p>
+        <p style="margin: var(--space-1) 0 0;">This imports watched state, not every historical play date into each media server. Plekt keeps Trakt play dates and rewatches in its own history, while Plex, Emby, and Jellyfin typically receive watched/unwatched updates.</p>
         <p style="margin: var(--space-1) 0 0;"><b>Rule of thumb:</b> keep the safe default unless you intentionally want Trakt to populate the other servers.</p>
       </div>
-      <p class="tool-accordion-desc" style="margin: 0;"><b>After the first connection:</b> Plembfin checks the complete Trakt snapshot each minute; additions become watched actions and removals become unwatched actions. <b>Sync Now</b> is a safe repair pass: it restores missing watched state from Trakt, but never treats a partial Trakt response as a bulk unwatch. While it runs, the connection card shows progress and changes the action to “Syncing”; completion reports how many Trakt items were checked and how many changes were applied.</p>
+      <p class="tool-accordion-desc" style="margin: 0;"><b>After the first connection:</b> Plekt checks the complete Trakt snapshot each minute; additions become watched actions and removals become unwatched actions. <b>Sync Now</b> is a safe repair pass: it restores missing watched state from Trakt, but never treats a partial Trakt response as a bulk unwatch. While it runs, the connection card shows progress and changes the action to “Syncing”; completion reports how many Trakt items were checked and how many changes were applied.</p>
     </div>
   `;
 }
@@ -178,7 +178,7 @@ export function embyWebhookSetup() {
         <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL">Copy</button>
         <pre><code>${escapeHtml(url)}</code></pre>
       </div>
-      <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">Automation clients can also call <code>/api/webhook</code> with an <code>X-Plembfin-Webhook-Secret</code> or <code>Authorization: Bearer</code> header.</p>
+      <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">Automation clients can also call <code>/api/webhook</code> with an <code>X-Plekt-Webhook-Secret</code> or <code>Authorization: Bearer</code> header.</p>
       <ul class="webhook-instruction-list">
         <li>Go to Emby Preferences ➔ <b>Notifications</b> ➔ <b>Webhooks</b> and add a new webhook pointing to the URL above.</li>
         <li>Under <b>Events → Playback</b>, check:
@@ -195,7 +195,7 @@ export function embyWebhookSetup() {
             <li><code>Mark Unplayed</code> <span>Detects items manually marked as unwatched.</span></li>
           </ul>
         </li>
-        <li>Leave every other event category unticked. Plembfin ignores library, system, and activity events, and they only add rejected entries to Sync History.</li>
+        <li>Leave every other event category unticked. Plekt ignores library, system, and activity events, and they only add rejected entries to Sync History.</li>
         <li>Enable <b>Send All Properties</b> so payloads include <code>PlaybackPositionTicks</code> for resume sync.</li>
       </ul>
     </div>
@@ -210,17 +210,17 @@ export function jellyfinWebhookSetup() {
         <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL">Copy</button>
         <pre><code>${escapeHtml(url)}</code></pre>
       </div>
-      <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">Automation clients can also call <code>/api/webhook</code> with an <code>X-Plembfin-Webhook-Secret</code> or <code>Authorization: Bearer</code> header.</p>
+      <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">Automation clients can also call <code>/api/webhook</code> with an <code>X-Plekt-Webhook-Secret</code> or <code>Authorization: Bearer</code> header.</p>
       <ul class="webhook-instruction-list">
         <li>Install the <b>Webhooks</b> plugin in the Jellyfin Dashboard (Plugins → Catalog).</li>
-        <li>Add a new <b>Generic Webhook</b> named <code>plembfin</code> pointing to the URL above. Check <b>Enable</b>.</li>
+        <li>Add a new <b>Generic Webhook</b> named <code>plekt</code> pointing to the URL above. Check <b>Enable</b>.</li>
         <li>Under <b>Notification Type</b>, check:
           <ul class="webhook-option-list">
             <li><code>Playback Start</code> <span>Required to detect when media starts playing.</span></li>
             <li><code>Playback Progress</code> <span>Required to keep resume progress up to date while media plays.</span></li>
             <li><code>Playback Stop</code> <span>Required to save the final position and evaluate watched status.</span></li>
             <li><code>User Data Saved</code> <span>Detects items manually marked as watched or unwatched.</span></li>
-            <li><code>Item Added</code> <span>Optional. Applies Plembfin's existing watched state when new media is added to Jellyfin.</span></li>
+            <li><code>Item Added</code> <span>Optional. Applies Plekt's existing watched state when new media is added to Jellyfin.</span></li>
           </ul>
         </li>
         <li>Under <b>Item Type</b>, select:
@@ -229,9 +229,9 @@ export function jellyfinWebhookSetup() {
             <li><code>Episodes</code> <span>Enables episode playback and watch-state updates.</span></li>
           </ul>
         </li>
-        <li>Leave every other notification type and item type unticked. Plembfin ignores them.</li>
+        <li>Leave every other notification type and item type unticked. Plekt ignores them.</li>
         <li>Check <b>Send All Properties (ignores template)</b> so resume position fields are included.</li>
-        <li>The body has to be JSON, but the content type does not matter - Jellyfin labels its payloads <code>text/plain</code> and Plembfin reads them anyway. A body that is not JSON is logged in Sync History as <code>Unsupported webhook content type</code>, along with the sender that posted it.</li>
+        <li>The body has to be JSON, but the content type does not matter - Jellyfin labels its payloads <code>text/plain</code> and Plekt reads them anyway. A body that is not JSON is logged in Sync History as <code>Unsupported webhook content type</code>, along with the sender that posted it.</li>
       </ul>
     </div>
   `;
@@ -241,7 +241,7 @@ export function webhookWarning() {
   return `
     <div class="guide-callout warning-callout" style="gap: var(--space-3); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08);">
       <b style="font-size: 1.1rem; color: var(--yellow);">Webhook Setup & Unwatched Sync Guide</b>
-      <p>Configure your media servers to send played and unplayed/unwatched events to your Plembfin webhook URL:</p>
+      <p>Configure your media servers to send played and unplayed/unwatched events to your Plekt webhook URL:</p>
 
       <div style="display: grid; gap: var(--space-2); margin-top: var(--space-2);">
         <h3 style="margin: 0; color: var(--text); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
@@ -250,9 +250,9 @@ export function webhookWarning() {
         </h3>
         <ul style="padding-left: 1.2rem; margin: 0; display: grid; gap: 4px;">
           <li>Plex does not support sending unwatched (unscrobble) events via native webhooks or Tautulli.</li>
-          <li>For resume sync, Plex webhook traffic must include playback lifecycle events such as <code>media.play</code>, <code>media.resume</code>, <code>media.pause</code>, <code>media.stop</code>, and <code>media.scrobble</code>. Plembfin reads <code>viewOffset</code> and <code>duration</code> when Plex provides them.</li>
-          <li><b>Real-time Sync (Built-in):</b> Plembfin's server includes a built-in Plex notification listener. It connects to your Plex Media Server via the WebSocket notification channel (configured automatically from your Plex URL and token in Settings → Media Servers), records watched and unwatched library changes, and expands bulk show or season changes into their episodes for propagation - no external script or daemon is required.</li>
-          <li><b>Per-Minute Scheduler:</b> Plembfin's background worker runs every minute to process playback sessions, evaluate watched thresholds, and dispatch sync actions.</li>
+          <li>For resume sync, Plex webhook traffic must include playback lifecycle events such as <code>media.play</code>, <code>media.resume</code>, <code>media.pause</code>, <code>media.stop</code>, and <code>media.scrobble</code>. Plekt reads <code>viewOffset</code> and <code>duration</code> when Plex provides them.</li>
+          <li><b>Real-time Sync (Built-in):</b> Plekt's server includes a built-in Plex notification listener. It connects to your Plex Media Server via the WebSocket notification channel (configured automatically from your Plex URL and token in Settings → Media Servers), records watched and unwatched library changes, and expands bulk show or season changes into their episodes for propagation - no external script or daemon is required.</li>
+          <li><b>Per-Minute Scheduler:</b> Plekt's background worker runs every minute to process playback sessions, evaluate watched thresholds, and dispatch sync actions.</li>
           <li>For general playback events, set up webhooks according to the <a href="https://support.plex.tv/articles/115002267687-webhooks/?utm_campaign=Plex%20Apps&utm_medium=Plex%20Web&utm_source=Plex%20Apps" target="_blank" rel="noopener noreferrer" style="color: #4b96e6; text-decoration: underline;">Plex Webhook Documentation</a>.</li>
         </ul>
       </div>
@@ -263,7 +263,7 @@ export function webhookWarning() {
           2. Emby Webhook Setup
         </h3>
         <ul style="padding-left: 1.2rem; margin: 0; display: grid; gap: 4px;">
-          <li>In Emby Server Settings ➔ <b>Webhooks</b>, add a new webhook pointing to your Plembfin webhook URL.</li>
+          <li>In Emby Server Settings ➔ <b>Webhooks</b>, add a new webhook pointing to your Plekt webhook URL.</li>
           <li>Under <b>Events</b>, check the following boxes:
             <ul style="padding-left: 1.2rem; margin-top: 2px;">
               <li><b>Playback</b>: Check <code>Start</code>, <code>Pause</code>, <code>Unpause</code>, and <code>Stop</code></li>
@@ -281,7 +281,7 @@ export function webhookWarning() {
         </h3>
         <ul style="padding-left: 1.2rem; margin: 0; display: grid; gap: 4px;">
           <li>Install the <b>Webhooks</b> plugin in the Jellyfin Dashboard (under Plugins).</li>
-          <li>Add a new Generic Webhook named <code>plembfin</code> pointing to your Plembfin webhook URL.</li>
+          <li>Add a new Generic Webhook named <code>plekt</code> pointing to your Plekt webhook URL.</li>
           <li>Check <b>Enable</b>.</li>
           <li>Under <b>Notification Type</b>, check the following boxes:
             <ul style="padding-left: 1.2rem; margin-top: 2px;">
@@ -289,7 +289,7 @@ export function webhookWarning() {
               <li><code>Playback Progress</code></li>
               <li><code>Playback Stop</code></li>
               <li><code>User Data Saved</code> <i>(Crucial: sends events when items are marked watched or unwatched)</i></li>
-              <li><code>Item Added</code> <i>(Marks newly added media watched only when its current Plembfin state is watched; a newer unwatch wins)</i></li>
+              <li><code>Item Added</code> <i>(Marks newly added media watched only when its current Plekt state is watched; a newer unwatch wins)</i></li>
             </ul>
           </li>
           <li>Under <b>Item Type</b>, select:
@@ -311,7 +311,7 @@ export function cronSyncGuide() {
   return `
     <section class="guide-callout" id="cron-sync-setup">
       <b>Background Sync Worker</b>
-      <p>Plembfin runs a built-in scheduler directly inside the server process - no external cron job or cloud infrastructure is required. It fires once per minute as long as the server is running.</p>
+      <p>Plekt runs a built-in scheduler directly inside the server process - no external cron job or cloud infrastructure is required. It fires once per minute as long as the server is running.</p>
       <h3>Manual trigger</h3>
       <p>To force an immediate run, send an authenticated POST to <code>/api/cron-sync</code>. You can also use <b>Force Sync</b> in the dashboard, which calls <code>/api/force-sync</code> and streams progress.</p>
       <h3>Authenticated request</h3>
@@ -319,14 +319,14 @@ export function cronSyncGuide() {
 
 X-Api-Key: <your-api-key>`, "http")}
       <h3>What this runs</h3>
-      <p>The worker writes a heartbeat timestamp, polls Plex, Emby, and Jellyfin for active playback, updates live-session cache rows, detects completed sessions at the watched threshold (90% by default), writes completed watches to <code>watch_history</code>, dispatches outbound watched-state sync, repairs platform drift against Plembfin's canonical watched state, maintains <code>data/next-airing-cache.json</code>, and progressively stores month results in <code>data/upcoming-calendar-cache.json</code>.</p>
+      <p>The worker writes a heartbeat timestamp, polls Plex, Emby, and Jellyfin for active playback, updates live-session cache rows, detects completed sessions at the watched threshold (90% by default), writes completed watches to <code>watch_history</code>, dispatches outbound watched-state sync, repairs platform drift against Plekt's canonical watched state, maintains <code>data/next-airing-cache.json</code>, and progressively stores month results in <code>data/upcoming-calendar-cache.json</code>.</p>
     </section>
   `;
 }
 
 function rebuildPlaystateGuide() {
   return `
-          <p><b>scripts/rebuildPlaystateDatabase.js</b> is the one-time database reset tool for rebuilding Plembfin from a Trakt export and the latest live Plex state. It preserves saved server/admin settings, clears media history and sync state, imports Trakt and Plex history, writes canonical playstate rows, then converges Plex, Emby, and Jellyfin.</p>
+          <p><b>scripts/rebuildPlaystateDatabase.js</b> is the one-time database reset tool for rebuilding Plekt from a Trakt export and the latest live Plex state. It preserves saved server/admin settings, clears media history and sync state, imports Trakt and Plex history, writes canonical playstate rows, then converges Plex, Emby, and Jellyfin.</p>
           <p>Run the dry run first. It reads the Trakt export folder and configured media server APIs, but does not write because <code>--write</code> is omitted. Only run the write command after the convergence plan looks safe.</p>
           <section class="guide-callout">
             <b>What the write pass changes</b>
@@ -347,7 +347,7 @@ function rebuildPlaystateGuide() {
           </section>
           <section class="guide-callout">
             <b>Write pass</b>
-            <p>This clears and rebuilds Plembfin media data, then applies the convergence plan to all configured media servers.</p>
+            <p>This clears and rebuilds Plekt media data, then applies the convergence plan to all configured media servers.</p>
             <div class="copy-block">
               <button class="copy-button" type="button" data-copy="node scripts/rebuildPlaystateDatabase.js --trakt-dir &quot;C:\\Users\\lasik\\Downloads\\trakt-export-lasikie&quot; --write" aria-label="Copy write command">Copy</button>
               <pre><code>node scripts/rebuildPlaystateDatabase.js --trakt-dir "C:\\Users\\lasik\\Downloads\\trakt-export-lasikie" --write</code></pre>
@@ -358,7 +358,7 @@ function rebuildPlaystateGuide() {
 
 function exportPlexHistoryGuide() {
   return `
-          <p><b>scripts/exportPlexHistory.js</b> reads your full Plex play history and streams it into the local SQLite database via the import API. Imported rows become canonical Plembfin playstate and are queued for outbound sync, so use the full-sync tool only when you want an immediate complete replay.</p>
+          <p><b>scripts/exportPlexHistory.js</b> reads your full Plex play history and streams it into the local SQLite database via the import API. Imported rows become canonical Plekt playstate and are queued for outbound sync, so use the full-sync tool only when you want an immediate complete replay.</p>
           <p>Use it once when you want to bootstrap a fresh deployment, or again if you are migrating an existing Plex library and need the cloud history to reflect years of prior viewing. The script does not need the browser open after launch; it reads the local configuration block, streams rows to the import API in batches, and finishes with a deterministic summary.</p>
           <section class="guide-callout">
             <b>Token discovery walkthrough</b>
@@ -451,11 +451,11 @@ export function savedCredentialNote() {
 
 export function watchlistSyncGuide() {
   return `
-    <b>Plembfin is the canonical watchlist</b>
-    <p style="margin: 4px 0 0;">Turn sync on once to keep Plembfin and your Plex account watchlist aligned in both directions. Additions and removals save in Plembfin first, then go out through a durable delivery queue.</p>
+    <b>Plekt is the canonical watchlist</b>
+    <p style="margin: 4px 0 0;">Turn sync on once to keep Plekt and your Plex account watchlist aligned in both directions. Additions and removals save in Plekt first, then go out through a durable delivery queue.</p>
     <ul style="margin: 4px 0 0; padding-left: 1.1rem; line-height: 1.45;">
       <li>Syncs with the account-level Plex Universal Watchlist, so it can hold anything in the Plex catalogue - not only titles on your server.</li>
-      <li>Anything added in the Plex app is imported into Plembfin, and anything added in Plembfin is sent to Plex.</li>
+      <li>Anything added in the Plex app is imported into Plekt, and anything added in Plekt is sent to Plex.</li>
       <li>Failed items stay queued for retry. A restored list performs a safe union first, so an empty snapshot can never erase it.</li>
       <li>Anything Plex refuses is explained above, with what it reported and what to do about it. <b>Sync now</b> runs a full reconcile immediately.</li>
     </ul>
@@ -482,8 +482,8 @@ export function renderSettingsInlineHelp() {
           <span>No webhook setup required</span>
         </summary>
         <div class="tool-item-row">
-          <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">Plembfin watches Plex automatically. It picks up watched and unwatched changes in real time, and also checks playback progress every minute.</p>
-          <p style="font-size: 0.9rem; color: var(--muted); margin: var(--space-2) 0 0;">Changes are saved to Plembfin and passed on to your other servers.</p>
+          <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">Plekt watches Plex automatically. It picks up watched and unwatched changes in real time, and also checks playback progress every minute.</p>
+          <p style="font-size: 0.9rem; color: var(--muted); margin: var(--space-2) 0 0;">Changes are saved to Plekt and passed on to your other servers.</p>
           <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
             <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
               Turn off "Refresh library metadata periodically"
@@ -493,7 +493,7 @@ export function renderSettingsInlineHelp() {
               <li>Disable <b>"Refresh library metadata periodically"</b>.</li>
             </ol>
             <p style="margin: var(--space-1) 0 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-              This Plex task can quietly reset watched items back to unwatched overnight. Plembfin would then copy that "unwatch" to Emby, Jellyfin, and Trakt. Turning it off stops that from happening.
+              This Plex task can quietly reset watched items back to unwatched overnight. Plekt would then copy that "unwatch" to Emby, Jellyfin, and Trakt. Turning it off stops that from happening.
             </p>
           </div>
         </div>

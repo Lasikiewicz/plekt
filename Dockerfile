@@ -1,5 +1,9 @@
-# plembfin - self-hosted watch-state bridge (Sonarr/Radarr-style).
+# plekt - self-hosted watch-state bridge (Sonarr/Radarr-style).
 FROM node:25-trixie-slim
+
+LABEL org.opencontainers.image.title="Plekt" \
+    org.opencontainers.image.url="https://plekt.net" \
+    org.opencontainers.image.source="https://github.com/Lasikiewicz/plekt"
 
 WORKDIR /app
 ARG BUILD_CHANNEL=release
@@ -20,6 +24,7 @@ COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY scripts/check-worker-health.js ./scripts/check-worker-health.js
 COPY scripts/seed-demo-catalog.js ./scripts/seed-demo-catalog.js
 RUN npm ci --omit=dev --ignore-scripts \
+    && sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Application code.
@@ -28,9 +33,9 @@ COPY public ./public
 COPY changelog*.json ./
 
 # The Node slim base provides a 'node' user at uid 1000; rename it to
-# 'plembfin' for clarity and set up the data directory.
-RUN usermod -l plembfin node && groupmod -n plembfin node \
-    && mkdir -p /data && chown plembfin:plembfin /data /app
+# 'plekt' for clarity and set up the data directory.
+RUN usermod -l plekt node && groupmod -n plekt node \
+    && mkdir -p /data && chown plekt:plekt /data /app
 
 VOLUME ["/data"]
 EXPOSE 5055

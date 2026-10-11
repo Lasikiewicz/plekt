@@ -1,6 +1,6 @@
-import { buildAuthHeaders, signOutAdmin } from "./auth.js?v=1.3.1.1.2";
-import { state } from "./state.js?v=1.3.1.1.2";
-import { formatNumber } from "./utils.js?v=1.3.1.1.2";
+import { buildAuthHeaders, signOutAdmin } from "./auth.js?v=1.3.1.2.1";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { formatNumber } from "./utils.js?v=1.3.1.2.1";
 
 // ── Wipe data ────────────────────────────────────────────────────────────
 // Deliberately separate from tools-maintenance.js (repairs/backfills), which
@@ -151,7 +151,7 @@ export async function runWipeData(scope) {
 
   const isFactory = scope === "factory";
   const firstBody = isFactory
-    ? "⚠️ This resets Plembfin to a brand-new install: every table, all settings, media server and Trakt connections, cached artwork, and the admin login.\n\nYou will be signed out and taken to first-run setup. Only a full Plembfin backup can bring this back.\n\nContinue?"
+    ? "⚠️ This resets Plekt to a brand-new install: every table, all settings, media server and Trakt connections, cached artwork, and the admin login.\n\nYou will be signed out and taken to first-run setup. Only a full Plekt backup can bring this back.\n\nContinue?"
     : `⚠️ This permanently deletes ${def.label.toLowerCase()} from the local database.\n\nBack it up first if you might want it back - this cannot be undone.\n\nContinue?`;
   const firstApproved = await _openConfirmDialog({
     title: `Wipe ${def.label}?`,
@@ -162,7 +162,7 @@ export async function runWipeData(scope) {
   if (!firstApproved) return;
 
   const secondBody = isFactory
-    ? "This is the last confirmation. There is no undo, and no way back without a full Plembfin backup made beforehand.\n\nReset Plembfin now?"
+    ? "This is the last confirmation. There is no undo, and no way back without a full Plekt backup made beforehand.\n\nReset Plekt now?"
     : `This is the last confirmation. Wiping ${def.label} cannot be undone and there is no recovery once it runs.\n\nDelete it now?`;
   const secondApproved = await _openConfirmDialog({
     title: "Are you absolutely sure?",
@@ -195,7 +195,7 @@ export async function runWipeData(scope) {
     }
 
     if (body.signOutRequired) {
-      _setMessage("Plembfin has been reset. Signing you out…", "success");
+      _setMessage("Plekt has been reset. Signing you out…", "success");
       await signOutAdmin();
       window.location.href = "/";
       return;

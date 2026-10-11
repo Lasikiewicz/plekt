@@ -9,7 +9,7 @@ const { db } = await import("../server/src/db.js");
 const mediaConnectionRepo = await import("../server/src/utils/mediaConnectionRepo.js");
 const trackerConnectionRepo = await import("../server/src/utils/trackerConnectionRepo.js");
 const { dispatchTrackerWatchState } = await import("../server/src/utils/trackerDispatcher.js");
-const { pollConnectedTrackers } = await import("../server/src/utils/trackerSync.js");
+const { pollConnectedTrackers, partitionPendingTraktUnwatches, TRAKT_UNWATCH_CONFIRMATION_MS } = await import("../server/src/utils/trackerSync.js");
 const { trackerMediaKey } = await import("../server/src/utils/traktClient.js");
 const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
@@ -324,9 +324,10 @@ test("cross-ID aliases collapse to one episode and the newest intent wins", asyn
     const expiredAt = Date.now() - ECHO_WINDOW_MS - 1000;
     db.prepare("UPDATE tracker_item_state SET last_outbound_at=? WHERE provider='trakt'").run(expiredAt);
     db.prepare("UPDATE playstate SET updated_at=?").run(expiredAt);
-    const genuineResult = await pollConnectedTrackers();
-    assert.equal(genuineResult.unwatched, 1, "the episode should be unwatched exactly once after protection expires");
-    assert.equal((await repo.getPlaystateForMedia(richMedia)).state, "unwatched");
+    const recheckedResult = await pollConnectedTrackers();
+    assert.equal(recheckedResult.unwatched, 0, "expired echo protection must not bypass the missing-item confirmation window");
+    assert.equal(recheckedResult.deferredUnwatched, 1);
+    assert.equal((await repo.getPlaystateForMedia(richMedia)).state, "watched");
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -522,7 +523,7 @@ test("a local unwatch committed after the poll diff blocks its queued watch", as
   }
 });
 
-test("a stale empty poll retains a recent watched marker, then accepts a genuine unwatch after expiry", async () => {
+test("a stale empty poll retains a recent watched marker and confirms before unwatch", async () => {
   resetState();
   connectTrakt();
   await disableMediaServers();
@@ -545,18 +546,17 @@ test("a stale empty poll retains a recent watched marker, then accepts a genuine
     assert.ok(Number(retained.remoteWatchedAt) > 0, "the missing item must remain comparable on the next poll");
     assert.equal((await repo.getPlaystateForMedia(media)).state, "watched");
 
-    // Once the echo grace period has genuinely elapsed, the same still-empty
-    // remote snapshot is no longer protected and must propagate as a real
-    // Trakt unwatch rather than being forgotten forever.
+    // Once the outbound echo grace has elapsed, the snapshot is still held
+    // until it has remained missing for the separate confirmation period.
     const expiredAt = Date.now() - ECHO_WINDOW_MS - 1000;
     db.prepare("UPDATE tracker_item_state SET last_outbound_at=? WHERE provider='trakt' AND media_key=?").run(expiredAt, mediaKey);
     db.prepare("UPDATE playstate SET updated_at=?").run(expiredAt);
 
-    const genuineResult = await pollConnectedTrackers();
-    assert.equal(genuineResult.unwatched, 1);
-    assert.equal(genuineResult.deferredUnwatched, 0);
-    assert.equal((await repo.getPlaystateForMedia(media)).state, "unwatched");
-    assert.equal(trackerConnectionRepo.getTrackerItemState("trakt", mediaKey), null);
+    const recheckedResult = await pollConnectedTrackers();
+    assert.equal(recheckedResult.unwatched, 0);
+    assert.equal(recheckedResult.deferredUnwatched, 1);
+    assert.equal((await repo.getPlaystateForMedia(media)).state, "watched");
+    assert.ok(trackerConnectionRepo.getTrackerItemState("trakt", mediaKey));
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -565,7 +565,7 @@ test("a stale empty poll retains a recent watched marker, then accepts a genuine
 test("a newer watched LAN write finishes after an older poll paused while clearing progress", async () => {
   resetState();
   connectTrakt();
-  const media = siloEpisode(8);
+  const media = siloEpisode(88);
   const mediaKey = trackerMediaKey(media);
   const watchedAt = "2026-08-22T20:00:00.000Z";
   await seedLocalWatch(media, "manual", watchedAt);
@@ -590,6 +590,13 @@ test("a newer watched LAN write finishes after an older poll paused while cleari
   const progressGate = new Promise((resolve) => { releaseProgress = resolve; });
   const writes = [];
   const originalFetch = globalThis.fetch;
+  // Model a Trakt item that has already remained missing through the grace
+  // period. This keeps the test focused on the concurrent LAN write race.
+  partitionPendingTraktUnwatches(
+    [{ mediaKey }],
+    new Map(),
+    Date.now() - TRAKT_UNWATCH_CONFIRMATION_MS - 1,
+  );
   let poll = null;
   let watchedWrite = null;
 
@@ -617,22 +624,22 @@ test("a newer watched LAN write finishes after an older poll paused while cleari
       }
       if (requestUrl.searchParams.get("IncludeItemTypes") === "Episode") {
         return Response.json({
-          Items: [{ Id: "silo-s03e08", ParentIndexNumber: 3, IndexNumber: 8 }],
+          Items: [{ Id: "silo-s03e88", ParentIndexNumber: 3, IndexNumber: 88 }],
         });
       }
     }
-    if (requestUrl.pathname === "/Users/test-user/Items/silo-s03e08/UserData" && method === "POST") {
+    if (requestUrl.pathname === "/Users/test-user/Items/silo-s03e88/UserData" && method === "POST") {
       writes.push("progress-clear-started");
       signalProgressStarted();
       await progressGate;
       writes.push("progress-cleared");
       return new Response(null, { status: 200 });
     }
-    if (requestUrl.pathname === "/Users/test-user/PlayedItems/silo-s03e08" && method === "POST") {
+    if (requestUrl.pathname === "/Users/test-user/PlayedItems/silo-s03e88" && method === "POST") {
       writes.push("watched");
       return new Response(null, { status: 200 });
     }
-    if (requestUrl.pathname === "/Users/test-user/PlayedItems/silo-s03e08" && method === "DELETE") {
+    if (requestUrl.pathname === "/Users/test-user/PlayedItems/silo-s03e88" && method === "DELETE") {
       writes.push("unplayed");
       return new Response(null, { status: 200 });
     }
@@ -651,15 +658,15 @@ test("a newer watched LAN write finishes after an older poll paused while cleari
     // the target mutex is derived from normalized title coordinates, not from
     // whichever provider-keyed row happens to resolve first.
     const rematchedMedia = {
-      ...siloEpisode(8, { imdb: "tt-wrong-rematch", tmdb: "wrong-rematch" }),
-      title: "Silo (2023) - S03E08",
+      ...siloEpisode(88, { imdb: "tt-wrong-rematch", tmdb: "wrong-rematch" }),
+      title: "Silo (2023) - S03E88",
       showTitle: "Silo (2023)",
     };
     trackerConnectionRepo.recordTrackerOutbound("trakt", mediaKey, media, "watched");
     await repo.upsertPlaystateForMedia(media, "watched", "2026-08-23T20:00:00.000Z");
     await repo.upsertPlaystateForMedia(rematchedMedia, "watched", "2026-08-23T20:00:01.000Z");
     assert.equal(
-      db.prepare("SELECT COUNT(*) AS c FROM playstate WHERE season=3 AND episode=8").get().c,
+      db.prepare("SELECT COUNT(*) AS c FROM playstate WHERE season=3 AND episode=88").get().c,
       2,
       "the race setup must retain both non-overlapping provider identities",
     );

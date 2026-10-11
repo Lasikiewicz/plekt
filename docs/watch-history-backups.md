@@ -1,13 +1,13 @@
 # Watch-History Backups
 
-Plembfin's watch-history backup subsystem stores the minimum data required to restore
+Plekt's watch-history backup subsystem stores the minimum data required to restore
 watched state and resume progress. It is separate from the encrypted full-backup and
 plain portable export/import systems described in [backups.md](backups.md).
 
 ## Backup document
 
 Each backup is a gzip-compressed JSON document named
-`plembfin-watch-history-<YYYYMMDDTHHMMSSZ>.json.gz`.
+`plekt-watch-history-<YYYYMMDDTHHMMSSZ>.json.gz`.
 
 The document contains:
 
@@ -69,3 +69,7 @@ subsystem for portable snapshots that include settings and secrets, or copy the 
 
 Implementation: `server/src/utils/watchHistoryBackups.js` and
 `public/modules/tools-backups.js`.
+
+## Backups from before the rename
+
+Plekt writes new backup files and format markers under Plekt names. Backups written by Plembfin remain accepted, listed and pruned, including encrypted and watch-history backups. The local full-backup folder `data/backups/plembfin` and default Dropbox folder `/Plembfin Backups` stay unchanged so existing backups remain visible. A newly written Plekt backup cannot be restored by an older Plembfin build.

@@ -4,6 +4,7 @@ import { decryptCredential, encryptCredential } from "./credentialVault.js";
 import { getPlexPrivateKey } from "./mediaConnectionRepo.js";
 import { plexClientHeaders, refreshPlexJwt } from "./plexAuth.js";
 import { fetchWithTimeout } from "./outbound.js";
+import { brandEnv } from "./brandEnv.js";
 
 const REFRESH_AHEAD_MS = 24 * 60 * 60 * 1000;
 const LEASE_MS = 30 * 1000;
@@ -66,7 +67,7 @@ export async function getValidPlexToken({ force = false, fetchImpl, now = () => 
   const checkedAt = now();
   if (!force && tokenIsFresh(row, checkedAt)) return decryptedToken(row, vaultOptions);
 
-  const owner = `${process.env.PLEMBFIN_INSTANCE_ID || process.pid}:${crypto.randomUUID()}`;
+  const owner = `${brandEnv("INSTANCE_ID") || process.pid}:${crypto.randomUUID()}`;
   if (!claimRefreshLease(row.id, owner, checkedAt)) {
     const deadline = checkedAt + WAIT_LIMIT_MS;
     while (now() < deadline) {

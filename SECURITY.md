@@ -11,7 +11,7 @@ Only the latest release on the `main` branch receives security fixes.
 
 ## Threat Model
 
-Plembfin is a **self-hosted, single-user** dashboard. It assumes:
+Plekt is a **self-hosted, single-user** dashboard. It assumes:
 
 - The host machine is trusted (it has full access to the SQLite database and `data/` directory).
 - The network perimeter is controlled by the operator (typically behind a reverse proxy or VPN).

@@ -74,7 +74,7 @@ function parsedProvenance(value) {
   }
 }
 
-function isPlembfinTrackedWatchRow(row = {}) {
+function isPlektTrackedWatchRow(row = {}) {
   if (!isWatchedAction(row)) return false;
   if (!isScheduledLibraryHistoryRow(row)) return true;
   const provenance = parsedProvenance(row.watch_provenance);
@@ -95,7 +95,7 @@ function findUncachedShowTitles() {
     WHERE media_type = 'episode'
   `).all();
   const titles = new Set();
-  for (const row of rows.filter(isPlembfinTrackedWatchRow)) {
+  for (const row of rows.filter(isPlektTrackedWatchRow)) {
     const showTitle = showTitleFrom(row.show_title || row.title);
     const showKey = canonicalTitleKey(showTitle) || normalizeKeyPart(showTitle);
     if (!progressCache[showKey]) titles.add(showTitle);
@@ -186,7 +186,7 @@ async function calculateAndSetShowProgress(showTitle) {
       return (canonicalTitleKey(derived) || normalizeKeyPart(derived)) === showKey;
     });
 
-  const trackedRows = rows.filter(isPlembfinTrackedWatchRow);
+  const trackedRows = rows.filter(isPlektTrackedWatchRow);
   
   if (trackedRows.length === 0) {
     // If no watched episodes remain, delete from cache
@@ -320,7 +320,7 @@ export async function rebuildShowProgressCache() {
     WHERE media_type = 'episode'
   `).all();
   
-  const trackedRows = rows.filter(isPlembfinTrackedWatchRow);
+  const trackedRows = rows.filter(isPlektTrackedWatchRow);
   
   // Group rows by show key
   const groups = new Map();

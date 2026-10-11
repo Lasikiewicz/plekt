@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { providerAppName } from "./brandEnv.js";
 import { fetchWithTimeout } from "./outbound.js";
 
 export const PLEX_CLIENTS_ORIGIN = "https://clients.plex.tv";
@@ -9,7 +10,7 @@ export function plexClientHeaders(device, { token = "" } = {}) {
     Accept: "application/json",
     "Content-Type": "application/json",
     "X-Plex-Client-Identifier": device.deviceIdentifier,
-    "X-Plex-Product": "Plembfin",
+    "X-Plex-Product": providerAppName(device),
     "X-Plex-Device": "Server",
   };
   if (token) headers["X-Plex-Token"] = token;
@@ -119,7 +120,7 @@ export function plexAuthUrl({ device, code, publicBaseUrl = "" }) {
   const params = new URLSearchParams({
     clientID: device.deviceIdentifier,
     code,
-    "context[device][product]": "Plembfin",
+    "context[device][product]": providerAppName(device),
   });
   if (publicBaseUrl) params.set("forwardUrl", `${String(publicBaseUrl).replace(/\/$/, "")}/auth/plex/return`);
   return `https://app.plex.tv/auth#?${params}`;

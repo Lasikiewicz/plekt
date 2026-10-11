@@ -5,14 +5,15 @@ each subsystem to its detailed source of truth.
 
 ## The big picture
 
-Plembfin is a **self-hosted Node.js app** in the style of Sonarr/Radarr/
+Plekt is a **self-hosted Node.js app** in the style of Sonarr/Radarr/
 Jellyseerr. One long-running `node server/server.js` process serves:
 
 - the **web UI** - a plain ES-module SPA in `public/` with no framework, bundler, or build step
 - the **API** - every route lives under `/api/*`, dispatched by one hand-written router
 - the **scheduler** - an in-process `setInterval` tick that runs sync work every minute
 
-All state lives in a local **SQLite** database (`data/plembfin.db`, WAL mode) and a local
+All state lives in a local **SQLite** database (`data/plekt.db`, or `data/plembfin.db` on
+installs that predate the rename and already have one; WAL mode) and a local
 media folder (`data/media/`). There is no external database, no cloud functions, and no
 separate production environment.
 
@@ -22,7 +23,7 @@ progress to the other platforms** so all three stay in sync. On top of that it p
 a dashboard (Now Playing + recent history), Movies/TV Shows library browsers, a stats
 page, an upcoming-episodes calendar, rich media detail pages (TMDB/TVDB metadata,
 cast, trailers, artwork), Jellyseerr/Overseerr requesting, and a backup system.
-Personal ratings are a separate optional domain: Plembfin remains their local
+Personal ratings are a separate optional domain: Plekt remains their local
 canonical store, while a durable rating queue can exchange ratings with Plex, Emby,
 Jellyfin, and Trakt without entering the watched-state pipeline.
 Personal watchlist membership is another isolated domain: `personal_watchlist` is the
@@ -68,7 +69,7 @@ new metadata requests.
 | Stats page | `public/modules/stats.js`, `getWatchStats` in `dataRepo.js` | [stats.md](stats.md) |
 | TMDB/TVDB/Fanart/OMDb metadata | `server/src/routes/metadata.js`, `server/src/utils/tmdbGateway.js`, `tvdbGateway.js`, `fanartGateway.js`, `omdbGateway.js` | [metadata.md](metadata.md) |
 | Posters, backdrops, logos, artwork caching | `server/src/utils/posterCache.js`, `server/src/utils/mediaArtwork.js`, `handlePoster` in `routes/metadata.js`, `public/modules/images.js` | [posters-artwork.md](posters-artwork.md) |
-| Backups (all three subsystems) | `server/src/routes/backups.js`, `server/src/utils/backup.js`, `watchHistoryBackups.js`, `plembfinBackups.js`, `plembfinRestore.js`, `server/src/routes/plembfinRestore.js`, `backupDestinations/`, `public/modules/tools-backups.js` | [backups.md](backups.md) |
+| Backups (all three subsystems) | `server/src/routes/backups.js`, `server/src/utils/backup.js`, `watchHistoryBackups.js`, `plektBackups.js`, `plektRestore.js`, `server/src/routes/plektRestore.js`, `backupDestinations/`, `public/modules/tools-backups.js` | [backups.md](backups.md) |
 | Settings pages, connection config | `server/src/routes/admin.js`, `server/src/utils/configStore.js`, `public/modules/settings-shell.js`, `public/modules/settings-ui.js`, `public/modules/settings-services.js`, `public/modules/rating-sync-settings.js`, `public/modules/tools-backups.js` | [settings.md](settings.md) |
 | Login, sessions, API key, webhook secret | `server/src/utils/auth.js`, `server/src/appConfig.js`, `public/modules/auth.js` | [auth.md](auth.md) |
 | Pristine-install account claim, guided `/setup` wizard, dashboard checklist | `server/src/routes/onboarding.js`, `server/src/utils/onboardingStore.js`, `onboardingImportCoordinator.js`, `public/modules/onboarding.js` | [onboarding.md](onboarding.md) |
@@ -93,7 +94,7 @@ Repository files relevant to the application, build, and operations, grouped by 
 | `changelog.json` | Bundled release history. `scripts/promote-alpha-to-main.js` appends an entry and bumps the version locally, as part of "Force to main"; served verbatim at `GET /changelog.json` and consumed by the in-app changelog/update check. |
 | `package.json` | Dependencies and npm scripts (`start`, `dev`, `test`, `build`, `docs:check`, `demo:verify`, `seed:demo`, `prepare`). Version is set locally by `scripts/promote-alpha-to-main.js` as part of "Force to main". |
 | `package-lock.json` | Locked dependency tree. Version field is CI-managed alongside `package.json`. |
-| `Dockerfile` | `node:25-trixie-slim` image: installs prod deps, copies `server/`, `public/`, `changelog.json`, creates the non-root `plembfin` user, and uses the separate SQLite worker-health probe so synchronous maintenance cannot make the container fail its HTTP healthcheck. |
+| `Dockerfile` | `node:25-trixie-slim` image: installs prod deps, copies `server/`, `public/`, `changelog.json`, creates the non-root `plekt` user, and uses the separate SQLite worker-health probe so synchronous maintenance cannot make the container fail its HTTP healthcheck. |
 | `docker-compose.yml` | Base compose file: port 5056, `./data:/data` volume, admin env vars, `no-new-privileges`, resource limits. |
 | `docker-compose.secure.yml` | Hardened overlay: read-only rootfs, tmpfs `/tmp`, required env vars (`ADMIN_PASSWORD`, `SESSION_SECRET`, `API_KEY`, `WEBHOOK_SECRET`), forces `COOKIE_SECURE=true`. |
 | `.dockerignore` | Excludes `node_modules`, `data`, `docs`, `scratch`, markdown, and secrets from the Docker build context while whitelisting the required runtime scripts. |
@@ -139,12 +140,12 @@ before reversing something that looks unnecessarily cautious.
 | --- | --- |
 | `server.js` | **Process entrypoint.** Express app: access logging (rotating `data/logs/access.log`, secrets redacted), security headers + dynamic CSP, rate limiters, raw-body capture for `/api/*` → `dispatch()`, static mounts for `/media` and `public/`, `/health`, `/changelog.json`, SPA fallback, the per-minute scheduler tick, the Plex notification listener startup, and graceful shutdown. |
 | `src/index.js` | **The API router.** `dispatch()` strips `/api/` and routes paths to `handleX` functions exported by `src/routes/*.js`. The full route table is the body of `dispatch()`; feature behavior belongs in the owning route module. |
-| `src/db.js` | Opens `data/plembfin.db` via better-sqlite3 (WAL), applies concurrency-safe migrations, and exposes helpers plus the SQLite-backed cache version observed by every process. |
+| `src/db.js` | Opens `data/plekt.db` (or existing `data/plembfin.db`) via better-sqlite3 (WAL), applies concurrency-safe migrations, and exposes helpers plus the SQLite-backed cache version observed by every process. |
 | `src/schema.sql` | Authoritative table definitions. See [sqlite-schema.md](sqlite-schema.md). |
 | `src/appConfig.js` | Resolves admin credentials + secrets from env / `data/config.json` (scrypt password hash, generated API key / webhook secret / session secret), warns about insecure config at startup, exports `AUTH`, `verifyWebhookToken`, `rotateWebhookSecret`, `updateAdminCredentials`. |
 | `src/env.js` | Minimal `.env` loader (`loadLocalEnv`) - parses `<repo>/.env` without a dotenv dependency; env vars already set take precedence. |
 | `src/paths.js` | Resolves `DATA_DIR` and every path under it (`MEDIA_DIR`, `POSTERS_DIR`, `BACKDROPS_DIR`, `PROFILES_DIR`, backup dirs, `DB_PATH`, `CONFIG_PATH`, `PUBLIC_DIR`); `ensureDataDirs()` creates them. |
-| `src/scheduled.js` | The background sync engine: live-session polling → `live_tracking_cache`, completed-session detection, resume-progress replication, per-platform catch-up sync (recently watched + resumable + provider Up Next feeds), Plembfin-canonical dispatch/reconciliation queue, Plex drift repair, `runScheduledSync` and `runForceSync`. See [scheduled-sync.md](scheduled-sync.md). |
+| `src/scheduled.js` | The background sync engine: live-session polling → `live_tracking_cache`, completed-session detection, resume-progress replication, per-platform catch-up sync (recently watched + resumable + provider Up Next feeds), Plekt-canonical dispatch/reconciliation queue, Plex drift repair, `runScheduledSync` and `runForceSync`. See [scheduled-sync.md](scheduled-sync.md). |
 | `src/scheduler.js` | Scheduler wrapper and Plex notification listener lifecycle: per-minute tick orchestration, scheduled backup runs, watchlist/rating worker hooks, cache-backed metadata warm-up/backfill, next-airing cache refresh, startup/shutdown listener control, and Plex library-item unwatch callback. |
 
 ### `server/src/routes/`
@@ -152,7 +153,7 @@ before reversing something that looks unnecessarily cautious.
 | File | What it is |
 | --- | --- |
 | `admin.js` | Settings/admin API handlers: config, appearance, Seerr/app links, connection tests, and Plex notification probe. |
-| `backups.js` | Backup API handlers for portable import/export (`/api/import`, `/api/backup/export`, `/api/backup/import`), encrypted full backups (`/api/plembfin-backups`), and watch-history backup actions (`/api/watch-backups`). |
+| `backups.js` | Backup API handlers for portable import/export (`/api/import`, `/api/backup/export`, `/api/backup/import`), encrypted full backups (`/api/plekt-backups`), and watch-history backup actions (`/api/watch-backups`). |
 | `media.js` | Library and history handlers: history, movies, shows/show detail, delete/update watch records, transactional show rematching, merge shows, full watchstate replay, and missing-telemetry clearing. |
 | `metadata.js` | Poster proxy and metadata/search handlers: TMDB details/search/season/images/person/poster/profile, the remote-artwork caching proxy, TVDB search/images, Fanart images, media search, Discover feeds and recommendation exclusions, Upcoming episodes, cached Up Next, YouTube metadata, and OMDb ratings. |
 | `sync.js` | Sync/runtime handlers: webhook ingestion, manual watch/unwatch, playback progress, retry sync, sync job/history listing, Now Playing, active sessions, cron sync, library-wide planner Force Sync, Settings library Force Sync modes and status polling, title-scoped detail-page Force Sync modes and status polling, and stop-force-sync. |
@@ -161,6 +162,7 @@ before reversing something that looks unnecessarily cautious.
 | `maintenance.js` | Maintenance/admin utility handlers: ping, changelog/update check, diagnostic logs, cross-platform match reporting, backfill/repair/dedup/rematch, cache stats, cache clearing, plus the read-only `episode-title-audit` and `episode-title-backfill` Database Repairs endpoints that restore real episode names onto watch rows that only stored a coordinate. |
 | `wipeData.js` | Wipe data handlers (`GET /api/wipe-data/preview`, `POST /api/wipe-data`): Watch History, Personal Watchlist, Sync History & Logs, Everything Tracked, and Wipe All / Fresh Start (also clears every remaining table, deletes cached artwork, and resets `data/config.json` via `appConfig.js`'s `resetAdminAccount()`). Kept separate from `maintenance.js`, which is already near its size limit. |
 | `playstateAliases.js` | Watch-State Aliases card (`GET /api/playstate-aliases`, `POST /api/playstate-aliases/fold`, `POST /api/playstate-aliases/dismiss`), admin-only, disabled in the demo. Logic in `utils/playstateAliasReview.js`. |
+| `webhookPort.js` | Dashboard webhook port notice (`GET /api/webhook-port/status`), admin-only, disabled in the demo. Logic in `utils/webhookPortCheck.js`; the banner is `public/modules/webhook-port-banner.js`. |
 | `mediaAuth.js` | Browser-session-only Plex account, Emby account, and Jellyfin Quick Connect/account flows; verifies identities and persists encrypted managed connections. |
 | `trackerAuth.js` | Trakt device authorization, initial-state policy, connection status/disconnect, and manual tracker synchronization. |
 | `liveUpdates.js` | Authenticated streaming endpoint that emits shared history, Up Next-cache, and Discover-cache version changes so open pages refresh as local state or feed snapshots change. The history version it reports is the sum of the watch-history and resume-position generations, so a page still sees a resume position move even though that write no longer invalidates any derived cache. |
@@ -173,15 +175,15 @@ before reversing something that looks unnecessarily cautious.
 | `dataRepo.js` | **The data repository** - pure SQLite. All prepared-statement CRUD for watch history, playstate, playback progress, live tracking cache; the memoized derived caches (`getCachedHistory/Movies/Shows`, `getWatchStats`); canonical show-poster enrichment; `mediaKeyFor` canonical keys; query functions behind `/api/history`, `/api/movies`, `/api/shows`, `/api/show`; dedup/merge/rematch/backfill helpers. |
 | `parsers.js` | Webhook normalization: `parsePlexWebhook` (multipart), `parseEmbyWebhook`, `parseJellyfinWebhook`, `parseCustomWebhook` → a unified `media` object with a `phase` field (`active`/`completed`/`ended`/`unplayed`/`ignored`). Also `parsePlexGuids`, `normalizeProviderIds`, `decodeHtmlEntities`, `buildPlexMediaFromMetadata`. See [webhooks.md](webhooks.md). |
 | `resumeAuthority.js` | Shared ordering rules for resume candidates versus canonical watched/unwatched state: same-position acknowledgement matching, reliable source/receipt timestamps, stored-progress deletion authority, and Emby/Jellyfin ambiguous `UserDataSaved` phase resolution. |
-| `syncOrchestrator.js` | Cross-platform propagation: `syncMediaPlaystate` / `syncMediaUnplayedPlaystate` / `syncMediaProgress` fan out normal events to the other platforms' clients, while `syncCanonicalPlaystate` replays Plembfin's state to every configured destination; all use `TARGETS_BY_SOURCE` routing, echo-loop detection via `loopStore.checkAndClaim`, and result summaries written to telemetry. |
+| `syncOrchestrator.js` | Cross-platform propagation: `syncMediaPlaystate` / `syncMediaUnplayedPlaystate` / `syncMediaProgress` fan out normal events to the other platforms' clients, while `syncCanonicalPlaystate` replays Plekt's state to every configured destination; all use `TARGETS_BY_SOURCE` routing, echo-loop detection via `loopStore.checkAndClaim`, and result summaries written to telemetry. |
 | `watchSyncPolicy.js` | The provider matrix for one outgoing watched action: resolves its explicit intent (`live`, `manual`, `historical`, `import`, `restore`), decides per target whether to `send`, and names the terminal outcomes (`sent`, `already_matching`, `skipped_by_policy`, `unsupported`, `failed`). Owns the canonical play date Emby and Jellyfin receive, and the Plex-only historical-sync policy enforced by both `syncOrchestrator.js` and `markPlexPlayed`. Imports `tuning.js` only, so any provider adapter can enforce the matrix. |
 | `personalRatingIdentity.js` | Normalizes movie/show/episode rating identity; episode keys use parent show identity plus season/episode while retaining leaf provider IDs for writes. |
 | `personalRatingRepository.js` | SQLite repository for canonical rating source observations, latest-intent queue rows, provider echo markers, and per-provider sync runs. |
-| `personalRatingSync.js` | Optional two-way personal-rating snapshots, Plembfin-authoritative conflict handling, complete-snapshot clears, durable queue delivery, retries, and the independent scheduler hook. |
+| `personalRatingSync.js` | Optional two-way personal-rating snapshots, Plekt-authoritative conflict handling, complete-snapshot clears, durable queue delivery, retries, and the independent scheduler hook. |
 | `personalWatchlistIdentity.js` | Canonical movie/TV watchlist identity and provider/title aliases; episode rows are intentionally excluded from the first watchlist release. |
 | `personalWatchlistRepository.js` | Canonical watchlist mutations/tombstones, provider ownership ledger, durable queue, sync runs, activity, restore gate, and completed-watch removal hook. |
 | `personalWatchlistSync.js` | Bounded provider snapshots, safe first-run union, complete-snapshot removal safety, provider-addition fanout, owned-container cleanup, queue delivery, retries, and scheduler integration. |
-| `playlistSyncTriggers.js` | Playlist sync triggers: debounced per-playlist `syncPlaylist` after Plembfin edits (worker-capable processes only, app-targeted playlists only) and the 5-minute scheduled `syncAllPlaylists` pass, the only pass that counts toward an app-side deletion. Engines: `playlistPushEngine.js`, `playlistPullEngine.js` (plan: `plan/archive/custom-playlist-sync/plan.md`). |
+| `playlistSyncTriggers.js` | Playlist sync triggers: debounced per-playlist `syncPlaylist` after Plekt edits (worker-capable processes only, app-targeted playlists only) and the 5-minute scheduled `syncAllPlaylists` pass, the only pass that counts toward an app-side deletion. Engines: `playlistPushEngine.js`, `playlistPullEngine.js` (plan: `plan/archive/custom-playlist-sync/plan.md`). |
 | `upNextIdentity.js` | Shared Up Next identity normalizer and deterministic ordering/merge rules: verified movie IDs, provider-series-plus-SxxExx episode keys, native-ID fallbacks, source-ID preservation, and resume-over-next-up reconciliation. |
 | `upNextRepository.js` | Generation-based SQLite source ledger for provider Resume/Continue Watching/Next Up feeds. Activates only complete snapshots, preserves last-good rows on failures, exposes redacted feed status, and advances `up_next` invalidation when active source content changes. |
 | `upNextService.js` | Builds the unified dashboard projection from canonical local resume/playstate, provider observations, and bounded released-episode metadata fallback; emits stable public queue items without raw provider payloads. |
@@ -192,15 +194,15 @@ before reversing something that looks unnecessarily cautious.
 | `upNextDismissals.js` | Server-side Up Next dismissals: alias plus coordinate identity, projection filter, and restore. Replaces the browser-local map; see `docs/decisions.md` entry 23. |
 | `recommendationExclusions.js` | Server-side movie/TV exclusions for the personalized Discover recommendation rail, including identity normalization, bounded persistence, and recommendation filtering. |
 | `upNextSeedLedger.js` | Legacy ledger for identifying and suppressing positions written by older native-rail seed builds while they are migrated out. |
-| `providerPlaylists.js` | Uniform Plex/Emby/Jellyfin playlist client for Plembfin playlist sync (list, read, create, add, remove, move, rename, delete) plus minimal-move order reconcile (entries already in relative order stay put) and a `rebuild` mode that moves each entry to the end; the push re-reads Plex after moving, because Plex answered some moves between two entries with success yet ignored them, rebuilds once on a mismatch, and stores the order the app reports. Only a definite 404 counts as not-found; other read failures throw. Backed by `plexPlaylists.js` and `embyLikePlaylists.js`. Not yet wired to any route or job (`plan/archive/custom-playlist-sync/plan.md`). |
+| `providerPlaylists.js` | Uniform Plex/Emby/Jellyfin playlist client for Plekt playlist sync (list, read, create, add, remove, move, rename, delete) plus minimal-move order reconcile (entries already in relative order stay put) and a `rebuild` mode that moves each entry to the end; the push re-reads Plex after moving, because Plex answered some moves between two entries with success yet ignored them, rebuilds once on a mismatch, and stores the order the app reports. Only a definite 404 counts as not-found; other read failures throw. Backed by `plexPlaylists.js` and `embyLikePlaylists.js`. Not yet wired to any route or job (`plan/archive/custom-playlist-sync/plan.md`). |
 | `playlistRuleCatalogue.js` | Library catalogue read for automatic playlists: every movie and show each connected app holds, with genres (Plex read per genre), year, added date, rating, and ids; cached per app for 50 minutes; any failed page is an unreadable app, never a partial library. Also the merged genre list (`genreKey`, TMDB genre ids) behind the `list-rule-genres` action (`plan/archive/custom-playlist-sync/step8-auto-playlists.md`). |
 | `playlistWatched.js` | Watch index for playlists (trusted `watch_history` rows with watch times, furthest watched episode per show) and "Remove items once watched" (`personal_lists.remove_watched`): items watched after they were added are removed on every 5-minute playlist pass and before each rule check; an automatic playlist also records the title in `personal_list_handoffs` so the rule never adds it back (a TV show then carries on in Up Next). `handOffAutomaticPlaylistItem` does the same for a title removed by hand from an automatic playlist (the whole show for TV). |
 | `playlistRuleEngine.js` | Automatic playlist rules: validation, evaluation (a type picks up to the maximum titles in its ranking, then any order but Ranked re-sorts them: Top rated, Popular, and New releases from TMDB Discover, Trending from TMDB's weekly trending list filtered locally; the library source ranks your titles by the apps' rating for Top rated, or by their place on the same TMDB list for the others; library source from the catalogue above (titles merged across apps by shared id; a title its app has not matched to any id is left out until it is), catalogue source from TMDB, watched state from `watch_history`, TV rules hold one episode per show: the next one to watch, read from TMDB season by season for the catalogue source; shows and movies handed off by "Remove items once watched" stay out; a Language choice keeps titles whose TMDB original language is ticked, read for library titles by `playlistLanguages.js` from the `tmdb_metadata_cache.original_language` column filled when metadata is imported, a title with no language left out), the whole-update hold for large removals (an episode replaced by its own show's next one does not count), the hourly check run from the scheduled playlist pass (which also re-checks, at that pass, a playlist with "Remove items once watched" off whose show was watched, so it moves on to its next episode), and Stop updating. A failed read never changes the items. |
 | `playlistLanguages.js` | Original language of each library title for automatic playlist rules: read from the metadata cache's `original_language` column (blob fallback for restored rows); only a title with no cached details is looked up through the TMDB gateway (lane `sync`); no TMDB match reads as unknown, any other failed lookup throws. |
-| `playlistPushEngine.js` | Push half of Plembfin playlist sync: per targeted app, resolves items (series expanded minus exclusions), reconciles the app playlist to Plembfin's order, writes the entry ledger and `personal_list_item_availability`, deletes deselected or soft-deleted apps' playlists. Removes only what Plembfin no longer wants; failed lookups, app-added entries, and entries removed in the app are left for the pull pass. Not yet wired to any route or job (`plan/archive/custom-playlist-sync/plan.md`). |
+| `playlistPushEngine.js` | Push half of Plekt playlist sync: per targeted app, resolves items (series expanded minus exclusions), reconciles the app playlist to Plekt's order, writes the entry ledger and `personal_list_item_availability`, deletes deselected or soft-deleted apps' playlists. Removes only what Plekt no longer wants; failed lookups, app-added entries, and entries removed in the app are left for the pull pass. Not yet wired to any route or job (`plan/archive/custom-playlist-sync/plan.md`). |
 | `plexWatchlistClient.js` | Plex account-level Universal Watchlist adapter with native read/write capability probing and RSS read-only fallback. |
-| `traktAppConfig.js` | Supplies the bundled Plembfin Trakt device application, applies optional `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` overrides, validates the personal-app fallback, and hydrates runtime requests without persisting application credentials in tracker records. |
-| `credentialVault.js` | AES-256-GCM envelope for provider credentials, backed by `PLEMBFIN_CREDENTIAL_KEY` or the generated `data/credential.key`. |
+| `traktAppConfig.js` | Supplies the bundled Plekt Trakt device application, applies optional `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` overrides, validates the personal-app fallback, and hydrates runtime requests without persisting application credentials in tracker records. |
+| `credentialVault.js` | AES-256-GCM envelope for provider credentials, backed by `PLEKT_CREDENTIAL_KEY` or the generated `data/credential.key`. |
 | `mediaConnectionRepo.js` | CRUD and runtime adaptation for encrypted Plex/Emby/Jellyfin account connections. |
 | `embyLikeAuth.js` | Emby/Jellyfin authentication exchange and verified user identity helpers. |
 | `plexAuth.js` | Plex PIN authorization, account verification, resource discovery, and server selection. |
@@ -215,8 +217,8 @@ before reversing something that looks unnecessarily cautious.
 | `traktClient.js` | Trakt device OAuth, refresh, paged watched-history reads, watched-history write client, and personal rating snapshot/write adapter. |
 | `watchStateTransitions.js` | Shared transactional watched/unwatched transition boundary used by tracker and media-server inputs. |
 | `syncMatchReport.js` | Pure aggregation of current watch-history telemetry into per-platform unmatched-media counts, movie/episode splits, and bounded samples used by Sync Activity's unresolved-match issue view. |
-| `mediaForceSync.js` | Detail-page Force Sync: title-scoped Plex/Emby/Jellyfin watched-state lookup, Set Plembfin as Source of Truth (push)/Import Watched Status (pull) modes, explicit import of remote-only records on pull, provenance/telemetry, and target-filtered canonical propagation. A remote item whose played flag has no reliable played date is skipped rather than imported with a fabricated current-time date. The modal's separate Push Personal Rating action uses `ratingSync/push` and does not enter this watched-state worker. The library-wide Force Sync planner remains remote-only-safe. Items are processed with bounded concurrency (`runWithConcurrency` in `concurrency.js`) so a show with many seasons doesn't sync one episode at a time. An all-destinations push completes the local media-server phase first and then drains a separate two-item Trakt phase, merging both phases into one final result and preserving each canonical remove/add pair during cancellation. |
-| `libraryForceSync.js` | Settings Force Sync: library-wide push (Set Plembfin as Source of Truth)/pull (Import Watched Status) operations, remote watched-state collection, and target-filtered canonical propagation. Also processes items and resume positions with bounded concurrency. |
+| `mediaForceSync.js` | Detail-page Force Sync: title-scoped Plex/Emby/Jellyfin watched-state lookup, Set Plekt as Source of Truth (push)/Import Watched Status (pull) modes, explicit import of remote-only records on pull, provenance/telemetry, and target-filtered canonical propagation. A remote item whose played flag has no reliable played date is skipped rather than imported with a fabricated current-time date. The modal's separate Push Personal Rating action uses `ratingSync/push` and does not enter this watched-state worker. The library-wide Force Sync planner remains remote-only-safe. Items are processed with bounded concurrency (`runWithConcurrency` in `concurrency.js`) so a show with many seasons doesn't sync one episode at a time. An all-destinations push completes the local media-server phase first and then drains a separate two-item Trakt phase, merging both phases into one final result and preserving each canonical remove/add pair during cancellation. |
+| `libraryForceSync.js` | Settings Force Sync: library-wide push (Set Plekt as Source of Truth)/pull (Import Watched Status) operations, remote watched-state collection, and target-filtered canonical propagation. Also processes items and resume positions with bounded concurrency. |
 | `concurrency.js` | `runWithConcurrency(items, handler, limit)` - a small bounded worker pool used by Force Sync to process multiple items at once. Safe to raise: outbound HTTP calls are still throttled per host by the outbound governor (`outboundGovernor.js`), so this only shortens wall-clock time. |
 | `mediaForceSyncActivity.js` | Bounded in-memory activity ledger used by the detail-page and Settings Force Sync status/cancellation endpoints to stream operation lines, cancellation state, and final results to the UI. |
 | `tuning.js` | Import-free runtime accessors for watched threshold, minimum resume position, active-session TTL, outbound timeout, and the app-marked watched-flag policy; reads environment defaults and applies validated Settings overrides. |
@@ -240,7 +242,7 @@ before reversing something that looks unnecessarily cautious.
 | `diagnosticLogger.js` | Wraps `console.log/warn/error` and writes captured lines (secrets redacted) to the `diagnostic_log` table for Settings → Logs (`/api/diagnostic-logs`). Batches writes, caps the table at 20,000 rows, and prunes the `data/logs` JSONL archive on boot. |
 | `logVerbose.js` | `LOG_VERBOSE` flag plus `traceLog()`, used to keep per-request tracing (Plex GUID lookups, search fallbacks) out of the log unless explicitly enabled. |
 | `cacheWarmup.js` | Background warm-up of the history-derived page caches after startup and after data changes settle (5 s quiet, 60 s ceiling); started by `server/server.js` in the web-serving process only. See "Data layer". |
-| `cacheTelemetry.js` | Derived-cache rebuild counters: per cache, how many rebuilds, total/max/mean milliseconds, and which labelled generation change each was for. `timeCacheRebuild`/`timeCacheRebuildAsync` wrap the rebuild itself, so a cache hit costs nothing. Logs per rebuild under `PLEMBFIN_DEBUG_CACHE_REBUILDS`; `cacheRebuildTelemetry()` returns the snapshot. |
+| `cacheTelemetry.js` | Derived-cache rebuild counters: per cache, how many rebuilds, total/max/mean milliseconds, and which labelled generation change each was for. `timeCacheRebuild`/`timeCacheRebuildAsync` wrap the rebuild itself, so a cache hit costs nothing. Logs per rebuild under `PLEKT_DEBUG_CACHE_REBUILDS`; `cacheRebuildTelemetry()` returns the snapshot. |
 | `posterCache.js` | Artwork fetch-resize-store pipeline: downloads a remote image (Plex token moved to a header), resizes with sharp to webp (poster 340w / backdrop 1600w / profile 780w / logo 800w), writes to `data/media/<variant>s/`, records metadata in `poster_cache` with negative caching for missing/failed. See [posters-artwork.md](posters-artwork.md). |
 | `tmdbGateway.js` | TMDB API gateway + SQLite caches (`tmdb_metadata_cache`, `tmdb_search_cache`, `tmdb_person_cache`): details, search, seasons, people, images, library prewarm, request throttling and in-flight dedupe. For TV it merges TVDB structural data - see [metadata.md](metadata.md). Also caches what an IMDb/TVDB id is to TMDB `find` (series, episode with show and coordinate, or nothing) for the playstate alias repair. |
 | `playstateAliasReview.js` | Watch-State Aliases card logic: lists episode-id playstate rows no proof tier places (id-less title-keyed rows excluded), folds a show's rows newest-state-wins, or stores them as "Different show" (settings row `playstateAliasDismissed`, whose keys the scheduled repair skips). |
@@ -255,8 +257,8 @@ before reversing something that looks unnecessarily cautious.
 | `showProgressCache.js` | File-backed cache (`data/tv_progress_cache.json`) of per-show watched/total episode counts. Burst updates share one flush, reuse recent metadata totals, and atomically replace the file after synchronous persistence. In split `web` + `worker` deployments each process still owns a private whole-file snapshot, so concurrent writers can overwrite one another's unrelated show updates; SQLite watch history remains authoritative and a later recalculation repairs the cache. |
 | `backup.js` | Portable full-backup format: exports/imports the core SQLite tables as versioned JSON collections (paged export, batched import, optional reset). Used by Settings → Backup / restore and the encrypted backup subsystem. |
 | `watchHistoryBackups.js` | Watch-history-only backup subsystem: gzip JSON of `watch_history` + `playstate` + `playback_progress` with checksum manifest, independent daily local and remote schedules with separate retention counts, dry-run/merge/replace restore, remote destination management (secrets kept server-side, redacted in every API response), cron-sync pausing around restores. See [backups.md](backups.md). |
-| `plembfinBackups.js` | Full encrypted backup subsystem: AES-256-GCM (PBKDF2) encrypted export of the entire portable backup, daily scheduling + retention, optional remote mirroring. |
-| `plembfinRestore.js` | Server-side restore of a full backup file of any size: streamed base64/AES-GCM decrypt, a verify pass before any write, then import through `importCollectionBatch`; in-memory restore job and streamed uploads. |
+| `plektBackups.js` | Full encrypted backup subsystem: AES-256-GCM (PBKDF2) encrypted export of the entire portable backup, daily scheduling + retention, optional remote mirroring. |
+| `plektRestore.js` | Server-side restore of a full backup file of any size: streamed base64/AES-GCM decrypt, a verify pass before any write, then import through `importCollectionBatch`; in-memory restore job and streamed uploads. |
 | `backupStreamScanner.js` | Incremental reader for the backup document that reports top-level fields and one collection document at a time, so a backup is never held as one string. |
 | `backupDestinations/index.js` | Adapter registry: `folder`, `webdav`, `s3` (also `backblaze`), `onedrive`, `dropbox` - all sharing `testConnection / upload / list / download / delete`. |
 | `backupDestinations/folder.js` | Local/mounted-folder destination adapter. |
@@ -275,9 +277,9 @@ before reversing something that looks unnecessarily cautious.
 | `styles-modern.css` | The Modern theme style, loaded after `styles.css`. Every rule is scoped to `html[data-style="modern"]`, so Classic (no attribute) is unaffected. |
 | `theme-boot.js` | Tiny classic script loaded with a blocking `<script>` in `<head>`, before the stylesheet. Applies the saved (or system) theme and the saved theme style (`plembfin:style`) before first paint and gives every `img[data-theme-logo]` the matching header logo as it is parsed. The logo `<img>` tags carry no `src` so the browser's preload scanner cannot fetch the wrong variant. `app.js` (`initializeTheme`/`updateThemeIcon`) keeps the theme in sync afterwards. |
 | `fonts/*.woff2`, `fonts/OFL-*.txt` | Self-hosted Outfit and JetBrains Mono variable fonts (latin and latin-ext subsets) with their SIL Open Font License texts, copied from the `@fontsource-variable` packages the public website uses. The app makes no request to Google Fonts; the CSP allows fonts from `'self'` only. |
-| `favicon.png`, `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `plembfin_header_logo_dark.png`, `plembfin_header_logo_light.png` | `icon-192.png` (light browser theme) and `icon-192-dark.png` (dark browser theme) are the browser tab icons, and `favicon.png` is the Windows package icon source; `favicon.svg` is the placeholder art used wherever a poster or profile image is missing. `apple-touch-icon.png` is the 180x180 icon iOS uses on a white background when the app is added to the Home Screen, and the `icon-*.png` files are the Android/Chrome install icons named by the web manifest. The two header logos are swapped by the theme toggle. |
+| `favicon.png`, `favicon.svg`, `apple-touch-icon.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png`, `plekt_header_logo_dark.png`, `plekt_header_logo_light.png` | `icon-192.png` (light browser theme) and `icon-192-dark.png` (dark browser theme) are the browser tab icons, and `favicon.png` is the Windows package icon source; `favicon.svg` is the placeholder art used wherever a poster or profile image is missing. `apple-touch-icon.png` is the 180x180 icon, filled to the edges with the app's dark background, that iOS uses when the app is added to the Home Screen, and the `icon-*.png` files are the Android/Chrome install icons named by the web manifest. The two header logos are swapped by the theme toggle. |
 | `manifest.webmanifest` | Web app manifest: app name, standalone display mode, theme/background colour, and the install icons above. Linked from `index.html`, which also sets `apple-touch-icon`, `apple-mobile-web-app-title` and `theme-color`. |
-| `icons/plex.svg`, `icons/emby.svg`, `icons/jellyfin.svg`, `icons/trakt.svg`, `icons/plembfin.png`, `icons/tmdb.svg`, `icons/tvdb.svg`, `icons/imdb.svg` | Media-server, Plembfin, and metadata-source badge icons used on cards and pills (the media detail page's Ratings/Watch Now rows, and per-watch source badges). A watch recorded with `source: "manual"` (marked watched from within Plembfin itself, not reported by a media server) normalizes to `plembfin` and renders with `icons/plembfin.png` and the "Plembfin" label, rather than defaulting to Plex (`normalizePlatformSource` in `modules/utils.js`). `icons/trakt.svg` is used by the Sync Activity page, which resolves tracker names itself. |
+| `icons/plex.svg`, `icons/emby.svg`, `icons/jellyfin.svg`, `icons/trakt.svg`, `icons/plembfin.png`, `icons/tmdb.svg`, `icons/tvdb.svg`, `icons/imdb.svg` | Media-server, Plekt, and metadata-source badge icons used on cards and pills (the media detail page's Ratings/Watch Now rows, and per-watch source badges). A watch recorded with `source: "manual"` (marked watched from within Plekt itself, not reported by a media server) normalizes to `plembfin` and renders with `icons/plembfin.png` and the "Plekt" label, rather than defaulting to Plex (`normalizePlatformSource` in `modules/utils.js`). `icons/trakt.svg` is used by the Sync Activity page, which resolves tracker names itself. |
 
 ### `public/modules/`
 
@@ -346,7 +348,7 @@ before reversing something that looks unnecessarily cautious.
 
 | File | What it is |
 | --- | --- |
-| `build-check.js` | The `npm run build` gate: syntax-checks every JS file, runs `docs-check.js`, validates the JSON manifests, rejects bare `fetch(` in `server/` (must be `fetchWithTimeout`), then boots the server once against a temp DATA_DIR (`PLEMBFIN_BUILD_CHECK=1`). |
+| `build-check.js` | The `npm run build` gate: syntax-checks every JS file, runs `docs-check.js`, validates the JSON manifests, rejects bare `fetch(` in `server/` (must be `fetchWithTimeout`), then boots the server once against a temp DATA_DIR (`PLEKT_BUILD_CHECK=1`). |
 | `docs-check.js` | `npm run docs:check` - derives the required Node.js version from `package.json`, checks the README badge and setup text, and rejects weak/default Docker password examples. |
 | `changelog-message.js` | Shared changelog-message formatting, bullet extraction, release-detail validation, noise/release-process detection, and the `changelogEntryProcessViolations` safety check used by the local hooks, tests, and the three changelog scripts below. `synthesizeHeadline()` folds every commit/entry headline bundled into a release entry into one sentence naming all of them, rather than only the most recent one. `isReleaseToolingText()` strips bullets describing the release pipeline's own machinery (git hooks, CI workflows, the promotion scripts) by content, regardless of which commit type carried them, so a real feat/fix commit's bullet list can't leak dev-tooling notes into a changelog end users read. |
 | `changelog-git-helpers.js` | Shared git plumbing for the changelog scripts: walks real commit history between an anchor and HEAD (`commitsSinceLastEntry`), lists a commit's changed files, and reads the current HEAD commit/author. |
@@ -360,9 +362,9 @@ before reversing something that looks unnecessarily cautious.
 | `publish-github-release.js` | CI helper called by the main image, alpha image, and Windows installer workflows: creates or updates the matching GitHub Release from `generate-release-notes.js`, marks alpha builds as prereleases, and handles two workflows finishing at the same time without duplicate releases. |
 | `notify-discord-release.js` | CI helper called by `update-changelog.yml` (`main`) and `docker-publish-alpha.yml` (`alpha`): builds a Discord embed from the newest `changelog.json`/`changelog.alpha.json` entry and posts it to the `DISCORD_RELEASES_WEBHOOK` secret. No-ops if the secret isn't set; supports `--dry-run` to print the embed instead of posting. |
 | `install-git-hooks.js` | Sets `core.hooksPath` to `.githooks` (runs automatically via npm `prepare`). |
-| `docker-entrypoint.sh` | Container entrypoint: chowns `/data` when starting as root, then drops to the `plembfin` user via gosu. |
+| `docker-entrypoint.sh` | Container entrypoint: chowns `/data` when starting as root, then drops to the `plekt` user via gosu. |
 | `exportPlexHistory.js` | Standalone one-shot importer: reads a Plex server's watch history over its API and posts it to `/api/import` in chunks. Driven by env vars (`PLEX_URL`, `PLEX_TOKEN`, `API_KEY`). |
-| `forcePushHistory.js` | Standalone one-shot replicator: fetches Plembfin's `/api/history` and replays every row against Plex/Emby/Jellyfin as mark-played calls. |
+| `forcePushHistory.js` | Standalone one-shot replicator: fetches Plekt's `/api/history` and replays every row against Plex/Emby/Jellyfin as mark-played calls. |
 | `seed-demo-content.js` | `npm run seed:demo` - inserts fictional movies/shows with generated poster art for demo screenshots/dev. |
 | `generate-synthetic-library.js` | Builds a disposable library at a stated scale for performance measurement, parameterized by movies, shows, episodes per show, history rows, TMDB cache blob size, and poster pool. Writes only to the `--data-dir` it is given, refuses a directory holding a database it did not create, and drops a `synthetic-library.json` marker recording the parameters and resulting counts. |
 | `browser-route-benchmark.js` | Browser-side route benchmark for the application-speed plan: pasted or injected into a signed-in tab, it drives one same-origin popup (the app sends `X-Frame-Options: DENY`) through document loads or SPA transitions and reports TTFB, load, FCP, LCP, detail primary-ready, request/transfer/decoded totals, the shell subset, and a per-path request inventory. Never handles credentials. |
@@ -480,11 +482,11 @@ The same logic runs on demand via:
 - `POST /api/cron-sync` - streams a text log of what the tick did.
 - `POST /api/force-sync` - runs and stores progress in `runtime_state` for the
   dashboard to poll; `stop-force-sync` cancels.
-- `POST /api/force-sync/library` - runs a library-wide push (Set Plembfin as
+- `POST /api/force-sync/library` - runs a library-wide push (Set Plekt as
   Source of Truth) or pull (Import Watched Status) operation from Settings →
   Sync Tools; `GET /api/force-sync/library/status?id=...` returns its live
   activity and final result.
-- `POST /api/force-sync/media` - runs a title-scoped push (Set Plembfin as
+- `POST /api/force-sync/media` - runs a title-scoped push (Set Plekt as
   Source of Truth) or pull (Import Watched Status) operation from the detail
   page; `GET /api/force-sync/media/status?id=...` returns its live activity
   and final result.
@@ -516,9 +518,9 @@ resumes.
 
 Playlist sync (`playlistSyncTriggers.js`) runs as the next elected-worker step: a full
 pull-then-push pass over every app-targeted playlist once per 5 minutes, plus a
-debounced single-playlist sync 5 seconds after a Plembfin add, remove, or delete. A
+debounced single-playlist sync 5 seconds after a Plekt add, remove, or delete. A
 web-only process skips the debounced sync (the per-playlist lock is in-process) and
-leaves it to the worker's next pass. Plembfin-only playlists never sync.
+leaves it to the worker's next pass. Plekt-only playlists never sync.
 
 The tick also runs the scheduled watch-history backup and encrypted backup jobs
 ([backups.md](backups.md)), refreshes the generation-based provider Up Next source ledger,
@@ -578,7 +580,7 @@ from `v0.2.15` to `v0.2.15 - Update available` (accent-tinted).
 
 `GET /api/changelog` (`handleChangelog` in `routes/maintenance.js`) layers an update check on top: it
 reads the bundled `changelog.json` for the current version and fetches the published
-`changelog.json` from GitHub raw (`Lasikiewicz/plembfin@main`), cached in-process for one
+`changelog.json` from GitHub raw (`Lasikiewicz/plekt@main`), cached in-process for one
 minute (8-second fetch timeout). `?refresh=1` from an admin session bypasses that cache and
 re-fetches immediately. The browser cannot reach GitHub directly because the CSP is
 `connect-src 'self'`, so the server proxies and caches it.
@@ -639,7 +641,7 @@ stays visible alongside releases that exist only on GitHub. The response is
 where `latest` is the highest version across the remote manifest and the merged entries,
 `newer` lists releases with a higher semver than the running build, `updateAvailable` is
 true when `latest` outranks `current`, and `channel` is `"alpha"` when the image was built
-with `BUILD_CHANNEL=alpha` (the `ghcr.io/lasikiewicz/plembfin:alpha` image) or `"release"`
+with `BUILD_CHANNEL=alpha` (the `ghcr.io/lasikiewicz/plekt:alpha` image) or `"release"`
 otherwise. `current` itself always stays a plain semver string so entry-matching and
 update comparisons are unaffected; the frontend appends " alpha" (and, on alpha, the build
 number) only where the version is displayed - the sidebar badge and About's
@@ -738,7 +740,7 @@ atomic replacement and re-read their on-disk snapshot when another process updat
 Gotcha: `getCachedHistory()`, `getCachedMovies()`, and `getCachedShows()` rebuild full
 history-derived result sets after invalidation. That is acceptable for current local
 install sizes, but large datasets should move hot paths to indexed SQL with
-`LIMIT`/`OFFSET` before adding more full-table caches. `PLEMBFIN_DEBUG_CACHE_REBUILDS=1`
+`LIMIT`/`OFFSET` before adding more full-table caches. `PLEKT_DEBUG_CACHE_REBUILDS=1`
 reports what each rebuild actually costs and which caller's invalidation caused it.
 
 **Background warm-up** (`server/src/utils/cacheWarmup.js`): so a page request does not pay
@@ -865,9 +867,15 @@ WebSocket listener is stopped, `server.close()` drains in-flight HTTP requests, 
 - `API_KEY` - pin the webhook/integration key
 - `WEBHOOK_SECRET` - pin the webhook secret used by header/Bearer auth and the compatibility `?token=` URL
 - `SESSION_SECRET` - pin the session signing secret
-- `PLEMBFIN_CREDENTIAL_KEY` - optional external credential-vault key; otherwise `data/credential.key` is generated
-- `PLEMBFIN_PUBLIC_URL` - fixed public origin for provider return links
-- `PLEMBFIN_MEDIA_AUTH_ENABLED` - account-connection routes, enabled by default; set `false` for manual-only setup
+- App-specific variables are named `PLEKT_<NAME>`. Every one is also read under its
+  older `PLEKT_<NAME>` name (the new name wins when both are set), through
+  `brandEnv()` in `server/src/utils/brandEnv.js`; the server logs one line at boot
+  listing any old names in use. New code reads these variables through `brandEnv()`,
+  never `process.env.PLEKT_*` directly.
+- `PLEKT_CREDENTIAL_KEY` - optional external credential-vault key; otherwise `data/credential.key` is generated
+- `PLEKT_PUBLIC_URL` - fixed public origin for provider return links
+- `PLEKT_PUBLISHED_PORT` - host port Plekt is published on (5056 in the compose files); used by the startup webhook port advisory (`docs/webhooks.md`), which is skipped when unset
+- `PLEKT_MEDIA_AUTH_ENABLED` - account-connection routes, enabled by default; set `false` for manual-only setup
 - `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` - optional replacement for the bundled Trakt device application
 - `COOKIE_SECURE` - set to `true` when behind an HTTPS reverse proxy
 - `LOG_VERBOSE` - set to `true` to include per-request tracing (Plex GUID lookups, search fallbacks, per-phase scheduled-sync narration) in the logs. Off by default; errors and warnings are always logged.
@@ -892,12 +900,12 @@ WebSocket listener is stopped, `server.close()` drains in-flight HTTP requests, 
 - `TVDB_PROJECT_KEY` - advanced: replace the built-in shared TheTVDB project key (used when no personal key is set). Only needed if the built-in key is revoked or exhausted.
 - `FANART_PROJECT_KEY` - advanced: replace the built-in shared Fanart.tv project key. Only needed if the built-in key is revoked or exhausted.
 - `FANART_API_KEY` - optional personal Fanart.tv key (raises the rate limit as a `client_key`)
-- `PLEMBFIN_DEBUG_OUTBOUND` - set to `1` to log a per-host outbound HTTP request count once a minute (visible in Settings → Logs); for measuring upstream traffic
-- `PLEMBFIN_DEBUG_CACHE_REBUILDS` - set to `1` to log one line per derived-cache rebuild (visible in Settings → Logs), recording which cache rebuilt, how long it took, and which generation change it was for. A version bump on its own is free; what costs is a bump that invalidates a cache which is then read
-- `PLEMBFIN_DEBUG_SCHEDULER` - set to `1` to log per-step scheduler timing (visible in Settings → Logs): each step's name, where in the tick it started, how long it ran, whether it exhausted its time budget, plus a per-tick summary carrying the achieved interval between tick starts
-- `PLEMBFIN_PAUSE_SCHEDULED_WORKER` - set to `1` only for diagnostics that need real-time provider listeners without scheduled sync ticks or background-job polling; the default is off
-- `PLEMBFIN_TRAKS_COLLECTOR_ORIGIN` / `PLEMBFIN_TRAKS_SITE_KEY` - optional public-demo Traks configuration; the browser uses first-party `/t` and `/api/event` routes while the collector origin remains server-side. `PLEMBFIN_TRAKS_SCRIPT_URL` is retained as a legacy origin fallback
-- `BUILD_CHANNEL` - baked into published Docker images at build time (`release` by default, `alpha` in the `ghcr.io/lasikiewicz/plembfin:alpha` image, and `develop` in the `ghcr.io/lasikiewicz/plembfin:develop` image); local `npm start` and `npm run dev` default to `develop`, while an explicit value can select another local channel. It controls the channel metadata shown in the sidebar badge, About, and Changelog
+- `PLEKT_DEBUG_OUTBOUND` - set to `1` to log a per-host outbound HTTP request count once a minute (visible in Settings → Logs); for measuring upstream traffic
+- `PLEKT_DEBUG_CACHE_REBUILDS` - set to `1` to log one line per derived-cache rebuild (visible in Settings → Logs), recording which cache rebuilt, how long it took, and which generation change it was for. A version bump on its own is free; what costs is a bump that invalidates a cache which is then read
+- `PLEKT_DEBUG_SCHEDULER` - set to `1` to log per-step scheduler timing (visible in Settings → Logs): each step's name, where in the tick it started, how long it ran, whether it exhausted its time budget, plus a per-tick summary carrying the achieved interval between tick starts
+- `PLEKT_PAUSE_SCHEDULED_WORKER` - set to `1` only for diagnostics that need real-time provider listeners without scheduled sync ticks or background-job polling; the default is off
+- `PLEKT_TRAKS_COLLECTOR_ORIGIN` / `PLEKT_TRAKS_SITE_KEY` - optional public-demo Traks configuration; the browser uses first-party `/t` and `/api/event` routes while the collector origin remains server-side. `PLEKT_TRAKS_SCRIPT_URL` is retained as a legacy origin fallback
+- `BUILD_CHANNEL` - baked into published Docker images at build time (`release` by default, `alpha` in the `ghcr.io/lasikiewicz/plekt:alpha` image, and `develop` in the `ghcr.io/lasikiewicz/plekt:develop` image); local `npm start` and `npm run dev` default to `develop`, while an explicit value can select another local channel. It controls the channel metadata shown in the sidebar badge, About, and Changelog
 
 Environment variables act as **defaults** for connection and sync-tuning settings:
 values saved in Settings (stored in the `settings` SQLite row) take precedence over
@@ -906,7 +914,7 @@ env values (`mergeEnvDefaults` in `configStore.js`).
 ## Synchronization safety modules
 
 - `server/src/utils/forceSyncPlanner.js` collects read-only server state and builds typed, scoped Force Sync actions.
-- `server/src/utils/libraryForceSync.js` powers the Settings library-wide Set Plembfin as Source of Truth (push) and Import Watched Status (pull) operations.
+- `server/src/utils/libraryForceSync.js` powers the Settings library-wide Set Plekt as Source of Truth (push) and Import Watched Status (pull) operations.
 - `server/src/utils/forceSyncExecutor.js` validates plan freshness, creates verified destructive-run snapshots, and executes confirmed actions.
 - `server/src/utils/syncPlans.js` stores plan summaries/actions, confirmation state, snapshots, and retention.
 - `server/src/utils/outboundGovernor.js` coordinates per-host pacing, lanes, cooldowns, and safe telemetry.

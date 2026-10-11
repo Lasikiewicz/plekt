@@ -1,10 +1,52 @@
 {
   "baseVersion": "1.3.1",
-  "build": 1,
-  "version": "1.3.1.1.0",
-  "updatedAt": "2026-10-05T20:05:03.929Z",
+  "build": 2,
+  "version": "1.3.1.2.0",
+  "updatedAt": "2026-10-05T23:12:17.325Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 2,
+      "version": "1.3.1.2.0",
+      "shortVersion": "1.3.1.2.0",
+      "date": "2026-10-05T23:12:17.325Z",
+      "commit": "185c523623f6c1dda2b2bbd226e242f22a8c8111",
+      "message": "This update refreshes dashboard data on entry and moves Plembfin's default port to 5056 so it can run alongside Seerr.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Refresh dashboard data and avoid Seerr port conflict",
+        "Fix: Refresh watch history and Up Next when the dashboard opens, showing loading or unavailable feedback until fresh server data arrives.",
+        "Fix: Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Refresh dashboard data and avoid Seerr port conflict",
+          "Refresh watch history and Up Next when the dashboard opens, showing loading or unavailable feedback until fresh server data arrives.",
+          "Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Up Next & watch-state",
+            "details": [
+              "Refresh watch history and Up Next when the dashboard opens, showing loading or unavailable feedback until fresh server data arrives."
+            ]
+          },
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Refresh dashboard data and avoid Seerr port conflict",
+              "Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 1,
       "version": "1.3.1.1.0",
@@ -80,5 +122,5 @@
       }
     }
   ],
-  "shortVersion": "1.3.1.1.0"
+  "shortVersion": "1.3.1.2.0"
 }

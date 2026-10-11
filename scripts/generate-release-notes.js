@@ -57,7 +57,7 @@ export function getReleaseMetadata({ channel, manifest } = {}) {
       version: normalizeText(entry.version || `${baseVersion}.${build}`),
       build,
       tagName,
-      title: `Plembfin ${tagName}`,
+      title: `Plekt ${tagName}`,
     };
   }
 
@@ -70,7 +70,7 @@ export function getReleaseMetadata({ channel, manifest } = {}) {
     version,
     build: null,
     tagName,
-    title: `Plembfin ${tagName}`,
+    title: `Plekt ${tagName}`,
   };
 }
 
@@ -88,7 +88,7 @@ function addSection(lines, section) {
   return true;
 }
 
-export function generateReleaseNotes({ channel, manifest, repository = "Lasikiewicz/plembfin", serverUrl = "https://github.com", commit = "" } = {}) {
+export function generateReleaseNotes({ channel, manifest, repository = "Lasikiewicz/plekt", serverUrl = "https://github.com", commit = "" } = {}) {
   const metadata = getReleaseMetadata({ channel, manifest });
   const entry = metadata.entry;
   const repoUrl = repositoryUrl(serverUrl, repository);
@@ -102,7 +102,7 @@ export function generateReleaseNotes({ channel, manifest, repository = "Lasikiew
     "",
   ];
   if (entry.websiteUrl) {
-    lines.push(`[Visit the Plembfin website](${normalizeText(entry.websiteUrl)})`, "");
+    lines.push(`[Visit the Plekt website](${normalizeText(entry.websiteUrl)})`, "");
   }
 
   const sections = changelogSectionGroups(entry);
@@ -121,7 +121,7 @@ export function generateReleaseNotes({ channel, manifest, repository = "Lasikiew
   lines.push(
     "## Start safely",
     "",
-    "1. Read the [fresh-install and provider setup notes](https://plembfin.com/docs).",
+    "1. Read the [fresh-install and provider setup notes](https://plekt.net/docs).",
     "2. Create a backup before the first write-back.",
     "3. Start with a small library or a limited provider scope.",
     "4. Inspect Sync Activity after the first run and retry only the rows that need it.",
@@ -159,7 +159,7 @@ export function generateReleaseNotes({ channel, manifest, repository = "Lasikiew
     "",
     "## Project",
     "",
-    `Plembfin is licensed under AGPL-3.0. [Repository](${repoUrl}) · [Documentation](https://plembfin.com/docs)`,
+    `Plekt is licensed under AGPL-3.0. [Repository](${repoUrl}) · [Documentation](https://plekt.net/docs)`,
     "",
     "Development and release work were heavily AI-assisted under my direction. I reviewed the generated changes, tested the integrations and browser flows, and maintain the project. AI is not required at runtime.",
   );
@@ -189,7 +189,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     const notes = generateReleaseNotes({
       channel,
       manifest,
-      repository: process.env.GITHUB_REPOSITORY || "Lasikiewicz/plembfin",
+      repository: process.env.GITHUB_REPOSITORY || "Lasikiewicz/plekt",
       serverUrl: process.env.GITHUB_SERVER_URL || "https://github.com",
       commit: process.env.GITHUB_SHA || "",
     });

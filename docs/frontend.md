@@ -256,7 +256,7 @@ stays set to the slug throughout, so the address bar keeps the `/tvshow/:key` fo
 - `popstate` re-runs `handleRouting` for browser back/forward; direct URL loads hydrate
   the same UI (the server falls back to `index.html` for any non-API path).
 - `modules/live-updates.js` coordinates its streaming `/api/live-updates` request with
-  the browser Web Locks API, so only one Plembfin tab holds the long-lived HTTP
+  the browser Web Locks API, so only one Plekt tab holds the long-lived HTTP
   connection. Other tabs load through the normal connection pool and automatically
   take ownership when the stream-owning tab closes or becomes unavailable.
 
@@ -357,7 +357,7 @@ The Playlists page itself lives in `playlists.js` (the sync behind it is describ
 [sqlite-schema.md](sqlite-schema.md) "Playlist tables"). Each
 heading shows the selected apps as icon-and-name badges (icon dimmed while waiting for the
 first sync, with a dot for a failed sync or a playlist the app no longer finds; the tooltip
-says which) or "Plembfin only", the item count, and on the right an **Options** menu
+says which) or "Plekt only", the item count, and on the right an **Options** menu
 (`details.playlist-options`, closed by an outside click, Escape, or choosing an item) with
 Edit and Delete. On desktop, cards are dragged and dropped within
 their rail to reorder (`bindPlaylistDragAndDrop`, delegated on the panel): the held card moves
@@ -455,7 +455,7 @@ The Plex Watchlist Sync panel lives in Settings → Sync → Sync Tools and is r
 Plex connection, and a **Sync now** button in the bottom right of the panel's action row
 (the Personal Rating Sync panel above it carries the same control in the same place). Status polling reports the sync state and Plex
 capability. Enabling it immediately starts a safe-union sync, so Plex-only additions are
-imported without allowing an empty first snapshot to erase Plembfin.
+imported without allowing an empty first snapshot to erase Plekt.
 
 The same `watchlistSync.enabled` flag has two other entry points, so all three stay in
 step through the `plembfin:config-changed` event: the Plex card under Media Servers
@@ -645,6 +645,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Dashboard rendering | `modules/dashboard.js` |
 | Modern-style-only dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout) and the compact Recently watched rows | `modules/dashboard-modern.js` |
 | Modern backdrop artwork behind cards on every page | `modules/card-art.js` |
+| Dashboard webhook port banner (startup port advisory, dismissable per findings text) | `modules/webhook-port-banner.js` |
 | Posters only on the library and media pages: a clicked poster opens its card in place | `modules/page-card-open.js` |
 | History, Posters only: episode, date and app overlaid on each poster | `modules/history-poster-overlay.js` |
 | Shared media identity/deduplication | `modules/media-records.js` |
@@ -656,7 +657,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Personal ratings/watchlist/playlist metadata fill (overview, release date) | `modules/personal-media-metadata.js` |
 | Playlists page: rails, app picker, Movies/TV/Mixed type, reorder, missing notes, held changes, Recently deleted | `modules/playlists.js` |
 | Playlist episode picker (adding a show to a TV playlist) | `modules/playlist-episode-picker.js` |
-| "Import from apps" dialog (app playlists into Plembfin playlists) | `modules/playlist-import.js` |
+| "Import from apps" dialog (app playlists into Plekt playlists) | `modules/playlist-import.js` |
 | Automatic playlists: rule editor, rule summary and Info pop-up, Auto label, Refresh now, Stop updating, held rule check | `modules/playlist-rules.js` |
 | Backup/restore tools (Settings route) | `modules/tools-backups.js` |
 | Settings changelog renderer and Main/Alpha tabs (build-version display formatting is core, in `modules/utils.js`) | `modules/changelog-channels.js` |

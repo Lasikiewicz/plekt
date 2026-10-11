@@ -4,12 +4,13 @@ import path from "node:path";
 import { db, parseJson, toJson } from "../db.js";
 import { FULL_BACKUPS_DIR } from "../paths.js";
 import { fullBackupJsonChunks } from "./backup.js";
+import { ENCRYPTED_BACKUP_FORMAT, FULL_BACKUP_FILE_PATTERN, FULL_BACKUP_TEMPORARY_FILE_PATTERN, fullBackupFilename, backupFileStamp } from "./backupNames.js";
 import { pushBackupToRemotes } from "./watchHistoryBackups.js";
 
 const CONFIG_ID = "plembfinBackups";
 const RUNTIME_ID = "plembfinBackups";
-const FILE_PATTERN = /^plembfin-backup-(\d{8}T\d{6}Z)\.encrypted\.json$/;
-const TEMPORARY_FILE_PATTERN = /^plembfin-backup-\d{8}T\d{6}Z\.encrypted\.json\.tmp-/;
+const FILE_PATTERN = FULL_BACKUP_FILE_PATTERN;
+const TEMPORARY_FILE_PATTERN = FULL_BACKUP_TEMPORARY_FILE_PATTERN;
 const STALE_TEMPORARY_MS = 10 * 60 * 1000;
 const WRITE_CHUNK_CHARS = 1024 * 1024;
 const SCHEDULED_ATTEMPTS_PER_DAY = 3;
@@ -53,26 +54,26 @@ function safeConfig(value = {}, previous = {}) {
   };
 }
 
-export function loadPlembfinBackupConfig() {
+export function loadPlektBackupConfig() {
   return safeConfig(parseJson(selectSetting.get(CONFIG_ID)?.data, {}) || {});
 }
 
-export function savePlembfinBackupConfig(value = {}) {
-  const previous = loadPlembfinBackupConfig();
+export function savePlektBackupConfig(value = {}) {
+  const previous = loadPlektBackupConfig();
   const config = safeConfig(value, previous);
   const hasLocalPassphrase = config.rememberPassphrase && config.passphrase.length >= 12;
   const hasRemotePassphrase = config.remoteRememberPassphrase && config.remotePassphrase.length >= 12;
   if (config.enabled && !hasLocalPassphrase) {
-    throw new Error("Remember the Plembfin backup passphrase before enabling scheduled local backups.");
+    throw new Error("Remember the Plekt backup passphrase before enabling scheduled local backups.");
   }
   if (config.remoteEnabled && !hasLocalPassphrase && !hasRemotePassphrase) {
-    throw new Error("Remember a Plembfin backup passphrase before enabling scheduled remote backups.");
+    throw new Error("Remember a Plekt backup passphrase before enabling scheduled remote backups.");
   }
   upsertSetting.run(CONFIG_ID, toJson(config), Date.now());
   return publicConfig(config);
 }
 
-function publicConfig(config = loadPlembfinBackupConfig()) {
+function publicConfig(config = loadPlektBackupConfig()) {
   return {
     ...config,
     passphrase: "",
@@ -82,12 +83,12 @@ function publicConfig(config = loadPlembfinBackupConfig()) {
   };
 }
 
-export function loadPlembfinBackupRuntime() {
+export function loadPlektBackupRuntime() {
   return parseJson(selectRuntime.get(RUNTIME_ID)?.data, {}) || {};
 }
 
 function saveRuntime(values = {}) {
-  const current = loadPlembfinBackupRuntime();
+  const current = loadPlektBackupRuntime();
   const next = { ...current, ...values, updatedAt: Date.now() };
   upsertRuntime.run(RUNTIME_ID, toJson(next), Date.now());
   return next;
@@ -101,7 +102,7 @@ function timestampName(date = new Date()) {
   const hh = pad(date.getUTCHours());
   const min = pad(date.getUTCMinutes());
   const ss = pad(date.getUTCSeconds());
-  return `plembfin-backup-${yyyy}${mm}${dd}T${hh}${min}${ss}Z.encrypted.json`;
+  return fullBackupFilename(`${yyyy}${mm}${dd}T${hh}${min}${ss}Z`);
 }
 
 function backupPath(filename) {
@@ -110,7 +111,7 @@ function backupPath(filename) {
   return path.join(FULL_BACKUPS_DIR, clean);
 }
 
-export function listPlembfinBackups() {
+export function listPlektBackups() {
   if (!fs.existsSync(FULL_BACKUPS_DIR)) return [];
   return fs.readdirSync(FULL_BACKUPS_DIR)
     .filter((name) => FILE_PATTERN.test(name))
@@ -119,11 +120,11 @@ export function listPlembfinBackups() {
       const stat = fs.statSync(absolute);
       return { name, sizeBytes: stat.size, createdAt: stat.mtime.toISOString() };
     })
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => backupFileStamp(b.name).localeCompare(backupFileStamp(a.name)));
 }
 
 function applyRetention(retention) {
-  const files = listPlembfinBackups();
+  const files = listPlektBackups();
   for (const file of files.slice(Math.max(1, retention))) {
     try {
       fs.unlinkSync(backupPath(file.name));
@@ -154,14 +155,14 @@ function removeStaleTemporaryFiles(now = Date.now()) {
 // it in memory needed several copies of the whole backup (about 3 GB for a 490 MB
 // file), which got the process killed. Everything here is synchronous so the
 // backup's row iterators never overlap other queries on the shared connection.
-export function writeEncryptedPlembfinBackup(filePath, passphrase, { chunks = fullBackupJsonChunks() } = {}) {
+export function writeEncryptedPlektBackup(filePath, passphrase, { chunks = fullBackupJsonChunks() } = {}) {
   const salt = crypto.randomBytes(16);
   const iv = crypto.randomBytes(12);
   const key = crypto.pbkdf2Sync(passphrase, salt, 100000, 32, "sha256");
   const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
   const encryptedAt = new Date().toISOString();
   const envelope = JSON.stringify({
-    format: "plembfin-encrypted-backup",
+    format: ENCRYPTED_BACKUP_FORMAT,
     version: 1,
     encryptedAt,
     encryption: {
@@ -214,9 +215,9 @@ export function writeEncryptedPlembfinBackup(filePath, passphrase, { chunks = fu
   return { encryptedAt, sizeBytes };
 }
 
-export async function createPlembfinBackup({ reason = "manual", passphrase, forceRemote = false } = {}) {
+export async function createPlektBackup({ reason = "manual", passphrase, forceRemote = false } = {}) {
   fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
-  const config = loadPlembfinBackupConfig();
+  const config = loadPlektBackupConfig();
   const actualPassphrase = passphrase || (forceRemote
     ? config.remotePassphrase || config.passphrase
     : config.passphrase || config.remotePassphrase);
@@ -237,7 +238,7 @@ export async function createPlembfinBackup({ reason = "manual", passphrase, forc
   const temporary = `${destination}.tmp-${process.pid}`;
   let written;
   try {
-    written = writeEncryptedPlembfinBackup(temporary, actualPassphrase);
+    written = writeEncryptedPlektBackup(temporary, actualPassphrase);
     fs.renameSync(temporary, destination);
   } catch (error) {
     fs.rmSync(temporary, { force: true });
@@ -293,13 +294,13 @@ export async function createPlembfinBackup({ reason = "manual", passphrase, forc
 }
 
 // Callers stream the file: backups can pass V8's ~512 MB string limit.
-export function plembfinBackupFilePath(filename) {
+export function plektBackupFilePath(filename) {
   const absolute = backupPath(filename);
   if (!fs.existsSync(absolute)) throw new Error("Backup file not found");
   return absolute;
 }
 
-export function deletePlembfinBackup(filename) {
+export function deletePlektBackup(filename) {
   const absolute = backupPath(filename);
   if (fs.existsSync(absolute)) {
     fs.unlinkSync(absolute);
@@ -307,11 +308,11 @@ export function deletePlembfinBackup(filename) {
   return { deleted: filename };
 }
 
-export function plembfinBackupStatus() {
+export function plektBackupStatus() {
   return {
     config: publicConfig(),
-    runtime: loadPlembfinBackupRuntime(),
-    files: listPlembfinBackups(),
+    runtime: loadPlektBackupRuntime(),
+    files: listPlektBackups(),
   };
 }
 
@@ -325,11 +326,11 @@ function localDateKey(date = new Date()) {
 // every minute from 03:00 to midnight). A failed day is retried at most
 // SCHEDULED_ATTEMPTS_PER_DAY times, at least an hour apart (user decision,
 // 27 September 2026).
-export async function runScheduledPlembfinBackup({ now = new Date() } = {}) {
-  const config = loadPlembfinBackupConfig();
+export async function runScheduledPlektBackup({ now = new Date() } = {}) {
+  const config = loadPlektBackupConfig();
   if (!config.enabled && !config.remoteEnabled) return null;
 
-  let runtime = loadPlembfinBackupRuntime();
+  let runtime = loadPlektBackupRuntime();
   if (runtime.attemptInProgress && !scheduledBackupInFlight) {
     runtime = saveRuntime({
       attemptInProgress: false,
@@ -350,7 +351,7 @@ export async function runScheduledPlembfinBackup({ now = new Date() } = {}) {
   scheduledBackupInFlight = true;
   try {
     const passphrase = config.passphrase || config.remotePassphrase;
-    return await createPlembfinBackup({ reason: "scheduled", passphrase });
+    return await createPlektBackup({ reason: "scheduled", passphrase });
   } catch (error) {
     saveRuntime({ lastError: error.message || String(error), lastFailureAt: Date.now(), attemptInProgress: false });
     throw error;

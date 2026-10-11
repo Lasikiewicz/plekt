@@ -3,13 +3,13 @@
 // The public demo is intentionally self-contained. Keep the check in a small
 // shared utility so image helpers, onboarding, and detail renderers all agree
 // on whether external artwork is allowed. The hostname check also makes the
-// local preview behave like the eventual demo.plembfin.com deployment.
+// local preview behave like the eventual demo.plekt.net deployment.
 export function isDemoMode() {
   if (typeof window === "undefined") return false;
-  const explicitFlag = window.__PLEMBFIN_DEMO__ ?? window.document?.documentElement?.dataset?.plembfinDemo;
+  const explicitFlag = window.__PLEMBFIN_DEMO__ ?? window.document?.documentElement?.dataset?.plektDemo;
   if (["1", "true", "yes", "on"].includes(String(explicitFlag || "").trim().toLowerCase())) return true;
   const hostname = String(window.location?.hostname || "").toLowerCase();
-  if (hostname === "demo.plembfin.com") return true;
+  if (hostname === "demo.plekt.net") return true;
   return ["localhost", "127.0.0.1", "::1"].includes(hostname) && String(window.location?.port || "") === "5057";
 }
 
@@ -255,7 +255,7 @@ export function normalizePlatformSource(value) {
   if (source.startsWith("emby")) return "emby";
   if (source.startsWith("jellyfin")) return "jellyfin";
   // Bundled demo activity is local-only simulated playback, not Plex. Keep it
-  // in the Plembfin styling/icon lane while giving the UI a truthful label.
+  // in the Plekt styling/icon lane while giving the UI a truthful label.
   if (source.startsWith("demo")) return "plembfin";
   if (source.startsWith("manual") || source.startsWith("force_sync") || source.startsWith("plembfin")) return "plembfin";
   return "plex";
@@ -264,7 +264,7 @@ export function normalizePlatformSource(value) {
 export function platformName(value) {
   if (String(value || "").trim().toLowerCase().startsWith("demo")) return "Demo Preview";
   const normalized = normalizePlatformSource(value);
-  if (normalized === "plembfin") return "Plembfin";
+  if (normalized === "plembfin") return "Plekt";
   const text = normalized.replace(/_/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -278,7 +278,7 @@ export function sourceClass(value) {
 }
 
 export function platformSourceValues(entry = {}) {
-  // An explicit manual/force-sync row is the user's Plembfin action. Provider
+  // An explicit manual/force-sync row is the user's Plekt action. Provider
   // echoes may still be present in `sources` and `playHistory`, but they are
   // sync targets rather than the origin to display for this watch event.
   if (normalizePlatformSource(entry.source) === "plembfin") return ["plembfin"];
@@ -305,9 +305,9 @@ export function platformSourceValues(entry = {}) {
 
 export function platformIconUrl(value) {
   const normalized = normalizePlatformSource(value);
-  if (normalized === "plembfin") return "/icons/plembfin.png?v=1.3.1.1.2";
+  if (normalized === "plembfin") return "/icons/plekt.png?v=1.3.1.2.1";
   const extension = "svg";
-  return `/icons/${normalized}.${extension}?v=1.3.1.1.2`;
+  return `/icons/${normalized}.${extension}?v=1.3.1.2.1`;
 }
 
 export function platformIconMarkup(value, className = "source-badge-icon", wrapperClass = "source-badge-icon-set") {
@@ -318,8 +318,8 @@ export function platformIconMarkup(value, className = "source-badge-icon", wrapp
   }
 
   return `<span class="${escapeAttribute(wrapperClass)} theme-aware-icon-set" aria-hidden="true">
-    <img class="${safeClassName} theme-aware-icon--light" src="/icons/plembfin-light.png?v=1.3.1.1.2" alt="" loading="eager" decoding="async" />
-    <img class="${safeClassName} theme-aware-icon--dark" src="/icons/plembfin.png?v=1.3.1.1.2" alt="" loading="eager" decoding="async" />
+    <img class="${safeClassName} theme-aware-icon--light" src="/icons/plekt-light.png?v=1.3.1.2.1" alt="" loading="eager" decoding="async" />
+    <img class="${safeClassName} theme-aware-icon--dark" src="/icons/plekt.png?v=1.3.1.2.1" alt="" loading="eager" decoding="async" />
   </span>`;
 }
 

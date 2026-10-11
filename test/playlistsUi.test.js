@@ -73,7 +73,7 @@ test("playlist headings show each selected app with its sync status, or Plembfin
   assert.match(html, /playlist-provider-icon--synced" role="listitem" title="Plex: synced\."/);
   assert.match(html, /playlist-provider-icon--error"[^>]*title="Emby: the last sync failed \(HTTP 500\)\."/);
   assert.doesNotMatch(html, /jellyfin\.svg/, "an app the playlist does not target has no icon");
-  assert.match(html, /<span class="playlist-provider-only">Plembfin only<\/span>/);
+  assert.match(html, /<span class="playlist-provider-only">Plekt only<\/span>/);
   assert.match(html, /data-playlist-edit="p1"/);
 });
 
@@ -328,7 +328,7 @@ test("Recently deleted lists each playlist with Restore and Delete permanently",
   assert.equal(clickOn("[data-playlist-recently-deleted]", {}).handled, true);
   assert.match(dialogBody, /^Recently deleted\n/);
   assert.match(dialogBody, /1 item · Deleted in Jellyfin on [^·]+· Restores to Plex and Jellyfin · Still removing from Plex/);
-  assert.match(dialogBody, /0 items · Deleted in Plembfin on [^·]+· Plembfin only/);
+  assert.match(dialogBody, /0 items · Deleted in Plekt on [^·]+· Plekt only/);
   assert.match(dialogBody, /data-playlist-restore="d1"/);
   assert.match(dialogBody, /data-playlist-purge="d2"/);
 

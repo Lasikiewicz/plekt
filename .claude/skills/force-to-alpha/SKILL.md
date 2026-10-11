@@ -1,13 +1,15 @@
 ---
 name: force-to-alpha
-description: "Promote everything queued on plembfin develop onto the alpha branch. Use when the user says \"Force to alpha\" exactly. Covers fast-forwarding develop, reviewing and checking README.md, running promote-develop-to-alpha.js, the asset restamp, the required approval and headline check of the alpha changelog entry, starting the build locally for the user to check, and the force-push to alpha. It does not push develop."
+description: "Promote everything queued on Plekt develop onto the alpha branch. Use when the user says \"Force to alpha\" exactly. Covers fast-forwarding develop, reviewing and checking README.md, running promote-develop-to-alpha.js, the asset restamp, the required approval and headline check of the alpha changelog entry, starting the build locally for the user to check, and the force-push to alpha. It does not push develop."
 ---
 
 # Force to alpha
 
 ## Step 0 - Make sure GHCR Cleanup is not running
 
-`ghcr-cleanup.yml` deletes images from the same `ghcr.io/lasikiewicz/plembfin`
+Rebrand gate: cleanup currently targets `plekt` with `dry-run: true`. Keep it in dry-run mode until its new-package results have been reviewed; the concurrency check below remains required when deletion is enabled.
+
+`ghcr-cleanup.yml` deletes images from the same `ghcr.io/lasikiewicz/plekt`
 package that this command publishes new tags to. The cleanup action's own docs warn it isn't safe
 to run in parallel against the same package it targets, so before starting this
 command, check it is not mid-run:

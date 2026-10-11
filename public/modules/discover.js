@@ -1,9 +1,9 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, formatTmdbDate } from "./utils.js?v=1.3.1.1.2";
-import { hydratePosters } from "./images.js?v=1.3.1.1.2";
-import { renderMediaCard } from "./media-card.js?v=1.3.1.1.2";
-import { mediaKeyForPersonalItem } from "./personal-media.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, formatTmdbDate } from "./utils.js?v=1.3.1.2.1";
+import { hydratePosters } from "./images.js?v=1.3.1.2.1";
+import { renderMediaCard } from "./media-card.js?v=1.3.1.2.1";
+import { mediaKeyForPersonalItem } from "./personal-media.js?v=1.3.1.2.1";
 
 const DISCOVER_TTL_MS = 10 * 60 * 1000;
 const DISCOVER_TIMEOUT_MS = 20000;
@@ -237,7 +237,7 @@ function discoverErrorPresentation() {
   }
   if (state.discoverErrorCode === "SERVER_ROUTE_MISSING" || /\bnot found\b/i.test(state.discoverError)) {
     return {
-      title: "Restart Plembfin to load Discover",
+      title: "Restart Plekt to load Discover",
       detail: "The local server is running an older build. Restart it, then try again.",
       action: `<button class="button-ghost" type="button" data-discover-retry>Try again</button>`,
     };
@@ -275,7 +275,7 @@ function renderFeed(feedKey, feed) {
     : [];
   const label = FEED_LABELS[feedKey] || "Discover";
   const emptyMessage = feedKey === "recommended"
-    ? { title: "Watch a few titles to get recommendations", detail: "Plembfin will use your watch history to build this rail." }
+    ? { title: "Watch a few titles to get recommendations", detail: "Plekt will use your watch history to build this rail." }
     : { title: "No results in this rail", detail: "Try another type or genre." };
   return `
     <section class="discover-feed" aria-labelledby="discover-${feedKey}-title">

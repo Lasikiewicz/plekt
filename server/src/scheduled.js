@@ -24,6 +24,7 @@ import { earliestTraktWatchedAt, loadTraktWatchedDateIndex } from "./utils/media
 import { startUpNextProviderFeed, completeUpNextProviderFeed, failUpNextProviderFeed, listUpNextProviderFeedStates, redactUpNextProviderError, withUpNextFeedSeriesIdentity } from "./utils/upNextRepository.js";
 import { refreshUpNextProviderFeeds } from "./utils/upNextProviderSync.js";
 import { reconcileAvailableWatchedItems } from "./utils/libraryAvailabilitySync.js";
+import { brandEnv } from "./utils/brandEnv.js";
 
 // A library-history endpoint exposes the server's current played snapshot; it
 // does not prove another viewing occurred. A canonical Plembfin playstate can
@@ -634,7 +635,7 @@ async function checkPlexUnwatchedStatus(config, loopStore) {
           const plexMedia = { ...media, itemId: plexItem.ratingKey || plexItem.key || undefined };
           const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(plexMedia, "plex", loopStore).catch(() => 0);
           if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) {
-            console.log("Cron ignored Plex unplayed state after Plembfin's own played mark", { title: record.title });
+            console.log("Cron ignored Plex unplayed state after Plekt's own played mark", { title: record.title });
             continue;
           }
 
@@ -696,7 +697,7 @@ async function checkEmbyUnwatchedStatus(config, loopStore) {
           const embyMedia = { ...media, itemId: item.Id || undefined };
           const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(embyMedia, "emby", loopStore).catch(() => 0);
           if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) {
-            console.log("Cron ignored Emby unplayed state after Plembfin's own played mark", { title: record.title });
+            console.log("Cron ignored Emby unplayed state after Plekt's own played mark", { title: record.title });
             continue;
           }
 
@@ -770,7 +771,7 @@ async function checkJellyfinUnwatchedStatus(config, loopStore) {
       )))));
       if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) {
         await clearJellyfinUnwatchedObservation(media, loopStore);
-        console.log("Cron ignored Jellyfin unplayed state after Plembfin's own played mark", { title: record.title });
+        console.log("Cron ignored Jellyfin unplayed state after Plekt's own played mark", { title: record.title });
         continue;
       }
 
@@ -815,6 +816,8 @@ async function processCompletedSession(row, config, loopStore) {
   // played-flag event it can open a rewatch (core-sync-health step 2).
   const lastSeenDay = Number(row.updated_at || 0) > 0 ? new Date(Number(row.updated_at)).toISOString().slice(0, 10) : "";
   const knownPlaystate = await getPlaystateForMedia(media).catch(() => null);
+  // A manual unwatch made after this session was last seen wins: the play ended before it.
+  if (resumeProgressBlockedByPlaystate(knownPlaystate, row.updated_at) === "item is unwatched") return null;
   let isRewatchOnNewDay = false;
   if (knownPlaystate?.state === "watched") {
     const lastWatchedDay = String(knownPlaystate.watched_at || "").slice(0, 10);
@@ -835,8 +838,6 @@ async function processCompletedSession(row, config, loopStore) {
   }
 
   if (isAuthoritativeRestoreActive()) return null;
-
-  await markLiveTrackingComplete(row.session_id, Date.now());
 
   // Date the watch from when the session was last seen playing, not from when
   // this tick noticed it disappeared. For a session completing normally the two
@@ -863,6 +864,17 @@ async function processCompletedSession(row, config, loopStore) {
       sourceTimestamp: watchedAt,
     },
   );
+  const watchRecord = mediaToWatchRecord(media, media.source);
+
+  if (isAuthoritativeRestoreActive()) return null;
+  // An unwatch can land during the awaits above; re-read it right before the write.
+  const latestPlaystate = await getPlaystateForMedia(media).catch(() => null);
+  if (resumeProgressBlockedByPlaystate(latestPlaystate, row.updated_at) === "item is unwatched") return null;
+  const inserted = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+  if (isAuthoritativeRestoreActive()) return null;
+  await upsertPlaystateForMedia(media, "watched", inserted.record.watched_at, { skipInvalidate: true });
+  // Marked only after both writes: a failed insert or upsert leaves the cached row for a retry.
+  await markLiveTrackingComplete(row.session_id, Date.now());
   recordWatchAuditEvent({
     eventType: "playback_ended",
     timestamp: lastSeenAt > 0 ? lastSeenAt : Date.now(),
@@ -888,13 +900,6 @@ async function processCompletedSession(row, config, loopStore) {
     details: "Live playback session ended after reaching the watched threshold.",
     payload: { progress: media.progress, offsetMs: media.offsetMs, durationMs: media.durationMs },
   });
-
-  const watchRecord = mediaToWatchRecord(media, media.source);
-
-  if (isAuthoritativeRestoreActive()) return null;
-  const inserted = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
-  if (isAuthoritativeRestoreActive()) return null;
-  await upsertPlaystateForMedia(media, "watched", inserted.record.watched_at, { skipInvalidate: true });
   let syncSummary;
   try {
     syncSummary = await syncMediaPlaystate(media, config, loopStore);
@@ -971,6 +976,7 @@ async function processStoppedSessionProgress(row, config, loopStore) {
 
   const progressRecord = mediaToPlaybackProgressRecord(media, media.source);
   if (isAuthoritativeRestoreActive()) return null;
+  // Not caught here: a failed write must reach refreshLiveSessions so the cached row is kept for a retry.
   await upsertPlaybackProgress({
     ...progressRecord,
     sync_dispatch_telemetry: buildProgressTelemetry(media, {
@@ -979,8 +985,6 @@ async function processStoppedSessionProgress(row, config, loopStore) {
       details: "Resume propagation queued",
       targetStates: [],
     }),
-  }).catch((error) => {
-    console.error("Failed to store stopped session resume progress", { sessionId: row.session_id, error });
   });
 
   let syncSummary;
@@ -1461,7 +1465,7 @@ async function syncRecentlyWatchedFromPlex(config, loopStore, logger = console.l
         continue;
       }
       if (libraryDecision === "skip_already_watched") {
-        logger(`Plex: ignored library-history date for an item already watched in Plembfin: ${media.title}`);
+        logger(`Plex: ignored library-history date for an item already watched in Plekt:${media.title}`);
         continue;
       }
 
@@ -1626,7 +1630,7 @@ async function syncRecentlyWatchedFromEmby(config, loopStore, logger = console.l
       }
 
       if (libraryDecision === "skip_already_watched") {
-        logger(`Emby: ignored library-history date for an item already watched in Plembfin: ${media.title}`);
+        logger(`Emby: ignored library-history date for an item already watched in Plekt:${media.title}`);
         continue;
       }
 
@@ -1784,7 +1788,7 @@ async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger = conso
       }
 
       if (libraryDecision === "skip_already_watched") {
-        logger(`Jellyfin: ignored library-history date for an item already watched in Plembfin: ${media.title}`);
+        logger(`Jellyfin: ignored library-history date for an item already watched in Plekt:${media.title}`);
         continue;
       }
 
@@ -2189,20 +2193,28 @@ export async function refreshLiveSessions(config, loopStore, { logger = () => {}
         continue;
       }
       logger(`Live session completed playback: ${row.title} (${row.session_id})`);
-      const completion = await processCompletedSession(row, config, loopStore).catch((error) => {
+      let completion;
+      try {
+        completion = await processCompletedSession(row, config, loopStore);
+      } catch (error) {
+        // Keep the cached row: a later tick retries it until isStaleLiveSessionRow drops it.
         logger(`ERROR: processCompletedSession failed for ${row.title}: ${error.message}`);
-        return null;
-      });
+        continue;
+      }
       if (completion) completions.push(completion);
       else staleIds.push(row.session_id);
       continue;
     }
 
     logger(`Live session stopped/paused playback: ${row.title} (${row.session_id})`);
-    const progressUpdate = await processStoppedSessionProgress(row, config, loopStore).catch((error) => {
+    let progressUpdate;
+    try {
+      progressUpdate = await processStoppedSessionProgress(row, config, loopStore);
+    } catch (error) {
+      // Keep the cached row for the same bounded retry as a failed completion.
       logger(`ERROR: processStoppedSessionProgress failed for ${row.title}: ${error.message}`);
-      return null;
-    });
+      continue;
+    }
     if (progressUpdate) progressUpdates.push(progressUpdate);
     staleIds.push(row.session_id);
   }
@@ -2476,7 +2488,7 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
 // this boundary a Force Sync could claim the lock while a scheduler tick that
 // started a moment earlier was still dispatching a watchstate write.
 export async function runScheduledSync(logger = console.log, options = {}) {
-  const ownerId = `scheduled:${process.env.PLEMBFIN_INSTANCE_ID || process.pid}:${Date.now()}`;
+  const ownerId = `scheduled:${brandEnv("INSTANCE_ID") || process.pid}:${Date.now()}`;
   const staleBefore = Date.now() - 3 * 60 * 1000;
   let runtime = await loadRuntimeState().catch(() => ({}));
   let existing = activeSyncOperation(runtime);
@@ -2765,7 +2777,7 @@ export async function runForceSync(logger = console.log, {
   }
 
   // 2. Fetch Plembfin watchHistory to resolve conflicts
-  logger("Database: loading Plembfin watchHistory records...");
+  logger("Database: loading Plekt watchHistory records...");
   const allWatchRows = await getCachedHistory();
   const rowById = new Map();
   const historyMap = new Map();
@@ -2863,7 +2875,7 @@ export async function runForceSync(logger = console.log, {
   // watched items are deliberately ignored; a platform cannot manufacture a
   // new canonical watch during Force Sync.
   const allConsideredKeys = new Set(historyMap.keys());
-  logger(`Force Sync: resolving Plembfin-canonical watched state for ${allConsideredKeys.size} distinct items...`);
+  logger(`Force Sync: resolving Plekt-canonical watched state for ${allConsideredKeys.size} distinct items...`);
 
   let propagatedCount = 0;
   let addedToHistoryCount = 0;
@@ -2998,7 +3010,7 @@ export async function runForceSync(logger = console.log, {
     if (newestState === "watched") {
       const inHistory = historyRecords.some(r => r.syncAction === "watched");
       if (!inHistory) {
-        logger(`Skipping server-only watched state for "${mediaObj.title}" because no Plembfin history row exists.`);
+        logger(`Skipping server-only watched state for "${mediaObj.title}" because no Plekt history row exists.`);
       } else if (lastHistoryRecord && lastHistoryRecord.syncAction === "unwatched") {
         logger(`Deleting outdated unwatched record for "${mediaObj.title}"`);
         const unwatchedDocs = historyRecords.filter(r => r.syncAction === "unwatched");
@@ -3036,7 +3048,7 @@ export async function runForceSync(logger = console.log, {
     } else if (newestState === "unwatched") {
       // The unwatched marker is already the canonical Plembfin decision. Do
       // not delete or recreate local history based on a remote discrepancy.
-      logger(`Plembfin is canonical for "${mediaObj.title}"; only repairing remote played flags.`);
+      logger(`Plekt is canonical for "${mediaObj.title}"; only repairing remote played flags.`);
 
       for (const target of healthyUnwatchedTargets) {
         if (await shouldAbort()) return false;
@@ -3064,7 +3076,7 @@ export async function runForceSync(logger = console.log, {
         }
       }
     } else {
-      logger(`Skipping "${mediaObj.title}": server shows it watched but Plembfin has no history record for it, so its unwatched/watched state cannot be determined safely.`);
+      logger(`Skipping "${mediaObj.title}": server shows it watched but Plekt has no history record for it, so its unwatched/watched state cannot be determined safely.`);
     }
     return true;
   }

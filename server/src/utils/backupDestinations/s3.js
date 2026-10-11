@@ -5,8 +5,9 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { fetchWithTimeout, uploadFileWithTimeout } from "../outbound.js";
+import { REMOTE_BACKUP_FILE_PATTERN } from "../backupNames.js";
 
-const FILE_PATTERN = /^plembfin-(?:watch-history-\d{8}T\d{6}Z\.json\.gz|backup-\d{8}T\d{6}Z\.encrypted\.json)$/;
+const FILE_PATTERN = REMOTE_BACKUP_FILE_PATTERN;
 const EMPTY_SHA256 = crypto.createHash("sha256").update("").digest("hex");
 
 function sha256Hex(data) {

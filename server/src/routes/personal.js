@@ -802,7 +802,7 @@ export async function handlePersonalMedia(req, res) {
         .map((target) => PLAYLIST_PROVIDER_LABELS[target.provider]);
       if (pending.length) {
         schedulePlaylistSync(listId);
-        return sendJson(res, { error: `Plembfin is still deleting this playlist from ${pending.join(", ")}. Try again in a few minutes.` }, 409);
+        return sendJson(res, { error: `Plekt is still deleting this playlist from ${pending.join(", ")}. Try again in a few minutes.` }, 409);
       }
       db.prepare("DELETE FROM personal_lists WHERE id = ? AND deleted_at IS NOT NULL").run(listId);
       bumpDataVersion();

@@ -31,7 +31,7 @@ When the user says **"enable quick edits"**, keep quick-edit mode active until t
 
 - Website/Traks work uses only the local `website/` tree, its own checks/build, and direct
   Wrangler deployment to the separate `plembfin-website` Cloudflare Pages project. It must
-  never use GitHub, modify `main`, run application CI, run the root Plembfin build, or touch
+  never use GitHub, modify `main`, run application CI, run the root Plekt build, or touch
   the `plembfin` application project, unless the user explicitly requests **"Force to main"**.
 - Read the website deployment docs and skill before acting. Website update requests follow
   [`docs/websiteupdate.md`](docs/websiteupdate.md): discover the verification baseline recorded
@@ -136,7 +136,7 @@ exactly. Never improvise or reconstruct these procedures from memory.**
 | "Force to main" (exactly) | `force-to-main` |
 | "Push website live" (case-insensitive) | `push-website-live` (website-only publish of local `website/` to `plembfin-website` via Wrangler; no GitHub push, no root build, no application CI) |
 | "Start the website" (case-insensitive) | `start-website` (local Astro preview on `http://localhost:4321/`; never publishes or runs the root build) |
-| "Start the server" (case-insensitive) | Start or reuse the Plembfin application server (see below) |
+| "Start the server" (case-insensitive) | Start or reuse the Plekt application server (see below) |
 | "Check requests" (case-insensitive) | `.claude/check-requests.md` |
 
 Rules that hold regardless of which skill is running:

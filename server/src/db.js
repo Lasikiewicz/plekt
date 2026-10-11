@@ -1539,6 +1539,88 @@ const migrations = [
       }
     },
   },
+  {
+    // Episode rating identity drops a release year from the show title (see
+    // showTitleKey in personalRatingIdentity.js). Rows keyed with the year,
+    // such as "Ludwig (2024)", move to the bare-title key. Where a bare-title
+    // row already exists for the same episode, the newest canonical rating
+    // wins. Its provider ledger and queue rows are kept; the other rows keep
+    // only the providers the winner lacks. This rewrite is one-time: keep it
+    // frozen rather than calling the live identity helpers.
+    id: 52,
+    up(database) {
+      const table = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'personal_ratings'").get();
+      if (!table) return;
+
+      const titleSlug = (showTitle) => String(showTitle ?? "").trim().slice(0, 300)
+        .replace(/\s*\(\d{4}\)$/, "")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+      const yearPattern = /\(\d{4}\)\s*$/;
+      const marks = (values) => values.map(() => "?").join(",");
+
+      const rows = database.prepare(`
+        SELECT media_key, show_title, season, episode, canonical_updated_at, updated_at
+        FROM personal_ratings
+        WHERE media_type = 'episode'
+          AND media_key LIKE 'episode:title:%'
+          AND trim(COALESCE(show_title, '')) <> ''
+      `).all();
+      const groups = new Map();
+      for (const row of rows) {
+        const coordinate = `s${Number.isInteger(row.season) ? row.season : "?"}e${Number.isInteger(row.episode) ? row.episode : "?"}`;
+        const target = `episode:title:${titleSlug(row.show_title)}:${coordinate}`;
+        const group = groups.get(target) || { target, rows: [] };
+        group.rows.push(row);
+        groups.set(target, group);
+      }
+
+      const ledgerTables = ["personal_rating_sources", "personal_rating_sync_queue"];
+      let rekeyedGroups = 0;
+      for (const { target, rows: members } of groups.values()) {
+        if (!members.some((row) => yearPattern.test(String(row.show_title).trim()) && row.media_key !== target)) continue;
+        const ranked = [...members].sort((left, right) => (
+          Number(right.canonical_updated_at || 0) - Number(left.canonical_updated_at || 0)
+          || Number(right.updated_at || 0) - Number(left.updated_at || 0)
+          || String(left.media_key).localeCompare(String(right.media_key))
+        ));
+        const winner = ranked[0].media_key;
+        const losers = ranked.slice(1).map((row) => row.media_key);
+        const allKeys = ranked.map((row) => row.media_key);
+        const droppedLosers = losers.filter((key) => key !== target);
+
+        for (const ledger of ledgerTables) {
+          if (losers.length) {
+            database.prepare(`
+              DELETE FROM ${ledger}
+              WHERE media_key IN (${marks(losers)})
+                AND provider IN (SELECT provider FROM ${ledger} WHERE media_key = ?)
+            `).run(...losers, winner);
+          }
+          database.prepare(`UPDATE OR IGNORE ${ledger} SET media_key = ? WHERE media_key IN (${marks(allKeys)})`).run(target, ...allKeys);
+          if (droppedLosers.length) {
+            database.prepare(`DELETE FROM ${ledger} WHERE media_key IN (${marks(droppedLosers)})`).run(...droppedLosers);
+          }
+        }
+
+        if (losers.length) {
+          database.prepare(`DELETE FROM personal_ratings WHERE media_key IN (${marks(losers)})`).run(...losers);
+        }
+        // A row already at the target key outside this group has no show title to
+        // check, so it is left alone rather than overwritten.
+        const targetTaken = database.prepare("SELECT 1 FROM personal_ratings WHERE media_key = ?").get(target);
+        if (winner !== target && !targetTaken) {
+          database.prepare("UPDATE personal_ratings SET media_key = ? WHERE media_key = ?").run(target, winner);
+        }
+        rekeyedGroups += 1;
+      }
+
+      if (rekeyedGroups) {
+        console.warn(`[personal] re-keyed ${rekeyedGroups} episode rating group${rekeyedGroups === 1 ? "" : "s"} without the show year`);
+      }
+    },
+  },
 ];
 
 function parseJsonValue(value, fallback) {

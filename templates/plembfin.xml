@@ -10,7 +10,7 @@
   <Icon>https://raw.githubusercontent.com/Lasikiewicz/plembfin/main/public/favicon.svg</Icon>
   <WebUI>http://[IP]:[PORT:5056]</WebUI>
   <Overview>Self-hosted watch history and playstate sync for Plex, Emby, Jellyfin, and Trakt.</Overview>
-  <Description>Plembfin keeps watched state, playback progress, watch history, ratings, and the Plex watchlist aligned across connected media services. Open the WebUI to claim a fresh install and complete the guided setup.</Description>
+  <Description>Plembfin is now Plekt. Existing installs can keep their current appdata folder and change the image to plembfin/plekt:latest. Plekt keeps watched state, playback progress, watch history, ratings, and the Plex watchlist aligned across connected media services. Open the WebUI to claim a fresh install and complete the guided setup.</Description>
   <Category>MediaApp:Video</Category>
   <ExtraSearchTerms>plex trakt plextraktsync emby jellyfin watch history watchstate playstate sync</ExtraSearchTerms>
   <Support>https://github.com/Lasikiewicz/plembfin/issues</Support>
@@ -20,6 +20,7 @@
   <License>AGPL-3.0</License>
   <Config Name="WebUI" Target="5056" Default="5056" Mode="tcp" Description="Port used by Plembfin's web interface." Type="Port" Display="always" Required="true" Mask="false"/>
   <Config Name="Appdata" Target="/data" Default="/mnt/user/appdata/plembfin" Mode="rw" Description="Persistent database, configuration, backups, and cached artwork." Type="Path" Display="always" Required="true" Mask="false"/>
+  <Config Name="PORT" Target="PORT" Default="5056" Description="Internal server port matching this legacy template's container port mapping. Keep 5056 unless you also change the container port." Type="Variable" Display="advanced" Required="true" Mask="false"/>
   <Config Name="ADMIN_USERNAME" Target="ADMIN_USERNAME" Default="admin" Description="Administrator username. Settings values take precedence after the account is claimed." Type="Variable" Display="advanced" Required="false" Mask="false"/>
   <Config Name="ADMIN_PASSWORD" Target="ADMIN_PASSWORD" Default="" Description="Optional initial administrator password. Leave blank to claim the account in the WebUI on first start." Type="Variable" Display="always" Required="false" Mask="true"/>
 </Container>

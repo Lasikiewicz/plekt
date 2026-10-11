@@ -1,6 +1,6 @@
 ---
 name: push-website-live
-description: "Publish the current local Astro website directly to the separate Cloudflare Pages project. Use when the user says \"Push website live\" (case-insensitive). This never pushes GitHub or rebuilds the Plembfin application."
+description: "Publish the current local Astro website directly to the separate Cloudflare Pages project. Use when the user says \"Push website live\" (case-insensitive). This never pushes GitHub or rebuilds the Plekt application."
 ---
 
 # Push website live
@@ -14,7 +14,7 @@ The current checkout is the source of truth, including uncommitted website fixes
 
 - Work from the repository root, with the site in `website/`.
 - Do not use the GitHub editor/API, checkout, pull, reset, stash, commit, or push Git branches.
-- Do not run the root Plembfin build, Docker build, or any GitHub workflow.
+- Do not run the root Plekt build, Docker build, or any GitHub workflow.
 - Do not deploy the `plembfin` application Pages project; the target is only
   `plembfin-website`.
 - Do not deploy when a website check or build fails.
@@ -49,7 +49,7 @@ The current checkout is the source of truth, including uncommitted website fixes
 4. Deploy the resulting `dist/` directly to Cloudflare Pages:
 
    ```bash
-   npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Update Plembfin website from local source" --commit-dirty=true
+   npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Update Plekt website from local source" --commit-dirty=true
    ```
 
    If Wrangler needs network access or authentication, request the required permission
@@ -61,7 +61,7 @@ The current checkout is the source of truth, including uncommitted website fixes
    website output when a specific fix or marker is part of the request.
 
 6. Report the production URL and any deployment URL. State clearly that this used the
-   website-only path and did not trigger a Plembfin application rebuild on GitHub.
+   website-only path and did not trigger a Plekt application rebuild on GitHub.
 
 "Push to git", "Force to alpha", and "Force to main" remain separate workflows and do
 not imply this website-only publish.

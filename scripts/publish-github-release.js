@@ -8,7 +8,7 @@
 import { generateReleaseNotes, getReleaseMetadata, loadReleaseManifest } from "./generate-release-notes.js";
 
 const apiBase = String(process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/$/, "");
-const repository = process.env.GITHUB_REPOSITORY || "Lasikiewicz/plembfin";
+const repository = process.env.GITHUB_REPOSITORY || "Lasikiewicz/plekt";
 const serverUrl = process.env.GITHUB_SERVER_URL || "https://github.com";
 const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN || "";
 

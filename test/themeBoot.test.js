@@ -79,7 +79,7 @@ test("theme boot follows the saved theme first, then the system preference", () 
   for (const { saved, prefersDark, light } of cases) {
     const result = runBoot({ saved, prefersDark });
     // Versioned like every other asset, so production caches it immutably.
-    const logo = `/plembfin_header_logo_${light ? "light" : "dark"}.png?v=${assetVersion}`;
+    const logo = `/plekt_header_logo_${light ? "light" : "dark"}.png?v=${assetVersion}`;
     const label = `saved=${saved} prefersDark=${prefersDark}`;
     assert.equal(result.light, light, label);
     // Exactly one logo variant is requested: the preload and every parsed logo agree.
@@ -96,7 +96,7 @@ test("the theme boot runs before the stylesheet and no logo carries a src in the
   assert.ok(boot < indexSource.indexOf('rel="stylesheet"'), "theme-boot.js must run before the stylesheet and body");
   assert.ok(boot < indexSource.indexOf("<body"), "theme-boot.js must be in <head>");
   // A logo src in the markup would be fetched by the preload scanner regardless of theme.
-  assert.doesNotMatch(indexSource, /plembfin_header_logo_(?:dark|light)\.png/);
+  assert.doesNotMatch(indexSource, /plekt_header_logo_(?:dark|light)\.png/);
   for (const match of indexSource.matchAll(/<img[^>]*class="(?:brand-logo|auth-brand-logo|about-page-brand-logo)"[^>]*>/g)) {
     assert.match(match[0], /data-theme-logo/, match[0]);
     assert.doesNotMatch(match[0], /\ssrc=/, match[0]);

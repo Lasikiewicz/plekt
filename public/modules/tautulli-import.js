@@ -1,10 +1,10 @@
-import { state } from "./state.js?v=1.3.1.1.2";
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=1.3.1.2.1";
 import {
   PLEX_HISTORICAL_SYNC_LABEL,
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=1.3.1.1.2";
+} from "./plex-history-policy.js?v=1.3.1.2.1";
 
 let bound = false;
 let preview = null;
@@ -40,7 +40,7 @@ function importStatus(text = "", tone = "muted", loading = false) {
   node.setAttribute("aria-busy", loading ? "true" : "false");
   node.style.display = text ? (loading ? "inline-flex" : "block") : "none";
 }
-// There is deliberately no per-server choice here. Plembfin is the source of
+// There is deliberately no per-server choice here. Plekt is the source of
 // truth, so its scheduled sync brings Emby and Jellyfin into line with imported
 // watches regardless - and they receive the original playback dates, so the
 // watches land correctly in their history either way. Asking would imply a
@@ -115,13 +115,13 @@ function setPreviewProgress(status = null) {
     : status.phase === "counting"
     ? "Checking how many completed movie and episode plays Tautulli has…"
     : status.phase === "preparing"
-      ? "Matching imported history against existing Plembfin records…"
+      ? "Matching imported history against existing Plekt records…"
       : hasTotal
         ? `Read ${Number(progress.completed || 0).toLocaleString()} of ${Number(progress.total).toLocaleString()} history records (${percent}%).`
         : "Reading completed movie and episode history…";
   const summary = el("tautulliPreviewSummary");
   if (summary && status.phase === "preparing") {
-    summary.textContent = "[working] Matching completed plays against existing Plembfin history and preparing the preview summary.";
+    summary.textContent = "[working] Matching completed plays against existing Plekt history and preparing the preview summary.";
   }
 }
 
@@ -268,13 +268,13 @@ function reviewRowCopy(review = {}) {
       : "close together";
     return {
       badge: "Possible rewatch",
-      note: `Plembfin already has this watched ${when}. Is this a second viewing, or the same one recorded with a different date?`,
+      note: `Plekt already has this watched ${when}. Is this a second viewing, or the same one recorded with a different date?`,
       mergeLabel: "Same viewing",
     };
   }
   return {
     badge: "Possible match",
-    note: "This play matches more than one record Plembfin already has.",
+    note: "This play matches more than one record Plekt already has.",
     mergeLabel: "Use this record",
   };
 }
@@ -481,10 +481,10 @@ async function previewImport() {
     const reviewed = Number(result.reviewed_merged || 0) + Number(result.reviewed_imported || 0) + Number(result.reviewed_skipped || 0);
     const summary = [
       `Preview found ${Number(result.total || 0).toLocaleString()} plays in the selected history:`,
-      `• ${Number(result.new || 0).toLocaleString()} plays are ready to import into Plembfin.`,
-      `• ${Number(result.merged || 0).toLocaleString()} plays are already in Plembfin, so they will be skipped.`,
+      `• ${Number(result.new || 0).toLocaleString()} plays are ready to import into Plekt.`,
+      `• ${Number(result.merged || 0).toLocaleString()} plays are already in Plekt, so they will be skipped.`,
       `• ${Number(result.skipped_incomplete || 0).toLocaleString()} incomplete or part-watched plays will be ignored.`,
-      `• ${Number(result.skipped_newer_unwatch || 0).toLocaleString()} plays are older than a later unwatch in Plembfin, so they will be skipped.`,
+      `• ${Number(result.skipped_newer_unwatch || 0).toLocaleString()} plays are older than a later unwatch in Plekt, so they will be skipped.`,
       `• ${Number(result.needs_review || 0).toLocaleString()} have more than one possible match and still need a decision below.`,
       `• ${Number(result.unresolved || 0).toLocaleString()} could not be matched because key details were missing.`,
       ...(reviewed ? [
@@ -547,9 +547,9 @@ async function runImport() {
   const targetPlan = Array.isArray(result.targetPlan) ? result.targetPlan : [];
   const summary = [
     `Imported ${Number(result.inserted || 0).toLocaleString()} new record(s).`,
-    `• ${Number(result.merged || 0).toLocaleString()} already represented in Plembfin.`,
+    `• ${Number(result.merged || 0).toLocaleString()} already represented in Plekt.`,
     `• ${Number(result.skipped_incomplete || 0).toLocaleString()} incomplete or part-watched plays ignored.`,
-    `• ${Number(result.skipped_newer_unwatch || 0).toLocaleString()} skipped because a later unwatch in Plembfin supersedes them.`,
+    `• ${Number(result.skipped_newer_unwatch || 0).toLocaleString()} skipped because a later unwatch in Plekt supersedes them.`,
     `• ${Number(result.reviewed_merged || 0).toLocaleString()} reviewed and merged into an existing record.`,
     `• ${Number(result.reviewed_imported || 0).toLocaleString()} reviewed and imported as separate plays.`,
     `• ${Number(result.reviewed_skipped || 0).toLocaleString()} reviewed and skipped.`,
@@ -577,7 +577,7 @@ async function runImport() {
     importButton.textContent = "Import complete";
   }
   setOperationProgress("tautulliImport", "Import complete.", "complete");
-  importStatus("Import complete. Plembfin is now syncing imported watches to your connected media servers.", "success");
+  importStatus("Import complete. Plekt is now syncing imported watches to your connected media servers.", "success");
   await loadStatus().catch(() => null);
 }
 

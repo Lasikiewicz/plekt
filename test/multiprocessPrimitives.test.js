@@ -14,7 +14,7 @@ const roles = await import("../server/src/utils/processRole.js");
 
 test("shared cache version observes another SQLite connection within the staleness bound", async () => {
   const before = dbModule.getDataVersion();
-  const other = new Database(path.join(dataDir, "plembfin.db"));
+  const other = new Database(path.join(dataDir, "plekt.db"));
   other.pragma("busy_timeout = 5000");
   other.prepare("UPDATE cache_versions SET version=version+1, updated_at=? WHERE id='history'").run(Date.now());
   other.close();

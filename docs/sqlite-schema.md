@@ -44,10 +44,11 @@ Reference for `data/plembfin.db`. The full authoritative schema is in
 | `personal_list_handoffs` | Titles an automatic playlist removed as watched and never adds back | `playlistWatched.js` | playlist rule engine |
 | `personal_list_item_exclusions` | Episodes of a pre-conversion show item removed in an app (no new rows) | playlist pull engine (before migration 44) | show-to-episodes conversion |
 | `personal_list_targets` | Which apps each playlist targets, remote playlist id, and sync/not-found state | playlist routes and sync engine | playlist sync, status |
-| `personal_list_entry_ledger` | Per-remote-entry record of what Plembfin last wrote or saw | playlist sync engine | app-side change detection |
+| `personal_list_entry_ledger` | Per-remote-entry record of what Plekt last wrote or saw | playlist sync engine | app-side change detection |
 | `personal_list_item_availability` | Per-item, per-app library availability from the last push | playlist push engine | "Missing from <app>" notes |
 | `personal_list_held_changes` | App-side mass removals or deletions held for confirmation | playlist pull engine | confirm/discard of held changes |
-| `loop_keys` | Loop-detection KV with TTL | sync orchestrator | sync orchestrator |
+| `loop_keys` | Loop-detection KV with TTL; expired rows deleted each tick by `pruneExpiredLoopKeys` | sync orchestrator | sync orchestrator |
+| `watch_audit_events` | Audit trail of source events and watch changes; source-event payloads older than 90 days are cleared each tick (summary columns kept), and routine source-event payloads are trimmed at write | webhook ingest (`routes/sync.js`) and watch transitions | audit views, debug details |
 | `poster_cache` | Cached artwork metadata (binaries in `data/media/`) | poster handler | poster resolution |
 | `tmdb_metadata_cache` | Movie details (pure TMDB) or TV show details (TVDB structure + TMDB extras merged), key `${mediaType}_${tmdbId}` (or `tv_tvdb_${tvdbId}` if no TMDB match). `status`, `original_language` (read by the Language choice of automatic playlists), poster and backdrop paths are also mirrored into their own columns, written on every cache write and backfilled from the stored blob on upgrade, so the TV Shows grid can read them without parsing a details blob that averages 64KB for a TV entry. The stored document keeps streaming availability only for the regions the detail page reads (GB and US) and drops the unread release-dates block, which is about 40% of the cache | tmdb-details handler | detail pages, prefetch |
 | `tmdb_search_cache` | TMDB search results and versioned Discover feed snapshots | tmdb-search/discover handlers | TMDB search and Discover |
@@ -207,6 +208,10 @@ provider write can address the leaf item without changing the canonical key.
 `canonical_updated_at` supplies ordering for conflict resolution and queue intents.
 Startup migration 17 merges older episode aliases that share a show title and
 episode coordinate, keeping the canonical media-page row and the latest rating.
+Migration 52 re-keys title-keyed episode ratings whose show title carries a
+release year (`Ludwig (2024)`) to the bare-title key (`episode:title:ludwig:s2e1`).
+Where both rows exist, the newest rating wins, and its source and queue rows
+replace the other row's for the same providers.
 Migration 20 adds the episode identity/origin columns and the isolated rating
 source, queue, and run tables. The Ratings page reads the canonical records, while
 `poster_url` remains the episode's own artwork.
@@ -239,7 +244,7 @@ removal. The latest canonical revision, rather than the provider timestamp alone
 
 `personal_watchlist_provider_items` is deliberately scoped by provider connection,
 remote user, representation, and media key. It supports duplicate provider copies and
-records whether Plembfin owns each item or container. Queue rows explicitly store
+records whether Plekt owns each item or container. Queue rows explicitly store
 `desired_state` (`present` or `absent`), so an absence can never be confused with “no
 work”. Processing rows have a lease; transient failures retry with backoff, while
 `not_available` and `reauth_required` remain visible for an explicit retry.
@@ -255,21 +260,21 @@ separate restore-pending flag until explicit publish.
 The UI calls these Playlists; the tables keep their original `personal_list` names.
 Migration 43 rebuilt `personal_lists` and `personal_list_items` (the `media_type` CHECK had
 to accept `episode`). Existing lists kept their items and got `position` numbered from the
-old newest-first order; they have no target rows, so they stay Plembfin-only.
+old newest-first order; they have no target rows, so they stay Plekt-only.
 
 - `personal_lists`: `deleted_at` / `deleted_origin` (`local` or a provider) mark a playlist
   in Recently deleted; active lists have `deleted_at IS NULL`. Names are unique
   case-insensitively among active lists only (partial index
   `idx_personal_lists_active_name`), so a deleted playlist does not block reusing its name.
-  `order_updated_at` records the last Plembfin-side reorder, so an app-side reorder is
-  imported only when Plembfin's order did not change since the last sync.
+  `order_updated_at` records the last Plekt-side reorder, so an app-side reorder is
+  imported only when Plekt's order did not change since the last sync.
 - `personal_list_items`: ordered by `position`; a new item takes the next position and a
   re-add keeps its place. Episode items use the `personal_ratings` convention: `tmdb_id` /
   `tvdb_id` / `imdb_id` are the show's ids, plus `show_title`, `season`, `episode`, and
   `episode_*` ids. A CHECK requires season and episode on episode rows.
 - `personal_lists.kind` (migration 44, widened by migration 45): `movie`, `tv`, or `mixed`
   (movies and episodes together), fixed at creation; NULL only for a
-  playlist that was empty when the column arrived, until its first item (a Plembfin add or
+  playlist that was empty when the column arrived, until its first item (a Plekt add or
   an imported app add) sets it. Migration 44 typed existing playlists by their items and
   split a mixed one: the original keeps its name and movies as `movie`, and its shows and
   episodes move to a new `Name (TV)` playlist (`(TV) (2)` on a name clash) with the same
@@ -301,7 +306,7 @@ old newest-first order; they have no target rows, so they stay Plembfin-only.
   switch off. Cascades when the playlist is deleted.
 - `personal_list_items` with `media_type = 'tv'` (a whole show) exist only from before
   TV playlists held separate episodes. `server/src/utils/playlistShowConversion.js`, run at
-  the start of each scheduled playlist pass for every playlist (Plembfin-only and deleted
+  the start of each scheduled playlist pass for every playlist (Plekt-only and deleted
   ones too), replaces each with every episode the TMDB metadata lists (specials and unaired
   included) minus its exclusions, at the show's place; episodes already present keep theirs.
   The show's ledger rows are relinked to the episode keys so the push keeps the app entries.
@@ -316,10 +321,10 @@ old newest-first order; they have no target rows, so they stay Plembfin-only.
   count definite not-found reads, since one not-found is never a deletion.
   `unidentified_count` is how many entries of that app's playlist the last pull could not
   identify (left in the app untouched; the Playlists page shows a note per app).
-- `personal_list_entry_ledger`: what Plembfin last wrote or saw per remote entry
+- `personal_list_entry_ledger`: what Plekt last wrote or saw per remote entry
   (`remote_entry_id` is Plex `playlistItemID` or Emby/Jellyfin `PlaylistItemId`). App-side
   changes are diffed against this ledger, never against the other side's live state, so
-  Plembfin's own writes are not re-imported. `absent_reads` counts consecutive reads missing
+  Plekt's own writes are not re-imported. `absent_reads` counts consecutive reads missing
   the entry, since one short read never drives a removal. Cascades from its target row.
 - `personal_list_item_availability`: whether each item resolved in each targeted app's
   library on the last push (`available` / `missing`, with a `reason`; `episode_count` was for
@@ -403,7 +408,7 @@ these tables, each scheduling a debounced sync:
   Separate creates a playlist of the guessed type (untyped when empty), named `Name (App)` when
   the name is taken or another pick shares it. Merge links into `merge_into`, or, without it,
   groups the merge picks of one name into a new playlist. The source app's target row gets
-  `remote_playlist_id`, `remote_name` set to the app title (so the Plembfin name wins and the
+  `remote_playlist_id`, `remote_name` set to the app title (so the Plekt name wins and the
   push renames the app playlist), and an empty ledger; the other ticked apps are added as
   targets, and no other app is touched. The route then runs each playlist's first sync
   (worker roles only): with an empty ledger the pull imports every identified entry and the
@@ -440,6 +445,26 @@ Not exposed via API - query the database directly for ops review:
 ```sh
 sqlite3 data/plembfin.db "SELECT ts, action, ip, detail FROM audit_log ORDER BY ts DESC LIMIT 50;"
 ```
+
+## `watch_audit_events` retention
+
+Summary columns (type, media key, phase, source, status, timestamp) are kept indefinitely. The
+`payload` column has two limits for `source_event` rows:
+
+- **Write-time trim:** a valid (`received`) source event keeps `watchProvenance` and `request`,
+  but its `rawPayloadDebug` is replaced by `{ trimmed: true, originalBytes, topLevelKeys, ids }`
+  (`auditSourceEventPayload` in `utils/watchAudit.js`). Rejected (`ignored`) events keep the full
+  payload, because they are the ones that need troubleshooting. Raw provider bodies were about 95%
+  of received payload bytes.
+- **90-day prune:** each tick `pruneWatchAuditPayloads` sets `payload = NULL` for source-event rows older than
+  90 days, in batches of 2,000. The partial index `idx_watch_audit_payload_created` serves it.
+  Readers already handle a null payload (`parseJson` returns null), and the audit view shows
+  "No additional payload was stored."
+
+Other audit event types retain their payloads.
+
+Disk space is not reclaimed until `VACUUM` runs, and the first payloads reach the 90-day window
+about 30 November 2026.
 
 ## `diagnostic_log`
 

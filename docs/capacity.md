@@ -1,6 +1,6 @@
 # Sync capacity guidance
 
-Plembfin publishes measured ranges rather than a universal library limit. Run
+Plekt publishes measured ranges rather than a universal library limit. Run
 `BENCHMARK_ITEMS=1000 node scripts/benchmark-sync.js` with the deployment's normal
 Node.js and storage configuration, and keep the workload and environment beside the
 result. Larger or provider-heavy installations should use a Force Sync preview and a
@@ -16,8 +16,8 @@ does not disable synchronization.
 and `scripts/benchmark-surfaces.js` records the server-side surfaces against it:
 
 ```bash
-node scripts/generate-synthetic-library.js --data-dir /tmp/plembfin-scale --movies 6000 --shows 1200 --episodes-per-show 24 --history-rows 90000
-node scripts/benchmark-surfaces.js --data-dir /tmp/plembfin-scale --runs 5 --output docs/benchmarks/surfaces-scale.json
+node scripts/generate-synthetic-library.js --data-dir /tmp/plekt-scale --movies 6000 --shows 1200 --episodes-per-show 24 --history-rows 90000
+node scripts/benchmark-surfaces.js --data-dir /tmp/plekt-scale --runs 5 --output docs/benchmarks/surfaces-scale.json
 ```
 
 The generator writes only to the directory it is given and refuses one holding a database

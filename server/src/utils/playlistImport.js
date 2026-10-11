@@ -234,7 +234,7 @@ function linkPicks(picks, now) {
   for (const pick of picks) {
     const label = PROVIDER_LABELS[pick.provider];
     if (linked.has(`${pick.provider}:${pick.remoteId}`)) {
-      throw importError(`"${pick.title}" in ${label} is already linked to a Plembfin playlist. Reload the list and try again.`, 409, "already_linked");
+      throw importError(`"${pick.title}" in ${label} is already linked to a Plekt playlist. Reload the list and try again.`, 409, "already_linked");
     }
     const title = pick.title.slice(0, MAX_NAME_LENGTH).trim() || "Imported playlist";
     let listId;

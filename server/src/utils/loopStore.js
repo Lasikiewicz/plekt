@@ -6,6 +6,8 @@ function encodeKey(key) {
 
 const getStmt = db.prepare("SELECT value, expire_at FROM loop_keys WHERE id = ?");
 const delStmt = db.prepare("DELETE FROM loop_keys WHERE id = ?");
+// Rows with no expiry (NULL or 0) are never expired by getFresh, so they must not match here.
+const pruneExpiredStmt = db.prepare("DELETE FROM loop_keys WHERE expire_at IS NOT NULL AND expire_at > 0 AND expire_at < ?");
 const putStmt = db.prepare(
   `INSERT INTO loop_keys (id, key, value, created_at, expire_at)
    VALUES (@id, @key, @value, @created_at, @expire_at)
@@ -56,6 +58,11 @@ const checkAndClaimTxn = db.transaction((checkKeys, claimKeys, ttlSeconds, windo
   }
   return { loopDetected: false };
 });
+
+// Reclaims expired rows. Expiry is already enforced on read, so this only frees space.
+export function pruneExpiredLoopKeys(now = Date.now()) {
+  return pruneExpiredStmt.run(now).changes;
+}
 
 export function createLoopStore() {
   return {

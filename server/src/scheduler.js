@@ -1,4 +1,4 @@
-import { createLoopStore } from "./utils/loopStore.js";
+import { createLoopStore, pruneExpiredLoopKeys } from "./utils/loopStore.js";
 import { activeSyncOperation, appendSyncHistory, isAuthoritativeRestoreActive, loadBackgroundSyncProgress, loadMediaConfig, loadRuntimeState, setRuntimeState, SYNC_OPERATION_SCHEDULED } from "./utils/configStore.js";
 import { createPlexNotificationListener } from "./utils/plexNotificationListener.js";
 import { createPlexAdaptivePoller } from "./utils/plexAdaptivePoller.js";
@@ -21,11 +21,13 @@ import { getTmdbDetails, prewarmTmdbLibrary } from "./utils/tmdbGateway.js";
 import { cachedNextAiringFor, mergeNextAiringCacheEntries, nextAiringCacheEntryStale, nextAiringCacheKey, readNextAiringCache } from "./utils/nextAiringCache.js";
 import { refreshUpcomingCalendarCache } from "./utils/upcomingCalendarCache.js";
 import { runScheduledWatchBackup, runScheduledRemoteWatchBackup } from "./utils/watchHistoryBackups.js";
-import { runScheduledPlembfinBackup } from "./utils/plembfinBackups.js";
+import { runScheduledPlektBackup } from "./utils/plektBackups.js";
 import { runRatingSyncScheduler } from "./utils/personalRatingSync.js";
 import { runWatchlistSyncScheduler } from "./utils/personalWatchlistSync.js";
 import { runPlaylistSyncScheduler } from "./utils/playlistSyncTriggers.js";
 import { pruneSyncPlans } from "./utils/syncPlans.js";
+import { runDbOptimizeIfDue } from "./utils/dbMaintenance.js";
+import { pruneWatchAuditPayloads } from "./utils/watchAudit.js";
 import { runScheduledPlaystateAliasRepair } from "./utils/playstateAliasRepair.js";
 import {
   deletePlaybackProgress,
@@ -47,6 +49,7 @@ import {
 } from "./utils/dataRepo.js";
 import { resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem } from "./utils/watchDates.js";
 import { enqueueManualWatchReview } from "./utils/manualWatchReview.js";
+import { brandEnv } from "./utils/brandEnv.js";
 
 const NEXT_AIRING_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 const EPISODE_IDENTITY_REPAIR_INTERVAL_MS = 15 * 60 * 1000;
@@ -193,12 +196,12 @@ const scheduledTasksInFlight = new Map();
 // returns a skipped/no-provider/no-due result is not the same as a task that
 // ran out of time.
 //
-// Set PLEMBFIN_DEBUG_SCHEDULER=1 to log a line per step and a tick summary
-// (visible in Settings → Logs), in the same style as PLEMBFIN_DEBUG_OUTBOUND.
+// Set PLEKT_DEBUG_SCHEDULER=1 to log a line per step and a tick summary
+// (visible in Settings → Logs), in the same style as PLEKT_DEBUG_OUTBOUND.
 // The in-process history below is always collected: it is one timestamp pair
 // per step, never per row.
 // ---------------------------------------------------------------------------
-const DEBUG_SCHEDULER = ["1", "true"].includes(String(process.env.PLEMBFIN_DEBUG_SCHEDULER || "").toLowerCase());
+const DEBUG_SCHEDULER = ["1", "true"].includes(String(brandEnv("DEBUG_SCHEDULER") || "").toLowerCase());
 const SCHEDULER_TICK_HISTORY_LIMIT = 60;
 const schedulerTickHistory = [];
 let schedulerTickSeq = 0;
@@ -419,6 +422,14 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
   pruneSyncPlans();
+  await runWithTimeBudget("Loop key prune", () => {
+    const removed = pruneExpiredLoopKeys();
+    if (removed > 0) console.log(`Loop key prune: removed ${removed} expired row${removed === 1 ? "" : "s"}.`);
+    return { removed };
+  }, 5_000);
+  await runWithTimeBudget("Database optimize", () => runDbOptimizeIfDue(), 10_000);
+  await runWithTimeBudget("Audit payload prune", () => ({ changed: pruneWatchAuditPayloads() }), 10_000);
+  if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   // A Trakt/TMDB-only split is deliberately an escape hatch for provider
   // numbering conflicts. Re-check it infrequently in the background; when
   // Trakt eventually adopts the canonical TVDB series and season numbers,
@@ -477,7 +488,7 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   await runWithTimeBudget("Scheduled remote watch-history backup", () => runScheduledRemoteWatchBackup(), 60_000);
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
-  await runWithTimeBudget("Scheduled Plembfin backup", () => runScheduledPlembfinBackup(), 30_000);
+  await runWithTimeBudget("Scheduled Plekt backup", () => runScheduledPlektBackup(), 30_000);
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
   // Repair identity aliases before the dashboard projection and metadata
@@ -664,7 +675,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     // route, so enforce the same durable deletion tombstone here before this
     // path can recreate the release-date fallback as a new history row.
     if (isDeletedWatchSuppressed(media, watchedAt)) {
-      console.log("Plex notifications: skipped a watch date explicitly deleted in Plembfin", {
+      console.log("Plex notifications: skipped a watch date explicitly deleted in Plekt", {
         title: media.title,
         ratingKey,
         watchedAt,
@@ -717,7 +728,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
           allowWhenUnwatched: true,
         });
         if (queued.queued) {
-          console.log("Plex notifications: queued manual watch review while Plembfin is unwatched", {
+          console.log("Plex notifications: queued manual watch review while Plekt is unwatched", {
             title: media.title,
             ratingKey,
           });
@@ -726,7 +737,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
         await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
         return;
       }
-      console.log("Plex notifications: ignored watched flag while Plembfin is unwatched", {
+      console.log("Plex notifications: ignored watched flag while Plekt is unwatched", {
         title: media.title,
         ratingKey,
       });

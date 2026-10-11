@@ -1,9 +1,9 @@
-import { state } from "./state.js?v=1.3.1.1.2";
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=1.3.1.1.2";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=1.3.1.1.2";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=1.3.1.2.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=1.3.1.2.1";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=1.3.1.2.1";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;
@@ -359,7 +359,7 @@ export function manualWatchReviewFailureOptions(details = {}, error = null) {
     } : {}),
     recommendations: [
       `Open Settings → Connections and test ${connectionLabel}.`,
-      "Confirm the app is reachable from the Plembfin server, then retry the pending review.",
+      "Confirm the app is reachable from the Plekt server, then retry the pending review.",
       "Open Settings → Logs to inspect the provider response if the retry fails again.",
     ],
   };

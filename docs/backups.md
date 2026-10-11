@@ -1,6 +1,6 @@
 # Backups
 
-Plembfin has **three backup subsystems** plus a set of pluggable remote destinations.
+Plekt has **three backup subsystems** plus a set of pluggable remote destinations.
 Schedules and destinations are managed from **Settings → Backup → Local / Remote**
 (`/settings/backup#backup-local`, `/settings/backup#backup-remote`); recovery workflows
 live under **Settings → Restore → Local / Remote** (`/settings/restore#restore-local`,
@@ -8,9 +8,9 @@ live under **Settings → Restore → Local / Remote** (`/settings/restore#resto
 
 | Subsystem | What it saves | Format | Files |
 | --- | --- | --- | --- |
-| Watch-history backups | `watch_history`, `playstate`, `playback_progress` + manifest | gzip JSON (`plembfin-watch-history-<stamp>.json.gz`) | `server/src/utils/watchHistoryBackups.js` |
-| Encrypted full backups | Every portable collection, including canonical personal watchlist mutations, provider ledger, queue, runs, and activity (but no provider secret) | AES-256-GCM encrypted JSON (`plembfin-backup-<stamp>.encrypted.json`) | `server/src/utils/plembfinBackups.js` |
-| Full export/import | Same portable collections, plain JSON, paged over the API | `plembfin-backup` v1 document | `server/src/utils/backup.js` |
+| Watch-history backups | `watch_history`, `playstate`, `playback_progress` + manifest | gzip JSON (`plekt-watch-history-<stamp>.json.gz`) | `server/src/utils/watchHistoryBackups.js` |
+| Encrypted full backups | Every portable collection, including canonical personal watchlist mutations, provider ledger, queue, runs, and activity (but no provider secret) | AES-256-GCM encrypted JSON (`plekt-backup-<stamp>.encrypted.json`) | `server/src/utils/plektBackups.js` |
+| Full export/import | Same portable collections, plain JSON, paged over the API | `plekt-backup` v1 document | `server/src/utils/backup.js` |
 
 Artwork binaries, poster cache rows, and TMDB metadata cache rows are never included -
 they are derived data that rebuilds itself.
@@ -50,7 +50,7 @@ The Tautulli one-time importer uses the same local watch-history backup format, 
 stages its workflow separately: preview and resolve matches first, create the
 recommended pre-import backup (or explicitly skip it), then run the import. The
 backup and import stages each show their own progress state in the UI. After a
-successful import, Plembfin reports completion and queues the selected targets for
+successful import, Plekt reports completion and queues the selected targets for
 background syncing.
 
 ### Remote destinations (`backupDestinations/`)
@@ -63,7 +63,7 @@ Per-destination status (last attempt/success, bytes, duration, error) is recorde
 the backup runtime and shown on the Remote Watch History Backups card. Remote retention
 is ordered by the sortable filename and scoped per backup type: pruning after a
 watch-history upload only counts watch-history files (remote retention setting), and
-pruning after a full-backup upload only counts encrypted full backups (Plembfin
+pruning after a full-backup upload only counts encrypted full backups (Plekt
 retention setting), so the two types never delete each other's files.
 
 All adapters implement the same contract (`index.js` in the folder):
@@ -97,7 +97,7 @@ Secret values are never prefilled; a configured placeholder means leaving the fi
 blank preserves the stored application key. Multiple B2 destination records are
 supported.
 
-## Encrypted full backups (`plembfinBackups.js`)
+## Encrypted full backups (`plektBackups.js`)
 
 Nightly encrypted snapshots of the entire portable backup document.
 
@@ -128,7 +128,7 @@ Nightly encrypted snapshots of the entire portable backup document.
   Until 27 September 2026 the browser decrypted and parsed the whole file itself, which
   failed for backups over about 512 MB (V8's string limit). Downloading a backup from the
   card streams it from disk and works at any size.
-- **Server-side restore** (`plembfinRestore.js`, `server/src/routes/plembfinRestore.js`)
+- **Server-side restore** (`plektRestore.js`, `server/src/routes/plektRestore.js`)
   - restores a backup of any size from disk. The
     base64 payload is decoded and decrypted as a stream (the last 16 bytes are the GCM tag)
     and `backupStreamScanner.js` reads the document one collection document at a time.
@@ -147,19 +147,19 @@ Nightly encrypted snapshots of the entire portable backup document.
   rows in 13 s with peak memory about 234 MB. Progress is an in-memory job (restoring
   `runtimeState` replaces that table).
 - **Remote mirroring** - optional; runs with the daily scheduled backup when remote
-  mirroring is enabled, or immediately via the Remote Plembfin Backups card's Back Up
+  mirroring is enabled, or immediately via the Remote Plekt Backups card's Back Up
   Now button. Reuses `pushBackupToRemotes` from the watch-history subsystem, so the
   same destination list applies; the aggregated attempt/success/error status across
   destinations is shown on the card.
 - **Storage** - `data/backups/plembfin/`. **Warning:** these backups contain
   media-server URLs, usernames, tokens, and API keys (that's what the encryption is
   for).
-- **API** - `GET/POST /api/plembfin-backups` (`handlePlembfinBackups`): status, list,
+- **API** - `GET/POST /api/plekt-backups` (`handlePlembfinBackups`): status, list,
   create, download, delete, restore-from-server, save settings.
-  `POST /api/plembfin-backups/upload` streams a raw backup file to a temporary upload in
+  `POST /api/plekt-backups/upload` streams a raw backup file to a temporary upload in
   the backups folder (kept up to a day so a wrong passphrase can be retried; deleted
   after a successful restore) and returns an `uploadId`. `POST
-  /api/plembfin-backups/restore` with `{filename | uploadId, passphrase}` starts a
+  /api/plekt-backups/restore` with `{filename | uploadId, passphrase}` starts a
   server-side restore (202, or 409 while one is running); `GET` returns the job status
   (`verifying` / `importing` / `complete` / `failed`, bytes read, collection, documents
   imported of total). The passphrase is used only for that restore and never stored.
@@ -180,7 +180,7 @@ The portable-format engine the other subsystems build on, also exposed directly:
   Settings → Sync → Sync Tools.
 
 Full backups include `personal_watchlist`, its append-only mutation/tombstone history,
-provider ownership observations (including Plembfin-owned playlist/container IDs),
+provider ownership observations (including Plekt-owned playlist/container IDs),
 non-secret queue/run state, and redacted activity. Provider URLs, users, and other
 connection settings remain in encrypted full backups as before; browser portable export
 does not include provider credentials. Restore never treats old provider success markers
@@ -205,7 +205,7 @@ The Tautulli importer is an explicit, one-time migration tool at
 `/settings/connections#tautulli`. Configure the Tautulli `/api/v2` URL and API key,
 select exactly one Tautulli user, and preview completed movie and episode rows.
 
-Before a confirmed import Plembfin creates a local watch-history backup with the
+Before a confirmed import Plekt creates a local watch-history backup with the
 reason `pre_tautulli_import`; remote mirroring follows the existing backup setting
 when requested by the operation. The import is additive and does not delete or write
 to Tautulli. Rows below Tautulli's watched threshold are reported as incomplete and
@@ -213,10 +213,10 @@ are not imported. Unix-second timestamps are converted before entering the norma
 history pipeline, and missing dates fall back to the release date only when a new
 local record is needed.
 
-The final backup-and-import confirmation is shown in Plembfin's in-app dialog, including
+The final backup-and-import confirmation is shown in Plekt's in-app dialog, including
 the multiline target summary and any possible-match plays that will remain unimported.
 After confirmation, the Connections page keeps the operation visible as `Importing...` and
-then reports `Import complete` while explaining that Plembfin is now syncing the imported
+then reports `Import complete` while explaining that Plekt is now syncing the imported
 watches to the connected media servers.
 
 The merge is identity-aware and same-local-day: provider IDs are compared
@@ -230,7 +230,7 @@ not used as a portable provider ID.
 
 #### Approximated dates and rewatches
 
-Plembfin holds a lot of approximated watch dates: release-day anchoring, episode timing,
+Plekt holds a lot of approximated watch dates: release-day anchoring, episode timing,
 and older manual backfills all write a round clock hour rather than an observed time. A
 real Tautulli playback timestamp often lands a day either side of one of those, which a
 strict same-calendar-day merge would treat as a second viewing. Measured against a real
@@ -280,7 +280,7 @@ different record.
 
 #### Where an import is sent
 
-The importer does not ask which servers to project to, and deliberately so. Plembfin is the
+The importer does not ask which servers to project to, and deliberately so. Plekt is the
 source of truth, so the scheduled sync reconciles Emby and Jellyfin with imported watches
 whether or not the import pushed them itself - and both receive the original Tautulli
 playback date, so the watches land in the right place in their history either way. A
@@ -302,11 +302,11 @@ accurate rather than a guess from the machine identifier. See [settings.md](sett
 ## Frontend (`public/modules/tools-backups.js`)
 
 Settings → Backup / restore → Backup settings renders four schedule cards - local and remote, for watch-history
-and encrypted Plembfin backups - each with an enable toggle in the card head, its own
+and encrypted Plekt backups - each with an enable toggle in the card head, its own
 time/retention (or passphrase) fields, a runtime status readout, and Save/Back Up Now
 actions at the bottom right, plus the Backblaze destination cards and edit dialogs.
 Settings → Backup / restore → Restore renders local/uploaded/remote backup choices and restore status
-(`setBackupTransferState`). Full Plembfin restores upload the chosen file
+(`setBackupTransferState`). Full Plekt restores upload the chosen file
 (`uploadPlembfinBackupFile`, XMLHttpRequest for upload progress) and run through
 `runServerPlembfinRestore`, which starts the server restore and polls its job; the
 browser never decrypts a backup. Encrypted exports are still encrypted in the browser.
@@ -316,7 +316,18 @@ State lives in
 
 ## Disaster recovery without the app
 
-Everything lives under `data/`: `plembfin.db` (SQLite), `media/` (artwork),
+Backup files are named `plekt-backup-<stamp>.encrypted.json` and
+`plekt-watch-history-<stamp>.json.gz`, with `plekt-*` format names inside. Files and
+formats written under the older `plembfin-*` names are still restored, listed, and
+counted by retention (`server/src/utils/backupNames.js`); retention orders files by
+the timestamp in the name, not the whole name. A backup written under the new names
+does not restore on a build from before the rename.
+
+Everything lives under `data/`: the database (`plekt.db`, or `plembfin.db` on an
+install that already had one; the old file is always used when present), `media/` (artwork),
 `config.json` (credentials/secrets). Copying that directory and restarting is a
 complete manual backup/restore - see the Backups section of
 [hardening.md](hardening.md).
+
+The local full-backup folder `data/backups/plembfin` and default Dropbox folder
+`/Plembfin Backups` retain their old names so existing backups remain visible.

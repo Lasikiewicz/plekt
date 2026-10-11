@@ -129,7 +129,7 @@ Behavior:
 - TMDB's TV catalogue does not list every series TVDB does, so TVDB is searched in
   parallel with TMDB rather than after it, and its series appear as quickly as any
   other result, marked with a `TVDB` badge. Search result lists from TVDB are cached
-  server-side, because the project key's rate pool is shared by every Plembfin install.
+  server-side, because the project key's rate pool is shared by every Plekt install.
 - Results from the three sources are merged on a normalised title key (lowercased,
   punctuation collapsed), so a series listed locally, by TMDB and by TVDB appears once.
   TVDB returns series only, so movie and person results are unaffected.

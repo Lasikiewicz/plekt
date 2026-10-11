@@ -78,14 +78,14 @@ function parseArgs(argv) {
 }
 
 function printHelp() {
-  console.log(`Build a bundled, non-commercial TMDB fixture for the Plembfin demo.
+  console.log(`Build a bundled, non-commercial TMDB fixture for the Plekt demo.
 
 Usage:
   npm run demo:assets
   npm run demo:assets -- --limit 5 --media movie
 
 Authentication is read from TMDB_API_KEY, TMDB_ACCESS_TOKEN, or the TMDB key
-already saved in Plembfin's local settings. Neither value is written to the
+already saved in Plekt's local settings. Neither value is written to the
 generated catalog, manifest, or image files.
 `);
 }
@@ -119,7 +119,7 @@ async function loadTmdbCredential() {
     }
 
     throw new Error(
-      "TMDB_API_KEY or TMDB_ACCESS_TOKEN is required. Set one locally, or save a TMDB API key in Plembfin Settings, then rerun npm run demo:assets. The credential is never written to the bundle.",
+      "TMDB_API_KEY or TMDB_ACCESS_TOKEN is required. Set one locally, or save a TMDB API key in Plekt Settings, then rerun npm run demo:assets. The credential is never written to the bundle.",
     );
   })();
   return tmdbCredentialPromise;

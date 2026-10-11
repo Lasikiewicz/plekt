@@ -83,8 +83,8 @@ const SECTIONS = {
       { id: "sync-field-watched_threshold", label: "Watched Threshold (%)", description: "Playback progress percentage at which a play counts as watched" },
       { id: "sync-field-min_resume_position", label: "Minimum Resume Position (sec)", description: "Minimum playback position before a stopped play is saved as a resume point" },
       { id: "sync-field-active_session_ttl", label: "Active Session TTL (min)", description: "How long a now playing session is kept without an update before it's considered stale" },
-      { id: "sync-field-request_timeout", label: "Outbound Request Timeout (sec)", description: "How long Plembfin waits for a response from Plex, Emby, or Jellyfin before giving up" },
-      { id: "sync-field-up_next_sync", label: "Up Next Sync", description: "Allow Up Next sync to push Plembfin's queue to connected media apps without removing anything already there" },
+      { id: "sync-field-request_timeout", label: "Outbound Request Timeout (sec)", description: "How long Plekt waits for a response from Plex, Emby, or Jellyfin before giving up" },
+      { id: "sync-field-up_next_sync", label: "Up Next Sync", description: "Allow Up Next sync to push Plekt's queue to connected media apps without removing anything already there" },
     ],
     isDisplayOnly: true, // Not a navigable route
   },
@@ -95,8 +95,8 @@ const SECTIONS = {
     subPanels: ["sync-tools"],
     subSections: [
       { id: "sync-tools-repair", label: "Repair Recent Items", description: "Check recent watched items for missing records" },
-      { id: "sync-tools-push", label: "Set Plembfin as Source of Truth", description: "Send Plembfin's currently recorded watched status and resume positions to one server or all connected servers, overwriting what they show" },
-      { id: "sync-tools-pull", label: "Import Watched Status", description: "Add watched status Plembfin doesn't already have from one server or all connected servers; never sends anything out or removes anything" },
+      { id: "sync-tools-push", label: "Set Plekt as Source of Truth", description: "Send Plekt's currently recorded watched status and resume positions to one server or all connected servers, overwriting what they show" },
+      { id: "sync-tools-pull", label: "Import Watched Status", description: "Add watched status Plekt doesn't already have from one server or all connected servers; never sends anything out or removes anything" },
     ],
     isDisplayOnly: true,
   },
@@ -185,7 +185,7 @@ const SECTIONS = {
     backupTab: "settings",
     subSections: [
       { id: "local-watch-history-backups", label: "Watch History", description: "Local watch-history backup schedule and files" },
-      { id: "local-plembfin-backups", label: "Plembfin", description: "Local encrypted full Plembfin backup schedule and files" },
+      { id: "local-plembfin-backups", label: "Plekt", description: "Local encrypted full Plekt backup schedule and files" },
     ],
     isDisplayOnly: true,
   },
@@ -196,7 +196,7 @@ const SECTIONS = {
     backupTab: "settings",
     subSections: [
       { id: "remote-watch-history-backups", label: "Watch History", description: "Watch-history backups mirrored to a remote destination" },
-      { id: "remote-plembfin-backups", label: "Plembfin", description: "Encrypted full Plembfin backups mirrored to a remote destination" },
+      { id: "remote-plembfin-backups", label: "Plekt", description: "Encrypted full Plekt backups mirrored to a remote destination" },
     ],
     isDisplayOnly: true,
   },
@@ -207,7 +207,7 @@ const SECTIONS = {
     backupTab: "restore",
     subSections: [
       { id: "local-watch-history-restore", label: "Watch History", description: "Restore watch history from a local file" },
-      { id: "local-plembfin-restore", label: "Plembfin", description: "Restore a full Plembfin backup from a local file" },
+      { id: "local-plembfin-restore", label: "Plekt", description: "Restore a full Plekt backup from a local file" },
     ],
     isDisplayOnly: true,
   },
@@ -218,7 +218,7 @@ const SECTIONS = {
     backupTab: "restore",
     subSections: [
       { id: "remote-watch-history-restore", label: "Watch History", description: "Restore watch history from a remote destination" },
-      { id: "remote-plembfin-restore", label: "Plembfin", description: "Restore a full Plembfin backup from a remote destination" },
+      { id: "remote-plembfin-restore", label: "Plekt", description: "Restore a full Plekt backup from a remote destination" },
     ],
     isDisplayOnly: true,
   },
@@ -298,7 +298,7 @@ const SECTIONS = {
   },
   "wipe-data": {
     label: "Wipe data",
-    description: "Permanently delete tracked watch history, sync history, or reset Plembfin entirely",
+    description: "Permanently delete tracked watch history, sync history, or reset Plekt entirely",
     panel: "tools",
     subPanels: ["tools-wipe-data"],
     subSections: [
@@ -397,7 +397,7 @@ const GROUP_DESCRIPTIONS = {
   connections: "Connect Trakt or Seerr, or import watch history.",
   metadata: "Configure TMDB, TVDB, Fanart.tv, and OMDb, and refresh cached metadata.",
   sync: "Tune sync behavior, run sync tools, and inspect history.",
-  backup: "Schedule local and remote backups of watch history and full Plembfin data.",
+  backup: "Schedule local and remote backups of watch history and full Plekt data.",
   restore: "Restore watch history or a full backup from local files or a remote destination.",
   tools: "Reopen guided setup, repair the database, rebuild the library, and wipe data.",
   logs: "Live server and browser diagnostic output.",

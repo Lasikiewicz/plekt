@@ -42,5 +42,5 @@ if [ -n "$develop_push_sha" ]; then
   node scripts/check-pending-commits.js "origin/develop..$develop_push_sha"
 fi
 
-echo "Running Plembfin pre-push build check..."
+echo "Running Plekt pre-push build check..."
 npm run build

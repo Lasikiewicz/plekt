@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state } from "./state.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml, episodeCode, formatDate } from "./utils.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml, episodeCode, formatDate } from "./utils.js?v=1.3.1.2.1";
 
 // ── Watch-state aliases ─────────────────────────────────────────────────────
 // Episode playstate rows keyed on the episode's own ids that no TMDB or TVDB
@@ -156,7 +156,7 @@ function confirmAction(button) {
   const entries = `${count} watch-state entr${count === 1 ? "y" : "ies"}`;
   const isFold = button.dataset.aliasAction === "fold";
   const message = isFold
-    ? `Move ${entries} into ${show.title}?\n\nFor each episode the newest watch state wins and the older entry is deleted. Only Plembfin's local watch state changes; nothing is sent to connected platforms. This cannot be undone.`
+    ? `Move ${entries} into ${show.title}?\n\nFor each episode the newest watch state wins and the older entry is deleted. Only Plekt's local watch state changes; nothing is sent to connected platforms. This cannot be undone.`
     : `Mark ${entries} as a different show than ${show.title}?\n\nThey are left as they are and not listed again, and the automatic repair will not move them. You can restore them from the Dismissed list.`;
   _showConfirmModal(message, async () => {
     button.disabled = true;

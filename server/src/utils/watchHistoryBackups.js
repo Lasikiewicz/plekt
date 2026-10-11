@@ -7,18 +7,26 @@ import { FULL_BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR } from "../paths.js";
 import { createAdapter, DESTINATION_TYPES } from "./backupDestinations/index.js";
 import { protectedSnapshotFiles } from "./syncPlans.js";
 import { persistedWatchDerivedFields } from "./watchDerivedFields.js";
+import {
+  FULL_BACKUP_FILE_PATTERN,
+  WATCH_HISTORY_BACKUP_FORMAT,
+  WATCH_HISTORY_FILE_PATTERN,
+  backupFileStamp,
+  isEncryptedBackupFormat,
+  isWatchHistoryBackupFormat,
+  watchHistoryBackupFilename,
+} from "./backupNames.js";
 
-const FORMAT = "plembfin-watch-history-backup";
+const FORMAT = WATCH_HISTORY_BACKUP_FORMAT;
 const VERSION = 1;
 const CONFIG_ID = "watchHistoryBackups";
 const RUNTIME_ID = "watchHistoryBackups";
 const DESTINATIONS_ID = "watchBackupDestinations";
 // Secret fields that must never be returned to the browser, per destination type.
 const SECRET_FIELDS = ["password", "secretAccessKey", "appSecret", "refreshToken"];
-const FILE_PATTERN = /^plembfin-watch-history-(\d{8}T\d{6}Z)\.json\.gz$/;
-// Encrypted full-backup filenames (see plembfinBackups.js). Remote destinations hold both
-// backup types side by side, so remote listing/retention must be able to tell them apart.
-const FULL_BACKUP_FILE_PATTERN = /^plembfin-backup-\d{8}T\d{6}Z\.encrypted\.json$/;
+const FILE_PATTERN = WATCH_HISTORY_FILE_PATTERN;
+// Remote destinations hold watch-history and encrypted full backups (see plembfinBackups.js)
+// side by side, so remote listing/retention must be able to tell them apart.
 
 const selectSetting = db.prepare("SELECT data FROM settings WHERE id = ?");
 const upsertSetting = db.prepare(`
@@ -290,8 +298,8 @@ export async function pullRemoteBackupToLocal(id, filename) {
   } catch {
     throw new Error("Downloaded file is not a valid gzip backup");
   }
-  if (document?.format !== FORMAT || Number(document?.version) !== VERSION) {
-    throw new Error("Downloaded file is not a Plembfin watch-history backup");
+  if (!isWatchHistoryBackupFormat(document?.format) ||Number(document?.version) !== VERSION) {
+    throw new Error("Downloaded file is not a Plekt watch-history backup");
   }
 
   fs.mkdirSync(WATCH_HISTORY_BACKUPS_DIR, { recursive: true });
@@ -302,7 +310,7 @@ export async function pullRemoteBackupToLocal(id, filename) {
   return { name, sizeBytes: buffer.length };
 }
 
-export async function listRemotePlembfinBackups(id) {
+export async function listRemotePlektBackups(id) {
   const destination = getBackupDestination(id);
   if (!destination) throw new Error("Destination not found");
   const files = await adapterFor(destination).list();
@@ -312,7 +320,7 @@ export async function listRemotePlembfinBackups(id) {
 // Download an encrypted full Plembfin backup from a remote destination and place it in
 // the local store, so the existing local-file restore flow (decrypt in the browser with
 // the passphrase, then import) can use it without any changes.
-export async function pullRemotePlembfinBackupToLocal(id, filename) {
+export async function pullRemotePlektBackupToLocal(id, filename) {
   const destination = getBackupDestination(id);
   if (!destination) throw new Error("Destination not found");
   const name = path.basename(String(filename || ""));
@@ -323,10 +331,10 @@ export async function pullRemotePlembfinBackupToLocal(id, filename) {
   try {
     document = JSON.parse(buffer.toString("utf8"));
   } catch {
-    throw new Error("Downloaded file is not a valid Plembfin backup");
+    throw new Error("Downloaded file is not a valid Plekt backup");
   }
-  if (document?.format !== "plembfin-encrypted-backup" || Number(document?.version) !== 1) {
-    throw new Error("Downloaded file is not an encrypted Plembfin backup");
+  if (!isEncryptedBackupFormat(document?.format) || Number(document?.version) !== 1) {
+    throw new Error("Downloaded file is not an encrypted Plekt backup");
   }
 
   fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
@@ -347,8 +355,8 @@ export function importWatchHistoryBackupFile({ filename = "", buffer }) {
   } catch {
     throw new Error("Uploaded file is not a valid gzip backup");
   }
-  if (document?.format !== FORMAT || Number(document?.version) !== VERSION) {
-    throw new Error("Uploaded file is not a Plembfin watch-history backup");
+  if (!isWatchHistoryBackupFormat(document?.format) ||Number(document?.version) !== VERSION) {
+    throw new Error("Uploaded file is not a Plekt watch-history backup");
   }
   for (const key of ["watchHistory", "playstate", "playbackProgress"]) {
     if (!Array.isArray(document.data?.[key])) throw new Error(`Uploaded backup is missing ${key}`);
@@ -383,9 +391,10 @@ async function applyRemoteRetention(adapter, retention, pattern) {
   // Retention only counts and deletes files of the same backup type as the one just
   // uploaded - watch-history and full Plembfin backups keep independent retention.
   const files = (await adapter.list()).filter((file) => pattern.test(file.name));
-  // Order by filename, not remote-reported mtimes: our names embed a sortable UTC
-  // timestamp, so this is newest-first regardless of how the remote reports dates.
-  const newestFirst = [...files].sort((a, b) => b.name.localeCompare(a.name));
+  // Order by the name's embedded UTC timestamp, not remote-reported mtimes, so this
+  // is newest-first regardless of how the remote reports dates. The stamp alone is
+  // compared: by whole name, every older-prefixed file would sort as the newest.
+  const newestFirst = [...files].sort((a, b) => backupFileStamp(b.name).localeCompare(backupFileStamp(a.name)));
   for (const file of newestFirst.slice(Math.max(1, retention))) {
     await adapter.delete(file.name);
   }
@@ -448,7 +457,7 @@ function essentialProgress() {
 
 function timestampName(date = new Date()) {
   const stamp = date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z$/, "Z");
-  return `plembfin-watch-history-${stamp}.json.gz`;
+  return watchHistoryBackupFilename(stamp);
 }
 
 function checksum(buffer) {
@@ -493,7 +502,7 @@ export function listWatchBackups() {
       const stat = fs.statSync(absolute);
       return { name, sizeBytes: stat.size, createdAt: stat.mtime.toISOString() };
     })
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    .sort((a, b) => backupFileStamp(b.name).localeCompare(backupFileStamp(a.name)));
 }
 
 function applyRetention(retention) {
@@ -561,7 +570,7 @@ function parseBackup(filename) {
   } catch {
     throw new Error("Backup is not valid gzip JSON");
   }
-  if (document?.format !== FORMAT || Number(document?.version) !== VERSION) {
+  if (!isWatchHistoryBackupFormat(document?.format) ||Number(document?.version) !== VERSION) {
     throw new Error("Unsupported watch-history backup format or version");
   }
   for (const key of ["watchHistory", "playstate", "playbackProgress"]) {

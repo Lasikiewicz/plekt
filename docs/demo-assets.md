@@ -10,7 +10,7 @@ npm run demo:assets
 ```
 
 `TMDB_ACCESS_TOKEN` can be used instead of `TMDB_API_KEY`. If neither is set,
-the builder also reads the TMDB API key already saved in Plembfin's local
+the builder also reads the TMDB API key already saved in Plekt's local
 settings database. The credential is used only for this build and is never
 written to the generated catalog, manifest, or image files. Do not put it in
 `public/`, a container image, or source control.
@@ -42,7 +42,7 @@ and [Logos & Attribution](https://www.themoviedb.org/about/logos-attribution).
 `npm run demo:seed` copies that catalog into an explicitly supplied isolated
 `DATA_DIR` and also seeds offline Discover rails, a three-month Upcoming
 calendar, local watchlist/rating examples, and custom lists. It refuses the
-normal Plembfin data directory and refuses to seed over non-demo watch history.
+normal Plekt data directory and refuses to seed over non-demo watch history.
 
 The scripts only prepare local assets and fixture data. They do not start the
 server, create DNS, publish a container, or deploy the hosted demo. The

@@ -148,7 +148,7 @@ export async function handlePlexConnection(req, res) {
   return sendJson(res, {
     ok: true,
     removed,
-    guidance: "If Plembfin still appears in Plex Authorized Devices, remove it there to revoke the remote device registration.",
+    guidance: "If Plekt (or Plembfin, its earlier name) still appears in Plex Authorized Devices, remove it there to revoke the remote device registration.",
   });
 }
 
@@ -198,7 +198,7 @@ export async function handleEmbyLikeAuth(req, res, path) {
     if (req.method !== "POST") return methodNotAllowed(res);
     const provider = path.includes("/emby/") ? "emby" : "jellyfin";
     const body = await readJson(req);
-    const device = getOrCreateAuthDevice(provider, { deviceName: "Plembfin" });
+    const device = getOrCreateAuthDevice(provider, { deviceName: "Plekt" });
     const verified = await authenticateEmbyLike({ provider, baseUrl: body.baseUrl, username: body.username, password: body.password, device });
     const stored = await loadMediaConfig({ resolveConnections: false });
     const connection = saveEmbyLikeAccount({ provider, authKind: `${provider}_user`, verified, device, legacyConfig: stored[provider], req });
@@ -208,7 +208,7 @@ export async function handleEmbyLikeAuth(req, res, path) {
   if (path === "media-auth/jellyfin/quick-connect/start") {
     if (req.method !== "POST") return methodNotAllowed(res);
     const body = await readJson(req);
-    const device = getOrCreateAuthDevice("jellyfin", { deviceName: "Plembfin" });
+    const device = getOrCreateAuthDevice("jellyfin", { deviceName: "Plekt" });
     if (!(await jellyfinQuickConnectEnabled(body.baseUrl, device))) {
       return sendJson(res, { error: "Quick Connect is disabled on this Jellyfin server", code: "quick_connect_disabled" }, 409);
     }
@@ -245,5 +245,5 @@ export async function handleEmbyLikeConnection(req, res, provider) {
   const revoked = await logoutEmbyLike(connection, getActiveAuthDevice(provider));
   const removed = disableMediaConnection(provider);
   writeAuditLog(`media-auth.${provider}.disconnected`, { ip: req.ip || req.socket?.remoteAddress, detail: { removed, remoteLogout: revoked } });
-  return sendJson(res, { ok: true, removed, remoteLogout: revoked, guidance: revoked ? `${provider === "emby" ? "Emby" : "Jellyfin"} account disconnected and its session was revoked.` : `${provider === "emby" ? "Emby" : "Jellyfin"} account disconnected locally. Remove the Plembfin device in the media server if it remains listed.` });
+  return sendJson(res, { ok: true, removed, remoteLogout: revoked, guidance: revoked ? `${provider === "emby" ? "Emby" : "Jellyfin"} account disconnected and its session was revoked.` : `${provider === "emby" ? "Emby" : "Jellyfin"} account disconnected locally. Remove the Plekt (or Plembfin) device in the media server if it remains listed.` });
 }

@@ -1,11 +1,11 @@
-# Plembfin release bot (Devvit app)
+# Plekt release bot (Devvit app)
 
 A small [Devvit](https://developers.reddit.com) app installed only in r/plembfin. On a
 schedule, it checks the public `changelog.json` in this repository; when a new release
 has been published, it posts a release announcement to r/plembfin and pins it,
 un-pinning whichever earlier release post it had pinned before.
 
-This is a separate deployable from the main Plembfin app - it runs on Reddit's own
+This is a separate deployable from the main Plekt app - it runs on Reddit's own
 infrastructure (not this repo's server or CI), and is built/deployed with the `devvit`
 CLI rather than `npm start`/Docker.
 
@@ -65,8 +65,8 @@ The first upload will prompt for:
 - An app icon (optional, can skip).
 - **Terms & Conditions** and **Privacy Policy** URLs - once this folder is pushed to
   `main`, use:
-  - `https://github.com/Lasikiewicz/plembfin/blob/main/reddit-app/TERMS.md`
-  - `https://github.com/Lasikiewicz/plembfin/blob/main/reddit-app/PRIVACY.md`
+  - `https://github.com/Lasikiewicz/plekt/blob/main/reddit-app/TERMS.md`
+  - `https://github.com/Lasikiewicz/plekt/blob/main/reddit-app/PRIVACY.md`
 - Approval for the `raw.githubusercontent.com` HTTP domain this app requests in
   `devvit.json`. Reddit reviews new domain requests within 1-2 business days
   (see [`http-fetch` docs](https://developers.reddit.com/docs/capabilities/server/http-fetch)).
@@ -87,3 +87,5 @@ permissions when prompted so it can pin/un-pin posts.
   `devvit.json`'s cron task calls
 - `src/core/release.ts` - the actual logic: fetch changelog, dedupe against Redis,
   un-sticky the previous post, submit and sticky the new one
+
+The product is now Plekt. The existing Devvit app id, subreddit names and bot identity remain unchanged; this rebrand changes announcement copy and repository links.

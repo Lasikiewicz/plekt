@@ -1,11 +1,11 @@
-import { buildAuthHeaders, buildNowPlayingUrl, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./auth.js?v=1.3.1.1.2";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=1.3.1.1.2";
-import { state, elements, explorerCardModeKey } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, sanitizeTitle, safeImageUrl, movieSlug, showTitleFrom, slug, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel } from "./utils.js?v=1.3.1.1.2";
-import { compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, markArtworkUnavailable, tmdbProfile } from "./images.js?v=1.3.1.1.2";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerCronSync, triggerStopSync } from "./sync.js?v=1.3.1.1.2";
-import { attachSidebarMiddleClickNavigation } from "./sidebar-navigation.js?v=1.3.1.1.2";
-import { WATCH_ROUTE_MODULES, ifLoaded, lazyExport, loadRouteModules, onRouteModuleLoaded } from "./route-modules.js?v=1.3.1.1.2";
+import { buildAuthHeaders, buildNowPlayingUrl, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./auth.js?v=1.3.1.2.1";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=1.3.1.2.1";
+import { state, elements, explorerCardModeKey } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, sanitizeTitle, safeImageUrl, movieSlug, showTitleFrom, slug, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel } from "./utils.js?v=1.3.1.2.1";
+import { compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, markArtworkUnavailable, tmdbProfile } from "./images.js?v=1.3.1.2.1";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerCronSync, triggerStopSync } from "./sync.js?v=1.3.1.2.1";
+import { attachSidebarMiddleClickNavigation } from "./sidebar-navigation.js?v=1.3.1.2.1";
+import { WATCH_ROUTE_MODULES, ifLoaded, lazyExport, loadRouteModules, onRouteModuleLoaded } from "./route-modules.js?v=1.3.1.2.1";
 
 // Route modules are not imported statically: that pulled the whole route graph
 // (about 1 MB) into the event wiring every page loads. Actions load their module
@@ -43,7 +43,7 @@ const dontRecommendDiscoverItem = lazyExport("discover", "dontRecommendDiscoverI
 const syncMediaActionsMenuState = ifLoaded("media-detail", "syncMediaActionsMenuState"), closeDebugModal = ifLoaded("media-detail", "closeDebugModal"), closeMediaDetail = ifLoaded("media-detail", "closeMediaDetail"), closeMediaInfoModal = ifLoaded("media-detail", "closeMediaInfoModal");
 const openHistoryDebugModal = lazyExport("media-detail", "openHistoryDebugModal");
 const closePersonProfile = ifLoaded("media-person", "closePersonProfile");
-import { hydrateDeferredCastDisclosure } from "./cast-disclosure.js?v=1.3.1.1.2";
+import { hydrateDeferredCastDisclosure } from "./cast-disclosure.js?v=1.3.1.2.1";
 
 let _cb = {};
 
@@ -210,7 +210,7 @@ async function openSyncAttentionFixMatch(issue = {}) {
     const href = String(issue.localHref || "").trim();
     if (href) {
       navigateTo(href);
-      setMessage("No local watch row was found for a direct match dialog. Opened the affected Plembfin item instead.", "warning");
+      setMessage("No local watch row was found for a direct match dialog. Opened the affected Plekt item instead.", "warning");
       return;
     }
     throw new Error("Could not find a local watch row to fix-match.");
@@ -791,7 +791,7 @@ function attachEvents() {
       ? await chooseUpNextRemovalScope(item)
       : (await openConfirmDialog({
         title: "Remove from Up Next",
-        body: `Remove "${title}" from Up Next in Plembfin and every connected media app?`,
+        body: `Remove "${title}" from Up Next in Plekt and every connected media app?`,
         confirmLabel: "Remove from Up Next",
         danger: true,
       })) && "show";
@@ -846,12 +846,12 @@ function attachEvents() {
       const issues = dismissals.filter((entry) => entry.status !== "fulfilled").length;
       setMessage(
         issues
-          ? `Removed "${title}" in Plembfin and ${synced} connected app${synced === 1 ? "" : "s"}; ${issues} app${issues === 1 ? " needs" : "s need"} attention`
+          ? `Removed "${title}" in Plekt and ${synced} connected app${synced === 1 ? "" : "s"}; ${issues} app${issues === 1 ? " needs" : "s need"} attention`
           : body.queued
           ? `Removed "${title}" from Up Next; sync queued until the current blocking operation completes`
           : synced
-            ? `Removed "${title}" from Up Next in Plembfin and ${synced} connected app${synced === 1 ? "" : "s"}`
-            : `Removed "${title}" from Up Next in Plembfin`,
+            ? `Removed "${title}" from Up Next in Plekt and ${synced} connected app${synced === 1 ? "" : "s"}`
+            : `Removed "${title}" from Up Next in Plekt`,
         issues ? "muted" : "success",
       );
       await loadHistory({ force: true, silent: true }).catch(() => null);
@@ -1358,10 +1358,10 @@ function attachEvents() {
     navigateTo("/settings/changelog");
   });
 
-  const aboutShareProjectUrl = () => elements.aboutShareButton?.dataset.shareUrl || "https://github.com/Lasikiewicz/plembfin";
+  const aboutShareProjectUrl = () => elements.aboutShareButton?.dataset.shareUrl || "https://github.com/Lasikiewicz/plekt";
   const aboutShareData = () => ({
-    title: "Plembfin",
-    text: "Plembfin — the local brain for your media stack.",
+    title: "Plekt",
+    text: "Plekt — the local brain for your media stack.",
     url: aboutShareProjectUrl(),
   });
   const setAboutShareStatus = (message = "") => {
@@ -1383,7 +1383,7 @@ function attachEvents() {
       reddit: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodeURIComponent(data.title)}`,
       whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(`${data.text} ${data.url}`)}`,
       telegram: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
-      email: `mailto:?subject=${encodeURIComponent("Plembfin")}&body=${encodeURIComponent(`${data.text}\n\n${data.url}`)}`,
+      email: `mailto:?subject=${encodeURIComponent("Plekt")}&body=${encodeURIComponent(`${data.text}\n\n${data.url}`)}`,
     };
 
     elements.aboutShareModal?.querySelectorAll("[data-about-share-network]").forEach((link) => {
@@ -1410,7 +1410,7 @@ function attachEvents() {
       await copyToClipboard(aboutShareProjectUrl(), elements.aboutShareCopyButton);
       setAboutShareStatus("Project link copied.");
     } catch {
-      setAboutShareStatus("Copy the GitHub project link to share Plembfin.");
+      setAboutShareStatus("Copy the GitHub project link to share Plekt.");
     }
   });
   elements.aboutShareNativeButton?.addEventListener("click", async () => {

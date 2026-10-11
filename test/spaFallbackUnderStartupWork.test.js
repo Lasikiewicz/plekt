@@ -101,7 +101,7 @@ test("the SPA fallback stays fast while combined-role startup work runs", async 
     timings.push({ route, elapsed });
     assert.equal(response.status, 200, `${route} returned ${response.status}`);
     assert.match(response.headers.get("content-type") || "", /text\/html/, `${route} is not the SPA document`);
-    assert.match(body, /<title>Plembfin<\/title>/, `${route} did not serve index.html`);
+    assert.match(body, /<title>Plekt<\/title>/, `${route} did not serve index.html`);
     assert.ok(elapsed < STALL_BOUND_MS, `${route} took ${Math.round(elapsed)} ms during startup work`);
     await delay(50);
   }

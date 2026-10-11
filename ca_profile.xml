@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CommunityApplications>
-  <Profile>Plembfin is a self-hosted watch history and playstate sync hub for Plex, Emby, Jellyfin, and Trakt. This repository provides the Plembfin Docker template and related support links.</Profile>
-  <Icon>https://raw.githubusercontent.com/Lasikiewicz/plembfin/main/public/favicon.svg</Icon>
-  <WebPage>https://github.com/Lasikiewicz/plembfin</WebPage>
-  <Forum>https://github.com/Lasikiewicz/plembfin/issues</Forum>
+  <Profile>Plekt is a self-hosted watch history and playstate sync hub for Plex, Emby, Jellyfin, and Trakt. This repository provides the Plekt Docker template and related support links.</Profile>
+  <Icon>https://raw.githubusercontent.com/Lasikiewicz/plekt/main/public/favicon.svg</Icon>
+  <WebPage>https://github.com/Lasikiewicz/plekt</WebPage>
+  <Forum>https://github.com/Lasikiewicz/plekt/issues</Forum>
 </CommunityApplications>

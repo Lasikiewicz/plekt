@@ -1118,7 +1118,7 @@ test("handleUpNextRemove clears positive playback progress and marks unplayed", 
 // Next version, so no live event reloaded it until a forced refresh.
 test("storing or clearing resume progress advances the Up Next version", async () => {
   const { upsertPlaybackProgress, deletePlaybackProgressSync } = await import("../server/src/utils/dataRepo.js");
-  const { getUpNextVersion } = await import("../server/src/db.js");
+  const { db, getUpNextVersion } = await import("../server/src/db.js");
   const record = {
     media_key: "movie:none:none:imdb:tt7700001",
     media_type: "movie",
@@ -1143,12 +1143,17 @@ test("storing or clearing resume progress advances the Up Next version", async (
   const afterMove = getUpNextVersion();
   assert.ok(afterMove > afterStore, "a moved resume position must advance the Up Next version");
 
+  const auditCount = () => db.prepare("SELECT COUNT(*) AS count FROM watch_audit_events WHERE event_type = ? AND media_key = ?")
+    .get("resume_progress_cleared", record.media_key).count;
+  const beforeClearAudit = auditCount();
   deletePlaybackProgressSync(record);
   const afterClear = getUpNextVersion();
   assert.ok(afterClear > afterMove, "clearing a resume position must advance the Up Next version");
+  assert.equal(auditCount(), beforeClearAudit + 1, "clearing a stored resume position must record one audit event");
 
   deletePlaybackProgressSync(record);
   assert.equal(getUpNextVersion(), afterClear, "clearing an absent resume must not advance the Up Next version");
+  assert.equal(auditCount(), beforeClearAudit + 1, "clearing absent progress must not record a false audit event");
 });
 
 test("two Jellyfin versions of one episode become one card carrying both native ids", async () => {

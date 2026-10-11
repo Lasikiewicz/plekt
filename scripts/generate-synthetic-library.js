@@ -152,7 +152,8 @@ function assertDisposableDirectory(dataDir) {
   if (resolved === repoRoot) {
     throw new Error("Refusing to write to the repository root. Point --data-dir at a disposable path.");
   }
-  const dbPath = path.join(resolved, "plembfin.db");
+  const legacyDbPath = path.join(resolved, "plembfin.db");
+  const dbPath = fs.existsSync(legacyDbPath) ? legacyDbPath : path.join(resolved, "plekt.db");
   const markerPath = path.join(resolved, MARKER_NAME);
   if (fs.existsSync(dbPath) && !fs.existsSync(markerPath)) {
     throw new Error(
@@ -164,7 +165,7 @@ function assertDisposableDirectory(dataDir) {
 }
 
 function removeExistingLibrary(target) {
-  for (const name of ["plembfin.db", "plembfin.db-wal", "plembfin.db-shm", MARKER_NAME]) {
+  for (const name of ["plekt.db", "plekt.db-wal", "plekt.db-shm", "plembfin.db", "plembfin.db-wal", "plembfin.db-shm", MARKER_NAME]) {
     fs.rmSync(path.join(target.resolved, name), { force: true });
   }
   fs.rmSync(path.join(target.resolved, "media"), { recursive: true, force: true });

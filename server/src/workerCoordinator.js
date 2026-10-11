@@ -23,6 +23,7 @@ import { UP_NEXT_AUTO_SYNC_JOB, UP_NEXT_PRIORITY_SYNC_JOB, requestUpNextAutoSync
 import { db } from "./db.js";
 import { setRuntimeState } from "./utils/configStore.js";
 import { yieldToEventLoop } from "./utils/eventLoop.js";
+import { brandEnv } from "./utils/brandEnv.js";
 import {
   claimSchedulerLease,
   markSchedulerTick,
@@ -40,22 +41,22 @@ import {
 } from "./utils/backgroundJobs.js";
 
 function timing(name, fallback) {
-  if (process.env.PLEMBFIN_TEST_MODE !== "1") return fallback;
-  const value = Number(process.env[name]);
+  if (brandEnv("TEST_MODE") !== "1") return fallback;
+  const value = Number(brandEnv(name));
   return Number.isFinite(value) && value >= 25 ? value : fallback;
 }
 
-const ACQUIRE_MS = timing("PLEMBFIN_TEST_LEASE_ACQUIRE_MS", 5_000);
-const RENEW_MS = timing("PLEMBFIN_TEST_LEASE_RENEW_MS", 10_000);
-const LEASE_TTL_MS = timing("PLEMBFIN_TEST_LEASE_TTL_MS", 60_000);
-const TICK_MS = timing("PLEMBFIN_TEST_TICK_MS", 60_000);
-const FIRST_TICK_MS = timing("PLEMBFIN_TEST_FIRST_TICK_MS", 10_000);
-const JOB_POLL_MS = timing("PLEMBFIN_TEST_JOB_POLL_MS", 1_000);
+const ACQUIRE_MS = timing("TEST_LEASE_ACQUIRE_MS", 5_000);
+const RENEW_MS = timing("TEST_LEASE_RENEW_MS", 10_000);
+const LEASE_TTL_MS = timing("TEST_LEASE_TTL_MS", 60_000);
+const TICK_MS = timing("TEST_TICK_MS", 60_000);
+const FIRST_TICK_MS = timing("TEST_FIRST_TICK_MS", 10_000);
+const JOB_POLL_MS = timing("TEST_JOB_POLL_MS", 1_000);
 // Useful for diagnostics that need the real-time provider listeners without
 // letting an existing scheduled/backlog pass compete with the event under
 // test. The default remains the normal combined worker behavior.
 const SCHEDULED_WORKER_PAUSED = ["1", "true", "yes", "on"].includes(
-  String(process.env.PLEMBFIN_PAUSE_SCHEDULED_WORKER || "").trim().toLowerCase(),
+  String(brandEnv("PAUSE_SCHEDULED_WORKER") || "").trim().toLowerCase(),
 );
 
 // How long to wait before the next tick, given how long the current one has
@@ -162,7 +163,7 @@ export function createWorkerCoordinator({ holderId, role }) {
           await runTick();
         }, FIRST_TICK_MS);
       } else {
-        console.log("[worker] scheduled sync and background jobs paused by PLEMBFIN_PAUSE_SCHEDULED_WORKER");
+        console.log("[worker] scheduled sync and background jobs paused by PLEKT_PAUSE_SCHEDULED_WORKER");
       }
     }
   }

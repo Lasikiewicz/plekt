@@ -94,7 +94,7 @@ the browser as a visible failure:
   resolved. It is discarded and the local identity fills the gap; with no local match the item
   falls back to a title route, which beats a route that resolves to nothing.
 - **Artwork that only resolves against the media server**, such as a bare Plex
-  `/library/metadata/.../thumb/...` path. The browser requests it from Plembfin's own origin,
+  `/library/metadata/.../thumb/...` path. The browser requests it from Plekt's own origin,
   where it hits the SPA fallback and renders no image. Dropping it hands the card back to the
   normal poster resolution (`/api/poster`, then cached artwork). Cached `/media/...`, `/api/...`
   and absolute `http(s)` URLs are kept as they are.
@@ -175,10 +175,10 @@ the watch-date prompt offers an explicit **Include unreleased episodes** choice 
 watched through an early online release. A failed or partial provider feed keeps the last good observations and displays a
 compact source-status message; future episodes remain in the Upcoming view.
 
-The Up Next header action is an authoritative push from Plembfin to Plex, Emby, and Jellyfin. It
-sends the full loaded Plembfin snapshot (up to the API's 100-item bound) and works entirely
+The Up Next header action is an authoritative push from Plekt to Plex, Emby, and Jellyfin. It
+sends the full loaded Plekt snapshot (up to the API's 100-item bound) and works entirely
 through each provider's own native rail. The target mapping is Plex Continue Watching, Emby
-Continue Watching (the Resume API), and Jellyfin Next Up. For each ready episode, Plembfin
+Continue Watching (the Resume API), and Jellyfin Next Up. For each ready episode, Plekt
 verifies that the target is unwatched, released, and follows a fully watched earlier run, then
 refreshes the provider's native calculated rail from the immediately preceding watched episode.
 Plex and Emby receive their native watched mark; Jellyfin receives only a merged `LastPlayedDate`
@@ -187,7 +187,7 @@ never overwritten, and an item that is already part-watched is already on its pr
 that position alone.
 
 The push also forwards known positive resume checkpoints. It only ever adds to the native rails:
-an entry the app lists but Plembfin's queue does not is reported as left in place and is never
+an entry the app lists but Plekt's queue does not is reported as left in place and is never
 hidden, whether the push is automatic or started from the header (`docs/decisions.md` entry 36).
 Jellyfin Continue Watching is read only to protect genuine part-watched progress; it is not the
 Jellyfin queue being reconciled. It never adds a card, but when it lists an episode that already
@@ -202,7 +202,7 @@ attempted. An automatic push that reached every other provider counts as done fo
 the push does not repeat while the provider stays down; the first feed read that succeeds again
 queues a push, which refreshes the recovered provider's whole rail.
 
-Plembfin no longer maintains a managed `Plembfin Up Next` playlist on any provider; see
+Plekt no longer maintains a managed `Plembfin Up Next` playlist on any provider; see
 `docs/decisions.md` entry 28. An installation upgraded from a build that created one keeps that
 playlist until it is deleted by hand in Plex, Emby, or Jellyfin.
 
@@ -331,7 +331,7 @@ the "Changelog & update check" section of [architecture.md](architecture.md).
 ### Background sync indicator
 
 A sync line sits above the version badge on every page. It reads "Sync - Idle" when
-nothing is being dispatched and "Sync - N of M" while Plembfin is actively pushing
+nothing is being dispatched and "Sync - N of M" while Plekt is actively pushing
 watch-state changes out to Plex/Emby/Jellyfin/Trakt - the scheduler's pending-dispatch
 queue working through a backlog, a bulk duplicate-watch cleanup, a manual
 watch/unwatch, anything. The indicator is driven by the `sync-progress` events on the
@@ -349,7 +349,7 @@ Clicking the line opens the Sync Activity page at `/sync-activity`.
 
 ### Sync Activity page
 
-`/sync-activity` (`public/modules/sync-activity.js`) lists what Plembfin has synced,
+`/sync-activity` (`public/modules/sync-activity.js`) lists what Plekt has synced,
 one row per movie or show, newest group activity first. `GET /api/sync-activity`
 groups the durable `sync_history` events before pagination, so a busy movie cannot
 fill a page by itself. The older event-shaped `GET /api/sync-history` endpoint remains
@@ -379,7 +379,7 @@ differences and are not raised as issues.
 
 When an episode's Trakt target reports `not_found`, the current result explains that
 the show identity may need correcting and offers **Fix show match**. This opens the
-same source search used elsewhere in Plembfin; after the user chooses the correct
+same source search used elsewhere in Plekt; after the user chooses the correct
 series, every stored episode for that show is rematched and the failed Trakt update is
 retried automatically using the current local identity. A complete show group also
 offers **Fix show match & retry all**: one show-level match updates every stored
@@ -467,14 +467,14 @@ the Sync Activity page resumes polling an already-running job automatically.
 Sync Activity resolves platform names itself (`activityPlatform`) rather than through
 `normalizePlatformSource`, which knows only the three media servers and folds anything
 else into Plex. That is what lets a Trakt dispatch appear as Trakt, with its own icon,
-alongside Plex, Emby, Jellyfin, and Plembfin's own manual actions.
+alongside Plex, Emby, Jellyfin, and Plekt's own manual actions.
 
 Clicking a title opens that media's page: its local page when the record matches
 something in the library, the TMDB or TVDB route when the dispatch carried those ids,
 and a search for the title when it carried neither. Clicking anywhere else on a row
 expands it to show the grouped event list; a background refresh reopens rows that were
 already expanded. The `/history` page remains the chronological watch-history view; Sync
-Activity is the operational record of what Plembfin attempted and what each destination
+Activity is the operational record of what Plekt attempted and what each destination
 reported.
 
 The "Download all logs" button saves every event in the group as one plain-text `.log`

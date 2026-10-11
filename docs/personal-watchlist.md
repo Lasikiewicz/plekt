@@ -1,6 +1,6 @@
 # Plex Watchlist Sync
 
-Plembfin stores the personal watchlist locally as the canonical present-set. A local
+Plekt stores the personal watchlist locally as the canonical present-set. A local
 watchlist add or removal commits to SQLite first and creates durable provider work; the
 browser does not wait for Plex.
 
@@ -28,15 +28,15 @@ cleanup.
 Watchlist sync is disabled by default and is turned on in any of three places, all writing
 the same `watchlistSync.enabled` flag:
 
-- **Guided setup** - a *Sync Watchlist with Plembfin* checkbox on the Plex row of the media
+- **Guided setup** - a *Sync Watchlist with Plekt* checkbox on the Plex row of the media
   servers step, checked by default and applied when that step is completed.
 - **Settings → Media Servers → Plex** - the same checkbox, which saves on change rather than
   waiting for the card's Save button (that button only submits connection fields).
 - **Settings → Sync → Sync Tools → Plex Watchlist Sync** - the on/off control, plus
   **Sync now** for an immediate reconcile.
 
-The first sync takes a safe union of the Plembfin and Plex lists. Plex-only entries are
-imported into Plembfin. Later complete snapshots reconcile additions and removals;
+The first sync takes a safe union of the Plekt and Plex lists. Plex-only entries are
+imported into Plekt. Later complete snapshots reconcile additions and removals;
 incomplete snapshots cannot delete canonical entries.
 
 ## Completion and removal
@@ -65,15 +65,15 @@ card per group, so a refused change explains what Plex reported and what to do:
   Settings → Media Servers to reconnect it.
 - `failed` shows the error Plex returned, the failed attempt count, and when the next
   automatic attempt is due.
-- `not_available` means Plembfin could not match the title in the Plex catalogue, usually
+- `not_available` means Plekt could not match the title in the Plex catalogue, usually
   because the entry carries none of the provider ids Plex matches on. It stays on the
-  Plembfin list and keeps retrying.
+  Plekt list and keeps retrying.
 
 A provider whose last snapshot run failed gets its own card, built from `providers[].lastRun`
-rather than the queue. Nothing can be queued against a list Plembfin could not read, so that
+rather than the queue. Nothing can be queued against a list Plekt could not read, so that
 failure is otherwise invisible: the provider row still reports its configured capability. That
 read is also the only path by which an addition made in the provider becomes a canonical
-Plembfin watchlist entry (`recordProviderSnapshot` applies unmatched remote items with reason
+Plekt watchlist entry (`recordProviderSnapshot` applies unmatched remote items with reason
 `provider_added`), so a failed run stops imports in both directions.
 
 A **Retry queued changes** button on that panel posts `{"action":"retry"}` to
@@ -83,7 +83,7 @@ provider snapshot, the button follows it with a plain `run` whenever a run failu
 screen, so a failed read is actually re-attempted. The panel header reads `Needs attention`
 only for failed or reauthentication rows.
 
-Full Plembfin backup/export includes the canonical watchlist and its non-secret sync state.
+Full Plekt backup/export includes the canonical watchlist and its non-secret sync state.
 Restoring it invalidates remote observations and forces another safe-union snapshot before
 delivery resumes. Watch-history-only backups do not include personal watchlist data.
 

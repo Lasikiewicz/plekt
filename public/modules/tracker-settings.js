@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=1.3.1.1.2";
-import { plexHistoricalSyncEnabled } from "./plex-history-policy.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { plexHistoricalSyncEnabled } from "./plex-history-policy.js?v=1.3.1.2.1";
 
 let getHeaders = () => ({ "Content-Type": "application/json" });
 let bound = false;
@@ -109,8 +109,8 @@ function renderProvider() {
     return;
   }
   if (status) status.textContent = traktProvider.configurationIncomplete
-    ? "The server has an incomplete Trakt configuration. Set both TRAKT_CLIENT_ID and TRAKT_CLIENT_SECRET, then restart Plembfin."
-    : "The Plembfin Trakt app is unavailable. A Trakt VIP developer may use a personal app below.";
+    ? "The server has an incomplete Trakt configuration. Set both TRAKT_CLIENT_ID and TRAKT_CLIENT_SECRET, then restart Plekt."
+    : "The Plekt Trakt app is unavailable. A Trakt VIP developer may use a personal app below.";
   if (!traktProvider.configurationIncomplete) personal?.setAttribute("open", "");
 }
 
@@ -156,7 +156,7 @@ async function startTraktFlow({ clientId = "", clientSecret = "" } = {}) {
     });
     const code = el("traktDeviceCode");
     code.classList.remove("hidden");
-    code.innerHTML = `<span>Enter this code in Trakt</span><b>${escapeText(start.userCode)}</b><small>The code expires automatically. Keep this page open while authorizing Plembfin.</small><div class="settings-actions"><button id="traktCopyDeviceCode" class="button-ghost sync-action-btn sync-tool-button" type="button">Copy code</button><a id="traktOpenActivation" class="button-primary sync-action-btn sync-tool-button" target="_blank" rel="noopener noreferrer">Open Trakt</a></div>`;
+    code.innerHTML = `<span>Enter this code in Trakt</span><b>${escapeText(start.userCode)}</b><small>The code expires automatically. Keep this page open while authorizing Plekt.</small><div class="settings-actions"><button id="traktCopyDeviceCode" class="button-ghost sync-action-btn sync-tool-button" type="button">Copy code</button><a id="traktOpenActivation" class="button-primary sync-action-btn sync-tool-button" target="_blank" rel="noopener noreferrer">Open Trakt</a></div>`;
     el("traktOpenActivation").href = start.verificationUrl;
     el("traktCopyDeviceCode").addEventListener("click", async () => {
       try {
@@ -167,7 +167,7 @@ async function startTraktFlow({ clientId = "", clientSecret = "" } = {}) {
       }
     });
     code.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    setMessage("Copy the code, then open Trakt and approve Plembfin. This page will finish automatically.");
+    setMessage("Copy the code, then open Trakt and approve Plekt. This page will finish automatically.");
     let interval = Math.max(2, Number(start.intervalSeconds || 5));
     while (Date.now() < Number(start.expiresAt)) {
       await sleep(interval * 1000);
@@ -230,11 +230,11 @@ async function syncNow() {
 }
 
 async function disconnect() {
-  if (!window.confirm("Disconnect Trakt and delete its encrypted OAuth credentials from Plembfin?")) return;
+  if (!window.confirm("Disconnect Trakt and delete its encrypted OAuth credentials from Plekt?")) return;
   try {
     await api("/api/tracker-connections/trakt", { method: "DELETE" });
     renderConnection(null);
-    setMessage("Trakt disconnected. Existing Plembfin history was kept.", "success");
+    setMessage("Trakt disconnected. Existing Plekt history was kept.", "success");
   } catch (error) { setMessage(error.message, "error"); }
 }
 

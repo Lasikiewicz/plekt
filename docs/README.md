@@ -1,6 +1,6 @@
-# Plembfin Documentation
+# Plekt Documentation
 
-This directory contains the technical reference for Plembfin's current architecture,
+This directory contains the technical reference for Plekt's current architecture,
 behavior, configuration, operations, and integration contracts.
 
 > **System map:** [architecture.md](architecture.md) describes the application flow,
@@ -80,7 +80,7 @@ separate production environment - you run the binary directly, or in a container
 via `docker compose up`.
 
 Common gotchas:
-1. **Media server reachability** - Plembfin contacts Plex/Emby/Jellyfin from the
+1. **Media server reachability** - Plekt contacts Plex/Emby/Jellyfin from the
    machine it runs on, not from the browser. A URL that the browser can reach but
    the server cannot (e.g. a different LAN segment or a VPN-gated address) will
    fail silently for the background sync while appearing fine in the UI probe.

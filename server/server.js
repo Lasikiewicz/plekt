@@ -7,13 +7,16 @@ import { createStream } from "rotating-file-stream";
 import { rateLimit } from "express-rate-limit";
 import { setGlobalDispatcher, Agent } from "undici";
 import { loadLocalEnv } from "./src/env.js";
+import { installProcessErrorHandlers } from "./src/utils/processErrorHandlers.js";
+import { brandEnv, logLegacyEnvNames } from "./src/utils/brandEnv.js";
 
 loadLocalEnv();
+logLegacyEnvNames();
 
 const { createInstanceId, resolveProcessRole, roleHasWeb, roleHasWorker } = await import("./src/utils/processRole.js");
 const ROLE = resolveProcessRole();
 const INSTANCE_ID = createInstanceId(ROLE);
-process.env.PLEMBFIN_INSTANCE_ID = INSTANCE_ID;
+process.env.PLEKT_INSTANCE_ID = INSTANCE_ID;
 process.env.ROLE = ROLE;
 const { isDemoMode } = await import("./src/utils/demoMode.js");
 const DEMO_MODE = isDemoMode();
@@ -24,9 +27,9 @@ const { createTraksProxyHandler, resolveTraksCollectorOrigin } = await import(".
 // origin. The legacy full tracker URL remains a supported fallback so existing
 // demo environment configuration can be migrated without a forced rebuild.
 const TRAKS_CONFIG = (() => {
-  const collectorOrigin = String(process.env.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN || "").trim();
-  const legacyScriptUrl = String(process.env.PLEMBFIN_TRAKS_SCRIPT_URL || "").trim();
-  const siteKey = String(process.env.PLEMBFIN_TRAKS_SITE_KEY || "").trim();
+  const collectorOrigin = String(brandEnv("TRAKS_COLLECTOR_ORIGIN") || "").trim();
+  const legacyScriptUrl = String(brandEnv("TRAKS_SCRIPT_URL") || "").trim();
+  const siteKey = String(brandEnv("TRAKS_SITE_KEY") || "").trim();
   if (!DEMO_MODE || !siteKey || (!collectorOrigin && !legacyScriptUrl)) {
     return { enabled: false, scriptUrl: "/t", siteKey: "", collectorOrigin: "" };
   }
@@ -49,7 +52,10 @@ const ANALYTICS_CONFIG = {
   },
 };
 
-const { DATA_DIR, PUBLIC_DIR, MEDIA_DIR, ensureDataDirs } = await import("./src/paths.js");
+const { DATA_DIR, DB_PATH, PUBLIC_DIR, MEDIA_DIR, ensureDataDirs } = await import("./src/paths.js");
+if (path.basename(DB_PATH) === "plembfin.db" && fs.existsSync(path.join(DATA_DIR, "plekt.db"))) {
+  console.warn(`[config] Both plembfin.db and plekt.db exist in ${DATA_DIR}. Using plembfin.db; move one of them away to choose which database is used.`);
+}
 const { dispatch } = await import("./src/index.js");
 const { db } = await import("./src/db.js");
 const { enableTmdbMetadataWarmup } = await import("./src/utils/tmdbGateway.js");
@@ -60,6 +66,7 @@ const { schedulerLeaseStatus } = await import("./src/utils/schedulerLease.js");
 const { createWorkerCoordinator } = await import("./src/workerCoordinator.js");
 const { flushPending: flushDiagnosticLogs } = await import("./src/utils/diagnosticLogger.js");
 const { startCacheWarmup, stopCacheWarmup } = await import("./src/utils/cacheWarmup.js");
+const { runWebhookPortCheck } = await import("./src/utils/webhookPortCheck.js");
 
 ensureDataDirs();
 if (!DEMO_MODE) enableTmdbMetadataWarmup();
@@ -436,7 +443,7 @@ app.get("/auth/plex/return", (_req, res) => {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
   </div>
   <h1>Plex connected</h1>
-  <p>Plembfin is verifying the connection in the original tab.</p>
+  <p>Plekt is verifying the connection in the original tab.</p>
   <p class="closing">You may close this tab.</p>
 </main>
 </body>
@@ -468,7 +475,7 @@ app.all(["/health", "/health/"], (req, res) => {
 app.use(express.static(PUBLIC_DIR, {
   extensions: ["html"],
   setHeaders: (res, filePath) => setPublicAssetCacheHeaders(res, filePath, {
-    disableCaching: process.env.PLEMBFIN_DEV_NO_CACHE_ASSETS === "1",
+    disableCaching: brandEnv("DEV_NO_CACHE_ASSETS") === "1",
   }),
 }));
 app.get("/*name", (req, res) => {
@@ -485,8 +492,8 @@ const server = roleHasWeb(ROLE) ? app.listen(PORT, HOST) : null;
 server?.on("listening", async () => {
   const address = server.address();
   const listeningPort = typeof address === "object" && address ? address.port : PORT;
-  console.log(`plembfin listening on http://localhost:${listeningPort}`);
-  if (process.env.PLEMBFIN_BUILD_CHECK === "1") {
+  console.log(`plekt listening on http://localhost:${listeningPort}`);
+  if (brandEnv("BUILD_CHECK") === "1") {
     server.close((error) => {
       if (error) {
         console.error("Build-check shutdown failed", error);
@@ -498,12 +505,14 @@ server?.on("listening", async () => {
   // Only the process that serves pages warms the page caches; a ROLE=worker
   // process has no readers for them.
   startCacheWarmup();
+  // Non-blocking: the port advisory never delays startup, and a failed check is logged only.
+  runWebhookPortCheck().catch((error) => console.error("Webhook port check failed", error));
   await coordinator?.start().catch((error) => console.error("Failed to start worker coordinator", error));
 });
 
 server?.on("error", (error) => {
   if (error?.code === "EADDRINUSE") {
-    console.error(`Port ${PORT} is already in use. Stop the existing Plembfin process or set PORT to another value.`);
+    console.error(`Port ${PORT} is already in use. Stop the existing Plekt process or set PORT to another value.`);
     process.exitCode = 1;
     return;
   }
@@ -534,8 +543,9 @@ async function shutdown(signal) {
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));
 process.on("SIGINT", () => shutdown("SIGINT"));
+installProcessErrorHandlers({ flush: () => flushDiagnosticLogs() });
 
 if (!server) {
-  console.log(`plembfin worker started (role=${ROLE})`);
+  console.log(`plekt worker started (role=${ROLE})`);
   await coordinator?.start();
 }

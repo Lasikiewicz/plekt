@@ -3,7 +3,7 @@ import { isClaimRequired } from "./appConfig.js";
 import { handleLogin, handleLogout, handleAuthStatus, handleAuthApiKey, handleAuthWebhookSecret, handleAuthCredentials, handleAuthClaim, handleRevokeAllSessions, requireAdmin } from "./utils/auth.js";
 import { backfillUnknownShowTitles } from "./utils/dataRepo.js";
 import { runScheduledTick, startPlexNotificationListener, stopPlexNotificationListener } from "./scheduler.js";
-import { handleBackupExport, handleBackupImport, handleImport, handlePlembfinBackups, handleWatchBackups } from "./routes/backups.js";
+import { handleBackupExport, handleBackupImport, handleImport, handlePlektBackups, handleWatchBackups } from "./routes/backups.js";
 import { handleAppearance, handleConfig, handleMediaAppLinks, handleSeerrMediaStatus, handleSeerrRequest, handleSeerrStatus, handleTestConnection, handleTestPlexNotifications } from "./routes/admin.js";
 import { handleAddWatchDate, handleClearMissingTelemetry, handleDeleteHistoryRecord, handleDeleteMedia, handleDeleteWatchDate, handleDeleteWatchDates, handleDuplicateWatchCleanup, handleDuplicateWatchScan, handleFullSyncWatchstates, handleHistory, handleHistoryAudit, handleMergeShows, handleMovies, handleRematchShow, handleShow, handleShows, handleUpdateWatch, handleUpdateWatchDates, handleWatchDates } from "./routes/media.js";
 import { handleActiveSessions, handleCronSync, handleCronSyncStatus, handleForceSync, handleForceSyncPlan, handleForceSyncCancellation, handleLibraryForceSync, handleLibraryForceSyncStatus, handleManualUnwatch, handleMediaForceSync, handleMediaForceSyncStatus, handleManualWatch, handleNowPlaying, handlePlaybackProgressList, handlePlaybackProgressUnwatch, handlePlaybackProgressWatch, handleDismissSyncHistory, handleDismissSyncMatch, handleRetryAllSyncActivity, handleRetrySync, handleRetrySyncActivityGroup, handleRetrySyncHistory, handleStopForceSync, handleSyncActivity, handleSyncActivityGroup, handleSyncHistory, handleSyncJobs, handleSyncLibraries, handleUpNextRemove, handleUpNextSync,
@@ -22,9 +22,10 @@ import { handleRatingSync } from "./routes/ratingSync.js";
 import { handleWatchlistSync } from "./routes/watchlistSync.js";
 import { handleManualWatchReview } from "./routes/manualWatchReview.js";
 import { handlePlaystateAliases } from "./routes/playstateAliases.js";
+import { handleWebhookPort } from "./routes/webhookPort.js";
 import { isDemoMode } from "./utils/demoMode.js";
 import { handleTautulli } from "./routes/tautulli.js";
-import { handlePlembfinRestore, handlePlembfinRestoreUpload } from "./routes/plembfinRestore.js";
+import { handlePlektRestore, handlePlektRestoreUpload } from "./routes/plektRestore.js";
 import { noteRequestActivity } from "./utils/cacheWarmup.js";
 
 function routePath(req) {
@@ -56,6 +57,7 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|likely-false-)/i,
   /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases)/i,
   /^(?:diagnostic-logs|debug-plex-match|webhook)$/i,
+  /^webhook-port(?:\/|$)/i,
 ]);
 
 const DEMO_MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -190,13 +192,14 @@ async function dispatch(req, res) {
     if (path === "backup/export") return handleBackupExport(req, res);
     if (path === "backup/import") return handleBackupImport(req, res);
     if (path === "watch-backups") return handleWatchBackups(req, res);
-    if (path === "plembfin-backups") return handlePlembfinBackups(req, res);
-    if (path === "plembfin-backups/restore") return handlePlembfinRestore(req, res);
-    if (path === "plembfin-backups/upload") return handlePlembfinRestoreUpload(req, res);
+    if (path === "plembfin-backups") return handlePlektBackups(req, res);
+    if (path === "plembfin-backups/restore") return handlePlektRestore(req, res);
+    if (path === "plembfin-backups/upload") return handlePlektRestoreUpload(req, res);
     if (path === "manual-watch") return handleManualWatch(req, res);
     if (path === "manual-unwatch") return handleManualUnwatch(req, res);
     if (path === "manual-watch-review" || path.startsWith("manual-watch-review/")) return handleManualWatchReview(req, res, path);
     if (path === "playstate-aliases" || path.startsWith("playstate-aliases/")) return handlePlaystateAliases(req, res, path);
+    if (path === "webhook-port/status") return handleWebhookPort(req, res, path);
     if (path === "playback-progress") return handlePlaybackProgressList(req, res);
     if (path === "playback-progress/watch") return handlePlaybackProgressWatch(req, res);
     if (path === "playback-progress/unwatch") return handlePlaybackProgressUnwatch(req, res);

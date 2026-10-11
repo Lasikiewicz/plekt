@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -131,7 +132,7 @@ function compileTrayHelper(destination, iconPath) {
   }
 
   const csc = resolveCsc();
-  const source = path.join(root, "packaging", "windows", "tray", "PlembfinTray.cs");
+  const source = path.join(root, "packaging", "windows", "tray", "PlektTray.cs");
   const references = [
     "System.dll",
     "System.Core.dll",
@@ -174,17 +175,26 @@ async function main() {
 
   const outputDir = path.resolve(option("--output", path.join(root, "dist", "windows")));
   const appDir = path.join(outputDir, "app");
+  const relativeOutput = path.relative(path.join(root, "dist"), outputDir);
+  if (!relativeOutput || relativeOutput.startsWith("..") || path.isAbsolute(relativeOutput)) {
+    fail("output must be a child directory of this checkout\'s dist directory");
+  }
   fs.rmSync(outputDir, { recursive: true, force: true });
   fs.mkdirSync(appDir, { recursive: true });
 
   const metadata = readBuildMetadata(channel);
-  const iconPath = path.join(appDir, "plembfin.ico");
+  const iconPath = path.join(appDir, "plekt.ico");
   await writeIcon(path.join(root, "public", "favicon.png"), iconPath);
 
   copy(path.join(root, "server"), path.join(appDir, "server"));
   // The public website/demo bundle is deployed separately and can be hundreds of
   // megabytes. The Windows app only needs the application UI and its icons.
   copyApplicationPublic(path.join(root, "public"), path.join(appDir, "public"));
+  // Local installer rebuilds can share a release version while their UI differs.
+  // Stamp only the packaged copy so immutable browser caches cannot hide fixes.
+  const assetVersion = `${metadata.version}-windows-${randomUUID()}`;
+  run(process.execPath, [path.join(root, "scripts", "asset-versions.js"),
+    "--write", `--version=${assetVersion}`, `--public-dir=${path.join(appDir, "public")}`]);
   copy(path.join(root, "node_modules"), path.join(appDir, "node_modules"));
   copy(path.join(root, "package.json"), path.join(appDir, "package.json"));
   copy(path.join(root, "package-lock.json"), path.join(appDir, "package-lock.json"));
@@ -196,19 +206,20 @@ async function main() {
   }
 
   copy(
-    path.join(root, "packaging", "windows", "PlembfinService.xml"),
-    path.join(appDir, "PlembfinService.xml"),
+    path.join(root, "packaging", "windows", "PlektService.xml"),
+    path.join(appDir, "PlektService.xml"),
   );
   copy(
     path.join(root, "packaging", "windows", "THIRD-PARTY-NOTICES.txt"),
     path.join(appDir, "THIRD-PARTY-NOTICES.txt"),
   );
-  copy(winswPath, path.join(appDir, "PlembfinService.exe"));
+  copy(winswPath, path.join(appDir, "PlektService.exe"));
   copy(process.execPath, path.join(appDir, "node.exe"));
-  compileTrayHelper(path.join(appDir, "PlembfinTray.exe"), iconPath);
+  compileTrayHelper(path.join(appDir, "PlektTray.exe"), iconPath);
 
   const buildInfo = {
     ...metadata,
+    assetVersion,
     node: process.version,
     platform: process.platform,
     arch: process.arch,
@@ -221,7 +232,7 @@ async function main() {
   fs.mkdirSync(archiveDir, { recursive: true });
   fs.writeFileSync(path.join(archiveDir, "build-info.json"), `${JSON.stringify(buildInfo, null, 2)}\n`);
 
-  console.log(`Prepared Plembfin ${metadata.displayVersion} in ${appDir}`);
+  console.log(`Prepared Plekt ${metadata.displayVersion} in ${appDir}`);
 }
 
 main().catch((error) => {

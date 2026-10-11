@@ -1,6 +1,6 @@
 # Plex Integration
 
-How Plembfin talks to Plex: three inbound channels (webhook, WebSocket, polling) and
+How Plekt talks to Plex: three inbound channels (webhook, WebSocket, polling) and
 one outbound client. Read [architecture.md](architecture.md) first for the big picture.
 
 ## Files
@@ -16,11 +16,11 @@ one outbound client. Read [architecture.md](architecture.md) first for the big p
 
 ## Configuration
 
-Settings → Media Servers → Plex uses **Connect Plex account** by default. Plembfin opens
-Plex authorization with a strong PIN bound to Plembfin's locally generated device key,
+Settings → Media Servers → Plex uses **Connect Plex account** by default. Plekt opens
+Plex authorization with a strong PIN bound to Plekt's locally generated device key,
 verifies the signed-in account, discovers its servers, and stores the selected server plus
 encrypted managed account/server tokens. The resulting short-lived Plex JWT is refreshed
-with that private device key before clients receive runtime configuration. Plembfin never
+with that private device key before clients receive runtime configuration. Plekt never
 sends the private key to Plex. Legacy PIN flows that were already open before an upgrade
 can still complete, but every new connection uses strong PIN/JWT authorization.
 
@@ -28,7 +28,7 @@ Manual setup remains optional; its values are stored in the `settings` SQLite ro
 `configStore.js`, and env vars `PLEX_SERVER_URL` / `PLEX_TOKEN` / `PLEX_USERNAME` act as
 defaults:
 
-- **baseUrl** - reachable *from the Plembfin server machine*, not just the browser
+- **baseUrl** - reachable *from the Plekt server machine*, not just the browser
 - **token** - an X-Plex-Token
 - **username** - which Plex account's watch state to track and write. `admin` or
   `owner` maps to account ID 1; any other name is resolved against `/accounts` and
@@ -53,7 +53,7 @@ Settings → Sync → Sync Tools can enable the separate Plex Watchlist Sync pro
 The Plex adapter (`plexWatchlistClient.js`) uses the account-level Universal Watchlist,
 not a selected server library, so it authenticates with the connected Plex account JWT.
 It deliberately does not reuse a server token for account operations. Enabling Plex
-Watchlist Sync authorizes native reads and writes; Plembfin no longer exposes separate
+Watchlist Sync authorizes native reads and writes; Plekt no longer exposes separate
 representation or account-write controls.
 
 The whole account watchlist surface lives on `discover.provider.plex.tv`, not on the
@@ -89,7 +89,7 @@ The rating key is the account catalog key, which is also the last segment of a
 resolved id.
 
 Plex does not publish a stable, fully documented account-watchlist mutation API in the
-PMS API reference. Plembfin therefore keeps native paths configurable - overriding
+PMS API reference. Plekt therefore keeps native paths configurable - overriding
 `watchlistAddPath` with a template containing `{id}` still substitutes into the path
 instead of sending `ratingKeys` - probes
 capability before delivery, and leaves the canonical local row intact when the account
@@ -117,7 +117,7 @@ series resolution and one `allLeaves` fetch populate the coordinate map for a bu
 sibling episodes, and concurrent callers join the same in-flight lookup. Exact item keys
 remain coordinate-specific and TTL-bounded. APIs that inspect current `viewCount` or
 container state continue to fetch fresh Plex data instead of treating the identity index
-as watched-state authority. When a mutation misses an exact episode, Plembfin invalidates
+as watched-state authority. When a mutation misses an exact episode, Plekt invalidates
 the series index and retries once before reporting the destination skipped.
 
 Two Plex-specific caveats (also in [webhooks.md](webhooks.md)):
@@ -161,21 +161,21 @@ rating key when available and copies the exact series GUID collection onto the e
 before normalization. That prevents an episode's own provider IDs from being sent in
 Trakt's series slot, and avoids guessing the series from a short or ambiguous title.
 The result is checked for its actual view state. A watched transition is recorded in
-Plembfin history and propagated to Emby/Jellyfin. An unwatched transition supersedes the
-watched state in Plembfin and propagates to the other eligible destinations. If a Plex
+Plekt history and propagated to Emby/Jellyfin. An unwatched transition supersedes the
+watched state in Plekt and propagates to the other eligible destinations. If a Plex
 notification episode unwatch finds no matching item on any configured Emby/Jellyfin
 destination, the orchestrator records that no-match result but withholds the remaining
 Trakt episode unwatch until the identity/library mapping is reliable. This channel
 covers library UI changes that Plex webhooks do not reliably report, including unwatching.
 Plex's "Mark Unwatched" clears `viewCount` but can leave a stale `viewOffset` behind, and a
 lingering offset alone cannot distinguish that from a fresh in-progress first watch. The
-callback only treats a nonzero offset as a real unwatch when Plembfin already had the item
+callback only treats a nonzero offset as a real unwatch when Plekt already had the item
 recorded as watched; otherwise it is left alone, the same as any other watch in progress.
 The same rule applies to an unplayed notification with no offset: Plex sends one when it
-adds a new item to the library, so it is ignored unless Plembfin holds a watched playstate
+adds a new item to the library, so it is ignored unless Plekt holds a watched playstate
 or a watched history row for the item (under any matching key). Either transition also bumps the
 `nowPlayingRefresh` runtime-state signal (same as the webhook route), which is what tells
-any open Plembfin browser tab to refresh - see
+any open Plekt browser tab to refresh - see
 [now-playing.md](now-playing.md) for how the frontend consumes that signal.
 
 The same socket also carries a `playing` notification type, separate from `timeline`,
@@ -208,14 +208,14 @@ own catch-up sync separately pulls:
 - **Continue Watching / Up Next** (`fetchPlexContinueWatchingItems`, called by the
   resumable catch-up pass) - reads Plex's account-scoped
   `/hubs/home/continueWatching` feed, preserving the Plex rating key and account
-  context. If that hub is unavailable, Plembfin falls back to the existing configured
+  context. If that hub is unavailable, Plekt falls back to the existing configured
   library-section scan. The result is recorded in the provider source ledger for the
   unified dashboard queue; it does not overwrite canonical local watch state.
 
 Every minute, **unwatched reconciliation** (`checkPlexUnwatchedStatus`) verifies items
-Plembfin thinks are watched are still watched on Plex, as a backstop for unwatches
+Plekt thinks are watched are still watched on Plex, as a backstop for unwatches
 missed while the WebSocket listener was disconnected. A mismatch records the unwatched
-transition in Plembfin and propagates it to the other eligible destinations.
+transition in Plekt and propagates it to the other eligible destinations.
 
 ## Outbound operations (`plexClient.js`)
 

@@ -5,7 +5,7 @@ publishing paths:
 
 - **"Push website live"** publishes the current local website tree directly to the
   separate `plembfin-website` Cloudflare Pages project. It does not push GitHub, run
-  GitHub Actions, or rebuild the Plembfin application.
+  GitHub Actions, or rebuild the Plekt application.
 - **"Force to main"** remains the release-driven path for publishing the reviewed
   website tree alongside an application release.
 
@@ -16,7 +16,9 @@ release path and must remain untouched. Use the separate Pages project named
 
 ## Current repository shape
 
-- Git remote: `https://github.com/Lasikiewicz/plembfin.git`
+- Current local Git remote: `https://github.com/Lasikiewicz/plembfin.git`; the planned
+  destination is `https://github.com/Lasikiewicz/plekt.git`. The repository rename
+  and origin update have not yet been performed.
 - Website source: `website/`
 - Astro output: `website/dist/`
 - Build command: `npm run build` from `website/`
@@ -37,14 +39,14 @@ the rest of the repository.
 
 Use this path when the latest website fixes are in the current local checkout and should
 go live immediately. It intentionally does not create a Git commit, push to GitHub, or
-start the Plembfin application build workflows.
+start the Plekt application build workflows.
 
 From the repository's `website/` directory:
 
 ```bash
 npm run check:deploy
 npm run build
-npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Update Plembfin website from local source" --commit-dirty=true
+npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Update Plekt website from local source" --commit-dirty=true
 ```
 
 Run the Wrangler command from `website/`, where the sibling `functions/` directory is
@@ -138,9 +140,9 @@ In Cloudflare:
 
 1. Open **Workers & Pages**.
 2. Select **Create application → Pages → Connect to Git**.
-3. Install and authorize the Cloudflare GitHub app for the `Lasikiewicz/plembfin`
+3. Install and authorize the Cloudflare GitHub app for the `Lasikiewicz/plekt`
    repository only where possible.
-4. Select `Lasikiewicz/plembfin`, then choose **Begin setup**.
+4. Select `Lasikiewicz/plekt`, then choose **Begin setup**.
 5. Use these build settings:
 
    | Setting | Value |

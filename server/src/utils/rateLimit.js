@@ -6,12 +6,23 @@
 const buckets = new Map();
 const MAX_BUCKETS = 5000;
 
+// Keeps the map under MAX_BUCKETS on every insert. Expired windows go first;
+// if a flood of distinct keys is still inside its window, the oldest-inserted
+// buckets are evicted so the cap holds (a fresh bucket is then created for them).
 function pruneIfLarge() {
   if (buckets.size <= MAX_BUCKETS) return;
   const now = Date.now();
   for (const [key, bucket] of buckets) {
     if (now - bucket.windowStart > bucket.windowMs) buckets.delete(key);
   }
+  for (const key of buckets.keys()) {
+    if (buckets.size <= MAX_BUCKETS) break;
+    buckets.delete(key);
+  }
+}
+
+export function rateLimitBucketCount() {
+  return buckets.size;
 }
 
 // Returns true when the caller is within the allowed rate, false when the

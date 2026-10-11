@@ -1,6 +1,6 @@
 ---
 name: push-to-git
-description: "Run the complete plembfin develop-branch push workflow. Use when the user says \"Push to git\", \"Push all to git\", \"push all the git\", or any case variation. Covers scope selection, doc/README sync, in-app help sync, commit message rules, changelog rebuild, commit consolidation, and the push itself."
+description: "Run the complete Plekt develop-branch push workflow. Use when the user says \"Push to git\", \"Push all to git\", \"push all the git\", or any case variation. Covers scope selection, doc/README sync, in-app help sync, commit message rules, changelog rebuild, commit consolidation, and the push itself."
 ---
 
 # Push to git / Push all to git
@@ -10,7 +10,9 @@ phrase as running `git push` by itself.
 
 ## Step 0 - Make sure GHCR Cleanup is not running
 
-`ghcr-cleanup.yml` deletes images from the same `ghcr.io/lasikiewicz/plembfin`
+Rebrand gate: cleanup currently targets `plekt` with `dry-run: true`. Keep it in dry-run mode until its new-package results have been reviewed; the concurrency check below remains required when deletion is enabled.
+
+`ghcr-cleanup.yml` deletes images from the same `ghcr.io/lasikiewicz/plekt`
 package that this command publishes new tags to. The cleanup action's own docs warn it isn't safe
 to run in parallel against the same package it targets, so before starting this
 command, check it is not mid-run:
@@ -337,7 +339,7 @@ rejected with the repair command. Never bypass this with `--no-verify`.
 git push origin develop
 ```
 This lands the commit on `develop`, not `alpha` or `main`. `docker-publish-develop.yml`
-builds, verifies, and publishes a rolling image to `ghcr.io/lasikiewicz/plembfin:develop`
+builds, verifies, and publishes a rolling image to `ghcr.io/lasikiewicz/plekt:develop`
 using the build number already in the pushed commit - it does not write anything back.
 Nothing touches `changelog.json`/`changelog.alpha.json` or the package version, `:latest`
 is not updated, and - unlike `alpha` - **no secret-scan or security CI runs against this

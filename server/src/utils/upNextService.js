@@ -13,7 +13,7 @@ import {
 } from "./upNextIdentity.js";
 import {
   getUpNextFeedSourceVersion,
-  isPlembfinPrimaryUpNextFeed,
+  isPlektPrimaryUpNextFeed,
   listActiveUpNextProviderItems,
   listUpNextProviderFeedStates,
 } from "./upNextRepository.js";
@@ -1301,14 +1301,14 @@ export async function buildUpNextProjection({
   const activeProviderItems = (providerItems || listActiveUpNextProviderItems())
     .filter((item) => UP_NEXT_PROVIDERS.has(String(item?.source || item?.provider || "").toLowerCase()));
   const observations = activeProviderItems
-    .filter((item) => isPlembfinPrimaryUpNextFeed(item?.source || item?.provider, feedKindOf(item)))
+    .filter((item) => isPlektPrimaryUpNextFeed(item?.source || item?.provider, feedKindOf(item)))
     .slice(0, MAX_PROVIDER_OBSERVATIONS);
   // A Resume feed that is not the provider's queue mapping (Jellyfin's) never
   // decides membership (decision 25), but it names that provider's item for a
   // part-watch a canonical resume row already backs. It only lends that id.
   const secondaryResumeObservations = activeProviderItems
     .filter((item) => String(feedKindOf(item)).toLowerCase() === "resume"
-      && !isPlembfinPrimaryUpNextFeed(item?.source || item?.provider, "resume"))
+      && !isPlektPrimaryUpNextFeed(item?.source || item?.provider, "resume"))
     .slice(0, MAX_PROVIDER_OBSERVATIONS);
   const rawProviderCandidates = observations.map((item) => normalizeUpNextCandidate(item));
   const baseShowRows = shows || ((localFallback || rawProviderCandidates.some((candidate) => candidate.queue_kind === "next_up"))

@@ -460,8 +460,8 @@ async function pullTarget(list, target, config, deps, { countNotFound }) {
     // since the last successful push to this app; otherwise Plembfin's order
     // wins and the push moves the app entries back. Importing marks the order
     // changed, so a second app reordered in the same pass is moved back.
-    const plembfinReordered = Number(list.order_updated_at || 0) > Number(target.last_synced_at || 0);
-    if (reorder && !plembfinReordered && !target.last_error && applyAppOrder(list.id, reorder)) {
+    const plektReordered = Number(list.order_updated_at || 0) > Number(target.last_synced_at || 0);
+    if (reorder && !plektReordered && !target.last_error && applyAppOrder(list.id, reorder)) {
       orderListStmt.run(at, at, list.id);
       list.order_updated_at = at;
       result.reordered = true;

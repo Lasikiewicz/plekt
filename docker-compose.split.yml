@@ -1,9 +1,10 @@
 # Optional same-host web/worker split:
 # docker compose -f docker-compose.yml -f docker-compose.split.yml up -d
 services:
-  plembfin:
+  plekt:
     environment:
       - ROLE=web
+      - PLEKT_PUBLISHED_PORT=5056
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set for split mode}
       - SESSION_SECRET=${SESSION_SECRET:?SESSION_SECRET must be set for split mode}
       - API_KEY=${API_KEY:?API_KEY must be set for split mode}
@@ -13,7 +14,7 @@ services:
 
   worker:
     build: .
-    image: plembfin:latest
+    image: plembfin/plekt:latest
     environment:
       - ROLE=worker
       - ADMIN_USERNAME=admin

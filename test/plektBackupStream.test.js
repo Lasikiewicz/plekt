@@ -12,14 +12,31 @@ const { db } = await import("../server/src/db.js");
 const { FULL_BACKUPS_DIR } = await import("../server/src/paths.js");
 const { fullBackupJsonChunks, getFullBackup } = await import("../server/src/utils/backup.js");
 const {
-  listPlembfinBackups,
-  loadPlembfinBackupRuntime,
-  runScheduledPlembfinBackup,
-  savePlembfinBackupConfig,
-  writeEncryptedPlembfinBackup,
-} = await import("../server/src/utils/plembfinBackups.js");
+  listPlektBackups,
+  createPlektBackup,
+  loadPlektBackupRuntime,
+  runScheduledPlektBackup,
+  savePlektBackupConfig,
+  writeEncryptedPlektBackup,
+} = await import("../server/src/utils/plektBackups.js");
 
 const PASSPHRASE = "correct horse battery staple";
+
+test("mixed-name local retention uses filename dates even when mtimes are equal", async () => {
+  fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
+  const old = "plembfin-backup-20200103T000000Z.encrypted.json";
+  const older = "plekt-backup-20200102T000000Z.encrypted.json";
+  const sharedTime = new Date("2026-01-01T00:00:00Z");
+  for (const name of [older, old]) {
+    const file = path.join(FULL_BACKUPS_DIR, name);
+    fs.writeFileSync(file, "retention fixture");
+    fs.utimesSync(file, sharedTime, sharedTime);
+  }
+  savePlektBackupConfig({ retention: 2, remoteEnabled: false });
+  const result = await createPlektBackup({ passphrase: PASSPHRASE });
+  assert.deepEqual(listPlektBackups().map((file) => file.name), [result.name, old]);
+  for (const file of listPlektBackups()) fs.rmSync(path.join(FULL_BACKUPS_DIR, file.name));
+});
 
 test.after(() => db.close());
 
@@ -74,29 +91,29 @@ test("encrypted backup file keeps the old layout and decrypts across chunk and b
   // Odd-sized pieces well past the 1 MB write chunk, so buffered writes and the
   // 3-byte base64 carry both have to join up correctly.
   const pieces = Array.from({ length: 3000 }, (_, index) => `${index}:${"xé".repeat(500)};`);
-  const { sizeBytes } = writeEncryptedPlembfinBackup(filePath, PASSPHRASE, { chunks: pieces });
+  const { sizeBytes } = writeEncryptedPlektBackup(filePath, PASSPHRASE, { chunks: pieces });
   const text = fs.readFileSync(filePath, "utf8");
   assert.equal(sizeBytes, Buffer.byteLength(text, "utf8"));
 
   const { envelope, plain } = decryptFile(filePath, PASSPHRASE);
   assert.equal(plain, pieces.join(""));
-  assert.equal(envelope.format, "plembfin-encrypted-backup");
+  assert.equal(envelope.format, "plekt-encrypted-backup");
   assert.equal(text, JSON.stringify(envelope, null, 2));
   fs.rmSync(filePath);
 });
 
 test("a scheduled backup that died is recorded, retried an hour later, and capped at three a day", async () => {
-  savePlembfinBackupConfig({ enabled: true, time: "03:00", retention: 7, rememberPassphrase: true, passphrase: PASSPHRASE });
+  savePlektBackupConfig({ enabled: true, time: "03:00", retention: 7, rememberPassphrase: true, passphrase: PASSPHRASE });
   const base = new Date();
   base.setHours(12, 0, 0, 0);
   const today = localDateKey(base);
 
   writeRuntime({ attemptDate: today, attemptCount: 1, lastAttemptAt: base.getTime() - 10 * 60 * 1000, attemptInProgress: true });
-  assert.equal(await runScheduledPlembfinBackup({ now: base }), null);
-  let runtime = loadPlembfinBackupRuntime();
+  assert.equal(await runScheduledPlektBackup({ now: base }), null);
+  let runtime = loadPlektBackupRuntime();
   assert.equal(runtime.attemptInProgress, false);
   assert.match(runtime.lastError, /stopped before finishing/);
-  assert.equal(listPlembfinBackups().length, 0);
+  assert.equal(listPlektBackups().length, 0);
 
   const stale = path.join(FULL_BACKUPS_DIR, "plembfin-backup-20260101T000000Z.encrypted.json.tmp-1");
   const fresh = path.join(FULL_BACKUPS_DIR, "plembfin-backup-20260101T000001Z.encrypted.json.tmp-1");
@@ -107,9 +124,9 @@ test("a scheduled backup that died is recorded, retried an hour later, and cappe
   fs.utimesSync(stale, old, old);
 
   const later = new Date(base.getTime() + 61 * 60 * 1000);
-  const result = await runScheduledPlembfinBackup({ now: later });
+  const result = await runScheduledPlektBackup({ now: later });
   assert.ok(result?.name);
-  runtime = loadPlembfinBackupRuntime();
+  runtime = loadPlektBackupRuntime();
   assert.equal(runtime.lastRunDate, localDateKey(new Date()));
   assert.equal(runtime.attemptCount, 2);
   assert.equal(runtime.attemptInProgress, false);
@@ -119,6 +136,6 @@ test("a scheduled backup that died is recorded, retried an hour later, and cappe
   assert.ok(JSON.parse(decryptFile(path.join(FULL_BACKUPS_DIR, result.name), PASSPHRASE).plain).collections);
 
   writeRuntime({ attemptDate: today, attemptCount: 3, lastAttemptAt: base.getTime() - 5 * 60 * 60 * 1000 });
-  assert.equal(await runScheduledPlembfinBackup({ now: later }), null);
-  assert.equal(loadPlembfinBackupRuntime().attemptCount, 3);
+  assert.equal(await runScheduledPlektBackup({ now: later }), null);
+  assert.equal(loadPlektBackupRuntime().attemptCount, 3);
 });

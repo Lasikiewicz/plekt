@@ -1305,3 +1305,27 @@ review.
 so the public documentation can claim unreleased behavior and screenshots may be stale at the
 moment of release. Release-first review ties every website change to the source the user
 approved.
+
+
+### 44. Plekt keeps legacy identifiers to preserve existing installs
+**Date:** 2026-10-09  |  **Status:** Active
+
+**Context:** Changing the product name can reset an install if database paths,
+credential keys, cookies, provider identities or backup formats are renamed without
+compatibility. Existing users must keep their state after changing only the image.
+
+**Decision:** Rename visible copy to Plekt. Accept both environment-variable and
+webhook-secret header names, preferring nonblank new values. Keep existing
+`plembfin.db` databases, backup folders, cookies, browser storage keys, provider
+device ids, persisted source values and legacy API routes. New databases and backups
+use Plekt names; old backups still restore, list and prune. New backup output is not
+restorable on older builds. Existing provider connections keep their old display
+name; fresh connections announce Plekt. The Windows installer retains its AppId and
+migrates the service/data folder with conflict checks; actual upgrade verification
+is still pending. New Unraid installs use `/mnt/user/appdata/plekt`; old paths stay.
+Publish both old image names for at least six months after the rebrand release.
+
+**Rejected:** A global identifier rename: it can make history disappear, invalidate
+credentials or webhooks, orphan backups and register a second Windows service.
+Compatibility is established before display changes; real upgrades run against
+copies of old data. This work is local preparation and does not authorize publishing.

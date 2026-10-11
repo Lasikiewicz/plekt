@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { db, parseJson, toJson, transaction } from "../db.js";
-import { personalRatingMediaAliases, ratingMediaForStorage } from "./personalRatingIdentity.js";
+import { personalRatingMediaAliases, ratingMediaForStorage, showTitleKey } from "./personalRatingIdentity.js";
 
 export const PERSONAL_RATING_PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
 const QUEUE_STATUSES = ["pending", "processing", "succeeded", "not_found", "reauth_required", "failed"];
@@ -89,16 +89,17 @@ export function findCanonicalPersonalRating(media = {}) {
   const type = String(media.media_type || media.mediaType || media.type || "").toLowerCase();
   const showTitle = String(media.show_title || media.showTitle || "").trim();
   if (type === "episode" && showTitle && media.season != null && media.episode != null) {
-    return db.prepare(`
+    const wanted = showTitleKey(showTitle);
+    if (!wanted) return null;
+    const candidates = db.prepare(`
       SELECT *
       FROM personal_ratings
       WHERE media_type = 'episode'
-        AND lower(trim(show_title)) = lower(trim(?))
         AND season = ?
         AND episode = ?
       ORDER BY canonical_updated_at DESC, updated_at DESC, media_key ASC
-      LIMIT 1
-    `).get(showTitle, Number(media.season), Number(media.episode)) || null;
+    `).all(Number(media.season), Number(media.episode));
+    return candidates.find((row) => showTitleKey(row.show_title) === wanted) || null;
   }
   return null;
 }

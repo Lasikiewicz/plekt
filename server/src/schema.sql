@@ -389,6 +389,7 @@ CREATE INDEX IF NOT EXISTS idx_watch_audit_tvdb_id ON watch_audit_events(tvdb_id
 CREATE INDEX IF NOT EXISTS idx_watch_audit_imdb_id ON watch_audit_events(imdb_id, timestamp);
 CREATE INDEX IF NOT EXISTS idx_watch_audit_title ON watch_audit_events(title_lower, timestamp);
 CREATE INDEX IF NOT EXISTS idx_watch_audit_show_title ON watch_audit_events(show_title_lower, timestamp);
+CREATE INDEX IF NOT EXISTS idx_watch_audit_payload_created ON watch_audit_events(created_at) WHERE payload IS NOT NULL;
 
 -- Single-row key/value documents stored as JSON blobs.
 CREATE TABLE IF NOT EXISTS runtime_state (
@@ -422,6 +423,7 @@ CREATE TABLE IF NOT EXISTS loop_keys (
   created_at INTEGER,
   expire_at INTEGER
 );
+CREATE INDEX IF NOT EXISTS idx_loop_keys_expire_at ON loop_keys(expire_at);
 
 CREATE TABLE IF NOT EXISTS poster_cache (
   id TEXT PRIMARY KEY,

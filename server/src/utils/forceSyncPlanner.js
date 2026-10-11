@@ -514,7 +514,7 @@ export function buildForceSyncPlan({
     skipped.push({
       mediaKey: key,
       title: entry.media.title,
-      reason: "Watched on a server but absent from Plembfin history; the server-only state was not imported because Plembfin is canonical.",
+      reason: "Watched on a server but absent from Plekt history; the server-only state was not imported because Plekt is canonical.",
     });
   }
 
@@ -536,7 +536,7 @@ export function buildForceSyncPlan({
     if (lastHistoryRecord) {
       newestState = lastHistoryRecord.syncAction === "unwatched" ? "unwatched" : "watched";
       newestTime = new Date(lastHistoryRecord.watchedAt).getTime();
-      decidedBy = { policy: "plembfin", evidence: "Plembfin history", timestamp: newestTime };
+      decidedBy = { policy: "plembfin", evidence: "Plekt history", timestamp: newestTime };
     }
 
     let serverWatchedOn = new Set();
@@ -585,7 +585,7 @@ export function buildForceSyncPlan({
             kind: "mark_played",
             target,
             risk: "additive",
-            reason: `Watched in Plembfin; ${target} does not have it marked played.`,
+            reason: `Watched in Plekt;${target} does not have it marked played.`,
           });
         }
       }
@@ -600,7 +600,7 @@ export function buildForceSyncPlan({
             kind: "mark_unplayed",
             target,
             risk: "destructive",
-            reason: `Unwatched in Plembfin; ${target} still has it marked played.`,
+            reason: `Unwatched in Plekt;${target} still has it marked played.`,
           });
         }
       }
@@ -608,7 +608,7 @@ export function buildForceSyncPlan({
       skipped.push({
         mediaKey: key,
         title: mediaObj.title,
-        reason: "A server shows this watched but Plembfin has no history record for it, so its unwatched/watched state cannot be determined safely.",
+        reason: "A server shows this watched but Plekt has no history record for it, so its unwatched/watched state cannot be determined safely.",
       });
     }
   }

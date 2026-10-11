@@ -1,7 +1,7 @@
-import { buildAuthHeaders, buildNowPlayingUrl } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, platformBadge, sourceClass, sourceBadgeHtml, computeProgress, formatDate, formatPlaybackClock, showName } from "./utils.js?v=1.3.1.1.2";
-import { hydratePosters, posterMarkup } from "./images.js?v=1.3.1.1.2";
+import { buildAuthHeaders, buildNowPlayingUrl } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, platformBadge, sourceClass, sourceBadgeHtml, computeProgress, formatDate, formatPlaybackClock, showName } from "./utils.js?v=1.3.1.2.1";
+import { hydratePosters, posterMarkup } from "./images.js?v=1.3.1.2.1";
 
 const NOW_PLAYING_POLL_MS = 10000;
 
@@ -106,7 +106,7 @@ export function mediaSyncNoticeHtml(entries = [], scopeLabel = "this item") {
   return `
     <div class="media-detail-sync-notice" data-media-detail-sync-notice role="status" aria-live="polite">
       <span class="media-detail-sync-notice-spinner" aria-hidden="true"></span>
-      <span><strong>Syncing…</strong> Plembfin is updating ${escapeHtml(scopeLabel)}. Watch controls are paused until the sync completes.</span>
+      <span><strong>Syncing…</strong> Plekt is updating ${escapeHtml(scopeLabel)}. Watch controls are paused until the sync completes.</span>
     </div>
   `;
 }
@@ -1136,7 +1136,7 @@ export async function triggerRetrySync(id, button) {
     elements.retryTerminalOutput.scrollTop = elements.retryTerminalOutput.scrollHeight;
   }
 
-  termLog("plembfin@server:~$ ./retry-sync --id=" + id, "header");
+  termLog("plekt@server:~$ ./retry-sync --id=" + id, "header");
   termLog("Initializing sync connection...", "info");
   termLog("POST /api/retry-sync HTTP/1.1", "info");
 
@@ -1209,7 +1209,7 @@ export async function triggerRetrySync(id, button) {
           if (errLower.includes("unauthorized") || errLower.includes("401") || errLower.includes("token") || errLower.includes("auth")) {
             termLog("👉 FIX: Open Settings → Media Servers for this app and verify that the API key or token is correct, valid, and not expired.", "success");
           } else if (errLower.includes("refused") || errLower.includes("timeout") || errLower.includes("conn") || errLower.includes("reach") || errLower.includes("address")) {
-            termLog("👉 FIX: Verify that the Server URL is correct, the target server is currently online, and there are no network rules or firewalls blocking the connection from the machine running Plembfin.", "success");
+            termLog("👉 FIX: Verify that the Server URL is correct, the target server is currently online, and there are no network rules or firewalls blocking the connection from the machine running Plekt.", "success");
           } else if (errLower.includes("not found") || errLower.includes("404") || errLower.includes("match")) {
             termLog("👉 FIX: The media item was not found on the target platform. Ensure the TMDB/IMDB/TVDB IDs are correct and that the media is properly scanned/matched in your Plex/Emby/Jellyfin library.", "success");
           } else {
@@ -1327,7 +1327,7 @@ function updateSyncProgressFromLine(line, mode) {
       ["receiving targets resolved", "Media servers connected", 15],
       ["querying watched libraries", "Scanning watched libraries", 24],
       ["collected ", "Watched libraries scanned", 38],
-      ["loading plembfin watchhistory", "Loading Plembfin history", 45],
+      ["loading plekt watchhistory", "Loading Plekt history", 45],
       ["grouping and matching", "Matching items across servers", 52],
       ["resolving watched state", "Preparing reconciliation", 58],
       ["process complete", "Sync complete", 100],
@@ -1563,7 +1563,7 @@ export async function triggerForceSync({ planId = "", confirmed = false } = {}) 
 
   if (confirmed) return startForceSyncJob();
   _cb.showConfirmModal?.(
-    "Are you sure you want to run Force Sync?\n\nThis checks configured media servers and repairs their watched/unwatched states from Plembfin's canonical history. It may take some time.",
+    "Are you sure you want to run Force Sync?\n\nThis checks configured media servers and repairs their watched/unwatched states from Plekt's canonical history. It may take some time.",
     startForceSyncJob,
   );
 }

@@ -1280,7 +1280,7 @@ export async function retryTraktRestoreItem(row = {}, {
   const rowId = String(row?.id || "").trim();
   const projectedRow = projection.rows.find((candidate) => rowId && String(candidate?.id || "") === rowId) || row;
   if (!projectedRow || !String(projectedRow.media_type || projectedRow.mediaType || projectedRow.type || "").trim()) {
-    return { success: false, code: "not_found", error: "The restored Plembfin watch-history row could not be found." };
+    return { success: false, code: "not_found", error: "The restored Plekt watch-history row could not be found." };
   }
 
   const primaryHydrationCache = new Map();
@@ -1311,7 +1311,7 @@ export async function retryTraktRestoreItem(row = {}, {
     detailsResolver,
   });
   if (!candidates.length) {
-    return { success: false, code: "not_found", error: "Plembfin could not resolve this watch-history row to a Trakt identity." };
+    return { success: false, code: "not_found", error: "Plekt could not resolve this watch-history row to a Trakt identity." };
   }
 
   const callBatch = async (candidate) => {
@@ -1336,7 +1336,7 @@ export async function retryTraktRestoreItem(row = {}, {
       const result = await callBatch(candidate);
       if (result?.cancelled) return { success: false, code: "restore_changed", error: "The restore changed or was cancelled before this play was repaired." };
       if (traktNotFoundCount(result)) {
-        lastError = "Trakt returned not_found for this play using the current Plembfin mapping.";
+        lastError = "Trakt returned not_found for this play using the current Plekt mapping.";
         continue;
       }
       recordTrackerOutbound("trakt", mediaKey, candidate, "watched");

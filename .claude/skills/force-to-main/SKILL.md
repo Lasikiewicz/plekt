@@ -1,6 +1,6 @@
 ---
 name: force-to-main
-description: "Promote plembfin alpha's current tip onto main as a single release when the user says \"Force to main\" exactly, or resume a named phase B/C handoff. Get changelog and running-build approval first, complete website phases A/B/C against that build, then promote, obtain final approval, force-push main, and verify the OCI demo. Never push develop."
+description: "Promote Plekt alpha's current tip onto main as a single release when the user says \"Force to main\" exactly, or resume a named phase B/C handoff. Get changelog and running-build approval first, complete website phases A/B/C against that build, then promote, obtain final approval, force-push main, and verify the OCI demo. Never push develop."
 ---
 
 # Force to main
@@ -154,7 +154,7 @@ Set-Location -LiteralPath $releaseWorktree
 npm ci
 node scripts/promote-alpha-to-main.js --confirm
 $releaseListeners = Get-NetTCPConnection -LocalPort 5055 -State Listen -ErrorAction SilentlyContinue
-# Inspect ownership first, then stop only the verified Plembfin listener(s).
+# Inspect ownership first, then stop only the verified Plekt listener(s).
 $releaseListeners | Select-Object OwningProcess -Unique |
   ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }
 $env:DATA_DIR = Join-Path $releaseRepo "data"
@@ -431,7 +431,7 @@ not part of this release gate.
 
 The `Publish Main Release` workflow now builds an AMD64/ARM64 image and its dependent
 `Deploy public demo to OCI` job copies `scripts/deploy-oracle-demo.sh` to the instance
-over pinned SSH, pulls the exact `ghcr.io/lasikiewicz/plembfin:<version>` tag, and
+over pinned SSH, pulls the exact `ghcr.io/lasikiewicz/plekt:<version>` tag, and
 recreates only the configured demo container while preserving its `/data` mount. It
 then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.
 
@@ -497,3 +497,7 @@ This supersedes `docs/decisions.md` entry 16; see entry 18 for the reasoning and
 entry 16's conflict concern no longer applies. Entry 8 still stands: do not fold the
 release into `alpha` either, because the next "Force to alpha" force-pushes `develop`'s tip
 onto `alpha` regardless.
+
+## Plekt rebrand release gate
+
+Before the first Plekt release, verify that old raw changelog URLs still resolve after the repository rename, the new documentation domain serves the rebranded website, both legacy image targets remain published for at least six months after this release, and the release preview contains the image migration guidance. Keep GHCR cleanup in dry-run mode until the new-package results are reviewed. Do not rename the local checkout or deployment data/container identities as part of promotion.

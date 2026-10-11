@@ -222,7 +222,7 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
       return;
     }
 
-    // Coordinate across every Plembfin tab. Exactly one document owns the
+    // Coordinate across every Plekt tab. Exactly one document owns the
     // long-lived stream; waiting lock requests consume no HTTP connection.
     const controller = new AbortController();
     lockAbortController = controller;

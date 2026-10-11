@@ -1,13 +1,13 @@
 # Guided first-run setup
 
-Plembfin replaces the old "generated password printed to the console" dead end with a
+Plekt replaces the old "generated password printed to the console" dead end with a
 one-time account claim, followed by a resumable `/setup` wizard. This page covers the
 claim flow, the setup wizard, and how to reach either one again later.
 
 ## Pristine-install account claim
 
 On a brand-new install with no `ADMIN_PASSWORD` set and no in-app credentials yet, the app
-shows **Claim this Plembfin instance** instead of the normal sign-in form. No password is
+shows **Claim this Plekt instance** instead of the normal sign-in form. No password is
 generated or logged anywhere - the first administrator sets their own username and
 password directly.
 
@@ -38,17 +38,17 @@ same endpoints and Settings dialogs used elsewhere in the app - there is no sepa
 setup-only configuration path.
 
 - **Media servers** - reuses the same Plex/Emby/Jellyfin connect-and-test modal shown from
-  Settings → Media Servers. No server is actually required - Plembfin also works from
+  Settings → Media Servers. No server is actually required - Plekt also works from
   manually marking titles watched (via search), so this step can be skipped like any other
   optional one.
 - **Metadata** - TMDB save/test, plus a note on which providers (TheTVDB, Fanart.tv) are
-  already available through Plembfin's built-in project keys.
+  already available through Plekt's built-in project keys.
 - **Webhooks** - the same per-provider setup instructions and webhook URL shown in
   Settings, with a self-attestation checkbox per connected server. See
   [`docs/webhooks.md`](webhooks.md) for the full guide.
 - **Trakt** (optional) - the same device-authorization flow as Settings → Import. Skipping
   it carries a reminder onto the dashboard checklist.
-- **Background imports** - once a server passes its connection test, Plembfin
+- **Background imports** - once a server passes its connection test, Plekt
   automatically starts pulling its watched status in the background (the same "Import
   Watched Status" pull already offered from Settings → Sync → Force Sync, scoped to that
   one server). Unchecking the box on the server's card cancels the in-progress pull and
@@ -66,13 +66,13 @@ setup-only configuration path.
   review. The default is **Require review**. It also includes the opt-in
   **Fast Local-Network Sync** toggle, which is only appropriate when all connected
   media services are on the same trusted local network. The **Sync Up Next to media
-  apps** toggle is enabled by default. When enabled, Plembfin keeps its Up Next queue in
+  apps** toggle is enabled by default. When enabled, Plekt keeps its Up Next queue in
   sync with Plex and Emby's Continue Watching and Jellyfin's Next Up. Turn it off to leave
-  those app lists unchanged; Plembfin's own Up Next view remains available. You can change
+  those app lists unchanged; Plekt's own Up Next view remains available. You can change
   this later in Settings →
   Sync → Sync Tuning. These choices are saved together when continuing past the step
   and remain editable in Settings → Sync → Sync Tuning.
-- **Setting Plembfin as the source of truth** (pushing local watch history outward) is
+- **Setting Plekt as the source of truth** (pushing local watch history outward) is
   intentionally *not* offered inline in the wizard. It's a destructive, confirm-gated
   action, so the wizard links to Settings → Sync → Sync Tools, where the existing
   preview/confirm/lock/cancel flow already lives. The wizard does surface whether it's
@@ -104,7 +104,7 @@ setup-only configuration path.
 
 ### Dashboard checklist
 
-Once setup is complete, the dashboard shows a short **Finish setting up Plembfin**
+Once setup is complete, the dashboard shows a short **Finish setting up Plekt**
 checklist for anything still outstanding - TMDB, per-server webhook acknowledgement,
 Trakt, Seerr, and an encrypted backup/credential-key reminder. It's derived server-side
 from canonical configuration on every load, not from anything the wizard "remembers", and

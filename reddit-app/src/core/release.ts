@@ -1,8 +1,8 @@
 import { reddit, redis } from "@devvit/web/server";
 
-const SUBREDDIT = "plembfin";
+const SUBREDDIT = "plekt";
 const CHANGELOG_URL =
-  "https://raw.githubusercontent.com/Lasikiewicz/plembfin/main/changelog.json";
+  "https://raw.githubusercontent.com/Lasikiewicz/plekt/main/changelog.json";
 const LAST_ANNOUNCED_KEY = "lastAnnouncedVersion";
 
 type ChangelogSections = {
@@ -74,11 +74,11 @@ function buildPost(entry: ChangelogEntry): { title: string; text: string } {
   if (websiteUrl) bodyParts.push(`Website: ${websiteUrl}`);
   if (sections.length) bodyParts.push(sections.join("\n\n"));
   bodyParts.push(
-    "[View the full changelog](https://github.com/Lasikiewicz/plembfin/blob/main/CHANGELOG.md)",
+    "[View the full changelog](https://github.com/Lasikiewicz/plekt/blob/main/CHANGELOG.md)",
   );
 
   return {
-    title: `Plembfin v${entry.version} released`.slice(0, 300),
+    title: `Plekt v${entry.version} released`.slice(0, 300),
     text: bodyParts.join("\n\n"),
   };
 }
@@ -108,6 +108,12 @@ export async function checkAndAnnounceNewRelease(): Promise<void> {
   if (!entry) return;
 
   const lastAnnounced = await redis.get(LAST_ANNOUNCED_KEY);
+  if (lastAnnounced === undefined) {
+    // First run of this app: record the current release as already known, so nothing old is posted.
+    await redis.set(LAST_ANNOUNCED_KEY, entry.version);
+    console.log(`Baseline set to v${entry.version}; no post made.`);
+    return;
+  }
   if (lastAnnounced === entry.version) return;
 
   const appUser = await reddit.getAppUser();

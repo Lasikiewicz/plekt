@@ -12,15 +12,15 @@ makeTempDataDir("plembfin-restore-");
 const { db } = await import("../server/src/db.js");
 const { FULL_BACKUPS_DIR } = await import("../server/src/paths.js");
 const { BackupStreamScanner } = await import("../server/src/utils/backupStreamScanner.js");
-const { writeEncryptedPlembfinBackup } = await import("../server/src/utils/plembfinBackups.js");
+const { writeEncryptedPlektBackup } = await import("../server/src/utils/plektBackups.js");
 const { loadWatchBackupRuntime } = await import("../server/src/utils/watchHistoryBackups.js");
 const {
-  getPlembfinRestoreJob,
-  runPlembfinRestore,
+  getPlektRestoreJob,
+  runPlektRestore,
   saveUploadedBackup,
-  startPlembfinRestore,
+  startPlektRestore,
   uploadedBackupPath,
-} = await import("../server/src/utils/plembfinRestore.js");
+} = await import("../server/src/utils/plektRestore.js");
 
 const PASSPHRASE = "correct horse battery staple";
 
@@ -111,12 +111,12 @@ test("the stream scanner reports the same fields and documents in pieces of any 
 test("a server-written encrypted backup restores through the server", async () => {
   upsertRuntime.run("restoreKeep", JSON.stringify({ text: "café ☃", list: [1, 2] }), 1);
   const filePath = backupFile("plembfin-backup-20260927T000000Z.encrypted.json");
-  writeEncryptedPlembfinBackup(filePath, PASSPHRASE);
+  writeEncryptedPlektBackup(filePath, PASSPHRASE);
 
   db.prepare("DELETE FROM runtime_state WHERE id = 'restoreKeep'").run();
   upsertRuntime.run("restoreAddedLater", JSON.stringify({ later: true }), 2);
 
-  const job = await runPlembfinRestore({ filePath, passphrase: PASSPHRASE, label: "server" });
+  const job = await runPlektRestore({ filePath, passphrase: PASSPHRASE, label: "server" });
   assert.equal(job.status, "complete", job.error);
   assert.equal(job.encrypted, true);
   assert.ok(job.totalDocuments > 0);
@@ -131,10 +131,10 @@ test("a server-written encrypted backup restores through the server", async () =
 test("a wrong passphrase or a damaged file changes nothing", async () => {
   upsertRuntime.run("restoreBefore", JSON.stringify({ v: 1 }), 1);
   const filePath = backupFile("plembfin-backup-20260927T000001Z.encrypted.json");
-  writeEncryptedPlembfinBackup(filePath, PASSPHRASE);
+  writeEncryptedPlektBackup(filePath, PASSPHRASE);
   upsertRuntime.run("restoreMarker", JSON.stringify({ untouched: true }), 1);
 
-  let job = await runPlembfinRestore({ filePath, passphrase: "wrong passphrase here" });
+  let job = await runPlektRestore({ filePath, passphrase: "wrong passphrase here" });
   assert.equal(job.status, "failed");
   assert.match(job.error, /Could not decrypt/);
   assert.deepEqual(runtimeRow("restoreMarker"), { untouched: true });
@@ -144,13 +144,13 @@ test("a wrong passphrase or a damaged file changes nothing", async () => {
   const middle = payloadAt + Math.floor((text.lastIndexOf('"') - payloadAt) / 2);
   const flipped = text[middle] === "A" ? "B" : "A";
   fs.writeFileSync(filePath, text.slice(0, middle) + flipped + text.slice(middle + 1));
-  job = await runPlembfinRestore({ filePath, passphrase: PASSPHRASE });
+  job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
   assert.equal(job.status, "failed");
   assert.match(job.error, /Could not decrypt/);
   assert.deepEqual(runtimeRow("restoreMarker"), { untouched: true });
 
   fs.writeFileSync(filePath, text.slice(0, text.length - 200));
-  job = await runPlembfinRestore({ filePath, passphrase: PASSPHRASE });
+  job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
   assert.equal(job.status, "failed");
   assert.deepEqual(runtimeRow("restoreMarker"), { untouched: true });
   fs.rmSync(filePath);
@@ -168,14 +168,14 @@ test("a browser export (250,000 iterations) restores, and an invalid document st
     },
   };
   writeBrowserStyleBackup(filePath, document, PASSPHRASE);
-  let job = await runPlembfinRestore({ filePath, passphrase: PASSPHRASE });
+  let job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
   assert.equal(job.status, "complete", job.error);
   assert.deepEqual(job.counts, { runtimeState: 1 }, "credential collections are left out, as in the browser restore");
   assert.deepEqual(runtimeRow("fromBrowser"), { ok: "yes" });
 
   document.collections.runtimeState = [{ id: "fromBrowser2", data: { ok: 2 } }, { id: "", data: {} }];
   writeBrowserStyleBackup(filePath, document, PASSPHRASE);
-  job = await runPlembfinRestore({ filePath, passphrase: PASSPHRASE });
+  job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
   assert.equal(job.status, "failed");
   assert.match(job.error, /invalid document/);
   assert.deepEqual(runtimeRow("fromBrowser"), { ok: "yes" });
@@ -198,19 +198,19 @@ function browserEncryptFunction() {
     lift(/^const BACKUP_KDF_ITERATIONS = /m).split("\n")[0],
     lift(/^function bytesToBase64\(/m),
     lift(/^async function backupCryptoKey\(/m),
-    lift(/^async function encryptPlembfinBackup\(/m),
-    "return encryptPlembfinBackup;",
+    lift(/^async function encryptPlektBackup\(/m),
+    "return encryptPlektBackup;",
   ].join("\n");
   return new Function(body)();
 }
 
 test("a backup the Restore page exported restores on the server", async () => {
   const filePath = backupFile("page-export.encrypted.json");
-  const encryptPlembfinBackup = browserEncryptFunction();
+  const encryptPlektBackup = browserEncryptFunction();
   const document = { format: "plembfin-backup", version: 1, collections: { runtimeState: [{ id: "fromPage", data: { text: "café ☃" } }] } };
   // downloadJsonFile writes the envelope indented.
-  fs.writeFileSync(filePath, JSON.stringify(await encryptPlembfinBackup(document, PASSPHRASE), null, 2));
-  const job = await runPlembfinRestore({ filePath, passphrase: PASSPHRASE });
+  fs.writeFileSync(filePath, JSON.stringify(await encryptPlektBackup(document, PASSPHRASE), null, 2));
+  const job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
   assert.equal(job.status, "complete", job.error);
   assert.deepEqual(runtimeRow("fromPage"), { text: "café ☃" });
   fs.rmSync(filePath);
@@ -230,13 +230,13 @@ test("an uploaded plain backup is streamed to disk, restored, and removed", asyn
   assert.equal(fs.readFileSync(filePath, "utf8"), text);
   assert.throws(() => uploadedBackupPath("../escape"), /Invalid upload id/);
 
-  const started = startPlembfinRestore({ filePath, label: "Uploaded backup", removeAfter: true });
+  const started = startPlektRestore({ filePath, label: "Uploaded backup", removeAfter: true });
   assert.equal(started.status, "verifying");
-  assert.throws(() => startPlembfinRestore({ filePath }), /already running/);
-  while (["verifying", "importing"].includes(getPlembfinRestoreJob().status)) {
+  assert.throws(() => startPlektRestore({ filePath }), /already running/);
+  while (["verifying", "importing"].includes(getPlektRestoreJob().status)) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
-  const job = getPlembfinRestoreJob();
+  const job = getPlektRestoreJob();
   assert.equal(job.status, "complete", job.error);
   assert.equal(job.encrypted, false);
   assert.equal(job.imported, 600);

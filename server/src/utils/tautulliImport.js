@@ -346,7 +346,7 @@ export function buildTautulliTelemetry(selectedTargets = [], activeTargets = TAR
   const eligible = plan.filter((entry) => entry.decision === TARGET_DECISIONS.SEND);
   const policySkipped = plan.filter((entry) => entry.decision === TARGET_DECISIONS.SKIPPED_BY_POLICY);
   const details = eligible.length
-    ? `Historical Tautulli watch imported into Plembfin; ${eligible.map((entry) => entry.target).join(", ")} queued for outbound sync`
+    ? `Historical Tautulli watch imported into Plekt;${eligible.map((entry) => entry.target).join(", ")} queued for outbound sync`
     : policySkipped.length
       ? "Historical Tautulli watch stored locally; every selected target was skipped by the historical sync policy"
       : "Historical Tautulli watch stored locally; no outbound targets were selected";

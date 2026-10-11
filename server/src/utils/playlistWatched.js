@@ -1,5 +1,5 @@
 import { bumpDataVersion, db, transaction } from "../db.js";
-import { isPlembfinTrackedWatchRow } from "./dataRepo.js";
+import { isPlektTrackedWatchRow } from "./dataRepo.js";
 import { withPlaylistLock } from "./playlistPushEngine.js";
 
 // Watch state for playlists (plan/archive/custom-playlist-sync step 8e,
@@ -32,7 +32,7 @@ export function readWatchIndex() {
     const keys = row.media_type === "movie"
       ? idKeys("movie", ids)
       : idKeys("show", ids, `:${Number(row.season)}:${Number(row.episode)}`);
-    const watched = isPlembfinTrackedWatchRow(row);
+    const watched = isPlektTrackedWatchRow(row);
     for (const key of keys) {
       const previous = latest.get(key);
       if (!previous || at >= previous.at) latest.set(key, { at, watched });

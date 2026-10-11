@@ -1,3 +1,4 @@
+# Keep legacy image targets for at least six months after the Plekt release.
 name: Build and Push Docker Image
 
 on:
@@ -5,7 +6,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: lasikiewicz/plekt
+  LEGACY_IMAGE_NAME: lasikiewicz/plembfin
 
 jobs:
   build-and-push:
@@ -34,6 +36,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Read application version
         id: version
         run: node -e "const fs=require('fs'); fs.appendFileSync(process.env.GITHUB_OUTPUT, 'version=' + require('./changelog.json').version + '\n')"
@@ -46,7 +54,11 @@ jobs:
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
+            docker.io/plembfin/plekt
+            docker.io/plembfin/plembfin
           tags: |
             type=raw,value=latest
             type=raw,value=${{ steps.version.outputs.version }}

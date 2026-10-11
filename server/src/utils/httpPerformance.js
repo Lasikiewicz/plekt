@@ -1,6 +1,7 @@
 import path from "node:path";
 import { monitorEventLoopDelay, performance } from "node:perf_hooks";
 import compression from "compression";
+import { brandEnv } from "./brandEnv.js";
 
 const STATIC_ASSET_EXTENSIONS = /\.(?:m?js|css|svg|png|jpe?g|webp|gif|ico|webmanifest|woff2?)$/i;
 
@@ -85,8 +86,8 @@ export function createResponseCompression() {
 // application-speed plan. The middleware is inert unless enabled explicitly,
 // so normal installs pay no event-loop-monitor or logging cost.
 export function createHttpTimingMiddleware({
-  enabled = process.env.PLEMBFIN_DEBUG_HTTP === "1",
-  thresholdMs = Number(process.env.PLEMBFIN_DEBUG_HTTP_THRESHOLD_MS || 500),
+  enabled = brandEnv("DEBUG_HTTP") === "1",
+  thresholdMs = Number(brandEnv("DEBUG_HTTP_THRESHOLD_MS") || 500),
   logger = console.warn,
 } = {}) {
   if (!enabled) return (_request, _response, next) => next();

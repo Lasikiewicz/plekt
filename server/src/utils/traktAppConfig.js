@@ -26,7 +26,7 @@ export function resolveTraktAppCredentials(input = {}, env = process.env) {
 
   const configured = getTraktAppConfig(env);
   if (configured.incomplete) throw new Error("Server Trakt app configuration is incomplete");
-  if (!configured.configured) throw new Error("The Plembfin Trakt app is not configured on this server");
+  if (!configured.configured) throw new Error("The Plekt Trakt app is not configured on this server");
   return { clientId: configured.clientId, clientSecret: configured.clientSecret, source: "server" };
 }
 

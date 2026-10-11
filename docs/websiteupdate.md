@@ -65,7 +65,7 @@ When a website update is requested, carry out the following workflow:
   navbar so it is available from every website page. Submit searches to `/docs/?q=...`, keep
   the results list on the documentation landing page, and verify both empty and populated
   clear states after changing the shared header.
-- **Homepage positioning and proof:** the home page should lead with Plembfin as the local
+- **Homepage positioning and proof:** the home page should lead with Plekt as the local
   source of truth—the brain that tracks playback, remembers canonical state, and auto-syncs
   the right answer back to connected services. Keep the main Track → Remember → Auto-sync
   loop visible, then send the broader feature inventory to the top-level `/features/` page.
@@ -80,13 +80,13 @@ When a website update is requested, carry out the following workflow:
   the page feels like a maintained product rather than a concept page. Check that the hero
   headline, supporting copy, screenshot, and calls to action all explain the same product
   promise before accepting the visual pass.
-- **Homepage must feel like Plembfin:** keep the home page dark-first, compact, media-first,
+- **Homepage must feel like Plekt:** keep the home page dark-first, compact, media-first,
   and aligned with the app's dashboard language. Use real screens and the existing tokens;
   do not wrap screenshots in decorative boxes, add marketing-only reveal effects, or fill
   every feature with a paragraph. Use short linked rows for secondary features and let the
   actual media UI carry the visual weight. Check the hero, core flow, feature list, and
   product proof at their anchors in both themes before accepting the page.
-- **Keep the homepage and feature index separate:** the homepage should explain Plembfin in
+- **Keep the homepage and feature index separate:** the homepage should explain Plekt in
   one short overview and one clear Track → Remember → Auto-sync flow. Put the broader feature
   inventory on the top-level `/features/` page, using concise grouped rows and direct links to
   the detailed documentation. Do not turn the homepage into a second documentation index.
@@ -94,15 +94,15 @@ When a website update is requested, carry out the following workflow:
   current official [Sonarr](https://sonarr.tv/), [Radarr](https://radarr.video/),
   [Seerr](https://seerr.dev/), and [Plex](https://www.plex.tv/) presentation patterns. Borrow
   the useful structure—screenshot-led product proof, short feature sections, clear actions,
-  and media-first rails—but keep Plembfin's own copy, logo, reviewed captures, and UI language.
+  and media-first rails—but keep Plekt's own copy, logo, reviewed captures, and UI language.
   Use the existing `--accent`, `--blue`, `--text`, `--soft`, and `--bg` tokens so light mode
-  and dark mode retain the Plembfin palette. Do not introduce a purple/gradient palette or copy
+  and dark mode retain the Plekt palette. Do not introduce a purple/gradient palette or copy
   another product's identity. Recheck both routes in both themes after every visual change.
 - **Simple landing-page reference rule:** a reference such as [Scrob](https://scrob.app/) may
   be reviewed for high-level communication structure only: one clear promise, one useful
   product view, a short feature overview, and direct links into the docs. Never copy its
   wording, logo, colour treatment, imagery, layout details, or product claims. Rebuild the
-  idea with Plembfin's existing tokens, current screenshots, and accurate source-of-truth
+  idea with Plekt's existing tokens, current screenshots, and accurate source-of-truth
   language. Keep the homepage shorter than the Features page; do not turn either page into a
   large hero, a generic AI-style marketing composition, or a second copy of the docs.
 - **Landing-page link audit:** every page-specific documentation link on the homepage or
@@ -131,7 +131,7 @@ served version, server PID, and approval in the per-release summary. If the cand
 repeat its approval before starting phase A. The website gate is mandatory for every main
 release.
 
-For the next **Force to main** after the port-default change, create a dedicated website guide for existing users explaining how to move Plembfin to port 5056 (including Docker/Unraid port mapping and Windows upgrade behavior), then add a direct link to that guide in the new release changelog entry. Verify the guide link in the public Changelog as part of the website gate.
+For the next **Force to main** after the port-default change, create a dedicated website guide for existing users explaining how to move Plekt to port 5056 (including Docker/Unraid port mapping and Windows upgrade behavior), then add a direct link to that guide in the new release changelog entry. Verify the guide link in the public Changelog as part of the website gate.
 
 The gate has three phases, all checked against the same approved release build:
 

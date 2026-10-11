@@ -477,7 +477,7 @@ test("a successful movie-unwatch push does not revive its older watched history 
   assert.equal(result.results[0].status, "success");
   assert.equal(unplayedWriteSeen, true);
   assert.ok(lines.some((line) => line.includes("sending unwatched state")));
-  assert.ok(lines.some((line) => line.includes("Set Plembfin as Source of Truth finished")));
+  assert.ok(lines.some((line) => line.includes("Set Plekt as Source of Truth finished")));
   assert.equal(await repo.getCanonicalWatchState(media), "unwatched");
   const watchedRow = database.prepare("SELECT updated_at, sync_dispatch_telemetry FROM watch_history WHERE id = ?").get("arrival-watched");
   assert.equal(watchedRow.updated_at, 1_000);

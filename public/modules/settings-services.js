@@ -4,17 +4,17 @@
 // echoes credentials, only a `configured` flag per section, and a blank secret
 // on save means "keep the stored credential" (except Seerr, whose key is only
 // sent when non-empty).
-import { state } from "./state.js?v=1.3.1.1.2";
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=1.3.1.1.2";
-import { prepareHelpReadMore } from "./settings-shell.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=1.3.1.2.1";
+import { prepareHelpReadMore } from "./settings-shell.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=1.3.1.2.1";
 import {
   plexCredentialGuide,
   embyCredentialGuide,
   jellyfinCredentialGuide,
   savedCredentialNote,
-} from "./help-content.js?v=1.3.1.1.2";
+} from "./help-content.js?v=1.3.1.2.1";
 import {
   PLEX_HISTORICAL_SYNC_HELP_HTML,
   PLEX_HISTORICAL_SYNC_CHOICES,
@@ -22,7 +22,7 @@ import {
   PROVIDER_DATE_NOTE_HTML,
   plexHistoricalSyncEnabled,
   plexHistoricalSyncOffWarningHtml,
-} from "./plex-history-policy.js?v=1.3.1.1.2";
+} from "./plex-history-policy.js?v=1.3.1.2.1";
 
 let _cb = {};
 let _tautulliImport = {
@@ -84,7 +84,7 @@ const CONNECTION_SERVICES = {
     fields: (config) => [
       { key: "enabled", label: "Enable", type: "checkbox", value: !config.disabled },
       { key: "manualMode", label: "Use manual token setup", type: "checkbox", value: config.authMode === "manual", optionalGroup: true, help: "Turns off verified account mode. Only one Plex authentication mode is active at a time." },
-      { key: "baseUrl", label: "Server URL", type: "url", value: config.baseUrl || config.url || "", placeholder: "http://127.0.0.1:32400", help: "Address Plembfin uses to reach Plex.", optionalGroup: true },
+      { key: "baseUrl", label: "Server URL", type: "url", value: config.baseUrl || config.url || "", placeholder: "http://127.0.0.1:32400", help: "Address Plekt uses to reach Plex.", optionalGroup: true },
       { key: "token", label: "Token", secret: true, configured: config.configured, configuredPlaceholder: "Configured - enter a new token to replace it", placeholder: "Plex token", optionalGroup: true },
       { key: "username", label: "Username", value: config.username || "", optional: true, help: "Plex account name used to match webhook events.", optionalGroup: true },
     ],
@@ -97,9 +97,9 @@ const CONNECTION_SERVICES = {
     description: "Sync watch history with an Emby server",
     fields: (config) => [
       { key: "enabled", label: "Enable", type: "checkbox", value: !config.disabled },
-      { key: "baseUrl", label: "Server URL", type: "url", value: config.baseUrl || config.url || "", placeholder: "http://127.0.0.1:8096", help: "Address Plembfin uses to reach Emby." },
+      { key: "baseUrl", label: "Server URL", type: "url", value: config.baseUrl || config.url || "", placeholder: "http://127.0.0.1:8096", help: "Address Plekt uses to reach Emby." },
       { key: "accountUsername", label: "Emby username", value: "", autocomplete: "username", help: "Used once to obtain a user-scoped access token." },
-      { key: "accountPassword", label: "Emby password", secret: true, value: "", autocomplete: "current-password", placeholder: "Not stored by Plembfin" },
+      { key: "accountPassword", label: "Emby password", secret: true, value: "", autocomplete: "current-password", placeholder: "Not stored by Plekt" },
       { key: "manualMode", label: "Use manual API key setup", type: "checkbox", value: config.authMode === "manual", optionalGroup: true, help: "Turns off verified account mode. Only one Emby authentication mode is active at a time." },
       { key: "apiKey", label: "API Key", secret: true, configured: config.configured, placeholder: "Emby API key", optionalGroup: true },
       { key: "userId", label: "User ID", value: config.userId || "", help: "The Emby user whose playstate is synchronized.", optionalGroup: true },
@@ -113,9 +113,9 @@ const CONNECTION_SERVICES = {
     description: "Sync watch history with a Jellyfin server",
     fields: (config) => [
       { key: "enabled", label: "Enable", type: "checkbox", value: !config.disabled },
-      { key: "baseUrl", label: "Server URL", type: "url", value: config.baseUrl || config.url || "", placeholder: "http://127.0.0.1:8096", help: "Address Plembfin uses to reach Jellyfin." },
+      { key: "baseUrl", label: "Server URL", type: "url", value: config.baseUrl || config.url || "", placeholder: "http://127.0.0.1:8096", help: "Address Plekt uses to reach Jellyfin." },
       { key: "accountUsername", label: "Fallback username", value: "", autocomplete: "username", optional: true, help: "Only used if Quick Connect is disabled." },
-      { key: "accountPassword", label: "Fallback password", secret: true, value: "", autocomplete: "current-password", placeholder: "Not stored by Plembfin", optional: true },
+      { key: "accountPassword", label: "Fallback password", secret: true, value: "", autocomplete: "current-password", placeholder: "Not stored by Plekt", optional: true },
       { key: "manualMode", label: "Use manual API key setup", type: "checkbox", value: config.authMode === "manual", optionalGroup: true, help: "Turns off verified account mode. Only one Jellyfin authentication mode is active at a time." },
       { key: "apiKey", label: "API Key", secret: true, configured: config.configured, placeholder: "Jellyfin API key", optionalGroup: true },
       { key: "userId", label: "User ID", value: config.userId || "", help: "The Jellyfin user whose playstate is synchronized.", optionalGroup: true },
@@ -174,7 +174,7 @@ const METADATA_SERVICES = {
     optional: true,
     keyHelp: "A built-in project key is already configured - a personal key raises rate limits.",
     help: () => `
-      <p class="tool-accordion-desc">Plembfin uses fanart.tv as a fallback source for posters, backdrops, and logo art when TMDB has no images for a title. A built-in project key is already configured - no key is required to use this feature.</p>
+      <p class="tool-accordion-desc">Plekt uses fanart.tv as a fallback source for posters, backdrops, and logo art when TMDB has no images for a title. A built-in project key is already configured - no key is required to use this feature.</p>
       <p class="tool-accordion-desc">Entering your own personal API key gives you higher rate limits and access to images uploaded by your fanart.tv account:</p>
       ${keySteps(["Create an account at <b>fanart.tv</b>", "Go to your <b>Profile → API Key</b>", "Copy your personal key and paste it here"])}
     `,
@@ -198,7 +198,7 @@ const METADATA_SERVICES = {
     keyPlaceholder: "OMDb API key",
     optional: true,
     help: () => `
-      <p class="tool-accordion-desc">When configured, Plembfin fetches IMDb ratings from the OMDb API and shows them next to the TMDB score on movie pages. Ratings are cached for 7 days; the free tier allows 1,000 requests/day.</p>
+      <p class="tool-accordion-desc">When configured, Plekt fetches IMDb ratings from the OMDb API and shows them next to the TMDB score on movie pages. Ratings are cached for 7 days; the free tier allows 1,000 requests/day.</p>
       ${keySteps(["Go to <b>omdbapi.com/apikey.aspx</b>", "Register for a free API key", "Paste the key here and save"])}
     `,
   },
@@ -213,7 +213,7 @@ const TUNING_FIELD_DEFS = [
   { key: "watchedThresholdPercent", label: "Watched Threshold", unit: "%", help: "Playback progress percentage at which a play counts as watched." },
   { key: "minResumePositionSec", label: "Minimum Resume Position", unit: "sec", help: "Minimum playback position before a stopped play is saved as a resume point." },
   { key: "activeSessionTtlMin", label: "Active Session TTL", unit: "min", help: `How long a "now playing" session is kept without an update before it's considered stale.` },
-  { key: "outboundTimeoutSec", label: "Outbound Request Timeout", unit: "sec", help: "How long Plembfin waits for a response from Plex, Emby, or Jellyfin before giving up." },
+  { key: "outboundTimeoutSec", label: "Outbound Request Timeout", unit: "sec", help: "How long Plekt waits for a response from Plex, Emby, or Jellyfin before giving up." },
 ];
 const WATCH_IMPORT_FIELD = {
   key: "watchImportMode",
@@ -253,7 +253,7 @@ const PACING_FIELD = {
   key: "fastLocalPacing",
   type: "checkbox",
   label: "Fast Local-Network Sync",
-  help: "Speeds up Force Sync, Full Sync Watchstates, and other bulk sync operations by removing most outbound pacing delays.<br>Only enable this when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local network as Plembfin.<br>It is not safe to enable if any of them is reached over the public internet.",
+  help: "Speeds up Force Sync, Full Sync Watchstates, and other bulk sync operations by removing most outbound pacing delays.<br>Only enable this when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local network as Plekt.<br>It is not safe to enable if any of them is reached over the public internet.",
   helpIsHtml: true,
 };
 const UP_NEXT_SYNC_FIELD = {
@@ -261,7 +261,7 @@ const UP_NEXT_SYNC_FIELD = {
   id: "sync-field-up_next_sync",
   type: "checkbox",
   label: "Sync Up Next to media apps",
-  help: "When enabled, Plembfin keeps its Up Next queue in sync with Plex and Emby's Continue Watching and Jellyfin's Next Up.<br>Turn it off to leave those app lists unchanged; Plembfin's own Up Next view remains available.",
+  help: "When enabled, Plekt keeps its Up Next queue in sync with Plex and Emby's Continue Watching and Jellyfin's Next Up.<br>Turn it off to leave those app lists unchanged; Plekt's own Up Next view remains available.",
   helpIsHtml: true,
 };
 
@@ -273,7 +273,7 @@ const SYNC_TUNING_SUMMARIES = Object.freeze({
   activeSessionTtlMin: "Set how long inactive now-playing sessions remain valid",
   outboundTimeoutSec: "Set how long requests wait for a media server response",
   fastLocalPacing: "Speed up bulk sync on a trusted local network",
-  upNextSyncEnabled: "Keep Plembfin's Up Next queue synced with media apps",
+  upNextSyncEnabled: "Keep Plekt's Up Next queue synced with media apps",
 });
 
 function tuningBadges(tuning = {}) {
@@ -452,7 +452,7 @@ function renderPlexServerPicker(ui, flowId, account, servers = []) {
   fields.innerHTML = `
     <div class="plex-account-summary">
       <b>${escapeHtml(account?.username || "Plex account")}</b>
-      <span>Choose the server Plembfin should synchronize.</span>
+      <span>Choose the server Plekt should synchronize.</span>
     </div>
     <p class="message" data-tone="success">Plex account verified. Choose a server.</p>
     <div class="settings-card-grid plex-server-picker">
@@ -491,7 +491,7 @@ function renderPlexServerPicker(ui, flowId, account, servers = []) {
 
 async function connectPlexAccount(ui) {
   const popup = window.open("about:blank", "_blank");
-  if (!popup) throw new Error("Allow pop-ups for Plembfin, then try again.");
+  if (!popup) throw new Error("Allow pop-ups for Plekt, then try again.");
   popup.document.title = "Opening Plex";
   popup.document.body.textContent = "Opening Plex sign-in...";
   ui.setStatus("Starting secure Plex sign-in...", "muted");
@@ -787,7 +787,7 @@ function buildServiceEditOptions(serviceId) {
     // that offers the toggle. It writes to watchlistSync, not to the Plex
     // connection, which is why it is an extra toggle rather than a field.
     extraToggles: serviceId === "plex" ? [{
-      label: "Sync Watchlist with Plembfin",
+      label: "Sync Watchlist with Plekt",
       checked: Boolean(state.savedConfig?.watchlistSync?.enabled),
       onChange: (enabled) => saveWatchlistSyncEnabled(enabled),
     }] : [],
@@ -832,7 +832,7 @@ function openServicePicker(area) {
   openSettingsPickerModal({
     title: area === "connection" ? "Add Media Server" : "Add Metadata Provider",
     intro: area === "connection"
-      ? "Plembfin keeps watch history in sync across every connected server."
+      ? "Plekt keeps watch history in sync across every connected server."
       : "Metadata providers enrich detail pages with artwork, ratings, and episode data.",
     items,
     onPick: (id) => openServiceEditModal(id),

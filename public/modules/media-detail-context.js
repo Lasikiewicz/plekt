@@ -1,9 +1,9 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, platformName, formatDate } from "./utils.js?v=1.3.1.1.2";
-import { historyAction, syncStatus, telemetryLineValue } from "./sync.js?v=1.3.1.1.2";
-import { syncInlineMediaDetailHeading } from "./explorer.js?v=1.3.1.1.2";
-import { auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync } from "./media-info-summary.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, platformName, formatDate } from "./utils.js?v=1.3.1.2.1";
+import { historyAction, syncStatus, telemetryLineValue } from "./sync.js?v=1.3.1.2.1";
+import { syncInlineMediaDetailHeading } from "./explorer.js?v=1.3.1.2.1";
+import { auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync } from "./media-info-summary.js?v=1.3.1.2.1";
 
 let _cb = {};
 let _mediaRenderToken = 0;
@@ -387,12 +387,12 @@ function auditEventLabel(event = {}) {
   }
   if (type === "playback_detected") return "Playback detected";
   if (type === "playback_ended") return "Playback ended";
-  if (type === "history_added") return "Added to Plembfin watch history";
-  if (type === "history_state_recorded") return "Watch state recorded in Plembfin";
-  if (type === "history_deleted") return "Removed from Plembfin watch history";
-  if (type === "history_record_updated") return "Plembfin history record updated";
+  if (type === "history_added") return "Added to Plekt watch history";
+  if (type === "history_state_recorded") return "Watch state recorded in Plekt";
+  if (type === "history_deleted") return "Removed from Plekt watch history";
+  if (type === "history_record_updated") return "Plekt history record updated";
   if (type === "sync_queued") return "Outbound sync queued";
-  if (type === "playstate_updated") return "Plembfin playstate updated";
+  if (type === "playstate_updated") return "Plekt playstate updated";
   if (type === "resume_progress_stored") return "Resume progress stored";
   if (type === "resume_progress_cleared") return "Resume progress cleared";
   if (type === "sync_dispatch") return "Outbound sync dispatched";
@@ -663,7 +663,7 @@ function exportFieldLines(entries, indent = "") {
 
 function mediaInfoExportText({ context, title, summaryText, isTv, records, glanceEntries, auditEvents = [], auditCoverage = {} }) {
   const lines = [
-    "PLEMBFIN MEDIA INFORMATION",
+    "PLEKT MEDIA INFORMATION",
     "===========================",
     `Title: ${title}`,
     `Media type: ${isTv ? "TV show" : "Movie"}`,
@@ -767,7 +767,7 @@ function mediaInfoExportFilename(title) {
     .trim()
     .replace(/\s+/g, "-")
     .slice(0, 80) || "media";
-  return `${safeTitle}-plembfin-info.txt`;
+  return `${safeTitle}-plekt-info.txt`;
 }
 
 function downloadMediaInfoText(title, text) {
@@ -862,7 +862,7 @@ export async function openMediaInfoModal() {
   };
   const summaryText = isTv
     ? `${watchedCount} of ${infoValue(totalCount, "?")} episodes watched · ${progress}% complete`
-    : (records.length ? `Watched · ${infoDate(watchDates.at(-1))}` : "Not watched in Plembfin");
+    : (records.length ? `Watched · ${infoDate(watchDates.at(-1))}` : "Not watched in Plekt");
   const exportText = mediaInfoExportText({ context: activeContext, title, summaryText, isTv, records, glanceEntries, auditEvents, auditCoverage });
   const auditTimeline = debugEvents.length ? renderInfoAuditTimeline(debugEvents, debugCoverage) : "";
   const auditErrorHtml = auditError ? `<div class="media-info-audit-error"><strong>Audit timeline unavailable</strong><span>${escapeHtml(auditError)}</span></div>` : "";

@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=1.3.1.2.1";
 
 function identityValues(item = {}, kind = "tmdb") {
   const capitalized = `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;
@@ -132,7 +132,7 @@ export function chooseUpNextRemovalScope(item = {}) {
     overlay.innerHTML = `
       <div class="edit-dialog">
         <h3>Remove from Up Next</h3>
-        <p class="confirm-dialog-body">"${escapeHtml(title)}" has more than one card in Up Next. Hide only Season ${escapeHtml(String(item.season ?? ""))}, or the whole show? Either way it is removed in Plembfin and every connected media app.</p>
+        <p class="confirm-dialog-body">"${escapeHtml(title)}" has more than one card in Up Next. Hide only Season ${escapeHtml(String(item.season ?? ""))}, or the whole show? Either way it is removed in Plekt and every connected media app.</p>
         <div class="edit-dialog-actions">
           <button class="button-danger confirm-dialog-confirm" type="button" data-scope="season">Hide Season ${escapeHtml(String(item.season ?? ""))}</button>
           <button class="button-danger" type="button" data-scope="show">Hide show</button>

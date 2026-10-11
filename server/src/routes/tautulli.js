@@ -95,7 +95,7 @@ async function runPreviewJob(job, config, body) {
       reviewDecisions: normalizeReviewDecisions(body.reviewDecisions),
       onProgress: ({ completed, total }) => {
         job.phase = "preparing";
-        job.message = "Matching imported history against existing Plembfin records…";
+        job.message = "Matching imported history against existing Plekt records…";
         job.progress = {
           completed,
           total,

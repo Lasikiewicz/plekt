@@ -1,6 +1,6 @@
-# Contributing to Plembfin
+# Contributing to Plekt
 
-Thanks for your interest in improving Plembfin. This is a self-hosted, single-maintainer
+Thanks for your interest in improving Plekt. This is a self-hosted, single-maintainer
 project, so please keep pull requests focused and read this guide before opening one.
 
 ## Before you start

@@ -2,7 +2,7 @@
 
 Local single-admin auth: username/password login, a signed session cookie, an API key
 for integrations, and a separate webhook secret. Provider account connections are
-outbound authorizations managed by that administrator; they do not replace Plembfin login.
+outbound authorizations managed by that administrator; they do not replace Plekt login.
 
 ## Files
 
@@ -29,7 +29,7 @@ outbound authorizations managed by that administrator; they do not replace Plemb
 
 First boot: if `ADMIN_PASSWORD` is unset and the instance has no prior in-app credentials,
 media connection, watch history, or configured metadata key, it's treated as pristine and
-**no password is generated at all**. The app shows a one-time **Claim this Plembfin
+**no password is generated at all**. The app shows a one-time **Claim this Plekt
 instance** screen instead of sign-in; `POST /api/auth/claim` sets the administrator
 username/password atomically (inside a SQLite immediate transaction guarding
 `accountClaimed`, so two simultaneous claims can't both win) and behaves like
@@ -69,7 +69,7 @@ server logs a `[security]` notice if those env vars are set but inactive; remove
 ## Provider credentials
 
 Media-server and Trakt access/refresh tokens are encrypted with AES-256-GCM before they
-enter SQLite. Plembfin uses `PLEMBFIN_CREDENTIAL_KEY` when provided; otherwise it creates
+enter SQLite. Plekt uses `PLEKT_CREDENTIAL_KEY` when provided; otherwise it creates
 `data/credential.key`. The generated key is not included in database or application
 backups, so a restore containing encrypted provider connections also needs the original
 key. Passwords entered for Emby or Jellyfin are used only for the authorization request

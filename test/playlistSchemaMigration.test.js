@@ -67,7 +67,7 @@ function assertPlaylistConstraints(database) {
 
 test("playlist migration keeps existing lists Plembfin-only with their order", async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-playlist-migration-"));
-  const legacy = new Database(path.join(dataDir, "plembfin.db"));
+  const legacy = new Database(path.join(dataDir, "plekt.db"));
   legacy.exec(`
     CREATE TABLE personal_lists (
       id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
@@ -93,7 +93,7 @@ test("playlist migration keeps existing lists Plembfin-only with their order", a
   try {
     await openWithAppSchema(dataDir);
     await openWithAppSchema(dataDir);
-    const upgraded = new Database(path.join(dataDir, "plembfin.db"));
+    const upgraded = new Database(path.join(dataDir, "plekt.db"));
     assert.ok(upgraded.prepare("SELECT id FROM schema_migrations WHERE id = 43").get());
     // Migration 44 then moves the show out of the mixed list 'a' (next test).
     assert.deepEqual(
@@ -132,7 +132,7 @@ test("migration 44 types playlists and splits a mixed one into a Movies and a TV
   try {
     await openWithAppSchema(dataDir);
     // Back to the state before migration 44, with playlists already synced.
-    const before = new Database(path.join(dataDir, "plembfin.db"));
+    const before = new Database(path.join(dataDir, "plekt.db"));
     before.exec(`
       DELETE FROM schema_migrations WHERE id = 44;
       ALTER TABLE personal_lists DROP COLUMN kind;
@@ -160,7 +160,7 @@ test("migration 44 types playlists and splits a mixed one into a Movies and a TV
     before.close();
 
     await openWithAppSchema(dataDir);
-    const after = new Database(path.join(dataDir, "plembfin.db"));
+    const after = new Database(path.join(dataDir, "plekt.db"));
     const lists = Object.fromEntries(after.prepare("SELECT * FROM personal_lists").all().map((row) => [row.name, row]));
     const items = (listId) => after.prepare("SELECT media_key, position FROM personal_list_items WHERE list_id = ? ORDER BY position").all(listId)
       .map((row) => [row.media_key, row.position]);
@@ -194,7 +194,7 @@ test("migration 45 widens the playlist type to Mixed without losing playlists, i
   try {
     await openWithAppSchema(dataDir);
     // Back to the Movies-or-TV-only column from before migration 45.
-    const before = new Database(path.join(dataDir, "plembfin.db"));
+    const before = new Database(path.join(dataDir, "plekt.db"));
     before.exec(`
       DELETE FROM schema_migrations WHERE id = 45;
       ALTER TABLE personal_lists DROP COLUMN kind;
@@ -207,7 +207,7 @@ test("migration 45 widens the playlist type to Mixed without losing playlists, i
     before.close();
 
     await openWithAppSchema(dataDir);
-    const after = new Database(path.join(dataDir, "plembfin.db"));
+    const after = new Database(path.join(dataDir, "plekt.db"));
     after.pragma("foreign_keys = ON");
     assert.deepEqual(after.prepare("SELECT id, kind FROM personal_lists ORDER BY id").all().map((row) => ({ ...row })),
       [{ id: "m", kind: "movie" }, { id: "t", kind: "tv" }, { id: "u", kind: null }]);
@@ -228,7 +228,7 @@ test("a fresh database gets the playlist schema and indexes", async () => {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-playlist-fresh-"));
   try {
     await openWithAppSchema(dataDir);
-    const fresh = new Database(path.join(dataDir, "plembfin.db"));
+    const fresh = new Database(path.join(dataDir, "plekt.db"));
     for (const index of ["idx_personal_lists_active_name", "idx_personal_list_items_position", "idx_personal_list_entry_ledger_item"]) {
       assert.ok(fresh.prepare("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?").get(index), index);
     }
@@ -247,7 +247,7 @@ test("migration 47 adds the automatic playlist rule columns and keeps existing p
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-playlist-rules-"));
   try {
     await openWithAppSchema(dataDir);
-    const before = new Database(path.join(dataDir, "plembfin.db"));
+    const before = new Database(path.join(dataDir, "plekt.db"));
     before.exec(`
       DELETE FROM schema_migrations WHERE id = 47;
       ALTER TABLE personal_lists DROP COLUMN rule_json;
@@ -259,7 +259,7 @@ test("migration 47 adds the automatic playlist rule columns and keeps existing p
     before.close();
 
     await openWithAppSchema(dataDir);
-    const after = new Database(path.join(dataDir, "plembfin.db"));
+    const after = new Database(path.join(dataDir, "plekt.db"));
     assert.deepEqual({ ...after.prepare("SELECT id, kind, rule_json, rule_checked_at, rule_error FROM personal_lists").get() },
       { id: "m", kind: "movie", rule_json: null, rule_checked_at: null, rule_error: null });
     assert.equal(after.prepare("SELECT COUNT(*) AS n FROM personal_list_items WHERE list_id = 'm'").get().n, 1);
@@ -274,7 +274,7 @@ test("migration 49 adds Remove items once watched (off) and the hand-off table",
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-playlist-watched-"));
   try {
     await openWithAppSchema(dataDir);
-    const before = new Database(path.join(dataDir, "plembfin.db"));
+    const before = new Database(path.join(dataDir, "plekt.db"));
     before.exec(`
       DELETE FROM schema_migrations WHERE id = 49;
       DROP TABLE personal_list_handoffs;
@@ -284,7 +284,7 @@ test("migration 49 adds Remove items once watched (off) and the hand-off table",
     before.close();
 
     await openWithAppSchema(dataDir);
-    const after = new Database(path.join(dataDir, "plembfin.db"));
+    const after = new Database(path.join(dataDir, "plekt.db"));
     assert.equal(after.prepare("SELECT remove_watched FROM personal_lists WHERE id = 'w'").get().remove_watched, 0);
     after.prepare("INSERT INTO personal_list_handoffs (list_id, identity, handed_off_at) VALUES ('w', 'movie:tmdb:1', 1)").run();
     after.pragma("foreign_keys = ON");

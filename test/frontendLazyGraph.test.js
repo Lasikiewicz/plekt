@@ -147,9 +147,12 @@ test("a route waits for its own modules and is replayed once, not the whole grap
   assert.doesNotMatch(appSource, /import\("\.\/modules\//, "route modules are loaded through route-modules.js only");
 });
 
-test("the dashboard waits for a fresh server Up Next projection before painting saved cards", () => {
+test("the dashboard paints saved Up Next cards with a per-title check status while revalidating", () => {
   assert.match(appSource, /loadUpNext\(\{ force: true \}\)/);
   assert.match(upNextSource, /const params = force \? "refresh=1" : "revalidate=1";/);
-  assert.match(upNextSource, /state\.upNextFromCache && \(state\.upNextLoading \|\| \(!state\.upNextLoadedAt && !state\.upNextError\)\)/);
+  assert.match(upNextSource, /const checkingCachedItems = state\.upNextFromCache\s+&& \(state\.upNextLoading \|\| \(!state\.upNextLoadedAt && !state\.upNextError\)\)/);
+  assert.match(upNextSource, /checking: checkingCachedItems/);
+  assert.match(fs.readFileSync(path.resolve(import.meta.dirname, "../public/modules/dashboard.js"), "utf8"), /up-next-checking-status.*Checking/);
+  assert.doesNotMatch(upNextSource, /state\.upNextFromCache && \(state\.upNextLoading/);
   assert.doesNotMatch(upNextSource, /allowStale|UP_NEXT_STALE_FOLLOW_UP_MS/);
 });

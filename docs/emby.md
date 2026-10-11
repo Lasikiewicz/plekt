@@ -1,6 +1,6 @@
 # Emby Integration
 
-How Plembfin talks to Emby: webhooks in, API calls out, plus scheduled catch-up
+How Plekt talks to Emby: webhooks in, API calls out, plus scheduled catch-up
 polling. Read [architecture.md](architecture.md) first for the big picture.
 
 ## Files
@@ -15,14 +15,14 @@ polling. Read [architecture.md](architecture.md) first for the big picture.
 
 ## Configuration
 
-Settings → Media Servers → Emby uses account setup by default. Plembfin sends the server
+Settings → Media Servers → Emby uses account setup by default. Plekt sends the server
 URL, username, and password directly to that Emby server, verifies the returned user, and
 stores only the encrypted user-scoped token. The password is never persisted.
 
 Manual setup remains optional; its values are stored in the `settings` SQLite row and env
 vars `EMBY_SERVER_URL` / `EMBY_API_KEY` / `EMBY_USER_ID` act as defaults:
 
-- **baseUrl** - reachable *from the Plembfin server machine*
+- **baseUrl** - reachable *from the Plekt server machine*
 - **apiKey** - an Emby API key (Dashboard → Advanced → API Keys)
 - **userId** - the Emby user whose watch state is tracked and written
 
@@ -35,7 +35,7 @@ manual setup switches Emby back to manual mode. Requests authenticate with the
 
 Emby is not a Personal Watchlist Sync provider. Emby has no native account-level
 watchlist contract; its playlist and Favorites equivalents are library-bound and cannot
-represent titles the user does not own. Plembfin therefore keeps the personal watchlist
+represent titles the user does not own. Plekt therefore keeps the personal watchlist
 projection on Plex, whose account Universal Watchlist can hold the full catalogue. Emby's
 watched-state and personal-rating integrations remain independent of that feature; see
 [personal-watchlist.md](personal-watchlist.md) for the supported watchlist flow.
@@ -54,7 +54,7 @@ without enough title/type/progress data to record a watch.
 - `playback.stop` → `completed` at the watched threshold (90% by default), else `ended`
 
 `item.markplayed` and userdata-saved events are also tagged `playedFlagOnly`, because
-Emby fires them whenever anything sets the played flag - including Plembfin's own
+Emby fires them whenever anything sets the played flag - including Plekt's own
 outbound sync - and can deliver them hours late. They are dated from the item's
 `LastPlayedDate` rather than arrival time, and never record a rewatch for an item
 already marked watched. See [webhooks.md](webhooks.md#rewatch-detection).
@@ -84,7 +84,7 @@ Every minute `fetchLiveSessions` polls `/Sessions` for Now Playing. The catch-up
 
 **Enabled by default** - set `EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED=false` to disable it. Every
 5 minutes (`EMBY_UNWATCHED_POLL_INTERVAL_MS`), **unwatched reconciliation**
-(`checkEmbyUnwatchedStatus`) re-checks up to 5 items Plembfin thinks are watched via Emby
+(`checkEmbyUnwatchedStatus`) re-checks up to 5 items Plekt thinks are watched via Emby
 against Emby's current played flag. Emby's webhook natively reports `Mark Unplayed`, so
 this is a backstop for a missed or misconfigured webhook, not the primary detection path -
 mirrors `checkPlexUnwatchedStatus` in [plex.md](plex.md), but Plex needs that poll as its

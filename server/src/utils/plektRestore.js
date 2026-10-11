@@ -6,7 +6,8 @@ import { StringDecoder } from "node:string_decoder";
 import { promisify } from "node:util";
 import { db } from "../db.js";
 import { FULL_BACKUPS_DIR } from "../paths.js";
-import { BACKUP_FORMAT, BACKUP_VERSION, BROWSER_BACKUP_COLLECTIONS, importCollectionBatch } from "./backup.js";
+import { BACKUP_VERSION, BROWSER_BACKUP_COLLECTIONS, importCollectionBatch } from "./backup.js";
+import { ENCRYPTED_BACKUP_FORMAT_FIELD_PATTERN, isBackupFormat, isEncryptedBackupFormat } from "./backupNames.js";
 import { BackupStreamScanner } from "./backupStreamScanner.js";
 import { isAuthoritativeRestoreActive } from "./configStore.js";
 import { pauseCronSync, resumeCronSync } from "./watchHistoryBackups.js";
@@ -19,7 +20,6 @@ import { pauseCronSync, resumeCronSync } from "./watchHistoryBackups.js";
 // passes; the second pass imports through importCollectionBatch, the same
 // rules as the browser restore.
 
-const ENCRYPTED_FORMAT = "plembfin-encrypted-backup";
 const ENCRYPTED_VERSION = 1;
 const DEFAULT_ITERATIONS = 250000;
 const HEADER_PEEK_BYTES = 64 * 1024;
@@ -30,10 +30,10 @@ const UPLOAD_PREFIX = "plembfin-restore-upload-";
 const UPLOAD_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const STALE_UPLOAD_MS = 24 * 60 * 60 * 1000;
 const RESTORED_COLLECTIONS = new Set(BROWSER_BACKUP_COLLECTIONS);
-const DECRYPT_ERROR = "Could not decrypt this Plembfin backup. Check the passphrase and file.";
+const DECRYPT_ERROR = "Could not decrypt this Plekt backup. Check the passphrase and file.";
 const DATABASE_RECOVERY_OPTIONS = Object.freeze([
   "Cancel the restore and keep the current database files for recovery.",
-  "Preserve plembfin.db and its -wal/-shm sidecars, start Plembfin with a clean database, then retry this backup. The backup replaces its supported collections and may not include the newest changes.",
+  "Preserve the database file (plekt.db, or plembfin.db on an older install) and its -wal/-shm sidecars, start Plekt with a clean database, then retry this backup. The backup replaces its supported collections and may not include the newest changes.",
   "Recover data from the current database with SQLite recovery tools before restoring, if you need changes newer than the backup.",
 ]);
 const pbkdf2 = promisify(crypto.pbkdf2);
@@ -58,18 +58,18 @@ function readHead(filePath) {
 export function readEncryptedEnvelope(filePath) {
   const head = readHead(filePath);
   const text = head.toString("latin1");
-  if (!/"format"\s*:\s*"plembfin-encrypted-backup"/.test(text)) return null;
+  if (!ENCRYPTED_BACKUP_FORMAT_FIELD_PATTERN.test(text)) return null;
   const match = /"payload"\s*:\s*"/.exec(text);
-  if (!match) throw new Error("This is not a supported encrypted Plembfin backup file.");
+  if (!match) throw new Error("This is not a supported encrypted Plekt backup file.");
   let envelope;
   try {
     envelope = JSON.parse(`${text.slice(0, match.index).replace(/[\s,]*$/, "")}}`);
   } catch {
-    throw new Error("This is not a supported encrypted Plembfin backup file.");
+    throw new Error("This is not a supported encrypted Plekt backup file.");
   }
   const encryption = envelope.encryption || {};
-  if (envelope.format !== ENCRYPTED_FORMAT || Number(envelope.version) !== ENCRYPTED_VERSION) {
-    throw new Error("This is not a supported encrypted Plembfin backup file.");
+  if (!isEncryptedBackupFormat(envelope.format) || Number(envelope.version) !== ENCRYPTED_VERSION) {
+    throw new Error("This is not a supported encrypted Plekt backup file.");
   }
   if (encryption.algorithm !== "AES-256-GCM" || encryption.kdf !== "PBKDF2" || (encryption.hash && encryption.hash !== "SHA-256")) {
     throw new Error("This encrypted backup uses an unsupported encryption method.");
@@ -170,8 +170,8 @@ async function verifyBackup(open) {
       counts.set(name, counts.get(name) + 1);
     },
   }, { drainOnError: true });
-  if (header.format !== BACKUP_FORMAT || Number(header.version) !== BACKUP_VERSION) {
-    throw new Error("This is not a supported Plembfin backup file.");
+  if (!isBackupFormat(header.format) || Number(header.version) !== BACKUP_VERSION) {
+    throw new Error("This is not a supported Plekt backup file.");
   }
   if (!counts.size) throw new Error("The backup contains no supported collections.");
   return { portable: header.portable === true, counts };
@@ -217,7 +217,7 @@ function publicJob(job) {
   return { ...rest };
 }
 
-export function getPlembfinRestoreJob() {
+export function getPlektRestoreJob() {
   return publicJob(currentJob);
 }
 
@@ -260,7 +260,7 @@ export async function saveUploadedBackup(readable) {
 // route starts it without awaiting and the Restore page polls the job.
 function assertCanStart(filePath) {
   if (currentJob && ["verifying", "importing"].includes(currentJob.status)) {
-    throw Object.assign(new Error("A Plembfin restore is already running."), { status: 409 });
+    throw Object.assign(new Error("A Plekt restore is already running."), { status: 409 });
   }
   if (isAuthoritativeRestoreActive()) {
     throw Object.assign(new Error("An authoritative watch-history restore is active; backup imports are paused until it completes."), { status: 409 });
@@ -273,7 +273,7 @@ function assertCanStart(filePath) {
     check = null;
   }
   if (!Array.isArray(check) || check.length !== 1 || check[0]?.quick_check !== "ok") {
-    throw Object.assign(new Error("The current Plembfin database failed its SQLite integrity check. The restore was not started and no data was changed."), {
+    throw Object.assign(new Error("The current Plekt database failed its SQLite integrity check. The restore was not started and no data was changed."), {
       status: 409,
       code: "DATABASE_CORRUPT",
       recoveryOptions: DATABASE_RECOVERY_OPTIONS,
@@ -281,7 +281,7 @@ function assertCanStart(filePath) {
   }
 }
 
-export async function runPlembfinRestore({ filePath, passphrase = "", label = "", removeAfter = false }, { prechecked = false } = {}) {
+export async function runPlektRestore({ filePath, passphrase = "", label = "", removeAfter = false }, { prechecked = false } = {}) {
   if (!prechecked) assertCanStart(filePath);
   const stat = fs.statSync(filePath);
   const job = {
@@ -310,7 +310,7 @@ export async function runPlembfinRestore({ filePath, passphrase = "", label = ""
     job.encrypted = Boolean(envelope);
     let key = null;
     if (envelope) {
-      if (!passphrase) throw new Error("Enter the passphrase used when this Plembfin backup was exported.");
+      if (!passphrase) throw new Error("Enter the passphrase used when this Plekt backup was exported.");
       key = await pbkdf2(passphrase, envelope.salt, envelope.iterations, 32, "sha256");
     }
     const open = () => {
@@ -350,9 +350,9 @@ export async function runPlembfinRestore({ filePath, passphrase = "", label = ""
 
 // Checks synchronously (so the route can answer 404/409), then leaves the
 // restore running and returns its initial job status.
-export function startPlembfinRestore(options) {
+export function startPlektRestore(options) {
   assertCanStart(options.filePath);
-  const running = runPlembfinRestore(options, { prechecked: true });
-  running.catch((error) => console.error("Plembfin restore failed to start:", error.message));
+  const running = runPlektRestore(options, { prechecked: true });
+  running.catch((error) => console.error("Plekt restore failed to start:", error.message));
   return publicJob(currentJob);
 }

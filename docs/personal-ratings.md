@@ -1,7 +1,7 @@
 # Personal Rating Sync
 
 Personal ratings are a separate synchronization domain from watched state, play
-history, resume positions, and custom lists. Plembfin's local `personal_ratings`
+history, resume positions, and custom lists. Plekt's local `personal_ratings`
 table remains the canonical store. Remote work is optional and is delivered through
 its own durable queue and scheduler cadence.
 
@@ -14,14 +14,14 @@ The first complete snapshot imports provider ratings; later snapshots reconcile
 additions, changes, and removals. A partial or failed snapshot cannot clear local
 ratings through missing rows.
 
-Plembfin remains the source of truth. A newer canonical Plembfin value wins a
+Plekt remains the source of truth. A newer canonical Plekt value wins a
 conflict and is queued back to the provider. A provider value with no newer local
 change is imported and fanned out to the other connected providers. Outbound intent
-markers suppress an echo of a change Plembfin just sent.
+markers suppress an echo of a change Plekt just sent.
 
 ## Local writes and queue behavior
 
-Rating and remove-rating actions commit Plembfin's canonical value first. If rating
+Rating and remove-rating actions commit Plekt's canonical value first. If rating
 sync is enabled, the same SQLite transaction upserts one queue item per enabled send
 provider. A later edit or removal replaces the pending item for that provider, so a
 stale rating cannot be delivered after a newer intent.
@@ -42,7 +42,7 @@ TVDB, IMDb, and provider item IDs are stored separately for remote writes. This
 prevents an episode's leaf ID from fragmenting the show's episode rating record.
 
 Authenticated Trakt snapshots read the account's ratings feed. For episode writes,
-Plembfin can resolve a Trakt leaf ID from show identity and season/episode
+Plekt can resolve a Trakt leaf ID from show identity and season/episode
 coordinates, then retry with the canonical episode ID when an external episode ID
 is rejected.
 

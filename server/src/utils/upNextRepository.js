@@ -23,7 +23,7 @@ export const PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER = Object.freeze({
   jellyfin: "next_up",
 });
 
-export function isPlembfinPrimaryUpNextFeed(provider, feedKind) {
+export function isPlektPrimaryUpNextFeed(provider, feedKind) {
   const normalizedProvider = String(provider || "").trim().toLowerCase();
   const normalizedFeedKind = String(feedKind || "").trim().toLowerCase();
   return PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER[normalizedProvider] === normalizedFeedKind;

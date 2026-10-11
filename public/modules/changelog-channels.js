@@ -12,8 +12,8 @@
 // version and never raises an update prompt - the server forces
 // alphaBuild.newerBuildAvailable false off the alpha channel for exactly that
 // reason.
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml, formatBuildVersion, formatListDate, versionDisplayLabel } from "./utils.js?v=1.3.1.1.2";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml, formatBuildVersion, formatListDate, versionDisplayLabel } from "./utils.js?v=1.3.1.2.1";
 
 export { formatBuildVersion };
 
@@ -100,8 +100,8 @@ export function baseVersionOf(version) {
 
 function renderWebsiteLink(entry) {
   const websiteUrl = String(entry?.websiteUrl || "").trim();
-  if (!/^https:\/\/plembfin\.com(?:\/|$)/i.test(websiteUrl)) return "";
-  return `<p class="changelog-entry-website"><a href="${escapeAttribute(websiteUrl)}" target="_blank" rel="noopener noreferrer">Visit the Plembfin website</a></p>`;
+  if (!/^https:\/\/(?:plekt\.net|plembfin\.com)(?:\/|$)/i.test(websiteUrl)) return "";
+  return `<p class="changelog-entry-website"><a href="${escapeAttribute(websiteUrl)}" target="_blank" rel="noopener noreferrer">Visit the Plekt website</a></p>`;
 }
 
 // Splits alpha build entries into the ones built on the installed release and
@@ -212,8 +212,12 @@ export async function renderChangelog(force = false) {
     // A release install is never notified about alpha or develop builds: the
     // server forces alphaBuild.newerBuildAvailable false off the alpha channel
     // for exactly that reason, and developBuild is only read on develop.
-    const notices = [];
-    const pullHint = (tag) => `then pull the latest ghcr.io/lasikiewicz/plembfin:${tag} image to update.`;
+    const notices = [{
+      kind: "muted",
+      title: "Plembfin is now Plekt",
+      body: "For Docker installs, change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt. Keep your existing tag, volumes and settings. Both old image names will receive updates for at least six months after the rebrand release. The default web port is now 5056 (it was 5055). If your Jellyfin, Emby or Plex webhooks point at port 5055, update them to 5056, or keep your old port mapping.",
+    }];
+    const pullHint = (tag) => `then pull the latest ghcr.io/lasikiewicz/plekt:${tag} image to update.`;
 
     if (!data.remoteAvailable) {
       notices.push({

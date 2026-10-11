@@ -160,7 +160,7 @@ cards.
 
 The Discover page keeps provider failures actionable: a missing TMDB key links to
 Settings → Metadata, transient TMDB/network failures offer a retry, and a stale local
-server build asks the operator to restart Plembfin. The selected rails, including the
+server build asks the operator to restart Plekt. The selected rails, including the
 personalized recommendation rail, are restored from a bounded browser cache before the
 first request, then refreshed from the server cache when its SSE Discover version changes
 or watch state changes. Watched titles are hidden rather than shown with a watched badge.

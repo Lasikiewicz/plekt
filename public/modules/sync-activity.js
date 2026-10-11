@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=1.3.1.1.2";
-import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=1.3.1.2.1";
+import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=1.3.1.2.1";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -273,11 +273,11 @@ function isActive() {
 // dispatch as Plex here. Sync activity names trackers as well as servers, so it
 // resolves platforms itself.
 const PLATFORMS = {
-  plex: { name: "Plex", icon: "/icons/plex.svg?v=1.3.1.1.2" },
-  emby: { name: "Emby", icon: "/icons/emby.svg?v=1.3.1.1.2" },
-  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=1.3.1.1.2" },
-  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=1.3.1.1.2" },
-  plembfin: { name: "Plembfin", icon: "" },
+  plex: { name: "Plex", icon: "/icons/plex.svg?v=1.3.1.2.1" },
+  emby: { name: "Emby", icon: "/icons/emby.svg?v=1.3.1.2.1" },
+  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=1.3.1.2.1" },
+  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=1.3.1.2.1" },
+  plembfin: { name: "Plekt", icon: "" },
 };
 
 export function activityPlatform(value) {
@@ -373,7 +373,7 @@ export function mediaHrefFor(entry = {}) {
 }
 
 // "Where the request came from and where it went": the source is the app that
-// reported the play, the targets are the apps Plembfin dispatched it to.
+// reported the play, the targets are the apps Plekt dispatched it to.
 function routeLine(entry = {}) {
   const source = activityPlatform(entry.source).name;
   const targets = routeTargetNames(entry);
@@ -390,7 +390,7 @@ function routeLine(entry = {}) {
 
 function traktMatchIssueMessage(entry = {}) {
   return isTraktNotFoundMatchIssue(entry)
-    ? "Trakt could not find this show. Fix the show match and Plembfin will retry this Trakt update automatically."
+    ? "Trakt could not find this show. Fix the show match and Plekt will retry this Trakt update automatically."
     : "";
 }
 
@@ -1202,7 +1202,7 @@ function logTimestamp(value) {
 export function buildSyncActivityLog(entry = {}) {
   const targets = Array.isArray(entry.targetStates) ? entry.targetStates : [];
   const lines = [
-    "Plembfin sync log",
+    "Plekt sync log",
     `Exported: ${new Date().toISOString()}`,
     "",
     `Title: ${entry.title || "Unknown media"}`,
@@ -1325,7 +1325,7 @@ async function fetchAllActivityGroupEvents(groupKey) {
 function buildSyncActivityGroupLog(group = {}, events = []) {
   const latest = groupLatestEntry(group);
   const lines = [
-    "Plembfin grouped sync log",
+    "Plekt grouped sync log",
     `Exported: ${new Date().toISOString()}`,
     "",
     `Title: ${group.title || latest.title || "Unknown media"}`,
@@ -1606,15 +1606,15 @@ function clientAttentionRecommendations(message) {
   }
   if (/timeout|timed out|network|refused|connect|fetch failed|econn|socket/.test(lower)) {
     return [
-      "Confirm the affected service is running and reachable from the Plembfin server.",
+      "Confirm the affected service is running and reachable from the Plekt server.",
       "Check firewall, proxy, DNS, and TLS settings for the connection.",
       "Review Settings → Logs for the full request failure.",
     ];
   }
   if (/not found|404|older build|route missing/.test(lower)) {
     return [
-      "Confirm the requested item or local API route exists in this Plembfin build.",
-      "Restart Plembfin if the message says the server is running an older build.",
+      "Confirm the requested item or local API route exists in this Plekt build.",
+      "Restart Plekt if the message says the server is running an older build.",
       "Review Settings → Logs for the full failure context.",
     ];
   }
@@ -1639,7 +1639,7 @@ export function recordClientAttention(message, tone = "error", options = {}) {
     severity: normalizeAttentionTone(tone, "error"),
     title: clientAttentionTitle(text, String(options.title || "").trim()),
     summary: String(options.summary || text),
-    explanation: String(options.explanation || "Plembfin could not complete this request. The failure is kept here so it is not lost when the page changes."),
+    explanation: String(options.explanation || "Plekt could not complete this request. The failure is kept here so it is not lost when the page changes."),
     recommendations: Array.isArray(options.recommendations) && options.recommendations.length
       ? options.recommendations.filter(Boolean)
       : clientAttentionRecommendations(text),
@@ -1852,7 +1852,7 @@ export function attentionIssueMarkup(parentId, issue = {}) {
     .filter(Boolean)
     .join(" · ");
   const href = String(issue.localHref || "").trim();
-  const linkLabel = String(issue.localLinkLabel || "Open in Plembfin");
+  const linkLabel = String(issue.localLinkLabel || "Open in Plekt");
   const reason = String(issue.reason || (provider && provider !== "Trakt"
     ? `${provider} did not confirm the restored state.`
     : "Trakt could not match this restored play."));
@@ -2144,7 +2144,7 @@ export function clientAttentionItemMarkup(item = {}) {
       <div class="sync-attention-detail-grid">
         <div>
           <h4>What happened</h4>
-          <p>${escapeHtml(item.explanation || "Plembfin could not complete this request.")}</p>
+          <p>${escapeHtml(item.explanation || "Plekt could not complete this request.")}</p>
         </div>
         <div>
           <h4>What to do</h4>
@@ -2393,7 +2393,7 @@ export async function retrySyncAttentionItem(id, itemKey) {
     status: "running",
     requiresMatch: false,
     lines: [
-      `[${attentionIssueTerminalTime()}] plembfin › retry restored item`,
+      `[${attentionIssueTerminalTime()}] plekt › retry restored item`,
       `[${attentionIssueTerminalTime()}] target: ${provider}`,
       `[${attentionIssueTerminalTime()}] Retrying "${title}"...`,
     ],
@@ -2535,7 +2535,7 @@ export async function retrySyncAttentionShow(id, showKey) {
     provider,
     status: "running",
     lines: [
-      `[${attentionIssueTerminalTime()}] plembfin › retry show "${showTitle}"`,
+      `[${attentionIssueTerminalTime()}] plekt › retry show "${showTitle}"`,
       `[${attentionIssueTerminalTime()}] target: ${provider}`,
       `[${attentionIssueTerminalTime()}] Retrying ${repairable.length} plays...`,
     ],
@@ -3247,7 +3247,7 @@ export function initSyncActivityEvents(callbacks = {}) {
       const count = Math.max(Number(dismissShow.dataset.syncActivityDismissShowCount) || 0, 1);
       const confirmed = openConfirmDialog({
         title: `Dismiss Trakt errors for ${showTitle}?`,
-        body: `${count} ${count === 1 ? "episode" : "episodes"} will be marked as intentionally skipped because Trakt does not have this show. Plembfin will keep the local watched state and remember this choice if a later retry still gets the same Trakt not-found result.`,
+        body: `${count} ${count === 1 ? "episode" : "episodes"} will be marked as intentionally skipped because Trakt does not have this show. Plekt will keep the local watched state and remember this choice if a later retry still gets the same Trakt not-found result.`,
         confirmLabel: `Dismiss ${count} error${count === 1 ? "" : "s"}`,
       });
       dismissShow.disabled = true;

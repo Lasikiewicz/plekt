@@ -167,6 +167,52 @@ const insertStmt = db.prepare(`
   )
 `);
 
+// Routine source events keep a compact debug summary, provenance, and request
+// details for 90 days. Rejected events keep the full payload until the same
+// retention cutoff, because they need troubleshooting. Decision recorded in
+// plan/active/data-growth-and-reliability/plan.md.
+export function auditSourceEventPayload(payload = {}, isValid = true) {
+  const raw = payload?.rawPayloadDebug;
+  if (!isValid || !raw || typeof raw !== "object") return payload;
+  return {
+    ...payload,
+    rawPayloadDebug: {
+      trimmed: true,
+      originalBytes: Buffer.byteLength(JSON.stringify(raw)),
+      topLevelKeys: Object.keys(raw),
+      ids: raw.ids && typeof raw.ids === "object" ? raw.ids : null,
+    },
+  };
+}
+
+export const AUDIT_PAYLOAD_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const AUDIT_PAYLOAD_PRUNE_BATCH = 2000;
+const countPrunablePayloadStmt = db.prepare(`
+  SELECT COUNT(*) AS rows, COALESCE(SUM(LENGTH(payload)), 0) AS bytes
+  FROM watch_audit_events
+  WHERE event_type = 'source_event' AND payload IS NOT NULL AND created_at < ?
+`);
+const prunePayloadStmt = db.prepare(`
+  UPDATE watch_audit_events SET payload = NULL
+  WHERE id IN (
+    SELECT id FROM watch_audit_events
+    WHERE event_type = 'source_event' AND payload IS NOT NULL AND created_at < ?
+    LIMIT ?
+  )
+`);
+
+// Read-only: how many payloads and bytes a prune would clear right now.
+export function countPrunableAuditPayloads(now = Date.now()) {
+  const row = countPrunablePayloadStmt.get(now - AUDIT_PAYLOAD_RETENTION_MS);
+  return { rows: Number(row.rows), bytes: Number(row.bytes) };
+}
+
+// Clears source-event payloads older than the retention window in bounded batches. Summary
+// columns (type, media key, phase, source, status, timestamp) are never touched.
+export function pruneWatchAuditPayloads(now = Date.now(), batchSize = AUDIT_PAYLOAD_PRUNE_BATCH) {
+  return prunePayloadStmt.run(now - AUDIT_PAYLOAD_RETENTION_MS, batchSize).changes;
+}
+
 export function recordWatchAuditEvent(event = {}) {
   try {
     const result = insertStmt.run(insertParams(event));

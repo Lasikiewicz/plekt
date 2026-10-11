@@ -93,7 +93,7 @@ watched episodes) instead of the real, already-correct data.
 canonical title key (`canonicalTitleKey(showTitleFrom(title))`), never by an exact
 `show_title_lower` string match. The same real show's episode rows can carry different
 exact show_title text over time - a media server's own title for a show is rarely
-year-suffixed even when Plembfin's preferred display title is, and a Fix Match rename
+year-suffixed even when Plekt's preferred display title is, and a Fix Match rename
 only ever touches rows matching whichever exact text its anchor row happened to have - so
 an exact match only ever sees one variant, silently missing the rest of the same show's
 episodes (or, worse, resolving a different variant to an unrelated show that happens to
@@ -132,7 +132,7 @@ and [webhooks.md#rewatch-detection](webhooks.md#rewatch-detection).
 from TVDB/TMDB details using the record's authoritative TVDB identity when present
 (specials/season 0 excluded - `PROGRESS_CACHE_SCHEMA_VERSION` is
 bumped when the calculation changes shape so stale entries refetch). Genuine
-Plembfin-tracked watches count, including scheduled library-history detections that carry
+Plekt-tracked watches count, including scheduled library-history detections that carry
 both the configured source user and the server's played timestamp. Unscoped scan rows
 remain excluded because they are not sufficient evidence of a user watch. Updates are
 queued (`queueShowProgressUpdate`) and flushed by the scheduler.

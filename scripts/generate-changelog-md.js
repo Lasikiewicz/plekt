@@ -28,7 +28,7 @@ export function generateChangelogMarkdown() {
   const lines = [
     "# Changelog",
     "",
-    "Release history for Plembfin. This file covers published releases on `main` only -",
+    "Release history for Plekt. This file covers published releases on `main` only -",
     "for the current pre-release build on `alpha` or `develop`, open **Settings → About**",
     "in a running instance, which lists that channel's build history separately.",
     "",
@@ -41,7 +41,7 @@ export function generateChangelogMarkdown() {
     const websiteUrl = String(entry.websiteUrl || "").trim();
     if (websiteUrl) {
       lines.push("");
-      lines.push(`[Visit the Plembfin website](${websiteUrl})`);
+      lines.push(`[Visit the Plekt website](${websiteUrl})`);
     }
     lines.push("");
     const sectionGroups = changelogSectionGroups(entry);

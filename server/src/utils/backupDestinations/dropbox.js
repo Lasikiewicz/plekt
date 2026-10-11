@@ -3,8 +3,9 @@
 // folder. Settings: { appKey, folder? }  Secrets: { appSecret, refreshToken }
 import fs from "node:fs";
 import { fetchWithTimeout } from "../outbound.js";
+import { REMOTE_BACKUP_FILE_PATTERN } from "../backupNames.js";
 
-const FILE_PATTERN = /^plembfin-(?:watch-history-\d{8}T\d{6}Z\.json\.gz|backup-\d{8}T\d{6}Z\.encrypted\.json)$/;
+const FILE_PATTERN = REMOTE_BACKUP_FILE_PATTERN;
 
 // access_token cache keyed by destination id (refresh tokens live in the DB).
 const tokenCache = new Map();

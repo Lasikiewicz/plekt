@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="public/plembfin_header_logo_dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="public/plembfin_header_logo_light.png">
-    <img alt="Plembfin Logo" src="public/plembfin_header_logo_dark.png" width="600" style="max-width: 100%;">
+    <source media="(prefers-color-scheme: dark)" srcset="public/plekt_header_logo_dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="public/plekt_header_logo_light.png">
+    <img alt="Plekt Logo" src="public/plekt_header_logo_dark.png" width="600" style="max-width: 100%;">
   </picture>
 </p>
 
@@ -17,29 +17,55 @@
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="#which-version-should-i-run">Which version should I run?</a> ·
   <a href="docs/README.md">Full documentation</a> ·
-  <a href="https://plembfin.com">Website</a> ·
+  <a href="https://plekt.net">Website</a> ·
   <a href="https://discord.gg/7ZmEGKcRC5">Discord</a> ·
   <a href="https://www.reddit.com/r/plembfin/">Reddit</a>
 </p>
 
 ---
 
-> **v1.3.1.** Plembfin writes watched state and playback progress to connected media
+> **v1.3.1.** Plekt writes watched state and playback progress to connected media
 > servers, so **back up first** (Settings → Backup → Local). Report
-> issues on the [issue tracker](https://github.com/Lasikiewicz/plembfin/issues).
+> issues on the [issue tracker](https://github.com/Lasikiewicz/plekt/issues).
 
 ---
 
-**Plembfin** is the brain in the middle. Your media servers, Trakt, and Seerr don't talk
-to each other - Plembfin remembers what you've watched and keeps everyone in sync.
+**Plekt** is the brain in the middle. Your media servers, Trakt, and Seerr don't talk
+to each other - Plekt remembers what you've watched and keeps everyone in sync.
+
+## Formerly Plembfin
+
+This checkout contains the unreleased rebrand. New image/repository names and
+`plekt.net` documentation links must be verified before the rebrand is published.
+
+Plekt is the same app with a new name. Existing Docker installs only need to change
+`ghcr.io/lasikiewicz/plembfin` to `ghcr.io/lasikiewicz/plekt`, or
+`plembfin/plembfin` to `plembfin/plekt`. Keep the same tag, volume, data folder,
+container settings and secrets. Do not replace an existing named volume with the
+fresh-install example below. Both old image names receive updates for at least six
+months after the rebrand release.
+
+Existing `plembfin.db` databases are kept and used; fresh installs use `plekt.db`.
+All `PLEMBFIN_*` environment variables remain accepted; a nonblank `PLEKT_*` value
+wins when both are supplied. The old `X-Plembfin-Webhook-Secret` header still works;
+new integrations can use `X-Plekt-Webhook-Secret`. Existing sign-in cookies,
+browser preferences, provider device ids, backup folders and API routes retain
+legacy identifiers so upgrades keep their state. Existing provider connections
+may still appear as Plembfin in the provider's device list; new connections on a
+fresh install identify as Plekt.
+
+Old backups still restore, list and prune. New backups use Plekt names and cannot
+be restored by older Plembfin builds. The Windows installer is designed to upgrade
+in place and move `%ProgramData%\Plembfin` to `%ProgramData%\Plekt`; its real upgrade
+check is still pending. Existing Unraid installs keep their current appdata path.
 
 ## The hub
 
 <p align="center">
-  <img src="docs/plembfin-hub.svg" alt="Plembfin sits between Plex, Emby, Jellyfin, and Trakt (two-way watch state sync) and TMDB, TheTVDB, Fanart.tv, OMDb, and Overseerr/Jellyseerr (metadata and requests flowing in)" width="100%" />
+  <img src="docs/plekt-hub.svg" alt="Plekt sits between Plex, Emby, Jellyfin, and Trakt (two-way watch state sync) and TMDB, TheTVDB, Fanart.tv, OMDb, and Overseerr/Jellyseerr (metadata and requests flowing in)" width="100%" />
 </p>
 
-None of these talk to each other - they all talk to Plembfin.
+None of these talk to each other - they all talk to Plekt.
 
 - **Remembers** every watch, once, locally in SQLite
 - **Syncs** watched/unwatched state across Plex, Emby, Jellyfin, and Trakt
@@ -55,14 +81,14 @@ None of these talk to each other - they all talk to Plembfin.
 - **Instant state restoration** - Automatically synchronizes watch history to newly added media and rebuilt server libraries
 - **Cross-platform resume** - Pause playback on one server and pick up right where you left off on another
 - **Rewatch tracking** - Full multi-watch history logging with smart deduplication that preserves authentic repeat viewings
-- **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plembfin-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history
+- **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plekt-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history
 - **Sync Activity hub** - Live grouped activity by movie/show, with all resume checkpoints and destination results preserved behind each row, clear reasons for skipped destinations, unresolved cross-platform matches with per-item Fix match actions, targeted retry for actual failed destinations (only the newest unresolved result per movie/episode is retried, individually or all at once as a background job that survives closing the tab; expected missing-library skips are excluded), show-wide Fix Match and retry-all controls for Trakt mismatches, dismiss controls for shows Trakt does not contain, blocked-restore repair grouped by show with Fix Match and skip controls, and downloadable group logs
 - **Rich analytics & stats** - In-depth all-time and period reports, top shows, and platform playback distribution
 - **Personal media organization** - Save movies, shows, and episodes to a watch list or playlists (optionally synced two ways to Plex, Emby, and Jellyfin, or filled automatically from genre, original language, year, and watched rules, with TV playlists holding the next episode of each show, and watched items removed if you choose), and rate them from their media pages; episode ratings use one canonical show/season/episode identity everywhere
 - **Cache-first media detail pages** - Reuse the latest local history snapshot on reload so known artwork, summaries, watched rows, and watch dates stay visible while provider metadata refreshes
 - **Paged media libraries** - Movies and TV Shows load more cards as you scroll without rebuilding the cards already on screen; saved TV pages revalidate after 30 minutes when reopened
-- **Personal Rating Sync** - One-toggle, two-way rating sync with every connected Plex, Emby, Jellyfin, and Trakt account through an isolated durable queue, with Plembfin as the conflict authority
-- **Plex Watchlist Sync** - One-toggle, two-way sync between Plembfin and the Plex account watchlist, with safe first-run union, durable retries, a Sync now action, and a plain-language explanation of anything Plex refuses
+- **Personal Rating Sync** - One-toggle, two-way rating sync with every connected Plex, Emby, Jellyfin, and Trakt account through an isolated durable queue, with Plekt as the conflict authority
+- **Plex Watchlist Sync** - One-toggle, two-way sync between Plekt and the Plex account watchlist, with safe first-run union, durable retries, a Sync now action, and a plain-language explanation of anything Plex refuses
 - **Upcoming episodes calendar** - Air date schedule for upcoming and past releases, pre-cached for instant loading
 - **Discover hub** - Personalized recommendations from your watch history plus cached trending, now-playing, airing-today, and genre feeds paint immediately from saved data, exclude titles you have already watched, and refresh live through the update stream with direct TMDB detail navigation
 - **Live Trakt sync** - Two-way Trakt integration with seamless device authorization, per-play history import, and resilient sync protection
@@ -87,7 +113,7 @@ See [`docs/architecture.md`](docs/architecture.md) for how each feature is actua
 Use the two switches at the bottom of the sidebar to choose **Classic** or **Modern** and
 **Light** or **Dark**. The choices are independent: each style works in either mode. Classic
 is the default; Modern changes the surfaces and accents while keeping the same pages and
-controls. Both choices are saved in your browser and restored when you reopen Plembfin.
+controls. Both choices are saved in your browser and restored when you reopen Plekt.
 On a phone, open the navigation drawer to reach the switches.
 
 The **Appearance** menu on movie and TV detail pages controls which optional sections,
@@ -97,6 +123,9 @@ switches.
 ---
 
 ## Screenshots
+
+These screenshots predate the rebrand and may show the old Plembfin name or logo.
+They will be refreshed against the approved release candidate.
 
 <p align="center">
   <img src="docs/screenshots/now-playing.png" alt="Now Playing dashboard" width="100%" />
@@ -154,23 +183,23 @@ switches.
 
 ### Which version should I run?
 
-Plembfin publishes three Docker tags, one per release channel. Most people should
+Plekt publishes three Docker tags, one per release channel. Most people should
 just use `:latest` - the guidance below is for anyone who wants to help test fixes
 before they're officially released.
 
 | Tag | Branch | Stability | Who it's for |
 |---|---|---|---|
-| `ghcr.io/lasikiewicz/plembfin:latest` (**recommended**) | `main` | Tested, tagged releases only | Everyone. Used by the Docker Compose example below. |
-| `ghcr.io/lasikiewicz/plembfin:alpha` | `alpha` | Pre-release; queued fixes not yet a numbered version | Testers who want fixes early and don't mind rough edges |
-| `ghcr.io/lasikiewicz/plembfin:develop` | `develop` | Bleeding edge; every commit, least tested | Contributors and the most adventurous testers |
+| `ghcr.io/lasikiewicz/plekt:latest` (**recommended**) | `main` | Tested, tagged releases only | Everyone. Used by the Docker Compose example below. |
+| `ghcr.io/lasikiewicz/plekt:alpha` | `alpha` | Pre-release; queued fixes not yet a numbered version | Testers who want fixes early and don't mind rough edges |
+| `ghcr.io/lasikiewicz/plekt:develop` | `develop` | Bleeding edge; every commit, least tested | Contributors and the most adventurous testers |
 
 Each channel shows its own version in the sidebar and **About**. Develop builds
 include the current release version and cycle number (for example, `1.3.1 Build 1`). See
 [`CHANGELOG.md`](CHANGELOG.md) for numbered releases, and
 [`docs/development.md`](docs/development.md) for how the three channels relate.
 
-Tagged releases are also on Docker Hub as `plembfin/plembfin:latest` (and
-`plembfin/plembfin:<version>`), the same image as the GHCR `:latest`. The `alpha` and
+Tagged releases are also on Docker Hub as `plembfin/plekt:latest` (and
+`plembfin/plekt:<version>`), the same image as the GHCR `:latest`. The `alpha` and
 `develop` channels are published to GHCR only.
 
 To run a different channel, swap the `image:` tag in the Docker Compose example below -
@@ -178,7 +207,7 @@ everything else about setup is identical.
 
 ### Public demo
 
-Try the [public Plembfin demo](https://demo.plembfin.com/) with `demo` / `demo`.
+Try the [public Plekt demo](https://demo.plembfin.com/) with `demo` / `demo`.
 It runs in an isolated demo mode on a dedicated Oracle Cloud Compute instance;
 actions are simulated in the browser, media-provider integrations are disabled,
 and the fixed bundled artwork and metadata catalogue is served without contacting
@@ -202,9 +231,9 @@ rebuild an image.
    no local clone needed:
    ```yaml
    services:
-     plembfin:
-       image: ghcr.io/lasikiewicz/plembfin:latest
-       container_name: plembfin
+     plekt:
+       image: ghcr.io/lasikiewicz/plekt:latest
+       container_name: plekt
        ports:
          - "5056:5055"
        volumes:
@@ -222,8 +251,8 @@ rebuild an image.
 > folder bind mount such as `./data:/data`. The file sharing layer that bind mounts use
 > there can corrupt the SQLite database under heavy writes (for example a first Trakt
 > sync), which shows up as `database disk image is malformed`. Use
-> `- plembfin-data:/data` under `volumes:` and add a top-level `volumes: { plembfin-data: {} }`.
-> Never open `plembfin.db` from the host while the container is running. Linux hosts
+> `- plekt-data:/data` under `volumes:` and add a top-level `volumes: { plekt-data: {} }`.
+> Never open `plekt.db` (or an existing `plembfin.db`) from the host while the container is running. Linux hosts
 > are not affected.
 
 This base example is intended for a local or trusted network. For a remotely reachable
@@ -238,7 +267,7 @@ give each tester an isolated `data/` volume.
 > Want a hardened production setup (read-only filesystem, required secrets,
 > `COOKIE_SECURE`)? Clone the repo and use the bundled secure overlay:
 > ```bash
-> git clone https://github.com/Lasikiewicz/plembfin.git && cd plembfin
+> git clone https://github.com/Lasikiewicz/plekt.git && cd plekt
 > docker compose -f docker-compose.yml -f docker-compose.secure.yml up -d
 > ```
 > See [`docs/hardening.md`](docs/hardening.md) for the full guide.
@@ -246,23 +275,23 @@ give each tester an isolated `data/` volume.
 ### Method B: Windows installer
 
 On 64-bit Windows, download the latest
-[Plembfin installer from GitHub Releases](https://github.com/Lasikiewicz/plembfin/releases/latest)
+[Plekt installer from GitHub Releases](https://github.com/Lasikiewicz/plekt/releases/latest)
 and run it as an administrator. The installer bundles the Node.js runtime and native
-Windows dependencies, registers Plembfin as a background Windows service, and creates
+Windows dependencies, registers Plekt as a background Windows service, and creates
 a Start Menu shortcut for the dashboard.
 
-Plembfin stores its database, artwork cache, logs, and backups in
-`%ProgramData%\Plembfin`. The installer can also create an optional notification-area
+Plekt stores its database, artwork cache, logs, and backups in
+`%ProgramData%\Plekt`. The installer can also create an optional notification-area
 companion that shows service status and opens the dashboard, plus an optional private
 network firewall rule for access from other devices. The Start Menu also includes a
 shortcut for launching the companion later. New installs default to port 5056; the wizard
 lets you choose a different TCP port, and upgrades prefill the current port while applying
 any new choice to the existing service, firewall rule, and tray links. On first launch,
-use the one-time **Claim this Plembfin instance** screen if no administrator password was
+use the one-time **Claim this Plekt instance** screen if no administrator password was
 configured.
 
 Testers running the `alpha` channel can download its matching Windows installer from the
-[GitHub Releases](https://github.com/Lasikiewicz/plembfin/releases) page. Alpha installers
+[GitHub Releases](https://github.com/Lasikiewicz/plekt/releases) page. Alpha installers
 are marked as prereleases with tags such as `v1.3.1-alpha.1`; the `latest` release remains
 the stable `main` installer.
 
@@ -270,7 +299,7 @@ Each alpha and stable build also publishes a formatted GitHub Release with its c
 changes, safe-start guidance, known limitations, Docker tags, installer status, and project
 links. Release notes are generated from the changelog committed with that build.
 
-Uninstalling preserves `%ProgramData%\Plembfin` by default. The uninstaller offers a
+Uninstalling preserves `%ProgramData%\Plekt` by default. The uninstaller offers a
 separate confirmation if you also want to remove the database, cache, logs, and backups.
 
 ### Method C: Bare metal (Node.js)
@@ -294,7 +323,7 @@ instead of the restricted sandbox, or outbound Plex/Emby/Jellyfin requests can f
 with `EACCES` even though `http://localhost:5056` is working.
 
 Open `http://localhost:5056`. If you didn't set `ADMIN_PASSWORD`, the app shows a
-one-time **Claim this Plembfin instance** screen - create the administrator username and
+one-time **Claim this Plekt instance** screen - create the administrator username and
 password there instead of looking for a generated password anywhere.
 
 > [!TIP]
@@ -303,14 +332,14 @@ password there instead of looking for a generated password anywhere.
 ### Method D: Unraid
 
 The repository includes the Unraid Community Applications metadata in
-[`ca_profile.xml`](ca_profile.xml) and [`templates/plembfin.xml`](templates/plembfin.xml).
-Plembfin appears in the Unraid **Apps** search after the repository has completed the
+[`ca_profile.xml`](ca_profile.xml) and [`templates/plekt.xml`](templates/plekt.xml).
+Plekt appears in the Unraid **Apps** search after the repository has completed the
 Community Applications review process.
 
 Until then, add it from **Docker → Add Container**:
 
-1. Set **Repository** to `ghcr.io/lasikiewicz/plembfin:latest`.
-2. Map `/mnt/user/appdata/plembfin` to the container path `/data`.
+1. Set **Repository** to `ghcr.io/lasikiewicz/plekt:latest`.
+2. Map `/mnt/user/appdata/plekt` to the container path `/data`.
 3. Map host port `5056` to container port `5055`.
 4. Leave `ADMIN_PASSWORD` blank to use the one-time claim screen on a fresh install,
    or set a strong password in the container environment.
@@ -322,7 +351,7 @@ Until then, add it from **Docker → Add Container**:
 
 Sign in with the administrator credentials from your installation, or claim a fresh
 instance by creating its administrator username and password. Claiming can only be done
-once. Plembfin then opens the guided `/setup` wizard. You can return to it later with
+once. Plekt then opens the guided `/setup` wizard. You can return to it later with
 **Reopen Onboarding** on the Settings → Tools page, and your progress is saved as you go.
 
 The wizard has nine stages:
@@ -332,10 +361,10 @@ Jellyfin connection is recommended, but no server is required to finish; Trakt, 
 metadata providers, webhooks, and backups can be skipped and configured later.
 
 **2. Trakt (optional).** Select **Connect Trakt**, open the displayed activation page,
-and enter the device code. Plembfin uses its built-in Trakt app credentials, so no
+and enter the device code. Plekt uses its built-in Trakt app credentials, so no
 personal API key or Trakt VIP subscription is required. Leave **Import watch history
 from Trakt** selected if you want existing plays imported. Connecting Trakt before the
-media servers lets Plembfin prefer its earlier watched dates when server dates were
+media servers lets Plekt prefer its earlier watched dates when server dates were
 reset by a library rebuild or rescan.
 
 **3. Metadata.** Add a free TMDB key from
@@ -358,7 +387,7 @@ more than one:
   API key and user ID manually.
 
 For each tested server, leave **Import watched status** selected to bring its existing
-history into Plembfin. Those imports wait for the Trakt import when necessary so the
+history into Plekt. Those imports wait for the Trakt import when necessary so the
 best available watched dates are retained. Only one connection mode is active for each
 server at a time.
 
@@ -390,10 +419,10 @@ selected server imports may show **Waiting** until it finishes.
 
 **8. Options.** Choose how app-marked watched flags are dated or sent to Manual Watch
 review, and whether to enable **Sync Up Next to media apps**. Up Next sync is enabled by
-default; when enabled, Plembfin keeps its Up Next queue in sync with Plex and Emby's Continue
+default; when enabled, Plekt keeps its Up Next queue in sync with Plex and Emby's Continue
 Watching and Jellyfin's Next Up. Queue additions, removals, reorderings, and progress changes
 coalesce into a background provider push, including when the dashboard is closed. Turn it off to
-leave those app lists unchanged; Plembfin's own
+leave those app lists unchanged; Plekt's own
 Up Next view remains available. These choices can be changed later under Settings →
 Sync → **Sync Tuning**.
 
@@ -403,15 +432,15 @@ can be marked manually from search. Any skipped item can be completed later from
 or the dashboard setup checklist.
 
 After onboarding, tune thresholds and timeouts under Settings → Sync → **Sync Tuning**.
-Items Plembfin could not identify appear in Sync Activity's **Issues only** view. New media that arrives
-already watched in Plembfin can be marked watched on the server automatically; see
+Items Plekt could not identify appear in Sync Activity's **Issues only** view. New media that arrives
+already watched in Plekt can be marked watched on the server automatically; see
 [webhooks.md](docs/webhooks.md#catching-up-newly-added-media) for the library-add flow.
 
 ---
 
 ## Webhook Setup
 
-Playback events reach Plembfin via webhooks. Each platform's setup guide under
+Playback events reach Plekt via webhooks. Each platform's setup guide under
 **Settings → Webhooks → Setup Guides** includes a ready-to-copy URL with your secret
 already in it - it looks like:
 
@@ -423,7 +452,7 @@ http://<YOUR_HOST>:5056/api/webhook?token=<your-secret>
 > Use the full URL with `?token=` for servers that can't set custom headers. Rotating
 > the secret means updating it everywhere it's used.
 
-**Plex** - no setup required. Plembfin connects to your Plex Media Server's WebSocket
+**Plex** - no setup required. Plekt connects to your Plex Media Server's WebSocket
 notification channel automatically to capture watched and unwatched changes in real
 time, and polls playback progress as a backstop - every 10 seconds while something's
 playing, backing off to every 45 seconds while idle.
@@ -441,11 +470,11 @@ Properties**.
 
 ## Backup & Restore
 
-Plembfin runs automated daily backups; each type has its own schedule, retention, and
+Plekt runs automated daily backups; each type has its own schedule, retention, and
 manual Back Up Now button.
 
 - **Watch history backups** - snapshots of history, playstates, and resume markers (`data/backups/watch-history`)
-- **Full Plembfin backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
+- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
 - **Personal watchlist recovery** - full backups include the local canonical watchlist and sync ledger; restore pauses provider delivery until an explicit publish, while watch-history-only backups exclude it
 - **Remote backups** - optional Backblaze B2 copies of either type, with per-type schedules and retention settings (Settings → Backup → Remote)
 
@@ -460,14 +489,14 @@ to a newly connected server.
 
 **From Tautulli (one-time):** open **Settings → Connections → Tautulli Watch-History
 Importer**, configure the Tautulli URL/API key, select one user, preview completed
-history, and choose the media-server targets. Plembfin creates a local watch-history
+history, and choose the media-server targets. Plekt creates a local watch-history
 backup before importing, keeps Tautulli unchanged, and merges same-day plays already
 represented by Trakt or another source while preserving rewatches on different days.
 
 **Live Trakt sync (ongoing):** Settings → Connections → Trakt → **Connect Trakt**, authorize
 with the displayed device code - no Trakt VIP or personal API credentials needed. Once connected,
 watched/unwatched state flows both ways every minute, including individual rewatches.
-Disable any Emby/Jellyfin Trakt plugins so Plembfin is the only Trakt writer. See
+Disable any Emby/Jellyfin Trakt plugins so Plekt is the only Trakt writer. See
 [`docs/webhooks.md`](docs/webhooks.md) for how this interacts with other sync sources.
 
 ---
@@ -500,9 +529,9 @@ is in [`.env.example`](.env.example).
 | `API_KEY` | _generated_ | Token authorizing incoming webhooks and API calls. |
 | `WEBHOOK_SECRET` | _generated_ | Secret for webhook auth; rotatable independently of `API_KEY`. |
 | `SESSION_SECRET` | _generated_ | Signing secret for the session cookie. |
-| `PLEMBFIN_CREDENTIAL_KEY` | _generated file_ | Optional external credential-vault key (64 hex chars or base64url). Keep with disaster-recovery material. |
-| `PLEMBFIN_PUBLIC_URL` | _none_ | Fixed public origin for provider return links (`http(s)://host`, no path). |
-| `PLEMBFIN_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
+| `PLEKT_CREDENTIAL_KEY` | _generated file_ | Optional external credential-vault key (64 hex chars or base64url). Keep with disaster-recovery material. |
+| `PLEKT_PUBLIC_URL` | _none_ | Fixed public origin for provider return links (`http(s)://host`, no path). |
+| `PLEKT_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS to enable the `Secure` cookie flag and HSTS. |
 | `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` | _built-in_ | Optional replacement for the bundled Trakt app. Both required together. |
 | `LOG_VERBOSE` | `false` | Set `true` for full per-request tracing in Settings → Logs. |
@@ -514,7 +543,7 @@ is in [`.env.example`](.env.example).
 | `OMDB_API_KEY` | _none_ | Optional key for IMDb rating badges. Free tier: 1,000 req/day. |
 | `PUBLIC_TRAKS_SITE_KEY` | _none_ | Optional public website build setting for Traks; the browser uses first-party `/t` and `/api/event` routes. Use the current key from the Traks Installation panel. |
 | `TRAKS_COLLECTOR_ORIGIN` | _none_ | Cloudflare Pages runtime origin for the Traks collector; it is kept out of browser configuration. `PUBLIC_TRAKS_SCRIPT_URL` remains a legacy fallback. |
-| `PLEMBFIN_TRAKS_COLLECTOR_ORIGIN` / `PLEMBFIN_TRAKS_SITE_KEY` | _none_ | Optional public-demo Traks settings; the demo proxies `/t` and `/api/event` first-party. `PLEMBFIN_TRAKS_SCRIPT_URL` remains a legacy origin fallback. |
+| `PLEKT_TRAKS_COLLECTOR_ORIGIN` / `PLEKT_TRAKS_SITE_KEY` | _none_ | Optional public-demo Traks settings; the demo proxies `/t` and `/api/event` first-party. `PLEKT_TRAKS_SCRIPT_URL` remains a legacy origin fallback. |
 | `PLEX_SERVER_URL` / `PLEX_TOKEN` / `PLEX_USERNAME` / `PLEX_ENABLED` | _none_ | Default Plex values (Settings takes precedence). |
 | `EMBY_SERVER_URL` / `EMBY_API_KEY` / `EMBY_USER_ID` / `EMBY_ENABLED` | _none_ | Default Emby values (Settings takes precedence). |
 | `JELLYFIN_SERVER_URL` / `JELLYFIN_API_KEY` / `JELLYFIN_USER_ID` / `JELLYFIN_ENABLED` | _none_ | Default Jellyfin values (Settings takes precedence). |
@@ -531,17 +560,17 @@ is in [`.env.example`](.env.example).
 | `MIN_RESUME_POSITION_SEC` | `60` | Minimum position saved as resume progress (0-3600s). Settings takes precedence. |
 | `ACTIVE_SESSION_TTL_MIN` | `5` | Time before an active session goes stale (1-120 min). Settings takes precedence. |
 | `OUTBOUND_TIMEOUT_SEC` | `10` | Default outbound request timeout (2-120s). |
-| `OUTBOUND_PACING_PROFILE` | `standard` | Outbound request pacing: `gentle`, `standard`, or `fast`. Settings → Sync → Sync Tuning's **Fast Local-Network Sync** checkbox toggles between `standard` and `fast` and takes precedence; only enable `fast` when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local network as Plembfin. |
-| `PLEMBFIN_DEBUG_OUTBOUND` | _off_ | Set `1` to log per-host outbound request counts once a minute. |
-| `PLEMBFIN_DEBUG_CACHE_REBUILDS` | _off_ | Set `1` to log one line per derived-cache rebuild: which cache, how long it took, and which change caused it. |
-| `PLEMBFIN_DEBUG_SCHEDULER` | _off_ | Set `1` to log per-step scheduler timing, plus a per-tick summary carrying the real interval between ticks. |
-| `PLEMBFIN_PAUSE_SCHEDULED_WORKER` | _off_ | Diagnostic mode: keep real-time provider listeners available while pausing scheduled sync ticks and background-job polling. |
+| `OUTBOUND_PACING_PROFILE` | `standard` | Outbound request pacing: `gentle`, `standard`, or `fast`. Settings → Sync → Sync Tuning's **Fast Local-Network Sync** checkbox toggles between `standard` and `fast` and takes precedence; only enable `fast` when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local network as Plekt. |
+| `PLEKT_DEBUG_OUTBOUND` | _off_ | Set `1` to log per-host outbound request counts once a minute. |
+| `PLEKT_DEBUG_CACHE_REBUILDS` | _off_ | Set `1` to log one line per derived-cache rebuild: which cache, how long it took, and which change caused it. |
+| `PLEKT_DEBUG_SCHEDULER` | _off_ | Set `1` to log per-step scheduler timing, plus a per-tick summary carrying the real interval between ticks. |
+| `PLEKT_PAUSE_SCHEDULED_WORKER` | _off_ | Diagnostic mode: keep real-time provider listeners available while pausing scheduled sync ticks and background-job polling. |
 
 ---
 
 ## Architecture
 
-Plembfin runs as a self-hosted Node app (Express + `better-sqlite3` in WAL mode). The
+Plekt runs as a self-hosted Node app (Express + `better-sqlite3` in WAL mode). The
 default `ROLE=all` process runs everything; larger installs can split `web` and `worker`
 roles against the same SQLite volume. A per-minute scheduler (leased in SQLite, no
 crontab needed) handles sync reconciliation, cache maintenance, and nightly backups, with
@@ -614,7 +643,7 @@ after they pass; the retried push must still pass the complete build gate.
 
 ## Community
 
-- **[Support Plembfin](https://github.com/sponsors/Lasikiewicz)** - help keep the complete self-hosted application free, private, and maintained. Sponsorship does not unlock features or change roadmap priority.
+- **[Support Plekt](https://github.com/sponsors/Lasikiewicz)** - help keep the complete self-hosted application free, private, and maintained. Sponsorship does not unlock features or change roadmap priority.
 - **[Discord](https://discord.gg/7ZmEGKcRC5)** - chat with other users, get help, and follow along with development.
 - **[r/plembfin](https://www.reddit.com/r/plembfin/)** - discussions, feature requests, and release announcements on Reddit.
 
@@ -622,7 +651,7 @@ after they pass; the retried push must still pass the complete build gate.
 
 ## License
 
-Plembfin is licensed under the GNU Affero General Public License v3.0. See
+Plekt is licensed under the GNU Affero General Public License v3.0. See
 [LICENSE.md](LICENSE.md). Version history is in [`CHANGELOG.md`](CHANGELOG.md) (also
 shown in **About**).
 
@@ -630,7 +659,7 @@ shown in **About**).
 
 ## Thank You
 
-Plembfin relies on these third-party services for artwork and metadata:
+Plekt relies on these third-party services for artwork and metadata:
 
 - **[TMDB](https://www.themoviedb.org)** - movie metadata, posters, backdrops, cast, and TV cast/trailers/recommendations. This product uses the TMDB API but is not endorsed or certified by TMDB.
 - **[TheTVDB](https://thetvdb.com)** - TV show names, seasons, episode numbering/titles/air dates, and artwork. Please consider adding missing information or subscribing.

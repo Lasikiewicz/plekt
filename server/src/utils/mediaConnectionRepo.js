@@ -21,7 +21,7 @@ export function getActiveAuthDevice(provider) {
   return rowToDevice(db.prepare("SELECT * FROM media_auth_devices WHERE provider=? AND retired_at IS NULL").get(providerName(provider)));
 }
 
-export function getOrCreateAuthDevice(provider, { deviceName = "Plembfin", publicJwk = null, encryptedPrivateKey = null } = {}) {
+export function getOrCreateAuthDevice(provider, { deviceName = "Plekt",publicJwk = null, encryptedPrivateKey = null } = {}) {
   const normalizedProvider = providerName(provider);
   const active = getActiveAuthDevice(normalizedProvider);
   if (active) return active;
@@ -37,7 +37,7 @@ export function getOrCreateAuthDevice(provider, { deviceName = "Plembfin", publi
     db.prepare(`INSERT INTO media_auth_devices
       (id,provider,device_identifier,legacy_client_identifier,device_name,public_jwk,private_key_ciphertext,private_key_iv,private_key_tag,key_version,created_at,updated_at)
       VALUES (@id,@provider,@identifier,@legacyIdentifier,@name,@jwk,@ciphertext,@iv,@tag,@version,@now,@now)`).run({
-      id, provider: normalizedProvider, identifier: crypto.randomUUID(), name: String(deviceName || "Plembfin").trim(),
+      id, provider: normalizedProvider, identifier: crypto.randomUUID(), name: String(deviceName || "Plekt").trim(),
       legacyIdentifier: crypto.randomUUID(),
       jwk: publicJwk ? JSON.stringify(publicJwk) : null, ciphertext: encryptedPrivateKey?.ciphertext || null,
       iv: encryptedPrivateKey?.iv || null, tag: encryptedPrivateKey?.tag || null, version: encryptedPrivateKey?.version || 1, now,
@@ -47,7 +47,7 @@ export function getOrCreateAuthDevice(provider, { deviceName = "Plembfin", publi
   return result;
 }
 
-export function getOrCreatePlexAuthDevice({ deviceName = "Plembfin", vaultOptions = {} } = {}) {
+export function getOrCreatePlexAuthDevice({ deviceName = "Plekt",vaultOptions = {} } = {}) {
   const active = getActiveAuthDevice("plex");
   if (active) return active;
   const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");

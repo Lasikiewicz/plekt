@@ -1,10 +1,10 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml, formatTmdbDate, episodeCode } from "./utils.js?v=1.3.1.1.2";
-import { hydratePosters } from "./images.js?v=1.3.1.1.2";
-import { normalizeMediaCardRecord, renderMediaCard } from "./media-card.js?v=1.3.1.1.2";
-import { hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata } from "./personal-media-metadata.js?v=1.3.1.1.2";
-import { bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog, openImportPlaylistsDialog, openShowEpisodePicker, recentlyDeletedButtonHtml, renderPlaylists, watchUncheckedPlaylistRules } from "./playlists.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml, formatTmdbDate, episodeCode } from "./utils.js?v=1.3.1.2.1";
+import { hydratePosters } from "./images.js?v=1.3.1.2.1";
+import { normalizeMediaCardRecord, renderMediaCard } from "./media-card.js?v=1.3.1.2.1";
+import { hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata } from "./personal-media-metadata.js?v=1.3.1.2.1";
+import { bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog, openImportPlaylistsDialog, openShowEpisodePicker, recentlyDeletedButtonHtml, renderPlaylists, watchUncheckedPlaylistRules } from "./playlists.js?v=1.3.1.2.1";
 
 export { openAddToListDialog, openCreateListDialog };
 
@@ -531,7 +531,7 @@ async function personalRequest(payload) {
 
 function personalErrorPresentation() {
   if (/(^|\s)not found($|\s)/i.test(state.personalMediaError)) {
-    return "The personal media tables are not available yet. Restart Plembfin, then try again.";
+    return "The personal media tables are not available yet. Restart Plekt, then try again.";
   }
   return state.personalMediaError || "Try again later.";
 }

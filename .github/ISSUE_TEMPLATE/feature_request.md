@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea or improvement for Plembfin
+about: Suggest an idea or improvement for Plekt
 title: "[Feature] "
 labels: enhancement
 assignees: ''
@@ -13,7 +13,7 @@ problem to solve so the maintainer can consider the right solution.
 
 What are you trying to do, and what limitation or friction are you running into?
 
-## What would you like Plembfin to do?
+## What would you like Plekt to do?
 
 Describe the behavior or outcome you would find useful.
 
@@ -23,5 +23,5 @@ Have you tried another approach, or is there a workaround you use today?
 
 ## Additional context
 
-Include the relevant Plembfin area, media server(s), examples, or mockups that would help explain
+Include the relevant Plekt area, media server(s), examples, or mockups that would help explain
 the request. Do not include passwords, API keys, access tokens, or webhook URLs.

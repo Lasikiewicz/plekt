@@ -3,21 +3,21 @@
 // wherever possible - openServiceEditModal() for every provider connect/test
 // flow, and the webhook-guide functions - so setup and Settings never diverge
 // in behavior, only in presentation.
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=1.3.1.1.2";
-import { openServiceEditModal } from "./settings-services.js?v=1.3.1.1.2";
-import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=1.3.1.1.2";
-import { claimAdminAccount } from "./auth.js?v=1.3.1.1.2";
-import { lazyExport } from "./route-modules.js?v=1.3.1.1.2";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=1.3.1.2.1";
+import { openServiceEditModal } from "./settings-services.js?v=1.3.1.2.1";
+import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=1.3.1.2.1";
+import { claimAdminAccount } from "./auth.js?v=1.3.1.2.1";
+import { lazyExport } from "./route-modules.js?v=1.3.1.2.1";
 import {
   PLEX_HISTORICAL_SYNC_CHOICES,
   PLEX_HISTORICAL_SYNC_LABEL,
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=1.3.1.1.2";
+} from "./plex-history-policy.js?v=1.3.1.2.1";
 
 let _cb = {};
 const loadWatchBackups = lazyExport("tools-backups", "loadWatchBackups");
-const loadPlembfinBackups = lazyExport("tools-backups", "loadPlembfinBackups");
+const loadPlektBackups = lazyExport("tools-backups", "loadPlektBackups");
 export function initOnboarding(callbacks = {}) {
   _cb = callbacks;
   document.addEventListener("click", handleSetupClick);
@@ -117,13 +117,13 @@ export function renderDashboardChecklist() {
     connect_trakt: "Keep watched state synchronized with Trakt.",
     configure_seerr: "Connect media requests and availability.",
     create_backup: "Protect settings, connections, and watch history.",
-    store_credential_key: "Keep recovery access outside this Plembfin server.",
+    store_credential_key: "Keep recovery access outside this Plekt server.",
   };
   container.innerHTML = `
     <section class="glass-panel dashboard-setup-checklist" id="dashboardChecklistPanel" aria-labelledby="dashboardChecklistTitle">
       <div class="dashboard-setup-checklist-head">
         <div class="dashboard-setup-checklist-title">
-          <h2 id="dashboardChecklistTitle">Finish setting up Plembfin</h2>
+          <h2 id="dashboardChecklistTitle">Finish setting up Plekt</h2>
           <p>${items.length} recommended task${items.length === 1 ? "" : "s"} remaining</p>
           <span class="badge">${items.length} remaining</span>
         </div>
@@ -157,7 +157,7 @@ const STEPS = [
 ];
 const SKIPPABLE_STEPS = new Set(["servers", "metadata", "webhooks", "backup"]);
 const STEP_TITLES = {
-  overview: "Set up Plembfin",
+  overview: "Set up Plekt",
   claim: "Claim this instance",
   servers: "Connect media servers",
   metadata: "Add metadata",
@@ -165,7 +165,7 @@ const STEP_TITLES = {
   trakt: "Connect Trakt",
   imports: "Import progress",
   options: "Choose your options",
-  backup: "Protect your Plembfin data",
+  backup: "Protect your Plekt data",
   review: "Review and finish",
 };
 
@@ -508,7 +508,7 @@ export function renderSetupPage() {
     root.innerHTML = `<div class="settings-content"><p class="muted-copy">Loading setup...</p></div>`;
     return;
   }
-  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plembfin_header_logo_light.png?v=1.3.1.1.2" : "/plembfin_header_logo_dark.png?v=1.3.1.1.2";
+  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=1.3.1.2.1" : "/plekt_header_logo_dark.png?v=1.3.1.2.1";
   if (restoreView) {
     renderRestoreView(root, logoSrc);
     return;
@@ -522,7 +522,7 @@ export function renderSetupPage() {
   const hasTestedServer = cachedStatus.servers.some((s) => s.tested);
   root.innerHTML = `
     <div class="setup-brand">
-      <img class="setup-brand-logo brand-logo" src="${logoSrc}" alt="Plembfin" />
+      <img class="setup-brand-logo brand-logo" src="${logoSrc}" alt="Plekt" />
     </div>
     <section class="glass-panel p-section setup-shell">
       <div class="section-heading">
@@ -578,7 +578,7 @@ function homeRestoreSections() {
 
 function renderRestoreChoice() {
   return `
-    <p class="muted-copy setup-step-intro">Already have a Plembfin backup? Restore it now instead of connecting everything from scratch.</p>
+    <p class="muted-copy setup-step-intro">Already have a Plekt backup? Restore it now instead of connecting everything from scratch.</p>
     <div class="settings-card-grid setup-overview-list">
       <button type="button" class="settings-card setup-overview-item setup-restore-choice" data-setup-restore-view="local">
         <div class="setup-overview-item-heading"><b>Restore from a local backup</b></div>
@@ -596,7 +596,7 @@ function renderRestoreRemoteIntro() {
   const destination = backblazeDestination();
   const config = backupSetupData.plembfin?.config || {};
   return `
-    <p class="muted-copy setup-step-intro">Enter the Backblaze B2 destination your old Plembfin server was backing up to, then test the connection to pull its backup list below.</p>
+    <p class="muted-copy setup-step-intro">Enter the Backblaze B2 destination your old Plekt server was backing up to, then test the connection to pull its backup list below.</p>
     ${renderBackblazeCard({ destination, config, showScheduleToggle: false, mode: "connect" })}`;
 }
 
@@ -610,7 +610,7 @@ function renderRestoreView(root, logoSrc) {
   const backLabel = restoreView === "choice" ? "Back to setup" : "Back";
   root.innerHTML = `
     <div class="setup-brand">
-      <img class="setup-brand-logo brand-logo" src="${logoSrc}" alt="Plembfin" />
+      <img class="setup-brand-logo brand-logo" src="${logoSrc}" alt="Plekt" />
     </div>
     <section class="glass-panel p-section setup-shell">
       <div class="section-heading">
@@ -621,7 +621,7 @@ function renderRestoreView(root, logoSrc) {
       </div>
       <div class="setup-step-body" id="setupRestoreBody">
         ${restoreView === "choice" ? renderRestoreChoice() : ""}
-        ${restoreView === "local" ? `<p class="muted-copy setup-step-intro">Restore from a backup already stored on this server, or upload one from your computer. Watch-history and full Plembfin backups restore from separate sections below.</p>` : ""}
+        ${restoreView === "local" ? `<p class="muted-copy setup-step-intro">Restore from a backup already stored on this server, or upload one from your computer. Watch-history and full Plekt backups restore from separate sections below.</p>` : ""}
         ${restoreView === "remote" ? `<div id="setupRestoreRemoteIntro">${renderRestoreRemoteIntro()}</div>` : ""}
       </div>
     </section>`;
@@ -631,7 +631,7 @@ function renderRestoreView(root, logoSrc) {
     const local = document.getElementById("restore-local");
     if (local) body.appendChild(local);
     loadWatchBackups().catch(() => {});
-    loadPlembfinBackups().catch(() => {});
+    loadPlektBackups().catch(() => {});
   } else if (restoreView === "remote") {
     if (!backupSetupData && !backupSetupLoading) loadBackupSetupData().catch(() => {});
     const remote = document.getElementById("restore-remote");
@@ -684,7 +684,7 @@ function renderClaim() {
     const address = currentInstanceAddress();
     return `
       <div class="setup-claim-step setup-claim-claimed">
-        <p class="muted-copy setup-step-intro">Your administrator account is ready. Use these details to sign in to this Plembfin instance.</p>
+        <p class="muted-copy setup-step-intro">Your administrator account is ready. Use these details to sign in to this Plekt instance.</p>
         <section class="setup-claim-panel setup-claim-summary" aria-labelledby="setupClaimSummaryTitle">
           <div class="setup-claim-panel-heading">
             <div>
@@ -703,8 +703,8 @@ function renderClaim() {
               <dd><span class="setup-claim-summary-status">Added</span><small>Stored securely and never shown here.</small></dd>
             </div>
             <div>
-              <dt>Plembfin address</dt>
-              <dd>${address ? `<a href="${escapeAttribute(address)}">${escapeHtml(address)}</a>` : "<span>Current Plembfin address</span>"}<small>Use this address to open Plembfin on this computer.</small></dd>
+              <dt>Plekt address</dt>
+              <dd>${address ? `<a href="${escapeAttribute(address)}">${escapeHtml(address)}</a>` : "<span>Current Plekt address</span>"}<small>Use this address to open Plekt on this computer.</small></dd>
             </div>
           </dl>
         </section>
@@ -712,7 +712,7 @@ function renderClaim() {
   }
   return `
     <div class="setup-claim-step">
-      <p class="muted-copy setup-step-intro">Create the administrator account for this local Plembfin instance. Once it is claimed, the remaining setup steps unlock.</p>
+      <p class="muted-copy setup-step-intro">Create the administrator account for this local Plekt instance. Once it is claimed, the remaining setup steps unlock.</p>
       <div id="setupClaimFormHost" class="setup-claim-form-host"></div>
     </div>`;
 }
@@ -724,7 +724,7 @@ const OVERVIEW_STEPS = [
   },
   {
     title: "Trakt", tag: "Optional",
-    detail: "Two-way watch-state sync with Plembfin's built-in app credentials - no personal API key needed.",
+    detail: "Two-way watch-state sync with Plekt's built-in app credentials - no personal API key needed.",
   },
   {
     title: "Metadata", tag: "Recommended",
@@ -839,14 +839,14 @@ function renderServers() {
               Turn off "Refresh library metadata periodically"
             </b>
             <p style="margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-              In Plex, under Settings &rarr; Scheduled Tasks, disable "Refresh library metadata periodically". This task can occasionally re-match and re-identify library items during its nightly maintenance window, which resets their viewed state to unwatched on Plex itself - and Plembfin will propagate that as a real unwatch to Emby, Jellyfin, and Trakt. Turning it off removes the most common trigger for a mass false-unwatch event.
+              In Plex, under Settings &rarr; Scheduled Tasks, disable "Refresh library metadata periodically". This task can occasionally re-match and re-identify library items during its nightly maintenance window, which resets their viewed state to unwatched on Plex itself - and Plekt will propagate that as a real unwatch to Emby, Jellyfin, and Trakt. Turning it off removes the most common trigger for a mass false-unwatch event.
             </p>
           </div>
           <label class="field-label setup-import-toggle-label">
             <input type="checkbox" data-setup-watchlist-toggle ${watchlistSyncPending() ? "checked" : ""} />
-            Sync Watchlist with Plembfin
+            Sync Watchlist with Plekt
           </label>
-          <p class="muted-copy setup-server-detail">Keeps your Plex watchlist and Plembfin's watchlist aligned in both directions.</p>
+          <p class="muted-copy setup-server-detail">Keeps your Plex watchlist and Plekt's watchlist aligned in both directions.</p>
         ` : ""}
         ${server.tested ? `
           <label class="field-label setup-import-toggle-label">
@@ -946,13 +946,13 @@ function renderWebhooks() {
             ${title}
             <span class="badge badge-success">Automatic</span>
           </div>
-          <p class="setup-webhook-automatic-copy"><b>No webhook setup required.</b> Plembfin receives Plex watch-state changes directly and checks playback progress every minute.</p>
+          <p class="setup-webhook-automatic-copy"><b>No webhook setup required.</b> Plekt receives Plex watch-state changes directly and checks playback progress every minute.</p>
           <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
             <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
               Turn off "Refresh library metadata periodically"
             </b>
             <p style="margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-              In Plex, under Settings &rarr; Scheduled Tasks, disable "Refresh library metadata periodically". This task can occasionally re-match and re-identify library items during its nightly maintenance window, which resets their viewed state to unwatched on Plex itself - and Plembfin will propagate that as a real unwatch to Emby, Jellyfin, and Trakt. Turning it off removes the most common trigger for a mass false-unwatch event.
+              In Plex, under Settings &rarr; Scheduled Tasks, disable "Refresh library metadata periodically". This task can occasionally re-match and re-identify library items during its nightly maintenance window, which resets their viewed state to unwatched on Plex itself - and Plekt will propagate that as a real unwatch to Emby, Jellyfin, and Trakt. Turning it off removes the most common trigger for a mass false-unwatch event.
             </p>
           </div>
         </section>`;
@@ -1007,13 +1007,13 @@ function renderTrakt() {
   }
   return `
     <div class="settings-card setup-trakt-card">
-      <p class="muted-copy">Trakt keeps watch state in sync both ways, including individual rewatches, using Plembfin's built-in app credentials - no personal API key or VIP required.</p>
+      <p class="muted-copy">Trakt keeps watch state in sync both ways, including individual rewatches, using Plekt's built-in app credentials - no personal API key or VIP required.</p>
       <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-bottom: var(--space-3);">
         <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
           Disable Existing Trakt Plugins
         </b>
         <p style="margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-          Disable any Trakt plugins or scheduled tasks in Emby and Jellyfin before connecting. Plembfin must be the sole Trakt bridge to prevent duplicate writers and sync loops.
+          Disable any Trakt plugins or scheduled tasks in Emby and Jellyfin before connecting. Plekt must be the sole Trakt bridge to prevent duplicate writers and sync loops.
         </p>
       </div>
       <label class="checkbox-label setup-trakt-date-pref">
@@ -1049,7 +1049,7 @@ function renderImports() {
   }
   return `
     <div class="guide-callout setup-import-note">These imports will continue in the background - go ahead and continue with setup.</div>
-    <div class="setup-import-list">${rows.join("") || `<p class="muted-copy">No imports were requested. Plembfin will track new activity from this point forward.</p>`}</div>`;
+    <div class="setup-import-list">${rows.join("") || `<p class="muted-copy">No imports were requested. Plekt will track new activity from this point forward.</p>`}</div>`;
 }
 
 function renderOptions() {
@@ -1082,7 +1082,7 @@ function renderOptions() {
       <section class="settings-card setup-options-card setup-options-policy">
         <div class="setup-options-heading">
           <b>When you manually mark an item as watched in Plex / Emby / Jellyfin</b>
-          <p class="muted-copy">Choose whether Plembfin dates the watch automatically or sends it to Manual Watch review.</p>
+          <p class="muted-copy">Choose whether Plekt dates the watch automatically or sends it to Manual Watch review.</p>
         </div>
         <div class="settings-choice-grid setup-options-radio-grid" role="radiogroup" aria-label="When you manually mark an item as watched in Plex / Emby / Jellyfin">
           ${WATCH_IMPORT_MODES.map((option) => `
@@ -1098,14 +1098,14 @@ function renderOptions() {
       <label class="settings-card setup-options-card setup-options-toggle">
         <span class="setup-options-toggle-copy">
           <b>Fast Local-Network Sync</b>
-          <span>Speed up bulk sync operations when Plembfin, Plex, Emby, and Jellyfin are all on the same trusted local network. Leave this off for public or mixed networks.</span>
+          <span>Speed up bulk sync operations when Plekt, Plex, Emby, and Jellyfin are all on the same trusted local network. Leave this off for public or mixed networks.</span>
         </span>
         <input class="setup-options-switch" type="checkbox" role="switch" aria-label="Fast Local-Network Sync" data-setup-fast-local-sync="1" ${fastLocalPacing ? "checked" : ""} aria-checked="${fastLocalPacing ? "true" : "false"}" />
       </label>
       <label class="settings-card setup-options-card setup-options-toggle">
         <span class="setup-options-toggle-copy">
           <b>Sync Up Next to media apps</b>
-          <span>When enabled, Plembfin keeps its Up Next queue in sync with Plex and Emby's Continue Watching and Jellyfin's Next Up.<br>Turn it off to leave those app lists unchanged; Plembfin's own Up Next view remains available.<br>You can change this later in Settings → Sync → Sync Tuning.</span>
+          <span>When enabled, Plekt keeps its Up Next queue in sync with Plex and Emby's Continue Watching and Jellyfin's Next Up.<br>Turn it off to leave those app lists unchanged; Plekt's own Up Next view remains available.<br>You can change this later in Settings → Sync → Sync Tuning.</span>
         </span>
         <input class="setup-options-switch" type="checkbox" role="switch" aria-label="Sync Up Next to media apps" data-setup-up-next-sync="1" ${upNextSync ? "checked" : ""} aria-checked="${upNextSync ? "true" : "false"}" />
       </label>
@@ -1188,7 +1188,7 @@ function renderBackblazeCard({ destination, config, showScheduleToggle = true, m
     ? `<p class="muted-copy">Enter the bucket and application key from your existing Backblaze B2 account.</p>
        <div class="setup-backblaze-stage-fields setup-backblaze-connect-fields">${fields}</div>`
     : `
-      <p class="muted-copy setup-backblaze-signup"><a href="https://www.backblaze.com/sign-up/cloud-storage" target="_blank" rel="noopener noreferrer">Create a free Backblaze B2 account</a>, then set up a bucket and key for Plembfin:</p>
+      <p class="muted-copy setup-backblaze-signup"><a href="https://www.backblaze.com/sign-up/cloud-storage" target="_blank" rel="noopener noreferrer">Create a free Backblaze B2 account</a>, then set up a bucket and key for Plekt:</p>
       <div class="setup-backblaze-workflow">
         <section class="setup-backblaze-stage">
           <div class="setup-backblaze-guide">
@@ -1238,7 +1238,7 @@ function renderBackblazeCard({ destination, config, showScheduleToggle = true, m
         ${body}
         <div class="setup-backblaze-toggles">
           <label class="checkbox-label"><input type="checkbox" data-setup-backblaze-field="enabled" ${destination?.enabled ? "checked" : ""} /><span>${isConnect ? "Enable this connection" : "Enable this Backblaze destination"}</span></label>
-          ${showScheduleToggle ? `<label class="checkbox-label"><input type="checkbox" data-setup-backup-field="remoteEnabled" ${config?.remoteEnabled ? "checked" : ""} /><span>Upload scheduled encrypted Plembfin backups to Backblaze</span></label>` : ""}
+          ${showScheduleToggle ? `<label class="checkbox-label"><input type="checkbox" data-setup-backup-field="remoteEnabled" ${config?.remoteEnabled ? "checked" : ""} /><span>Upload scheduled encrypted Plekt backups to Backblaze</span></label>` : ""}
         </div>
         <div class="setup-backblaze-actions">
           <button type="button" class="button-ghost" data-setup-action="backblaze-save">Save</button>
@@ -1253,10 +1253,10 @@ function renderBackup() {
   const config = backupSetupData.plembfin?.config || {};
   const destination = backblazeDestination();
   return `
-    <p class="muted-copy setup-step-intro">Schedule encrypted local backups so Plembfin's settings, connections, and watch data can be recovered. Remote storage is optional.</p>
+    <p class="muted-copy setup-step-intro">Schedule encrypted local backups so Plekt's settings, connections, and watch data can be recovered. Remote storage is optional.</p>
     <section class="settings-card setup-backup-card setup-backup-section">
       <div class="setup-backup-heading">
-        <div><b>Local encrypted backup</b><p class="muted-copy">Stored on this Plembfin server.</p></div>
+        <div><b>Local encrypted backup</b><p class="muted-copy">Stored on this Plekt server.</p></div>
         ${config.enabled ? `<span class="badge badge-success">Scheduled</span>` : `<span class="badge">Not scheduled</span>`}
       </div>
       <label class="checkbox-label"><input type="checkbox" data-setup-backup-field="enabled" ${config.enabled ? "checked" : ""} /><span>Enable daily local backups</span></label>
@@ -1450,7 +1450,7 @@ function renderReview(hasTestedServer) {
   return `
     <div class="setup-review-lead ${hasTestedServer ? "is-ready" : "is-optional"}">
       <span class="setup-review-mark" aria-hidden="true">${hasTestedServer ? "✓" : "!"}</span>
-      <div><b>${hasTestedServer ? "Plembfin is ready" : "Ready when you are"}</b><p>${hasTestedServer ? "Review your connections and open the dashboard when everything looks right." : "No media server is connected, so watches will need to be marked manually from search. Finish now and connect one anytime from Settings, or go back to add one first."}</p></div>
+      <div><b>${hasTestedServer ? "Plekt is ready" : "Ready when you are"}</b><p>${hasTestedServer ? "Review your connections and open the dashboard when everything looks right." : "No media server is connected, so watches will need to be marked manually from search. Finish now and connect one anytime from Settings, or go back to add one first."}</p></div>
     </div>
     <div class="setup-review-list">
       ${rows.map((row) => `

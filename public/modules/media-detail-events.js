@@ -1,9 +1,9 @@
-import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=1.3.1.1.2";
-import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource } from "./utils.js?v=1.3.1.1.2";
-import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=1.3.1.1.2";
-import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=1.3.1.1.2";
-import { movieBySlugOrId } from "./media-routing.js?v=1.3.1.1.2";
-import { ifLoaded, lazyExport, loadRouteModules, loadedRouteModule } from "./route-modules.js?v=1.3.1.1.2";
+import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=1.3.1.2.1";
+import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource } from "./utils.js?v=1.3.1.2.1";
+import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=1.3.1.2.1";
+import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=1.3.1.2.1";
+import { movieBySlugOrId } from "./media-routing.js?v=1.3.1.2.1";
+import { ifLoaded, lazyExport, loadRouteModules, loadedRouteModule } from "./route-modules.js?v=1.3.1.2.1";
 
 // This module wires document-wide handlers that the dashboard and library
 // pages use too, so it loads with the shell. Its route modules are therefore
@@ -135,7 +135,7 @@ function liveTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-// A provider can acknowledge an old played bit after Plembfin has already
+// A provider can acknowledge an old played bit after Plekt has already
 // recorded a newer local unwatch. Keep that stale watched row out of both the
 // dashboard history and the lightweight show summaries; patchShowModalEpisodeFromLive
 // applies the same rule to the mounted detail card.
@@ -370,7 +370,7 @@ function libraryForceSyncElements() {
 }
 
 function mediaForceSyncModeLabel(mode = "push") {
-  return mode === "pull" ? "Import Watched Status" : "Set Plembfin as Source of Truth";
+  return mode === "pull" ? "Import Watched Status" : "Set Plekt as Source of Truth";
 }
 
 function mediaForceSyncServerLabel(server = "all") {
@@ -540,9 +540,9 @@ function forceSyncConfirmation(mode, session, elements) {
     : "";
   if (mode === "push") {
     const progress = session.payload.type === "library" ? " and saved resume positions" : "";
-    return `This will send Plembfin's currently recorded watched state${progress} for ${title}${seasonScope} to ${mediaForceSyncServerLabel(elements.pushTarget?.value || "all")}, overwriting whatever it currently shows. Nothing is checked or pulled in first. If Plembfin's own record is wrong, this sends that wrong state out too. Continue?`;
+    return `This will send Plekt's currently recorded watched state${progress} for ${title}${seasonScope} to ${mediaForceSyncServerLabel(elements.pushTarget?.value || "all")}, overwriting whatever it currently shows. Nothing is checked or pulled in first. If Plekt's own record is wrong, this sends that wrong state out too. Continue?`;
   }
-  return `This will read watched status for ${title}${seasonScope} from ${mediaForceSyncServerLabel(elements.pullSource?.value || "all")} and add anything Plembfin doesn't already have. Nothing is sent back out, and nothing is marked unwatched or removed. Continue?`;
+  return `This will read watched status for ${title}${seasonScope} from ${mediaForceSyncServerLabel(elements.pullSource?.value || "all")} and add anything Plekt doesn't already have. Nothing is sent back out, and nothing is marked unwatched or removed. Continue?`;
 }
 
 function mediaRatingSyncLabel(target = "all") {
@@ -570,7 +570,7 @@ async function confirmAndRunMediaRatingSync() {
   try {
     const confirmed = await openConfirmDialog({
       title: "Confirm Push Personal Rating",
-      body: `This will send Plembfin's personal rating for "${session.payload.title}" to ${mediaRatingSyncLabel(target)}. It will not change watched status, play history, resume positions, or lists. Continue?`,
+      body: `This will send Plekt's personal rating for "${session.payload.title}" to ${mediaRatingSyncLabel(target)}. It will not change watched status, play history, resume positions, or lists. Continue?`,
       confirmLabel: "Push rating",
       cancelLabel: "Cancel",
     });
@@ -609,7 +609,7 @@ async function runMediaRatingSync() {
     if (body.status === "disabled") {
       setMessage("Personal Rating Sync is disabled. Enable it in Settings → Sync Tools first.", "muted");
     } else if (Number(body.items || 0) === 0) {
-      setMessage("No local Plembfin personal rating exists for this title, so nothing was pushed.", "muted");
+      setMessage("No local Plekt personal rating exists for this title, so nothing was pushed.", "muted");
     } else if (Number(body.queued || 0) === 0) {
       setMessage(`No enabled send direction is configured for ${mediaRatingSyncLabel(target)}.`, "muted");
     } else {
@@ -718,7 +718,7 @@ async function finishMediaForceSyncOperation(payload, activity, error = "") {
   }
 
   if (payload.mode === "pull") {
-    setMessage(`Import completed: found ${Number(result.found || 0)} watched item${Number(result.found || 0) === 1 ? "" : "s"}; added ${Number(result.imported || 0)} to Plembfin.`, "success");
+    setMessage(`Import completed: found ${Number(result.found || 0)} watched item${Number(result.found || 0) === 1 ? "" : "s"}; added ${Number(result.imported || 0)} to Plekt.`, "success");
   } else {
     const progressMessage = payload.type === "library" && Number(result.progressSynced || 0) > 0
       ? ` ${Number(result.progressSynced)} resume position${Number(result.progressSynced) === 1 ? "" : "s"} also sent.`
@@ -1344,7 +1344,7 @@ export function attachMediaDetailEvents() {
       if (!id) return;
       const confirmed = await openConfirmDialog({
         title: "Remove unmatched entry?",
-        body: "This removes the local Plembfin watch record only. It will not affect Plex, Emby or Jellyfin.",
+        body: "This removes the local Plekt watch record only. It will not affect Plex, Emby or Jellyfin.",
         confirmLabel: "Continue",
         cancelLabel: "Keep entry",
         danger: true,

@@ -3,11 +3,11 @@
 // "Missing from <app>" notes, held-change banners, and Recently deleted.
 // personal-media.js imports this module one way and injects its helpers
 // through initPlaylists(), so there is no import cycle.
-import { state } from "./state.js?v=1.3.1.1.2";
-import { episodeCode, escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.1.2";
-import { openEpisodePicker } from "./playlist-episode-picker.js?v=1.3.1.1.2";
-import { openPlaylistImportDialog } from "./playlist-import.js?v=1.3.1.1.2";
-import { bindRuleEditor, choiceCardHtml, handleRuleClick, isAutomaticPlaylist, playlistRefreshIndicatorHtml, playlistRuleHeadingHtml, playlistRuleMenuItemsHtml, playlistRulePanelHtml, readRuleFromForm, ruleEditorHtml } from "./playlist-rules.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { episodeCode, escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.2.1";
+import { openEpisodePicker } from "./playlist-episode-picker.js?v=1.3.1.2.1";
+import { openPlaylistImportDialog } from "./playlist-import.js?v=1.3.1.2.1";
+import { bindRuleEditor, choiceCardHtml, handleRuleClick, isAutomaticPlaylist, playlistRefreshIndicatorHtml, playlistRuleHeadingHtml, playlistRuleMenuItemsHtml, playlistRulePanelHtml, readRuleFromForm, ruleEditorHtml } from "./playlist-rules.js?v=1.3.1.2.1";
 
 export const PLAYLIST_PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
 const PLAYLIST_KIND_LABELS = { movie: "Movies", tv: "TV Shows", mixed: "Mixed" };
@@ -89,14 +89,14 @@ function joinNames(names) {
 function providerStatusText(entry) {
   const label = providerLabel(entry.provider);
   if (entry.status === "error") return `${label}: the last sync failed${entry.last_error ? ` (${entry.last_error})` : ""}.`;
-  if (entry.status === "missing") return `${label}: the playlist was not found in ${label}. Plembfin checks again before treating it as deleted.`;
+  if (entry.status === "missing") return `${label}: the playlist was not found in ${label}. Plekt checks again before treating it as deleted.`;
   if (entry.status === "pending") return `${label}: waiting for the first sync. The playlist appears in ${label} once one of its titles is in that library.`;
   return `${label}: synced.`;
 }
 
 export function playlistProviderIconsHtml(list = {}) {
   const providers = selectedProviders(list);
-  if (!providers.length) return `<span class="playlist-provider-only">Plembfin only</span>`;
+  if (!providers.length) return `<span class="playlist-provider-only">Plekt only</span>`;
   return `<span class="playlist-provider-icons" role="list" aria-label="Synced apps">${providers.map((entry) => {
     const text = providerStatusText(entry);
     // Icon and app name, like the app badges elsewhere; a dot marks trouble.
@@ -274,7 +274,7 @@ function heldChangesHtml(list) {
   `).join("");
 }
 
-// App entries Plembfin could not identify stay in the app untouched
+// App entries Plekt could not identify stay in the app untouched
 // (plan decision 24); the note says how many, per app.
 function unidentifiedNoteHtml(list) {
   const notes = (list.providers || [])
@@ -344,7 +344,7 @@ function renderRecentlyDeleted(deletedLists) {
   const rows = deletedLists.map((list) => {
     const origin = list.deleted_origin && list.deleted_origin !== "local"
       ? `Deleted in ${providerLabel(list.deleted_origin)}`
-      : "Deleted in Plembfin";
+      : "Deleted in Plekt";
     const when = formatDeletedAt(list.deleted_at);
     const count = Number(list.item_count || 0);
     const pending = (list.pending_app_deletes || []).map(providerLabel);
@@ -352,7 +352,7 @@ function renderRecentlyDeleted(deletedLists) {
     const details = [
       `${count} item${count === 1 ? "" : "s"}`,
       `${origin}${when ? ` on ${when}` : ""}`,
-      apps.length ? `Restores to ${joinNames(apps)}` : "Plembfin only",
+      apps.length ? `Restores to ${joinNames(apps)}` : "Plekt only",
       pending.length ? `Still removing from ${joinNames(pending)}` : "",
     ].filter(Boolean).join(" · ");
     return `
@@ -368,7 +368,7 @@ function renderRecentlyDeleted(deletedLists) {
   return `
     <div class="playlist-recently-deleted">
       <div class="playlist-recently-deleted-head">
-        <p class="playlist-recently-deleted-copy">Restore puts a playlist back in Plembfin and in every app it was synced to. Delete permanently removes it for good.</p>
+        <p class="playlist-recently-deleted-copy">Restore puts a playlist back in Plekt and in every app it was synced to. Delete permanently removes it for good.</p>
         ${deletedLists.length > 1 ? `<button class="button-danger" type="button" data-playlist-purge-all>Delete all permanently</button>` : ""}
       </div>
       <ul class="playlist-deleted-list">${rows}</ul>
@@ -474,7 +474,7 @@ function providerPickerHtml(current = []) {
     <fieldset class="playlist-provider-picker">
       <legend class="field-label">Sync to apps</legend>
       <div class="playlist-provider-choices">${options}</div>
-      <p class="playlist-availability-notice">Each app's copy holds only titles that are in that app's library. Titles an app does not have stay in the Plembfin playlist, marked "Missing from" that app, and join the app's copy once they arrive. An app gets no playlist until at least one of its titles is in that app's library. Leave every app unticked to keep the playlist in Plembfin only.</p>
+      <p class="playlist-availability-notice">Each app's copy holds only titles that are in that app's library. Titles an app does not have stay in the Plekt playlist, marked "Missing from" that app, and join the app's copy once they arrive. An app gets no playlist until at least one of its titles is in that app's library. Leave every app unticked to keep the playlist in Plekt only.</p>
     </fieldset>
   `;
 }

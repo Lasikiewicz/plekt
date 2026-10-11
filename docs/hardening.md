@@ -1,6 +1,12 @@
 # Hardening Guide
 
-A practical checklist for running Plembfin securely in production.
+Database commands below use `data/plekt.db` for a fresh install. If `data/plembfin.db`
+exists, use that existing file instead; do not let SQLite create a new empty database.
+Docker commands use the fresh-install container name `plekt`; substitute your existing
+container name when upgrading.
+
+
+A practical checklist for running Plekt securely in production.
 
 ---
 
@@ -23,12 +29,12 @@ openssl rand -hex 32
 
 ## 2. HTTPS and reverse proxy
 
-Plembfin speaks plain HTTP. Always place it behind a TLS-terminating reverse proxy when accessible over the internet.
+Plekt speaks plain HTTP. Always place it behind a TLS-terminating reverse proxy when accessible over the internet.
 
 ### Caddy (recommended - auto TLS)
 
 ```caddyfile
-plembfin.example.com {
+plekt.example.com {
     reverse_proxy localhost:5056
 }
 ```
@@ -38,9 +44,9 @@ plembfin.example.com {
 ```nginx
 server {
     listen 443 ssl;
-    server_name plembfin.example.com;
-    ssl_certificate     /etc/letsencrypt/live/plembfin.example.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/plembfin.example.com/privkey.pem;
+    server_name plekt.example.com;
+    ssl_certificate     /etc/letsencrypt/live/plekt.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/plekt.example.com/privkey.pem;
 
     location / {
         proxy_pass http://127.0.0.1:5056;
@@ -57,15 +63,15 @@ Label the Docker service:
 ```yaml
 labels:
   - "traefik.enable=true"
-  - "traefik.http.routers.plembfin.rule=Host(`plembfin.example.com`)"
-  - "traefik.http.routers.plembfin.entrypoints=websecure"
-  - "traefik.http.routers.plembfin.tls.certresolver=letsencrypt"
+  - "traefik.http.routers.plekt.rule=Host(`plekt.example.com`)"
+  - "traefik.http.routers.plekt.entrypoints=websecure"
+  - "traefik.http.routers.plekt.tls.certresolver=letsencrypt"
 ```
 
 ### Cloudflare Tunnel
 
 ```bash
-cloudflared tunnel route dns <tunnel-id> plembfin.example.com
+cloudflared tunnel route dns <tunnel-id> plekt.example.com
 ```
 
 Then point the tunnel to `http://localhost:5056`.
@@ -76,7 +82,7 @@ Once HTTPS is in place, set `COOKIE_SECURE=true` in your environment. This adds 
 
 ### Transport behavior
 
-Plembfin is self-hosted: it can run directly on a host, in Docker, or behind a reverse
+Plekt is self-hosted: it can run directly on a host, in Docker, or behind a reverse
 proxy chosen by the operator. The application compresses eligible responses when the client
 advertises gzip, keeps `index.html` and managed static assets on safe revalidation headers,
 and deliberately does not compress the authenticated `text/event-stream` live-update
@@ -118,7 +124,7 @@ WEBHOOK_SECRET=<openssl rand -hex 32>
 Keep your webhook URL private. It contains a secret token that authorises write access to your watch history.
 
 ```
-https://plembfin.example.com/api/webhook?token=<WEBHOOK_SECRET>
+https://plekt.example.com/api/webhook?token=<WEBHOOK_SECRET>
 ```
 
 - Configure this URL inside each media server (Plex, Emby, Jellyfin).
@@ -132,7 +138,7 @@ The entire application state lives in two locations:
 
 | What | Path |
 |------|------|
-| SQLite database | `data/plembfin.db` |
+| SQLite database | `data/plekt.db`, or existing `data/plembfin.db` |
 | Cached artwork | `data/media/` |
 | Config + secrets | `data/config.json` |
 
@@ -142,7 +148,7 @@ checkpoint the WAL files cleanly. For online backups, use the built-in
 with SQLite itself:
 
 ```bash
-sqlite3 data/plembfin.db "VACUUM INTO 'backup.db'"
+sqlite3 data/plekt.db "VACUUM INTO 'backup.db'"
 ```
 
 Restore: unzip a backup archive into `data/` and restart the container.

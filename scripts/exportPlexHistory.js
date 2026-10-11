@@ -9,7 +9,7 @@ function requiredEnv(name) {
 const PLEX_URL = requiredEnv("PLEX_URL");
 const PLEX_TOKEN = requiredEnv("PLEX_TOKEN");
 const API_KEY = requiredEnv("API_KEY");
-const IMPORT_ENDPOINT = process.env.PLEMBFIN_IMPORT_ENDPOINT || "http://localhost:5055/api/import";
+const IMPORT_ENDPOINT = process.env.PLEKT_IMPORT_ENDPOINT || process.env.PLEMBFIN_IMPORT_ENDPOINT ||"http://localhost:5055/api/import";
 const CHUNK_SIZE = 100;
 
 function trimTrailingSlash(value = "") {

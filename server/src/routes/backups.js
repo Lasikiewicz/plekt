@@ -18,16 +18,18 @@ import { replayTraktWatchHistory } from "../utils/trackerDispatcher.js";
 import { buildCompoundEpisodeIndex, compoundEpisodeForRow } from "../utils/compoundEpisode.js";
 import { createRestoreLookupCache } from "../utils/restoreLookupCache.js";
 import { cancelSyncJobsForAuthoritativeRestore } from "../utils/backgroundJobs.js";
-import { BACKUP_FORMAT, BACKUP_VERSION, backupManifest, exportCollectionPage, importCollectionBatch } from "../utils/backup.js";
+import { BACKUP_VERSION, backupManifest, exportCollectionPage, importCollectionBatch } from "../utils/backup.js";
+import { isBackupFormat } from "../utils/backupNames.js";
+import { brandEnv } from "../utils/brandEnv.js";
 import { batchInsertWatchRecords, requireDb } from "../utils/dataRepo.js";
 import {
   createWatchHistoryBackup,
   getBackupDestination,
   importWatchHistoryBackupFile,
   listRemoteBackups,
-  listRemotePlembfinBackups,
+  listRemotePlektBackups,
   pullRemoteBackupToLocal,
-  pullRemotePlembfinBackupToLocal,
+  pullRemotePlektBackupToLocal,
   readWatchBackupFile,
   removeBackupDestination,
   clearRestoreStatus,
@@ -43,12 +45,12 @@ import {
   watchBackupStatus,
 } from "../utils/watchHistoryBackups.js";
 import {
-  createPlembfinBackup,
-  deletePlembfinBackup,
-  plembfinBackupStatus,
-  plembfinBackupFilePath,
-  savePlembfinBackupConfig,
-} from "../utils/plembfinBackups.js";
+  createPlektBackup,
+  deletePlektBackup,
+  plektBackupStatus,
+  plektBackupFilePath,
+  savePlektBackupConfig,
+} from "../utils/plektBackups.js";
 import { deviceCodeEndpoint, tokenEndpoint, ONEDRIVE_SCOPE } from "../utils/backupDestinations/onedrive.js";
 
 const insertRestoreReportStmt = db.prepare(`
@@ -141,8 +143,8 @@ export async function handleBackupImport(req, res) {
   }
 
   const body = await readJson(req);
-  if (body.format !== BACKUP_FORMAT || Number(body.version) !== BACKUP_VERSION) {
-    return sendJson(res, { error: "Unsupported Plembfin backup format or version" }, 400);
+  if (!isBackupFormat(body.format) || Number(body.version) !== BACKUP_VERSION) {
+    return sendJson(res, { error: "Unsupported Plekt backup format or version" }, 400);
   }
 
   try {
@@ -155,18 +157,18 @@ export async function handleBackupImport(req, res) {
   }
 }
 
-export async function handlePlembfinBackups(req, res) {
+export async function handlePlektBackups(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (!(await requireAdmin(req, res))) return;
 
   if (req.method === "GET") {
     const filename = String(req.query?.download || "").trim();
     if (!filename) {
-      return sendJson(res, plembfinBackupStatus());
+      return sendJson(res, plektBackupStatus());
     }
     let absolute;
     try {
-      absolute = plembfinBackupFilePath(filename);
+      absolute = plektBackupFilePath(filename);
     } catch (error) {
       return sendJson(res, { error: error.message }, 404);
     }
@@ -184,28 +186,28 @@ export async function handlePlembfinBackups(req, res) {
   const action = String(body.action || "").trim();
   try {
     if (action === "configure") {
-      return sendJson(res, { ok: true, config: savePlembfinBackupConfig(body.config || {}) });
+      return sendJson(res, { ok: true, config: savePlektBackupConfig(body.config || {}) });
     }
     if (action === "create") {
       const passphrase = String(body.passphrase || "").trim();
       const forceRemote = body.remote === true;
-      return sendJson(res, { ok: true, backup: await createPlembfinBackup({ reason: "manual", passphrase, forceRemote }) });
+      return sendJson(res, { ok: true, backup: await createPlektBackup({ reason: "manual", passphrase, forceRemote }) });
     }
     if (action === "delete") {
       const filename = String(body.filename || "").trim();
       if (!filename) return sendJson(res, { error: "filename is required" }, 400);
-      return sendJson(res, { ok: true, ...deletePlembfinBackup(filename) });
+      return sendJson(res, { ok: true, ...deletePlektBackup(filename) });
     }
     if (action === "list-remote-backups") {
       const id = String(body.destinationId || "").trim();
       if (!id) return sendJson(res, { error: "destinationId is required" }, 400);
-      return sendJson(res, { ok: true, files: await listRemotePlembfinBackups(id) });
+      return sendJson(res, { ok: true, files: await listRemotePlektBackups(id) });
     }
     if (action === "pull-remote-backup") {
       const id = String(body.destinationId || "").trim();
       const filename = String(body.filename || "").trim();
       if (!id || !filename) return sendJson(res, { error: "destinationId and filename are required" }, 400);
-      return sendJson(res, { ok: true, pulled: await pullRemotePlembfinBackupToLocal(id, filename) });
+      return sendJson(res, { ok: true, pulled: await pullRemotePlektBackupToLocal(id, filename) });
     }
     return sendJson(res, { error: `Unsupported action: ${action}` }, 400);
   } catch (error) {
@@ -322,9 +324,9 @@ const POST_RESTORE_WEBHOOK_GUARD_MS = 24 * 60 * 60 * 1000;
 // hung app call can't stall the whole job. Keep the default conservative: each item fans out to
 // every connected media server, so a value that looks modest here can otherwise create dozens
 // of simultaneous requests against a home server.
-const RESTORE_PUSH_CONCURRENCY = Math.min(Math.max(Number(process.env.PLEMBFIN_RESTORE_CONCURRENCY || 8), 1), 64);
+const RESTORE_PUSH_CONCURRENCY = Math.min(Math.max(Number(brandEnv("RESTORE_CONCURRENCY") || 8), 1), 64);
 const RESTORE_ITEM_TIMEOUT_MS = 30000;
-const RESTORE_TARGET_FAILURE_THRESHOLD = Math.min(Math.max(Number(process.env.PLEMBFIN_RESTORE_TARGET_FAILURE_THRESHOLD || 3), 1), 10);
+const RESTORE_TARGET_FAILURE_THRESHOLD = Math.min(Math.max(Number(brandEnv("RESTORE_TARGET_FAILURE_THRESHOLD") || 3), 1), 10);
 // Test-only, opt-in: a disposable fixture with no providers configured makes
 // the whole push phase a no-op (no targets means no jobs), so a restore
 // against it finishes in seconds and never exercises the poll/log UI over a
@@ -332,7 +334,7 @@ const RESTORE_TARGET_FAILURE_THRESHOLD = Math.min(Math.max(Number(process.env.PL
 // inserts a synthetic per-row wait, at the same concurrency the real push
 // uses, so the live log and progress polling are measured honestly without
 // contacting any provider. Zero (the default) is a no-op in every other case.
-const DEBUG_RESTORE_PUSH_DELAY_MS = Math.max(Number(process.env.PLEMBFIN_DEBUG_RESTORE_PUSH_DELAY_MS || 0), 0);
+const DEBUG_RESTORE_PUSH_DELAY_MS = Math.max(Number(brandEnv("DEBUG_RESTORE_PUSH_DELAY_MS") || 0), 0);
 
 function normalizedTitlePart(value = "") {
   return String(value || "").trim().toLowerCase();
@@ -671,7 +673,7 @@ async function pushRestoredStateToApps(config, logLine, { shouldCancel = async (
   });
 
   if (!targets.length && DEBUG_RESTORE_PUSH_DELAY_MS > 0) {
-    logLine(`[debug] PLEMBFIN_DEBUG_RESTORE_PUSH_DELAY_MS=${DEBUG_RESTORE_PUSH_DELAY_MS}: simulating provider push latency across ${rows.length} item(s) at concurrency ${RESTORE_PUSH_CONCURRENCY}. No provider is contacted.`);
+    logLine(`[debug] PLEKT_DEBUG_RESTORE_PUSH_DELAY_MS=${DEBUG_RESTORE_PUSH_DELAY_MS}: simulating provider push latency across ${rows.length} item(s) at concurrency ${RESTORE_PUSH_CONCURRENCY}. No provider is contacted.`);
     let simulated = 0;
     await runWithConcurrency(indexedRows, RESTORE_PUSH_CONCURRENCY, async () => {
       if (await shouldCancel()) {

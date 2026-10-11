@@ -1,5 +1,21 @@
 # Webhooks
 
+## Port advisory
+
+Inside Docker, Plekt always listens on 5055; the compose files publish it on host port 5056 (changed
+from 5055 on 6 October 2026). A webhook still aimed at the old host port fails silently, so Plekt
+checks at startup and shows a dismissable notice on the dashboard.
+
+- Set `PLEKT_PUBLISHED_PORT` to the host port you open Plekt on. The compose files set it to 5056.
+  If it is unset, Plekt logs that the ports cannot be checked and makes no comparison.
+- **Jellyfin:** Plekt reads the enabled Generic destinations of its Webhook plugin and warns when a
+  destination's port differs from `PLEKT_PUBLISHED_PORT`. Tokens in the URLs are never logged or shown.
+- **Emby and Plex:** advice only. Plekt cannot read their webhook settings, so check the URL by hand.
+- Users still on 5055 can move their webhooks to 5056, or keep the old mapping and set
+  `PLEKT_PUBLISHED_PORT` to the port they use. Plekt does not force either change.
+- The notice returns until the webhook is fixed or dismissed; a dismissal is remembered per warning text.
+  Status is served by `GET /api/webhook-port/status` (admin only).
+
 ## Authentication
 
 The webhook endpoint is at `/api/webhook` and requires the webhook secret. Media servers commonly use the compatibility query-token URL:
@@ -12,8 +28,11 @@ Header auth is preferred for custom automation clients that can set request head
 
 ```
 POST /api/webhook
-X-Plembfin-Webhook-Secret: <webhookSecret>
+X-Plekt-Webhook-Secret: <webhookSecret>
 ```
+
+The header's older name, `X-Plembfin-Webhook-Secret`, is still accepted, so clients
+configured before the rename keep working unchanged.
 
 `Authorization: Bearer <webhookSecret>` is also accepted. Plex, Emby, and Jellyfin
 setups can continue using the query-token URL above when custom headers are not
@@ -52,30 +71,30 @@ Phase determination highlights:
   `completed` if ≥ 90 else `ended`; progress events → `active`.
 
 For Emby, enable **Send All Properties** on the webhook. Without the full item
-payload, Plembfin may receive an event without enough title/type/progress data to
+payload, Plekt may receive an event without enough title/type/progress data to
 record a watched item.
 
 ## Propagation (sync)
 
 For a new watched event, `syncMediaPlaystate()` propagates to the **other two**
 platforms via their clients (`plexClient.js`, `embyClient.js`, `jellyfinClient.js`).
-An explicit unwatched event from a configured source changes Plembfin's canonical state
-and propagates unplayed to the other eligible destinations. Manual unwatches in Plembfin
+An explicit unwatched event from a configured source changes Plekt's canonical state
+and propagates unplayed to the other eligible destinations. Manual unwatches in Plekt
 follow the same transition path and include the originating platform as a destination.
 A later provider watched event does not undo a manual unwatch unless it is an exact
-live-session playback completion whose provider timestamp and Plembfin receive time are
+live-session playback completion whose provider timestamp and Plekt receive time are
 both newer than the unwatch; generic played flags go to Manual Watch review instead (see
-`docs/decisions.md` entry 31). While that review is pending, Plembfin does not write the
+`docs/decisions.md` entry 31). While that review is pending, Plekt does not write the
 watched state to any other provider.
 
-**Loop detection:** when Plembfin writes a state to (say) Emby, Emby fires its own
+**Loop detection:** when Plekt writes a state to (say) Emby, Emby fires its own
 webhook back. `loopStore` (`server/src/utils/loopStore.js`) tracks
 recently-dispatched events keyed by platform + media identifier in the SQLite
 `loop_keys` table (a key/value store with per-row TTL, see `schema.sql`); an
 incoming webhook matching a recent dispatch is detected as an echo and dropped
 before it can trigger another round.
 
-Played callbacks caused by Plembfin's own outbound mark are also dropped before
+Played callbacks caused by Plekt's own outbound mark are also dropped before
 the canonical-repair path, even when the item is already watched locally. This
 prevents a provider acknowledgement from being sent back to every provider and
 starting a reconciliation loop. A callback without a matching outbound marker
@@ -88,24 +107,24 @@ still enters the normal canonical repair path.
 
 Each media item claims a key per provider id it carries **and** a key derived
 from its title and episode coordinates. Both forms are needed because the two
-directions of a round trip identify the same item differently: a record Plembfin
+directions of a round trip identify the same item differently: a record Plekt
 holds no provider ids for dispatches under its title key, while the echo the
 target server sends back carries that server's own imdb/tmdb/tvdb ids. Sharing
 the title key is what lets the second half of that trip recognise the first.
 
 Unwatch handling is also canonical and idempotent as a second line of defence. An
-echo of an explicit Plembfin unwatch finds the item already unwatched and changes
-nothing. A platform-side unwatch for an item Plembfin still considers watched never
+echo of an explicit Plekt unwatch finds the item already unwatched and changes
+nothing. A platform-side unwatch for an item Plekt still considers watched never
 deletes that local record; it dispatches a watched repair instead.
 
 ## Catching up newly added media
 
 An outbound sync can only mark an item a server actually holds. When a watch is
 recorded for media one of your servers is missing, that server is simply skipped
-with "no matching item found" and the watch stays correct in Plembfin.
+with "no matching item found" and the watch stays correct in Plekt.
 
 The `added` phase closes that gap. When a server announces new content and
-Plembfin already holds a watched record for it, the item is marked watched on
+Plekt already holds a watched record for it, the item is marked watched on
 that server as it arrives, without waiting for a Force Sync. The rules are
 deliberately tight:
 
@@ -123,7 +142,7 @@ deliberately tight:
 - The server's own sync role still applies: a platform not configured to receive
   watched state is skipped.
 - The outbound mark is written to the loop ledger, so the played event the server
-  fires back is recognised as Plembfin's own write rather than a new play.
+  fires back is recognised as Plekt's own write rather than a new play.
 
 Enable the library-add notification in each server's webhook configuration for
 this to fire: **library.new** on Plex, **library.new** / **item.added** on Emby,
@@ -161,7 +180,7 @@ not by when it arrived.
 
 Emby and Jellyfin emit a **played-flag event** (`item.markplayed`, or a
 userdata-saved event carrying `Played=true`) whenever anything sets the played
-flag - including Plembfin's own outbound sync - and they can deliver it hours
+flag - including Plekt's own outbound sync - and they can deliver it hours
 after the fact. The parser marks these with `playedFlagOnly` on the normalized
 payload. They carry no playback evidence, so:
 
@@ -169,7 +188,7 @@ payload. They carry no playback evidence, so:
   `watch_history` row, no re-propagation. The calendar day it lands on is
   meaningless, because delivery time says nothing about when the play happened.
 - **A played-flag event for an item not yet watched** enters Manual Watch review
-  when review is required, including when Plembfin currently has an explicit
+  when review is required, including when Plekt currently has an explicit
   unwatched state. It is not written to watch history or propagated until the
   user confirms it. Dismissing it sends the normal unwatched correction.
 - **A playback event** (`media.scrobble`, `playback.stop` past the watched
@@ -179,7 +198,7 @@ payload. They carry no playback evidence, so:
   this check at all - they're routed through the `active`/`ended` phases above.
 
 The same principle applies to inbound state read from library polling and from
-the Plex notification listener, so a played flag Plembfin itself wrote is never
+the Plex notification listener, so a played flag Plekt itself wrote is never
 read back as a new watch. See [scheduled-sync.md](scheduled-sync.md#echo-suppression).
 
 Every watch of the same movie/episode collapses into one card everywhere the UI
@@ -193,13 +212,13 @@ lists history (`dedupeHistory` / `collapseMovieCluster` in
 On `ended` (and via the scheduled poller), if resume is actionable
 (`shouldSyncResumeProgress`), a record goes into `playback_progress` keyed by
 `media_key`, and `syncMediaProgress()` pushes the resume position to the other
-platforms. When position and duration are available, Plembfin derives the percentage
+platforms. When position and duration are available, Plekt derives the percentage
 from those timing fields instead of trusting a conflicting percentage supplied by the
 webhook. This keeps stop-phase classification, stored progress, and the dashboard in
 agreement with the resume position written to each media server.
 
 Emby and Jellyfin include `Played: false` in ordinary positive resume-position
-`UserData` writes. Plembfin classifies that combination as partial playback (`ended`),
+`UserData` writes. Plekt classifies that combination as partial playback (`ended`),
 not as an explicit unwatch; named mark-unplayed events and zero-position unwatch writes
 remain authoritative. A repeated server acknowledgement of the same position retains
 the newer stored progress timestamp even when the server returns an older
@@ -214,7 +233,7 @@ dates such as `DateCreated` and `DateLastSaved` are not treated as playback auth
   default)** unless another event
   arrives. Continuous "still playing" tracking for Plex comes from the
   elected scheduler worker (→ `live_tracking_cache`), not from native webhooks.
-- Plex does **not** send unwatched (unscrobble) events. Plembfin compensates via
+- Plex does **not** send unwatched (unscrobble) events. Plekt compensates via
   the built-in Plex WebSocket notification listener, which connects automatically
   using the configured Plex URL and token. Bulk show and season state changes are
   expanded into their affected episodes before propagation.

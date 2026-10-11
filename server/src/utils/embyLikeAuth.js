@@ -1,4 +1,5 @@
 import packageJson from "../../../package.json" with { type: "json" };
+import { providerAppName } from "./brandEnv.js";
 import { assertSafeOutboundUrl, fetchWithTimeout, normalizeHttpUrl } from "./outbound.js";
 
 function cleanBaseUrl(value, provider) {
@@ -17,7 +18,7 @@ function cleanBaseUrl(value, provider) {
 export function embyLikeAuthorization(device, { userId = "", token = "" } = {}) {
   const parts = [
     userId ? `UserId="${String(userId).replaceAll('"', "")}"` : "",
-    'Client="Plembfin"',
+    `Client="${providerAppName(device)}"`,
     `Device="${String(device.deviceName || "Plembfin").replaceAll('"', "")}"`,
     `DeviceId="${String(device.deviceIdentifier).replaceAll('"', "")}"`,
     `Version="${packageJson.version}"`,

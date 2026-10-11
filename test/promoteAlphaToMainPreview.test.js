@@ -61,3 +61,19 @@ test("confirm with the same outstanding guide still refuses", () => {
     /website content-impact gate failed:\n- Stats: needs website\/src\/content\/docs\/stats\.mdx/,
   );
 });
+
+
+test("the first Plekt release carries image migration guidance readable by old changelog clients", () => {
+  const result = previewAlphaToMainRelease({ sources: fixtureSources(), impactViolations: () => [] });
+  assert.equal(result.mainEntry.brandMigration, "plekt");
+  assert.ok(result.mainEntry.details.some((detail) => detail.includes("Plembfin is now Plekt")));
+  assert.ok(result.mainEntry.sections.tweaks.some((detail) => detail.includes("keep the same tag, volumes and settings")));
+});
+
+test("later releases do not repeat the first-release migration entry", () => {
+  const sources = fixtureSources();
+  sources.changelog.entries[0].brandMigration = "plekt";
+  const result = previewAlphaToMainRelease({ sources, impactViolations: () => [] });
+  assert.equal(result.mainEntry.brandMigration, undefined);
+  assert.ok(!result.mainEntry.details.some((detail) => detail.includes("Plembfin is now Plekt")));
+});

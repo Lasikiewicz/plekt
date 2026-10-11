@@ -22,7 +22,7 @@ The merge de-duplicates by `(source, title, season, episode)` and sorts by
 webhook, or both.
 
 The Emby Continue Watching rail is refreshed by a zero-position playback-session
-touch after Plembfin marks the watched predecessor. Those callbacks carry the
+touch after Plekt marks the watched predecessor. Those callbacks carry the
 reserved `plembfin-up-next-seed` device id and are rejected before they can create
 an `active_sessions` row; the touch does not write resume progress or increment a
 play count. Rows written by older alpha builds are removed when
@@ -164,12 +164,13 @@ Work outside-in:
 
 1. **Is the data in the database?** Run:
    ```sh
-   sqlite3 data/plembfin.db "SELECT title, source_platform, last_progress, completed_at FROM live_tracking_cache ORDER BY updated_at DESC LIMIT 10;"
+   # Use data/plembfin.db instead if this install already has that database.
+   sqlite3 data/plekt.db "SELECT title, source_platform, last_progress, completed_at FROM live_tracking_cache ORDER BY updated_at DESC LIMIT 10;"
    ```
    With media playing you should see rows with `completed_at` = NULL.
    - If empty/stale -> the live-session poller isn't reaching the servers. Check the
      server logs for "Live session poller failed" or "Live session fetch failed".
-     Confirm the Plex/Emby/Jellyfin URLs in Settings are reachable from the Plembfin
+     Confirm the Plex/Emby/Jellyfin URLs in Settings are reachable from the Plekt
      server.
    - If all rows have `completed_at != NULL` -> they were marked complete after
      reaching the watched threshold (90% by default) and disappearing, so they

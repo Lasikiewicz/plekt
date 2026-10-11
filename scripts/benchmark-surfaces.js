@@ -186,7 +186,7 @@ async function main() {
         oldCeilingCrossed: historyCacheRows > 25000,
         note: "getCachedHistory() and Stats are uncapped. MAX_HISTORY_LIMIT remains an API pagination safety bound only.",
       },
-      databaseBytes: fs.existsSync(path.join(dataDir, "plembfin.db")) ? fs.statSync(path.join(dataDir, "plembfin.db")).size : null,
+      databaseBytes: ["plembfin.db", "plekt.db"].map((name) => path.join(dataDir, name)).filter((file) => fs.existsSync(file)).map((file) => fs.statSync(file).size)[0] ?? null,
     },
     hardware: {
       platform: `${os.platform()} ${os.release()}`,

@@ -122,7 +122,7 @@ jobs:
           Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$version"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "build=$build"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "file_channel=$fileChannel"
-          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifact_name=Plembfin-Windows-$fileChannel-$version"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "artifact_name=Plekt-Windows-$fileChannel-$version"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "installer_test=$installerTest"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "trigger=$trigger"
 
@@ -162,7 +162,7 @@ jobs:
         run: |
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           if (!(Test-Path -LiteralPath $iscc)) { throw "Inno Setup compiler not found at $iscc" }
-          & $iscc "/DAppVersion=${{ steps.metadata.outputs.version }}" "/DAppChannel=${{ steps.metadata.outputs.file_channel }}" 'packaging/windows/Plembfin.iss'
+          & $iscc "/DAppVersion=${{ steps.metadata.outputs.version }}" "/DAppChannel=${{ steps.metadata.outputs.file_channel }}" 'packaging/windows/Plekt.iss'
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
 
       - name: Sign installer (optional)
@@ -178,7 +178,7 @@ jobs:
             exit 0
           }
 
-          $pfx = Join-Path $env:RUNNER_TEMP 'plembfin-signing.pfx'
+          $pfx = Join-Path $env:RUNNER_TEMP 'plekt-signing.pfx'
           [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERTIFICATE_BASE64))
           $signtool = Get-ChildItem -Path "$env:ProgramFiles(x86)\Windows Kits\10\bin" -Filter signtool.exe -Recurse -ErrorAction SilentlyContinue | Sort-Object FullName | Select-Object -Last 1
           if (!$signtool) { throw 'Windows SDK signtool.exe was not found.' }

@@ -1,4 +1,4 @@
-name: "plembfin CodeQL config"
+name: "Plekt CodeQL config"
 
 # js/request-forgery (SSRF) is excluded repo-wide. plembfin is a self-hosted app in the
 # style of Sonarr/Radarr/Jellyseerr: every outbound request is either an admin-configured

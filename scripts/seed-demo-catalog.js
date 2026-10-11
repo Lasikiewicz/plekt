@@ -342,7 +342,7 @@ async function main() {
   }
   const resolvedDataDir = path.resolve(configuredDataDir);
   if (resolvedDataDir === path.resolve(sharedDataDir)) {
-    fail(`Refusing to seed the normal Plembfin data directory: ${resolvedDataDir}`);
+    fail(`Refusing to seed the normal Plekt data directory: ${resolvedDataDir}`);
   }
 
   const catalog = JSON.parse(fs.readFileSync(catalogPath, "utf8"));

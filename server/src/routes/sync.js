@@ -54,7 +54,7 @@ import {
   enqueueManualWatchReview,
 } from "../utils/manualWatchReview.js";
 import { applyUnwatchedTransition } from "../utils/watchStateTransitions.js";
-import { recordWatchAuditEvent, recordWatchAuditEvents } from "../utils/watchAudit.js";
+import { auditSourceEventPayload, recordWatchAuditEvent, recordWatchAuditEvents } from "../utils/watchAudit.js";
 import { fetchPosterFromTmdb } from "../utils/tmdbClient.js";
 import { cacheBackdropFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache, markPosterMissing, usableCachedPoster } from "../utils/posterCache.js";
 import { getTmdbDetails, getTmdbImages, getTmdbPerson, getTmdbSeason, searchTmdb, getCachedTvdbId, queueTmdbMetadataWarmup } from "../utils/tmdbGateway.js";
@@ -289,7 +289,7 @@ export async function normalizeWebhook(req) {
 }
 
 function isSyntheticUpNextWebhook(media = {}) {
-  if (String(media.source || "").trim().toLowerCase() !== "emby") return false;
+  if (!["emby", "jellyfin"].includes(String(media.source || "").trim().toLowerCase())) return false;
   const client = media.client && typeof media.client === "object" ? media.client : {};
   return [media.deviceId, media.device_id, client.deviceId, client.device_id, client.DeviceId]
     .some(isUpNextSeedDeviceId);
@@ -904,7 +904,7 @@ export function queuedWatchRecordToSyncActivity(row = {}) {
   const telemetry = String(row.sync_dispatch_telemetry || "");
   const timestamp = Number(row.updated_at || row.created_at) || Date.parse(String(row.watched_at || "")) || Date.now();
   const status = syncTelemetryLineValue(telemetry, "Dispatch status").toLowerCase() || "queued";
-  const details = syncTelemetryLineValue(telemetry, "Details") || "Outbound synchronization queued after the Plembfin history write.";
+  const details = syncTelemetryLineValue(telemetry, "Details") || "Outbound synchronization queued after the Plekt history write.";
   const ids = {
     imdb: row.imdb_id || "",
     tmdb: row.tmdb_id || "",
@@ -994,7 +994,7 @@ async function getMergedSyncActivityPage({ limit = 100, page = 1, search = "" } 
     .filter((entry) => {
       if (!cleanedSearch) return true;
       const source = String(entry.source || "").toLowerCase();
-      const sourceLabel = source.startsWith("manual") || source.startsWith("force_sync") || source.startsWith("plembfin") ? "Plembfin" : source;
+      const sourceLabel = source.startsWith("manual") || source.startsWith("force_sync") || source.startsWith("plembfin") ? "Plekt" : source;
       const haystack = [
         entry.mediaType,
         entry.title,
@@ -3149,10 +3149,12 @@ export async function handleStopForceSync(req, res) {
 export async function handleWebhook(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  const headerToken = String(req.get("x-plembfin-webhook-secret") || "").trim();
+  // The header was named for Plembfin before the rename; webhooks set up then still send it.
+  const headerToken = String(req.get("x-plekt-webhook-secret") || "").trim();
+  const legacyHeaderToken = String(req.get("x-plembfin-webhook-secret") || "").trim();
   const authToken = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
   const queryToken = String(req.query?.token || "").trim();
-  if (![headerToken, authToken, queryToken].some((token) => verifyWebhookToken(token))) {
+  if (![headerToken, legacyHeaderToken, authToken, queryToken].some((token) => verifyWebhookToken(token))) {
     return sendJson(res, { error: "Unauthorized" }, 401);
   }
   if (isAuthoritativeRestoreActive()) {
@@ -3215,14 +3217,14 @@ export async function handleWebhook(req, res) {
     details: media.isValid
       ? `Received ${media.event || "source event"} from ${media.source || "unknown source"}.`
       : `Received source event but did not process it: ${media.phase === "ignored" ? "unsupported event" : "missing required media fields"}.`,
-    payload: {
+    payload: auditSourceEventPayload({
       rawPayloadDebug: media.rawPayloadDebug || null,
       watchProvenance: media.watchProvenance || media.watch_provenance || null,
       request: {
         userAgent: req.get("user-agent") || "",
         remoteAddress: req.ip || req.socket?.remoteAddress || "",
       },
-    },
+    }, media.isValid),
   });
 
   await setRuntimeState({
@@ -3413,7 +3415,7 @@ export async function handleWebhook(req, res) {
         ok: true,
         inserted: false,
         skipped: true,
-        reason: "Callback followed Plembfin outbound resume update",
+        reason: "Callback followed Plekt outbound resume update",
       });
     }
   }
@@ -3446,7 +3448,7 @@ export async function handleWebhook(req, res) {
         ok: true,
         inserted: false,
         skipped: true,
-        reason: "Unplayed callback followed Plembfin outbound mark",
+        reason: "Unplayed callback followed Plekt outbound mark",
       });
     }
     if (!ownUnplayedEcho) {
@@ -3607,7 +3609,7 @@ export async function handleWebhook(req, res) {
                   releaseDate: episodeMedia.releaseDate,
                   observedWatchedAt: "",
                   sourceFingerprint: webhookWatchFingerprint(episodeMedia, episodeMedia.releaseDate),
-                  reason: "The app reported a watched flag for this episode while Plembfin is unwatched.",
+                  reason: "The app reported a watched flag for this episode while Plekt is unwatched.",
                   allowWhenUnwatched: true,
                 });
                 await deletePlaybackProgress(episodeMedia).catch(() => null);
@@ -3626,7 +3628,7 @@ export async function handleWebhook(req, res) {
                 title: episodeMedia.title,
                 success: true,
                 skipped: true,
-                reason: "Played flag ignored because Plembfin is unwatched",
+                reason: "Played flag ignored because Plekt is unwatched",
               });
               return;
             }
@@ -3765,7 +3767,7 @@ export async function handleWebhook(req, res) {
           details: unchangedWithoutTimestamp
             ? "Resume progress acknowledgement was unchanged and had no source timestamp"
             : staleDatedCandidate
-              ? "Resume progress acknowledgement was older than Plembfin's stored position"
+              ? "Resume progress acknowledgement was older than Plekt's stored position"
               : "Resume progress callback had no authoritative source timestamp",
           targetStates: [],
         };
@@ -3861,7 +3863,7 @@ export async function handleWebhook(req, res) {
           ok: true,
           inserted: false,
           skipped: true,
-          reason: "Played flag callback followed Plembfin outbound mark",
+          reason: "Played flag callback followed Plekt outbound mark",
         });
       }
     }
@@ -3892,7 +3894,7 @@ export async function handleWebhook(req, res) {
       // protects us from stale UserData/library echoes; the outbound-echo
       // guard above protects this explicit path from Plembfin's own mark.
       if (isDeletedWatchSuppressed(media, media.watched_at) && !isExplicitPlayedFlagEvent(media)) {
-        console.log("Webhook: skipped a provider watch date explicitly deleted in Plembfin", {
+        console.log("Webhook: skipped a provider watch date explicitly deleted in Plekt", {
           source: media.source,
           title: media.title,
           event: media.event,
@@ -3905,7 +3907,7 @@ export async function handleWebhook(req, res) {
           ok: true,
           inserted: false,
           skipped: true,
-          reason: "Provider watch date was explicitly deleted in Plembfin",
+          reason: "Provider watch date was explicitly deleted in Plekt",
         });
       }
 
@@ -3931,7 +3933,7 @@ export async function handleWebhook(req, res) {
             releaseDate: media.releaseDate,
             observedWatchedAt: "",
             sourceFingerprint: webhookWatchFingerprint(media, media.releaseDate),
-            reason: existingProvenance.note || `${media.source || "The app"} reported a watched flag without playback evidence while Plembfin is unwatched.`,
+            reason: existingProvenance.note || `${media.source || "The app"} reported a watched flag without playback evidence while Plekt is unwatched.`,
             allowWhenUnwatched: true,
           });
           await deletePlaybackProgress(media).catch(() => null);
@@ -3944,7 +3946,7 @@ export async function handleWebhook(req, res) {
             reason: "Manual watch review required",
           });
         }
-        console.log("Webhook: skipped a played flag while Plembfin is unwatched", {
+        console.log("Webhook: skipped a played flag while Plekt is unwatched", {
           source: media.source,
           title: media.title,
           event: media.event,
@@ -3955,7 +3957,7 @@ export async function handleWebhook(req, res) {
           ok: true,
           inserted: false,
           skipped: true,
-          reason: "Played flag ignored because Plembfin is unwatched",
+          reason: "Played flag ignored because Plekt is unwatched",
         });
       }
       if (existingCanonicalState === "watched") {

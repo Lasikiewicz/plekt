@@ -1108,7 +1108,7 @@ export async function handleClearCache(req, res) {
 // ---------------------------------------------------------------------------
 
 const REMOTE_CHANGELOG_URL =
-  "https://raw.githubusercontent.com/Lasikiewicz/plembfin/main/changelog.json";
+  "https://raw.githubusercontent.com/Lasikiewicz/plekt/main/changelog.json";
 const REMOTE_CHANGELOG_TTL_MS = 60 * 1000; // 1 minute default TTL
 let remoteChangelogCache = { fetchedAt: 0, data: null };
 
@@ -1253,7 +1253,7 @@ async function fetchRemoteChangelog({ force = false } = {}) {
 }
 
 const REMOTE_DEVELOP_CHANGELOG_URL =
-  "https://raw.githubusercontent.com/Lasikiewicz/plembfin/develop/changelog.develop.json";
+  "https://raw.githubusercontent.com/Lasikiewicz/plekt/develop/changelog.develop.json";
 const REMOTE_DEVELOP_CHANGELOG_TTL_MS = 60 * 1000;
 let remoteDevelopChangelogCache = { fetchedAt: 0, data: null };
 
@@ -1277,7 +1277,7 @@ async function fetchRemoteDevelopChangelog({ force = false } = {}) {
 // build has been published" apart from "a new release exists" - the running
 // image's bundled build number only reflects what it was built from.
 const REMOTE_ALPHA_CHANGELOG_URL =
-  "https://raw.githubusercontent.com/Lasikiewicz/plembfin/alpha/changelog.alpha.json";
+  "https://raw.githubusercontent.com/Lasikiewicz/plekt/alpha/changelog.alpha.json";
 const REMOTE_ALPHA_CHANGELOG_TTL_MS = 60 * 1000;
 let remoteAlphaChangelogCache = { fetchedAt: 0, data: null };
 

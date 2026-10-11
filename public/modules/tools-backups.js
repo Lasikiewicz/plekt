@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=1.3.1.1.2";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=1.3.1.1.2";
-import { applyAppearanceToBody } from "./appearance.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=1.3.1.2.1";
+import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=1.3.1.2.1";
+import { applyAppearanceToBody } from "./appearance.js?v=1.3.1.2.1";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -29,7 +29,7 @@ function authHeaders() {
 }
 
 const BACKUP_BATCH_SIZE = 250;
-const ENCRYPTED_BACKUP_FORMAT = "plembfin-encrypted-backup";
+const ENCRYPTED_BACKUP_FORMAT = "plekt-encrypted-backup";
 const ENCRYPTED_BACKUP_VERSION = 1;
 const BACKUP_KDF_ITERATIONS = 250000;
 const RESTORE_POLL_MS = 1000;
@@ -87,7 +87,7 @@ async function backupCryptoKey(passphrase, salt, iterations = BACKUP_KDF_ITERATI
     ["encrypt", "decrypt"],
   );
 }
-async function encryptPlembfinBackup(backup, passphrase) {
+async function encryptPlektBackup(backup, passphrase) {
   const cryptoApi = globalThis.crypto;
   if (!cryptoApi?.subtle) throw new Error("This browser does not support encrypted backups.");
   if (passphrase.length < 12) throw new Error("Use an encryption passphrase of at least 12 characters.");
@@ -111,13 +111,13 @@ async function encryptPlembfinBackup(backup, passphrase) {
     payload: bytesToBase64(encrypted),
   };
 }
-export async function exportPlembfinBackup() {
+export async function exportPlektBackup() {
   const button = elements.backupExportButton;
   if (!button) return;
   const passphrase = backupPassphrase("export");
   button.disabled = true;
   button.textContent = "Exporting...";
-  setBackupTransferState("Exporting", "warning", "Collecting Plembfin data before browser-side encryption...", "export");
+  setBackupTransferState("Exporting", "warning", "Collecting Plekt data before browser-side encryption...", "export");
   try {
     if (passphrase.length < 12) throw new Error("Enter an encryption passphrase of at least 12 characters.");
     const manifestResponse = await fetch("/api/backup/export", { headers: authHeaders() });
@@ -145,40 +145,40 @@ export async function exportPlembfinBackup() {
       totalDocuments += documents.length;
     }
     setBackupTransferState("Encrypting", "warning", `Encrypting ${formatNumber(totalDocuments)} documents in this browser...`, "export");
-    const encryptedBackup = await encryptPlembfinBackup(backup, passphrase);
-    downloadJsonFile(encryptedBackup, `plembfin-backup-${new Date().toISOString().slice(0, 10)}.encrypted.json`);
-    setBackupTransferState("Downloaded", "ready", `Encrypted backup downloaded: ${formatNumber(totalDocuments)} documents across ${formatNumber(collectionNames.length)} collections.\nKeep the passphrase separately. Plembfin cannot recover it.`, "export");
-    _setMessage("Encrypted Plembfin backup downloaded.", "success");
+    const encryptedBackup = await encryptPlektBackup(backup, passphrase);
+    downloadJsonFile(encryptedBackup, `plekt-backup-${new Date().toISOString().slice(0, 10)}.encrypted.json`);
+    setBackupTransferState("Downloaded", "ready", `Encrypted backup downloaded: ${formatNumber(totalDocuments)} documents across ${formatNumber(collectionNames.length)} collections.\nKeep the passphrase separately. Plekt cannot recover it.`, "export");
+    _setMessage("Encrypted Plekt backup downloaded.", "success");
   } catch (error) {
     setBackupTransferState("Failed", "error", `Backup failed: ${error.message}`, "export");
     _setMessage(error.message, "error");
   } finally {
     button.disabled = false;
-    button.textContent = "Export Plembfin Backup";
+    button.textContent = "Export Plekt Backup";
   }
 }
-// ── Full Plembfin restore (runs on the server) ─────────────────────────────
+// ── Full Plekt restore (runs on the server) ─────────────────────────────
 // The server decrypts, checks and imports the file in small pieces, so a backup
 // of any size restores; this page only uploads the file (when it is not already
 // on the server), starts the restore and shows its progress.
-export function selectPlembfinBackupFile(file) {
+export function selectPlektBackupFile(file) {
   state.backupImport = file ? { file, uploadId: "" } : null;
   if (!file) {
-    setBackupTransferState("Idle", "muted", "[idle] Enter a passphrase, then choose an encrypted Plembfin backup.", "restore");
+    setBackupTransferState("Idle", "muted", "[idle] Enter a passphrase, then choose an encrypted Plekt backup.", "restore");
     return;
   }
   setBackupTransferState("Ready", "ready", `${file.name} (${formatBytes(file.size)})\nThe file is uploaded and checked on the server when you restore it.`, "restore");
 }
-function confirmPlembfinRestore(label) {
+function confirmPlektRestore(label) {
   return _openConfirmDialog({
-    title: "Restore Plembfin backup?",
-    body: `This replaces every collection included in ${label} with the backup's contents. Your current data is not backed up first; if you might want it back, make sure a recent backup is listed under Local Plembfin Backups (or use Back Up Now) before you continue. Your local admin username and password stay unchanged. Nothing is changed until the whole file has been checked. Watch-history restores are safer for ordinary history rollback; use this for a full Plembfin move or rebuild.`,
-    confirmLabel: "Restore Plembfin Backup",
+    title: "Restore Plekt backup?",
+    body: `This replaces every collection included in ${label} with the backup's contents. Your current data is not backed up first; if you might want it back, make sure a recent backup is listed under Local Plekt Backups (or use Back Up Now) before you continue. Your local admin username and password stay unchanged. Nothing is changed until the whole file has been checked. Watch-history restores are safer for ordinary history rollback; use this for a full Plekt move or rebuild.`,
+    confirmLabel: "Restore Plekt Backup",
     danger: true,
   });
 }
 // XMLHttpRequest rather than fetch so a large upload can show its progress.
-function uploadPlembfinBackupFile(file) {
+function uploadPlektBackupFile(file) {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("POST", "/api/plembfin-backups/upload");
@@ -200,7 +200,7 @@ function uploadPlembfinBackupFile(file) {
     request.send(file);
   });
 }
-function plembfinRestoreLog(job) {
+function plektRestoreLog(job) {
   if (job.status === "verifying") {
     return `Checking ${job.label}: ${formatBytes(job.bytesRead)} of ${formatBytes(job.totalBytes)} read\nNothing is changed until the whole file has been checked.`;
   }
@@ -221,12 +221,12 @@ async function showRestoreRecoveryOptions(options = []) {
     : "Cancel and preserve the current database, or preserve its database and sidecar files, start with a clean database, and retry the backup.";
   await _openConfirmDialog({
     title: "Database corruption detected",
-    body: `Plembfin checked the current SQLite database before importing. The integrity check failed, so this restore was not started and no data was changed.\n\nRecovery options:\n${listedOptions}`,
+    body: `Plekt checked the current SQLite database before importing. The integrity check failed, so this restore was not started and no data was changed.\n\nRecovery options:\n${listedOptions}`,
     confirmLabel: "Understood",
     cancelLabel: "Close",
   });
 }
-async function waitForPlembfinRestore(jobId) {
+async function waitForPlektRestore(jobId) {
   let failures = 0;
   for (;;) {
     await new Promise((resolve) => setTimeout(resolve, RESTORE_POLL_MS));
@@ -245,7 +245,7 @@ async function waitForPlembfinRestore(jobId) {
     }
     if (!job || job.id !== jobId) throw new Error("The restore status was lost. Check the server log.");
     if (job.status === "verifying" || job.status === "importing") {
-      setBackupTransferState(job.status === "verifying" ? "Checking" : "Importing", "warning", plembfinRestoreLog(job), "restore");
+      setBackupTransferState(job.status === "verifying" ? "Checking" : "Importing", "warning", plektRestoreLog(job), "restore");
       continue;
     }
     return job;
@@ -253,7 +253,7 @@ async function waitForPlembfinRestore(jobId) {
 }
 // Starts the server restore of a listed backup ({ filename }) or an upload
 // ({ uploadId }), shows its progress and reloads the page's data when it is done.
-async function runServerPlembfinRestore(target, passphrase) {
+async function runServerPlektRestore(target, passphrase) {
   const response = await fetch("/api/plembfin-backups/restore", {
     method: "POST",
     headers: authHeaders(),
@@ -264,8 +264,8 @@ async function runServerPlembfinRestore(target, passphrase) {
     if (body.code === "DATABASE_CORRUPT") await showRestoreRecoveryOptions(body.recoveryOptions);
     throw new Error(body.error || `Restore failed to start with ${response.status}`);
   }
-  setBackupTransferState("Checking", "warning", plembfinRestoreLog(body.job), "restore");
-  const job = await waitForPlembfinRestore(body.job.id);
+  setBackupTransferState("Checking", "warning", plektRestoreLog(body.job), "restore");
+  const job = await waitForPlektRestore(body.job.id);
   if (job.status !== "complete") throw new Error(job.error || "The restore failed.");
   _clearDerivedUiCaches();
   state.configLoaded = false;
@@ -277,11 +277,11 @@ async function runServerPlembfinRestore(target, passphrase) {
     _loadActiveSessions(),
     _loadStats({ force: true }),
   ]);
-  setBackupTransferState("Complete", "ready", plembfinRestoreLog(job), "restore");
-  _setMessage("Plembfin backup restored.", "success");
+  setBackupTransferState("Complete", "ready", plektRestoreLog(job), "restore");
+  _setMessage("Plekt backup restored.", "success");
   return job;
 }
-export async function importPlembfinBackup() {
+export async function importPlektBackup() {
   const selected = state.backupImport;
   if (!selected?.file) return;
   const passphrase = backupPassphrase("restore");
@@ -289,7 +289,7 @@ export async function importPlembfinBackup() {
     _setMessage("Enter a restore passphrase of at least 12 characters.", "warning");
     return;
   }
-  if (!(await confirmPlembfinRestore(selected.file.name))) return;
+  if (!(await confirmPlektRestore(selected.file.name))) return;
   const button = elements.backupImportButton;
   const input = elements.backupImportFile;
   button.disabled = true;
@@ -298,8 +298,8 @@ export async function importPlembfinBackup() {
   try {
     // A failed restore keeps the upload on the server for a day, so a retry
     // with the right passphrase does not upload the file again.
-    if (!selected.uploadId) selected.uploadId = await uploadPlembfinBackupFile(selected.file);
-    await runServerPlembfinRestore({ uploadId: selected.uploadId }, passphrase);
+    if (!selected.uploadId) selected.uploadId = await uploadPlektBackupFile(selected.file);
+    await runServerPlektRestore({ uploadId: selected.uploadId }, passphrase);
     selected.uploadId = "";
   } catch (error) {
     if (/Upload not found|Backup file not found|Invalid upload id/i.test(error.message)) selected.uploadId = "";
@@ -308,7 +308,7 @@ export async function importPlembfinBackup() {
   } finally {
     input.disabled = false;
     button.disabled = !state.backupImport;
-    button.textContent = "Restore Plembfin Backup";
+    button.textContent = "Restore Plekt Backup";
   }
 }
 // ── Watch-history backups ──────────────────────────────────────────────────
@@ -347,7 +347,7 @@ export function renderWatchBackups() {
     setEnabledStatus(elements.watchBackupSummary, false, state.watchBackupsLoading);
     setEnabledStatus(elements.remoteWatchBackupSummary, false, state.watchBackupsLoading);
     setEnabledStatus(elements.backupDestinationSummary, false, state.watchBackupsLoading);
-    const loadingCopy = `<div class="empty-log"><b>${state.watchBackupsLoading ? "Loading backups..." : "Backups not loaded"}</b><span>Watch-history backups and Plembfin backups restore from separate sections.</span></div>`;
+    const loadingCopy = `<div class="empty-log"><b>${state.watchBackupsLoading ? "Loading backups..." : "Backups not loaded"}</b><span>Watch-history backups and Plekt backups restore from separate sections.</span></div>`;
     elements.watchBackupList.innerHTML = loadingCopy;
     if (elements.remoteWatchBackupList) elements.remoteWatchBackupList.innerHTML = loadingCopy;
     return;
@@ -521,13 +521,13 @@ const DESTINATION_FORMS = {
     description: "Mirror backups to a Backblaze B2 bucket",
     settings: [
       { key: "region", label: "Region or endpoint", placeholder: "eu-central-003", help: "A region name or full S3 endpoint is accepted." },
-      { key: "bucket", label: "Bucket name", placeholder: "yourname-plembfin" },
+      { key: "bucket", label: "Bucket name", placeholder: "yourname-plekt" },
       { key: "accessKeyId", label: "Key ID", placeholder: "0035..." },
-      { key: "prefix", label: "Key prefix", placeholder: "plembfin/", optional: true, help: "Optional folder-like prefix within the bucket." },
+      { key: "prefix", label: "Key prefix", placeholder: "plekt/", optional: true, help: "Optional folder-like prefix within the bucket." },
     ],
     secrets: [{ key: "secretAccessKey", label: "Application key", placeholder: "Backblaze application key" }],
     helpHtml: `
-      <p class="tool-accordion-desc">Plembfin needs a private B2 bucket and an application key that can read and write it. No Backblaze account yet? <a href="https://www.backblaze.com/sign-up/cloud-storage" target="_blank" rel="noopener noreferrer">Sign up for B2 Cloud Storage</a> (the first 10 GB are free).</p>
+      <p class="tool-accordion-desc">Plekt needs a private B2 bucket and an application key that can read and write it. No Backblaze account yet? <a href="https://www.backblaze.com/sign-up/cloud-storage" target="_blank" rel="noopener noreferrer">Sign up for B2 Cloud Storage</a> (the first 10 GB are free).</p>
       <ol class="tool-accordion-desc settings-help-steps">
         <li>Open <a href="https://secure.backblaze.com/b2_buckets.htm" target="_blank" rel="noopener noreferrer">Buckets</a> and choose <b>Create a Bucket</b>. Keep files <b>Private</b> and enter the name under <b>Bucket name</b>.</li>
         <li>On the bucket's card, copy the <b>Endpoint</b> (for example <code>s3.eu-central-003.backblazeb2.com</code>) into <b>Region or endpoint</b>. The region alone (<code>eu-central-003</code>) also works.</li>
@@ -535,8 +535,8 @@ const DESTINATION_FORMS = {
         <li>Copy the <b>keyID</b> into <b>Key ID</b> and the <b>applicationKey</b> into <b>Application key</b>. Backblaze shows the application key only once.</li>
         <li>Choose <b>Test</b>, then tick <b>Enable</b> and save.</li>
       </ol>
-      <p class="tool-accordion-desc"><b>Tip:</b> B2 keeps old versions of a deleted file by default, so backups removed by retention still use space. In the bucket's <b>Lifecycle Settings</b>, choose <b>Keep only the last version of the file</b>. If the bucket is shared, use a custom rule scoped to the Plembfin prefix. <a href="https://www.backblaze.com/docs/cloud-storage-configure-and-manage-lifecycle-rules" target="_blank" rel="noopener noreferrer">Backblaze lifecycle rule instructions</a>.</p>
-      <p class="tool-accordion-desc">Plembfin stores the application key securely and never sends it back to the browser. More detail: <a href="https://www.backblaze.com/docs/cloud-storage-s3-compatible-api" target="_blank" rel="noopener noreferrer">Backblaze S3-compatible API</a>.</p>
+      <p class="tool-accordion-desc"><b>Tip:</b> B2 keeps old versions of a deleted file by default, so backups removed by retention still use space. In the bucket's <b>Lifecycle Settings</b>, choose <b>Keep only the last version of the file</b>. If the bucket is shared, use a custom rule scoped to the Plekt prefix. <a href="https://www.backblaze.com/docs/cloud-storage-configure-and-manage-lifecycle-rules" target="_blank" rel="noopener noreferrer">Backblaze lifecycle rule instructions</a>.</p>
+      <p class="tool-accordion-desc">Plekt stores the application key securely and never sends it back to the browser. More detail: <a href="https://www.backblaze.com/docs/cloud-storage-s3-compatible-api" target="_blank" rel="noopener noreferrer">Backblaze S3-compatible API</a>.</p>
     `,
   },
 };
@@ -633,7 +633,7 @@ export function openBackupDestinationModal(destination = {}) {
 function openBackupDestinationPicker() {
   openSettingsPickerModal({
     title: "Add Backup Destination",
-    intro: "Choose where Plembfin should mirror scheduled backups.",
+    intro: "Choose where Plekt should mirror scheduled backups.",
     items: Object.entries(DESTINATION_FORMS).map(([id, form]) => ({ id, name: form.label, description: form.description })),
     onPick: (type) => openBackupDestinationModal({ type }),
   });
@@ -694,73 +694,73 @@ export async function postWatchBackupAction(payload) {
   if (!response.ok) throw new Error(body.error || `Backup action failed with ${response.status}`);
   return body;
 }
-export async function loadPlembfinBackups({ force = false } = {}) {
-  if (!state.token || state.plembfinBackupsLoading || (state.plembfinBackups && !force)) return state.plembfinBackups;
-  state.plembfinBackupsLoading = true;
-  renderPlembfinBackups();
+export async function loadPlektBackups({ force = false } = {}) {
+  if (!state.token || state.plektBackupsLoading || (state.plektBackups && !force)) return state.plektBackups;
+  state.plektBackupsLoading = true;
+  renderPlektBackups();
   try {
     const response = await fetch("/api/plembfin-backups", { headers: authHeaders(), cache: "no-store" });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error || `Plembfin backup status failed with ${response.status}`);
-    state.plembfinBackups = body;
+    if (!response.ok) throw new Error(body.error || `Plekt backup status failed with ${response.status}`);
+    state.plektBackups = body;
     return body;
   } finally {
-    state.plembfinBackupsLoading = false;
-    renderPlembfinBackups();
+    state.plektBackupsLoading = false;
+    renderPlektBackups();
   }
 }
-export async function postPlembfinBackupAction(payload) {
+export async function postPlektBackupAction(payload) {
   const response = await fetch("/api/plembfin-backups", {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || `Plembfin backup action failed with ${response.status}`);
+  if (!response.ok) throw new Error(body.error || `Plekt backup action failed with ${response.status}`);
   return body;
 }
-export function updatePlembfinButtonsState() {
-  const config = state.plembfinBackups?.config || {};
+export function updatePlektButtonsState() {
+  const config = state.plektBackups?.config || {};
   const passphrase = elements.backupExportPassphrase?.value.trim() || "";
   const remember = Boolean(elements.backupExportRememberPassphrase?.checked);
   const hasStoredPassphrase = Boolean(config.passphraseStored);
   const hasLocalPassphrase = passphrase.length >= 12 || (remember && hasStoredPassphrase);
-  const localScheduleEnabled = Boolean(elements.plembfinBackupEnabled?.checked);
-  if (elements.savePlembfinBackupConfigButton) {
-    elements.savePlembfinBackupConfigButton.disabled = localScheduleEnabled && (!remember || !hasLocalPassphrase);
+  const localScheduleEnabled = Boolean(elements.plektBackupEnabled?.checked);
+  if (elements.savePlektBackupConfigButton) {
+    elements.savePlektBackupConfigButton.disabled = localScheduleEnabled && (!remember || !hasLocalPassphrase);
   }
-  if (elements.createPlembfinBackupButton) elements.createPlembfinBackupButton.disabled = !hasLocalPassphrase && passphrase.length < 12;
+  if (elements.createPlektBackupButton) elements.createPlektBackupButton.disabled = !hasLocalPassphrase && passphrase.length < 12;
 
-  const remotePassphrase = elements.plembfinBackupRemotePassphrase?.value.trim() || "";
-  const remoteRemember = Boolean(elements.plembfinBackupRemoteRememberPassphrase?.checked);
+  const remotePassphrase = elements.plektBackupRemotePassphrase?.value.trim() || "";
+  const remoteRemember = Boolean(elements.plektBackupRemoteRememberPassphrase?.checked);
   const hasStoredRemotePassphrase = Boolean(config.remotePassphraseStored);
   const hasRemotePassphrase = remotePassphrase.length >= 12 || (remoteRemember && hasStoredRemotePassphrase);
-  const remoteScheduleEnabled = Boolean(elements.plembfinBackupRemoteEnabled?.checked);
-  if (elements.savePlembfinBackupRemoteButton) {
-    elements.savePlembfinBackupRemoteButton.disabled = remoteScheduleEnabled && !hasLocalPassphrase && (!remoteRemember || !hasRemotePassphrase);
+  const remoteScheduleEnabled = Boolean(elements.plektBackupRemoteEnabled?.checked);
+  if (elements.savePlektBackupRemoteButton) {
+    elements.savePlektBackupRemoteButton.disabled = remoteScheduleEnabled && !hasLocalPassphrase && (!remoteRemember || !hasRemotePassphrase);
   }
-  if (elements.createPlembfinBackupRemoteButton) {
+  if (elements.createPlektBackupRemoteButton) {
     const canBackUpRemoteNow = remotePassphrase.length >= 12 || hasStoredRemotePassphrase || hasStoredPassphrase || hasLocalPassphrase;
-    elements.createPlembfinBackupRemoteButton.disabled = !canBackUpRemoteNow;
+    elements.createPlektBackupRemoteButton.disabled = !canBackUpRemoteNow;
   }
 }
-export function renderPlembfinBackups() {
-  if (!elements.plembfinBackupList) return;
-  const data = state.plembfinBackups;
+export function renderPlektBackups() {
+  if (!elements.plektBackupList) return;
+  const data = state.plektBackups;
   if (!data) {
-    setEnabledStatus(elements.plembfinBackupSummary, false, state.plembfinBackupsLoading);
-    setEnabledStatus(elements.plembfinBackupRemoteSummary, false, state.plembfinBackupsLoading);
-    const loadingCopy = `<div class="empty-log"><b>${state.plembfinBackupsLoading ? "Loading backups..." : "Backups not loaded"}</b><span>Watch-history backups and Plembfin backups restore from separate sections.</span></div>`;
-    elements.plembfinBackupList.innerHTML = loadingCopy;
+    setEnabledStatus(elements.plektBackupSummary, false, state.plektBackupsLoading);
+    setEnabledStatus(elements.plektBackupRemoteSummary, false, state.plektBackupsLoading);
+    const loadingCopy = `<div class="empty-log"><b>${state.plektBackupsLoading ? "Loading backups..." : "Backups not loaded"}</b><span>Watch-history backups and Plekt backups restore from separate sections.</span></div>`;
+    elements.plektBackupList.innerHTML = loadingCopy;
     return;
   }
   const config = data.config || {};
   const runtime = data.runtime || {};
   const files = Array.isArray(data.files) ? data.files : [];
   
-  elements.plembfinBackupEnabled && (elements.plembfinBackupEnabled.checked = Boolean(config.enabled));
-  elements.plembfinBackupTime && (elements.plembfinBackupTime.value = config.time || "03:00");
-  elements.plembfinBackupRetention && (elements.plembfinBackupRetention.value = String(config.retention || 7));
+  elements.plektBackupEnabled && (elements.plektBackupEnabled.checked = Boolean(config.enabled));
+  elements.plektBackupTime && (elements.plektBackupTime.value = config.time || "03:00");
+  elements.plektBackupRetention && (elements.plektBackupRetention.value = String(config.retention || 7));
   if (elements.backupExportRememberPassphrase) {
     elements.backupExportRememberPassphrase.checked = Boolean(config.rememberPassphrase || config.passphraseStored);
   }
@@ -768,20 +768,20 @@ export function renderPlembfinBackups() {
     elements.backupExportPassphrase.placeholder = config.passphraseStored ? "Saved - leave blank to keep" : "";
   }
 
-  elements.plembfinBackupRemoteEnabled && (elements.plembfinBackupRemoteEnabled.checked = Boolean(config.remoteEnabled));
-  elements.plembfinBackupRemoteRetention && (elements.plembfinBackupRemoteRetention.value = String(config.remoteRetention || config.retention || 7));
-  if (elements.plembfinBackupRemoteRememberPassphrase) {
-    elements.plembfinBackupRemoteRememberPassphrase.checked = Boolean(config.remoteRememberPassphrase || config.remotePassphraseStored);
+  elements.plektBackupRemoteEnabled && (elements.plektBackupRemoteEnabled.checked = Boolean(config.remoteEnabled));
+  elements.plektBackupRemoteRetention && (elements.plektBackupRemoteRetention.value = String(config.remoteRetention || config.retention || 7));
+  if (elements.plektBackupRemoteRememberPassphrase) {
+    elements.plektBackupRemoteRememberPassphrase.checked = Boolean(config.remoteRememberPassphrase || config.remotePassphraseStored);
   }
-  if (elements.plembfinBackupRemotePassphrase) {
-    elements.plembfinBackupRemotePassphrase.placeholder = config.remotePassphraseStored ? "Saved - leave blank to keep" : "";
+  if (elements.plektBackupRemotePassphrase) {
+    elements.plektBackupRemotePassphrase.placeholder = config.remotePassphraseStored ? "Saved - leave blank to keep" : "";
   }
   
-  setEnabledStatus(elements.plembfinBackupSummary, Boolean(config.enabled));
-  setEnabledStatus(elements.plembfinBackupRemoteSummary, Boolean(config.remoteEnabled));
+  setEnabledStatus(elements.plektBackupSummary, Boolean(config.enabled));
+  setEnabledStatus(elements.plektBackupRemoteSummary, Boolean(config.remoteEnabled));
   
-  if (elements.plembfinBackupRuntime) {
-    elements.plembfinBackupRuntime.innerHTML = `
+  if (elements.plektBackupRuntime) {
+    elements.plektBackupRuntime.innerHTML = `
       <div><span>Last successful backup</span><b>${escapeHtml(watchBackupDate(runtime.lastSuccessAt))}</b></div>
       <div class="backup-runtime-with-action">
         <span>Last restore</span>
@@ -792,7 +792,7 @@ export function renderPlembfinBackups() {
     `;
   }
 
-  if (elements.plembfinBackupRemoteRuntime) {
+  if (elements.plektBackupRemoteRuntime) {
     let remoteHtml = "";
     if (runtime.lastRemoteAttemptAt) {
       if (!runtime.lastRemoteError) {
@@ -816,28 +816,28 @@ export function renderPlembfinBackups() {
         <div><span>Status</span><b>Not connected</b></div>
       `;
     }
-    elements.plembfinBackupRemoteRuntime.innerHTML = remoteHtml;
+    elements.plektBackupRemoteRuntime.innerHTML = remoteHtml;
   }
   
-  const plembfinRows = files.map((file) => `
+  const plektRows = files.map((file) => `
     <article class="watch-backup-row">
       <div class="watch-backup-copy">
         <b>${escapeHtml(file.name)}</b>
         <span>${escapeHtml(watchBackupDate(file.createdAt))} · ${escapeHtml(formatBytes(file.sizeBytes))}</span>
       </div>
       <div class="watch-backup-actions">
-        <button class="button-ghost" type="button" data-plembfin-backup-download="${escapeAttribute(file.name)}">Download</button>
-        <button class="button-primary" type="button" data-plembfin-backup-restore="${escapeAttribute(file.name)}">Restore</button>
-        <button class="button-ghost" type="button" data-plembfin-backup-delete="${escapeAttribute(file.name)}">Delete</button>
+        <button class="button-ghost" type="button" data-plekt-backup-download="${escapeAttribute(file.name)}">Download</button>
+        <button class="button-primary" type="button" data-plekt-backup-restore="${escapeAttribute(file.name)}">Restore</button>
+        <button class="button-ghost" type="button" data-plekt-backup-delete="${escapeAttribute(file.name)}">Delete</button>
       </div>
     </article>
   `);
-  elements.plembfinBackupList.innerHTML = plembfinRows.length
-    ? plembfinRows.slice(0, 2).join("") + collapseOlderRows(plembfinRows.slice(2))
-    : `<div class="empty-log"><b>No scheduled Plembfin backups yet</b><span>Use Back Up Now or enable the daily schedule.</span></div>`;
+  elements.plektBackupList.innerHTML = plektRows.length
+    ? plektRows.slice(0, 2).join("") + collapseOlderRows(plektRows.slice(2))
+    : `<div class="empty-log"><b>No scheduled Plekt backups yet</b><span>Use Back Up Now or enable the daily schedule.</span></div>`;
 
-  if (elements.remotePlembfinBackupList) {
-    const remoteFiles = Array.isArray(state.remotePlembfinBackupFiles) ? state.remotePlembfinBackupFiles : [];
+  if (elements.remotePlektBackupList) {
+    const remoteFiles = Array.isArray(state.remotePlektBackupFiles) ? state.remotePlektBackupFiles : [];
     const remoteSorted = [...remoteFiles].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
     const remoteRows = remoteSorted.map((file) => `
       <article class="watch-backup-row">
@@ -849,84 +849,84 @@ export function renderPlembfinBackups() {
           </span>
         </div>
         <div class="watch-backup-actions">
-          <button class="button-primary" type="button" data-plembfin-remote-backup-restore="${escapeAttribute(file.name)}" data-restore-dest-id="${escapeAttribute(file.destId)}">Restore</button>
+          <button class="button-primary" type="button" data-plekt-remote-backup-restore="${escapeAttribute(file.name)}" data-restore-dest-id="${escapeAttribute(file.destId)}">Restore</button>
         </div>
       </article>
     `);
-    if (state.remotePlembfinBackupFilesLoading) {
-      elements.remotePlembfinBackupList.innerHTML = `<div class="empty-log"><b>Checking remote destinations...</b></div>`;
+    if (state.remotePlektBackupFilesLoading) {
+      elements.remotePlektBackupList.innerHTML = `<div class="empty-log"><b>Checking remote destinations...</b></div>`;
     } else {
-      elements.remotePlembfinBackupList.innerHTML = remoteRows.length
+      elements.remotePlektBackupList.innerHTML = remoteRows.length
         ? remoteRows.slice(0, 2).join("") + collapseOlderRows(remoteRows.slice(2))
-        : `<div class="empty-log"><b>No remote Plembfin backups</b><span>Configure a remote destination on the Backups tab, then create a Plembfin backup with remote mirroring on.</span></div>`;
+        : `<div class="empty-log"><b>No remote Plekt backups</b><span>Configure a remote destination on the Backups tab, then create a Plekt backup with remote mirroring on.</span></div>`;
     }
   }
 
-  updatePlembfinButtonsState();
+  updatePlektButtonsState();
 }
-export async function savePlembfinBackupSettings() {
+export async function savePlektBackupSettings() {
   const rememberPassphrase = Boolean(elements.backupExportRememberPassphrase?.checked);
   const config = {
-    ...state.plembfinBackups?.config,
-    enabled: elements.plembfinBackupEnabled.checked,
-    time: elements.plembfinBackupTime.value || "03:00",
-    retention: Number(elements.plembfinBackupRetention.value) || 7,
+    ...state.plektBackups?.config,
+    enabled: elements.plektBackupEnabled.checked,
+    time: elements.plektBackupTime.value || "03:00",
+    retention: Number(elements.plektBackupRetention.value) || 7,
     rememberPassphrase,
     passphrase: rememberPassphrase ? elements.backupExportPassphrase.value.trim() : "",
   };
-  await postPlembfinBackupAction({ action: "configure", config });
-  state.plembfinBackups = null;
-  await loadPlembfinBackups({ force: true });
-  flashButtonSuccess(elements.savePlembfinBackupConfigButton);
+  await postPlektBackupAction({ action: "configure", config });
+  state.plektBackups = null;
+  await loadPlektBackups({ force: true });
+  flashButtonSuccess(elements.savePlektBackupConfigButton);
 }
-export async function savePlembfinBackupRemoteSettings() {
-  const remoteRememberPassphrase = Boolean(elements.plembfinBackupRemoteRememberPassphrase?.checked);
+export async function savePlektBackupRemoteSettings() {
+  const remoteRememberPassphrase = Boolean(elements.plektBackupRemoteRememberPassphrase?.checked);
   const config = {
-    ...state.plembfinBackups?.config,
-    remoteEnabled: elements.plembfinBackupRemoteEnabled.checked,
-    remoteRetention: Number(elements.plembfinBackupRemoteRetention.value) || 7,
+    ...state.plektBackups?.config,
+    remoteEnabled: elements.plektBackupRemoteEnabled.checked,
+    remoteRetention: Number(elements.plektBackupRemoteRetention.value) || 7,
     remoteRememberPassphrase,
-    remotePassphrase: remoteRememberPassphrase ? elements.plembfinBackupRemotePassphrase.value.trim() : "",
+    remotePassphrase: remoteRememberPassphrase ? elements.plektBackupRemotePassphrase.value.trim() : "",
   };
-  await postPlembfinBackupAction({ action: "configure", config });
-  state.plembfinBackups = null;
-  await loadPlembfinBackups({ force: true });
-  flashButtonSuccess(elements.savePlembfinBackupRemoteButton);
+  await postPlektBackupAction({ action: "configure", config });
+  state.plektBackups = null;
+  await loadPlektBackups({ force: true });
+  flashButtonSuccess(elements.savePlektBackupRemoteButton);
 }
-export async function createPlembfinBackupNow() {
-  const button = elements.createPlembfinBackupButton;
+export async function createPlektBackupNow() {
+  const button = elements.createPlektBackupButton;
   button.disabled = true;
   button.textContent = "Backing up...";
-  toggleBackupProgress(elements.plembfinBackupProgress, true);
+  toggleBackupProgress(elements.plektBackupProgress, true);
   try {
-    const result = await postPlembfinBackupAction({
+    const result = await postPlektBackupAction({
       action: "create",
       passphrase: elements.backupExportPassphrase.value.trim()
     });
-    state.plembfinBackups = null;
-    await loadPlembfinBackups({ force: true });
-    _setMessage(`Created ${result.backup?.name || "Plembfin backup"}.`, "success");
+    state.plektBackups = null;
+    await loadPlektBackups({ force: true });
+    _setMessage(`Created ${result.backup?.name || "Plekt backup"}.`, "success");
   } finally {
-    toggleBackupProgress(elements.plembfinBackupProgress, false);
+    toggleBackupProgress(elements.plektBackupProgress, false);
     button.disabled = false;
     button.textContent = "Back Up Now";
-    updatePlembfinButtonsState();
+    updatePlektButtonsState();
   }
 }
-export async function createPlembfinBackupRemoteNow() {
-  const button = elements.createPlembfinBackupRemoteButton;
+export async function createPlektBackupRemoteNow() {
+  const button = elements.createPlektBackupRemoteButton;
   if (!button) return;
   button.disabled = true;
   button.textContent = "Backing up...";
-  toggleBackupProgress(elements.plembfinBackupRemoteProgress, true);
+  toggleBackupProgress(elements.plektBackupRemoteProgress, true);
   try {
-    const result = await postPlembfinBackupAction({
+    const result = await postPlektBackupAction({
       action: "create",
       remote: true,
-      passphrase: elements.plembfinBackupRemotePassphrase?.value.trim() || "",
+      passphrase: elements.plektBackupRemotePassphrase?.value.trim() || "",
     });
-    state.plembfinBackups = null;
-    await loadPlembfinBackups({ force: true });
+    state.plektBackups = null;
+    await loadPlektBackups({ force: true });
     const remotes = Array.isArray(result.backup?.remotes) ? result.backup.remotes : [];
     const failed = remotes.filter((remote) => remote.status === "error");
     if (!remotes.length) {
@@ -934,16 +934,16 @@ export async function createPlembfinBackupRemoteNow() {
     } else if (failed.length) {
       _setMessage(`Backup created, but ${failed.length} remote upload${failed.length === 1 ? "" : "s"} failed: ${failed[0].lastError || "unknown error"}`, "error");
     } else {
-      _setMessage(`Created ${result.backup?.name || "Plembfin backup"} and uploaded it to ${remotes.length} remote destination${remotes.length === 1 ? "" : "s"}.`, "success");
+      _setMessage(`Created ${result.backup?.name || "Plekt backup"} and uploaded it to ${remotes.length} remote destination${remotes.length === 1 ? "" : "s"}.`, "success");
     }
   } finally {
-    toggleBackupProgress(elements.plembfinBackupRemoteProgress, false);
+    toggleBackupProgress(elements.plektBackupRemoteProgress, false);
     button.disabled = false;
     button.textContent = "Back Up Now";
-    updatePlembfinButtonsState();
+    updatePlektButtonsState();
   }
 }
-export async function downloadPlembfinBackup(filename) {
+export async function downloadPlektBackup(filename) {
   const response = await fetch(`/api/plembfin-backups?download=${encodeURIComponent(filename)}`, { headers: authHeaders() });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
@@ -958,63 +958,63 @@ export async function downloadPlembfinBackup(filename) {
   link.remove();
   URL.revokeObjectURL(url);
 }
-export async function deletePlembfinBackupFile(filename) {
+export async function deletePlektBackupFile(filename) {
   const approved = await _openConfirmDialog({
-    title: "Delete Plembfin backup?",
+    title: "Delete Plekt backup?",
     body: `Are you sure you want to permanently delete the backup file ${filename} from the server?`,
     confirmLabel: "Delete Backup",
     danger: true,
   });
   if (!approved) return;
-  await postPlembfinBackupAction({ action: "delete", filename });
-  state.plembfinBackups = null;
-  await loadPlembfinBackups({ force: true });
+  await postPlektBackupAction({ action: "delete", filename });
+  state.plektBackups = null;
+  await loadPlektBackups({ force: true });
   _setMessage("Backup deleted successfully.", "success");
 }
-export async function restorePlembfinBackupFromServer(filename, passphraseOverride) {
+export async function restorePlektBackupFromServer(filename, passphraseOverride) {
   const passphrase = passphraseOverride || elements.backupRestorePassphrase?.value.trim() || "";
   if (passphrase.length < 12) {
     throw new Error("Enter a restore passphrase of at least 12 characters.");
   }
-  if (!(await confirmPlembfinRestore(filename))) return;
+  if (!(await confirmPlektRestore(filename))) return;
   try {
-    await runServerPlembfinRestore({ filename }, passphrase);
+    await runServerPlektRestore({ filename }, passphrase);
   } catch (error) {
     setBackupTransferState("Failed", "error", `Restore failed: ${error.message}`, "restore");
     _setMessage(error.message, "error");
   }
 }
-// Pulls an encrypted Plembfin backup mirrored to a remote destination into local
+// Pulls an encrypted Plekt backup mirrored to a remote destination into local
 // storage, then restores it on the server like any listed local backup.
-export async function restoreRemotePlembfinBackup(destinationId, filename) {
+export async function restoreRemotePlektBackup(destinationId, filename) {
   const passphrase = elements.backupRestoreRemotePassphrase?.value.trim() || "";
   if (passphrase.length < 12) {
     _setMessage("Enter a restore passphrase of at least 12 characters.", "warning");
     return;
   }
-  if (!(await confirmPlembfinRestore(filename))) return;
+  if (!(await confirmPlektRestore(filename))) return;
   setBackupTransferState("Downloading", "warning", `Downloading ${filename} from remote destination...`, "restore");
   try {
-    const { pulled } = await postPlembfinBackupAction({ action: "pull-remote-backup", destinationId, filename });
-    await loadPlembfinBackups({ force: true });
-    await runServerPlembfinRestore({ filename: pulled.name }, passphrase);
+    const { pulled } = await postPlektBackupAction({ action: "pull-remote-backup", destinationId, filename });
+    await loadPlektBackups({ force: true });
+    await runServerPlektRestore({ filename: pulled.name }, passphrase);
   } catch (error) {
     setBackupTransferState("Failed", "error", `Restore failed: ${error.message}`, "restore");
     _setMessage(error.message, "error");
   }
 }
-export async function loadRemotePlembfinBackupsForRestoreTab() {
+export async function loadRemotePlektBackupsForRestoreTab() {
   const data = state.watchBackups;
   if (!data) return;
   const destinations = Array.isArray(data.destinations) ? data.destinations : [];
   if (!destinations.length) return;
-  state.remotePlembfinBackupFilesLoading = true;
-  state.remotePlembfinBackupFiles = [];
-  renderPlembfinBackups();
+  state.remotePlektBackupFilesLoading = true;
+  state.remotePlektBackupFiles = [];
+  renderPlektBackups();
   const results = await Promise.allSettled(
     destinations.map(async (dest) => {
       try {
-        const result = await postPlembfinBackupAction({ action: "list-remote-backups", destinationId: dest.id });
+        const result = await postPlektBackupAction({ action: "list-remote-backups", destinationId: dest.id });
         const files = Array.isArray(result.files) ? result.files : [];
         return files.map((f) => ({ ...f, source: "remote", destId: dest.id, destLabel: dest.label || dest.type || "Remote" }));
       } catch {
@@ -1022,9 +1022,9 @@ export async function loadRemotePlembfinBackupsForRestoreTab() {
       }
     })
   );
-  state.remotePlembfinBackupFiles = results.flatMap((r) => r.status === "fulfilled" ? r.value : []);
-  state.remotePlembfinBackupFilesLoading = false;
-  renderPlembfinBackups();
+  state.remotePlektBackupFiles = results.flatMap((r) => r.status === "fulfilled" ? r.value : []);
+  state.remotePlektBackupFilesLoading = false;
+  renderPlektBackups();
 }
 export async function saveAppearanceSettings() {
   const prefs = {
@@ -1038,14 +1038,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=1.3.1.1.2");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=1.3.1.2.1");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=1.3.1.1.2");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=1.3.1.2.1");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {
@@ -1162,7 +1162,7 @@ export async function uploadWatchBackupFile(file) {
   if (!file) return;
   const name = String(file.name || "");
   if (!name.toLowerCase().endsWith(".gz")) {
-    throw new Error("Choose a Plembfin watch-history .json.gz backup file.");
+    throw new Error("Choose a Plekt watch-history .json.gz backup file.");
   }
   if (elements.watchBackupUploadStatus) elements.watchBackupUploadStatus.textContent = `Uploading ${name}...`;
   const response = await fetch(`/api/watch-backups?upload=1&filename=${encodeURIComponent(name)}`, {

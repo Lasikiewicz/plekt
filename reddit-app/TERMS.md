@@ -1,4 +1,4 @@
-# Terms & Conditions — Plembfin Release Bot
+# Terms & Conditions — Plekt Release Bot
 
 This Devvit app ("the bot") is a small, single-purpose automation installed only in
 r/plembfin by that subreddit's moderators. It is not offered as a general-purpose
@@ -7,7 +7,7 @@ service and is not intended for installation in other subreddits.
 ## What it does
 
 The bot periodically checks a public changelog file in the
-[Lasikiewicz/plembfin](https://github.com/Lasikiewicz/plembfin) GitHub repository. When
+[Lasikiewicz/plekt](https://github.com/Lasikiewicz/plekt) GitHub repository. When
 a new release is published there, the bot posts a release announcement to r/plembfin
 and pins it, replacing whichever earlier release post it had previously pinned.
 
@@ -26,7 +26,7 @@ consequential.
 ## Changes
 
 These terms may be updated at any time by the r/plembfin moderators; the current
-version always lives at this file's path in the plembfin GitHub repository.
+version always lives at this file's path in the plekt GitHub repository.
 
 ## Contact
 

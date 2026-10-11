@@ -34,11 +34,10 @@ import { removeWatchlistAfterCompletedWatch } from "./personalWatchlistRepositor
 // completely unrelated shows, all sourced from one Jellyfin poll/webhook
 // burst - each one propagated to Plex and Emby before anyone noticed.
 //
-// This is deliberately coarser than the per-show/per-batch guard Trakt's own
-// poller already has (partitionSuspiciousUnwatches in trackerSync.js, which
-// only trips when *one show* loses a large share of its episodes at once):
-// it catches the case that guard misses, a burst spread thin across many
-// different shows/movies rather than concentrated in one. It is backed by
+// This is deliberately coarser than the per-item confirmation window Trakt's
+// own poller already has (partitionPendingTraktUnwatches in trackerSync.js,
+// which waits before trusting a missing watched item): it catches a burst
+// spread thin across many different shows/movies. It is backed by
 // the shared loop_keys table (not in-memory) so it works correctly across
 // a split web/worker deployment, where webhooks and scheduled polls can land
 // on different processes.

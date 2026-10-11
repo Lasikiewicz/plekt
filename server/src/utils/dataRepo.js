@@ -26,6 +26,7 @@ import {
   repairedStoredEpisodeTitle as repairedEpisodeTitle,
 } from "./watchDerivedFields.js";
 import { yieldToEventLoop } from "./eventLoop.js";
+import { brandEnv } from "./brandEnv.js";
 
 // Initialize TV show progress cache on startup
 initShowProgressCache().catch((err) => {
@@ -755,7 +756,7 @@ function isTrustedScheduledLibraryHistoryRow(row = {}) {
     && Boolean(String(provenance.source_timestamp || "").trim());
 }
 
-export function isPlembfinTrackedWatchRow(row = {}) {
+export function isPlektTrackedWatchRow(row = {}) {
   return isWatchedAction(row)
     && (!isScheduledLibraryHistoryRow(row) || isTrustedScheduledLibraryHistoryRow(row));
 }
@@ -764,7 +765,7 @@ export function isPlembfinTrackedWatchRow(row = {}) {
 // still isn't evidence of anything, watched or not) but without requiring the
 // row's current state to be "watched" - used for grouping a show's episodes
 // so a show doesn't disappear once every episode has been marked unwatched.
-export function isPlembfinTrackedEpisodeRow(row = {}) {
+export function isPlektTrackedEpisodeRow(row = {}) {
   return !isScheduledLibraryHistoryRow(row) || isTrustedScheduledLibraryHistoryRow(row);
 }
 
@@ -974,7 +975,7 @@ export async function getCachedMovies() {
   const version = getDataVersion();
   if (movieCache.version === version && Array.isArray(movieCache.rows)) return movieCache.rows;
   const rows = timeCacheRebuild("movies", version, dataVersionTrigger(version), () => (
-    selectMoviesStmt.all().map(rowToWatch).filter(isPlembfinTrackedWatchRow)
+    selectMoviesStmt.all().map(rowToWatch).filter(isPlektTrackedWatchRow)
   ));
   movieCache = { version, rows };
   return rows;
@@ -1014,7 +1015,7 @@ export async function getCachedShows({ includeScheduledLibraryHistory = false } 
       // here (with 0 watched) so it stays visible in the TV Shows grid/dashboard
       // instead of disappearing entirely.
       const episodeRows = (await getCachedHistory()).filter((r) => r.media_type === "episode"
-        && (includeScheduledLibraryHistory ? isWatchedAction(r) : isPlembfinTrackedEpisodeRow(r)));
+        && (includeScheduledLibraryHistory ? isWatchedAction(r) : isPlektTrackedEpisodeRow(r)));
       const groups = await groupShowRowsYielding(dedupeHistory(episodeRows));
       // Each show needs its own SQLite lookup + JSON parse for cached TMDB details;
       // at library scale that's enough synchronous work in one pass to block the
@@ -1236,7 +1237,7 @@ export function upsertPlaystateSync(record, stateOverride = undefined, { allowDu
     ids: { imdb: normalized.imdb_id, tmdb: normalized.tmdb_id, tvdb: normalized.tvdb_id },
     season: normalized.season,
     episode: normalized.episode,
-    details: `Plembfin playstate set to ${state}.`,
+    details: `Plekt playstate set to ${state}.`,
     payload: { state, watchedAt: normalized.watched_at, sources: [...sources].sort() },
   });
 
@@ -1479,7 +1480,7 @@ async function invalidateAfterRowMetaWrite(id, oldRow, changed) {
     if (rows) historyCache = { version, rows };
   }
 
-  const trackedFlipped = isPlembfinTrackedWatchRow(oldRow) !== isPlembfinTrackedWatchRow(freshRow);
+  const trackedFlipped = isPlektTrackedWatchRow(oldRow) !== isPlektTrackedWatchRow(freshRow);
   if (movieCache.version === previousVersion && Array.isArray(movieCache.rows) && !trackedFlipped) {
     if (freshRow.media_type === "movie") {
       const rows = patchCachedRow(movieCache.rows, freshRow);
@@ -1571,7 +1572,7 @@ export function insertWatchRecordSync(record, { id: presetId = "", watchlistConf
     client: normalized.watch_provenance?.client,
     clientVersion: normalized.watch_provenance?.client_version,
     details: isWatchedAction(normalized)
-      ? "Watch record added to Plembfin history; outbound sync is tracked separately."
+      ? "Watch record added to Plekt history;outbound sync is tracked separately."
       : `Watch history state recorded as ${normalized.sync_action}.`,
     payload: {
       record: normalized,
@@ -1604,7 +1605,7 @@ export function insertWatchRecordSync(record, { id: presetId = "", watchlistConf
       client: normalized.watch_provenance?.client,
       clientVersion: normalized.watch_provenance?.client_version,
       status: "queued",
-      details: "Outbound synchronization queued after the Plembfin history write.",
+      details: "Outbound synchronization queued after the Plekt history write.",
     });
   }
   return { id, record: normalized };
@@ -1634,7 +1635,7 @@ function defaultTelemetry(record) {
       `Origin: ${source}`,
       `Loop-check: Pending`,
       `Dispatch status: pending`,
-      `Details: Historical import stored in Plembfin and queued for canonical outbound sync`,
+      `Details: Historical import stored in Plekt and queued for canonical outbound sync`,
     ].join("\n");
   }
   return [`Origin: ${source}`, `Loop-check: Pending`, `Dispatch status: pending`, `Details: Awaiting outbound sync telemetry`].join("\n");
@@ -1742,7 +1743,7 @@ export async function batchInsertWatchRecords(records, {
           deviceId: normalized.watch_provenance?.device_id,
           client: normalized.watch_provenance?.client,
           clientVersion: normalized.watch_provenance?.client_version,
-          details: "Watch record imported into Plembfin history and queued for canonical outbound sync.",
+          details: "Watch record imported into Plekt history and queued for canonical outbound sync.",
           payload: { record: normalized, import: true, storedAt },
         });
       }
@@ -1839,7 +1840,7 @@ export function supersedeUnwatchedTransitionsForRecordSync(existing = {}) {
 function siblingWatchRowsFor(existing = {}) {
   if (!existing.id) return [];
   if (existing.media_type !== "episode") {
-    const allMovies = selectMoviesStmt.all().filter(isPlembfinTrackedWatchRow);
+    const allMovies = selectMoviesStmt.all().filter(isPlektTrackedWatchRow);
     const ids = [existing.imdb_id, existing.tmdb_id, existing.tvdb_id]
       .map(cleanString)
       .filter(Boolean);
@@ -1892,7 +1893,7 @@ function siblingWatchRowsFor(existing = {}) {
   // watched rows instead of retaining them as visible historical plays.
   const sameShow = sameShowAs(existing);
   return selectAllEpisodesStmt.all().filter((row) => {
-    if (row.id === existing.id || !isPlembfinTrackedEpisodeRow(row)) return false;
+    if (row.id === existing.id || !isPlektTrackedEpisodeRow(row)) return false;
     if (Number(row.season) !== season || Number(row.episode) !== episode) return false;
     return canonicalTitleKey(showTitleFrom(row.show_title || row.title)) === showKey && sameShow(row);
   });
@@ -1955,7 +1956,7 @@ export function clearWatchHistoryForMediaIdentitySync(media = {}, {
           Number(row.season) === season
           && Number(row.episode) === episode
           && canonicalTitleKey(showTitleFrom(row.show_title || row.title)) === showKey
-          && isPlembfinTrackedEpisodeRow(row)
+          && isPlektTrackedEpisodeRow(row)
           && sameShow(row)
         ))
         .forEach(add);
@@ -2045,7 +2046,7 @@ export async function addWatchDate(id, watchedAtInput) {
     ids: { imdb: existing.imdb_id, tmdb: existing.tmdb_id, tvdb: existing.tvdb_id },
     season: existing.season,
     episode: existing.episode,
-    details: "Additional watch date added manually to Plembfin history.",
+    details: "Additional watch date added manually to Plekt history.",
     payload: { copiedFromRecordId: existing.id, watchedAt },
   });
 
@@ -2095,9 +2096,9 @@ function remainingWatchRowFor(deletedRow) {
   for (const row of [...byExactKey, ...bySameIdentity]) {
     if (row?.id) byId.set(row.id, row);
   }
-  const trusted = [...byId.values()].filter(isPlembfinTrackedEpisodeRow);
+  const trusted = [...byId.values()].filter(isPlektTrackedEpisodeRow);
   if (!trusted.length) return null;
-  const watched = trusted.filter(isPlembfinTrackedWatchRow);
+  const watched = trusted.filter(isPlektTrackedWatchRow);
   const pool = watched.length ? watched : trusted;
   const newest = pool.reduce((best, row) => (String(row.watched_at || "") > String(best.watched_at || "") ? row : best));
   if (!watched.length) {
@@ -2174,7 +2175,7 @@ function safeMovieIdentityRowsForTitle(media = {}) {
   if (!titleKey) return [];
 
   const rows = selectMoviesStmt.all().filter((row) => (
-    isPlembfinTrackedWatchRow(row)
+    isPlektTrackedWatchRow(row)
       && canonicalMovieTitleKey(row.title || "") === titleKey
   ));
   return providerClusterCount(rows) <= 1 ? rows : [];
@@ -2418,7 +2419,7 @@ export async function deleteWatchDate(id) {
       episode: row.episode,
       status: "deleted",
       details: row.id === existing.id
-        ? "A single watch date was deleted from Plembfin history."
+        ? "A single watch date was deleted from Plekt history."
         : "An echoed duplicate row chained to the deleted watch date was removed with it.",
       payload: { record: row, operation: "delete_watch_date" },
     });
@@ -2800,7 +2801,7 @@ export async function upsertPlaybackProgress(record) {
     ids: storedIds,
     season: normalized.season,
     episode: normalized.episode,
-    details: "Resume progress stored in Plembfin.",
+    details: "Resume progress stored in Plekt.",
     payload: {
       positionMs: normalized.position_ms,
       durationMs: normalized.duration_ms,
@@ -2868,7 +2869,9 @@ export function deletePlaybackProgressSync(mediaOrRecord, { allowDuringRestore =
   ]);
   let removed = 0;
   for (const key of keys) {
-    removed += Number(deleteProgressStmt.run(key).changes || 0);
+    const deleted = Number(deleteProgressStmt.run(key).changes || 0);
+    removed += deleted;
+    if (!deleted) continue;
     recordWatchAuditEvent({
       eventType: "resume_progress_cleared",
       timestamp: Date.now(),
@@ -2880,12 +2883,12 @@ export function deletePlaybackProgressSync(mediaOrRecord, { allowDuringRestore =
       ids: { imdb: normalized.imdb_id, tmdb: normalized.tmdb_id, tvdb: normalized.tvdb_id },
       season: normalized.season,
       episode: normalized.episode,
-      details: "Resume progress cleared from Plembfin.",
+      details: "Resume progress cleared from Plekt.",
     });
   }
   // Same contract as upsertPlaybackProgress: a cleared resume must leave the rail.
   if (removed) bumpUpNextVersion();
-  return keys.size > 0;
+  return removed > 0;
 }
 
 export async function deletePlaybackProgress(mediaOrRecord, options = {}) {
@@ -2973,7 +2976,7 @@ export function backfillWatchRecordIdsAndKeys() {
 // chain into one viewing while each is within the window of the one before it,
 // and the earliest row of each chain is the one kept.
 export function sameEventDuplicateIds(windowMs = SAME_EVENT_WINDOW_MS) {
-  return sameEventDuplicateIdsForRows(selectWatchedStampsStmt.all().filter(isPlembfinTrackedWatchRow), windowMs);
+  return sameEventDuplicateIdsForRows(selectWatchedStampsStmt.all().filter(isPlektTrackedWatchRow), windowMs);
 }
 
 function episodeProviderGroupKeys(rows = []) {
@@ -3088,7 +3091,7 @@ const countOpaqueShowTitlesStmt = db.prepare(
 );
 
 export function countRewatchedItems() {
-  const rows = selectWatchedStampsStmt.all().filter(isPlembfinTrackedWatchRow);
+  const rows = selectWatchedStampsStmt.all().filter(isPlektTrackedWatchRow);
   return dedupeHistory(rows).filter((row) => Array.isArray(row.playHistory) && row.playHistory.length > 1).length;
 }
 
@@ -3187,7 +3190,7 @@ async function loadHistoryRowsByType({ mediaType, limit = 50, offset = 0, sort =
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), MAX_HISTORY_LIMIT);
   const safeOffset = Math.max(Number(offset) || 0, 0);
   const allRows = await getCachedHistory();
-  const filtered = allRows.filter((row) => row.media_type === mediaType && isPlembfinTrackedWatchRow(row));
+  const filtered = allRows.filter((row) => row.media_type === mediaType && isPlektTrackedWatchRow(row));
   const sorted = [...filtered];
   if (sort === "watched_asc") {
     sorted.sort((a, b) => a.watched_at.localeCompare(b.watched_at));
@@ -3428,7 +3431,7 @@ export async function listRecentTrackedWatchRows({ limit = 100, scanLimit = 400,
   const rows = selectRecentStmt
     .all(safeScanLimit)
     .map(rowToWatch)
-    .filter((row) => isWatchedAction(row) && (includeScheduled || isPlembfinTrackedWatchRow(row)));
+    .filter((row) => isWatchedAction(row) && (includeScheduled || isPlektTrackedWatchRow(row)));
   return dedupeHistory(rows).slice(0, safeLimit);
 }
 
@@ -3443,7 +3446,7 @@ export async function listRecentlyUpdatedTrackedWatchRows({ limit = 100, scanLim
   const rows = selectRecentlyUpdatedStmt
     .all(safeScanLimit)
     .map(rowToWatch)
-    .filter((row) => isWatchedAction(row) && (includeScheduled || isPlembfinTrackedWatchRow(row)));
+    .filter((row) => isWatchedAction(row) && (includeScheduled || isPlektTrackedWatchRow(row)));
   return dedupeHistory(rows).slice(0, safeLimit);
 }
 
@@ -3535,7 +3538,7 @@ export async function queryWatchHistory({ search = "", mediaType = "", limit = 5
 
   const rows = await loadHistoryRows({ limit: MAX_HISTORY_LIMIT, offset: 0 });
   const filtered = rows.filter((row) => {
-    if (!isPlembfinTrackedWatchRow(row)) return false;
+    if (!isPlektTrackedWatchRow(row)) return false;
     if (normalizedMediaType && row.media_type !== normalizedMediaType) return false;
     return matchesSearch(row, cleanString(search));
   });
@@ -3614,7 +3617,7 @@ async function buildHistoryPreview(all, safeLimit) {
   // library cards.
   const showByEpisodeId = new Map();
   const showByAliasCoordinate = new Map();
-  const previewShowRows = all.filter((row) => row.media_type === "episode" && isPlembfinTrackedWatchRow(row));
+  const previewShowRows = all.filter((row) => row.media_type === "episode" && isPlektTrackedWatchRow(row));
   for (const group of await groupShowRowsYielding(dedupeHistory(previewShowRows))) {
     const hasProviderIdentity = Boolean(group.tvdb_id || group.tmdb_id || group.imdb_id);
     for (const episode of group.episodes || []) {
@@ -3626,8 +3629,8 @@ async function buildHistoryPreview(all, safeLimit) {
       showByAliasCoordinate.set(aliasKey, existing === undefined ? group : existing === group ? group : null);
     }
   }
-  const tvRows = all.filter((row) => row.media_type === "episode" && isPlembfinTrackedWatchRow(row)).slice(0, HISTORY_PREVIEW_SCAN_LIMIT);
-  const movieRows = all.filter((row) => row.media_type === "movie" && isPlembfinTrackedWatchRow(row)).slice(0, HISTORY_PREVIEW_SCAN_LIMIT);
+  const tvRows = all.filter((row) => row.media_type === "episode" && isPlektTrackedWatchRow(row)).slice(0, HISTORY_PREVIEW_SCAN_LIMIT);
+  const movieRows = all.filter((row) => row.media_type === "movie" && isPlektTrackedWatchRow(row)).slice(0, HISTORY_PREVIEW_SCAN_LIMIT);
 
   const tvDeduped = dedupeHistory(tvRows).slice(0, safeLimit).map((row) => {
     const compact = compactHistoryPreviewRow(row);
@@ -3770,7 +3773,7 @@ export async function getWatchStats() {
   // needs the complete identity context, and reusing it here preserves the
   // exact JS grouping/echo semantics instead of reimplementing them in SQL.
   const rows = await enrichHistoryRowsWithShowArtwork(filterSameEventDuplicateRows(
-    (await getCachedHistory()).filter(isPlembfinTrackedWatchRow),
+    (await getCachedHistory()).filter(isPlektTrackedWatchRow),
   ));
   const statsMovieKeys = buildStatsMovieKeys(rows);
   const movieKeys = new Set();
@@ -3950,7 +3953,7 @@ export async function setWatchBackdropUrl(id, backdropUrl) {
 
 export async function listLibraryItemsForRefresh() {
   const movieMap = new Map();
-  for (const row of (await getCachedMovies()).filter(isPlembfinTrackedWatchRow)) {
+  for (const row of (await getCachedMovies()).filter(isPlektTrackedWatchRow)) {
     const key = row.tmdb_id ? `tmdb:${row.tmdb_id}` : `title:${canonicalTitleKey(row.title)}`;
     let group = movieMap.get(key);
     if (!group) { group = { mediaType: "movie", tmdbId: row.tmdb_id || "", title: row.title, records: [] }; movieMap.set(key, group); }
@@ -3959,7 +3962,7 @@ export async function listLibraryItemsForRefresh() {
   }
 
   const showMap = new Map();
-  for (const row of (await getCachedHistory()).filter((r) => r.media_type === "episode" && isPlembfinTrackedWatchRow(r))) {
+  for (const row of (await getCachedHistory()).filter((r) => r.media_type === "episode" && isPlektTrackedWatchRow(r))) {
     const title = showTitleFrom(row.title);
     const key = canonicalTitleKey(title) || title.toLowerCase();
     let group = showMap.get(key);
@@ -3988,7 +3991,7 @@ export async function getWatchRecordById(id) {
   if (!row) return null;
   if (row.media_key) {
     const allRows = await getCachedHistory();
-    const matches = filterSameEventDuplicateRows(allRows.filter((r) => r.media_key === row.media_key && isPlembfinTrackedWatchRow(r)));
+    const matches = filterSameEventDuplicateRows(allRows.filter((r) => r.media_key === row.media_key && isPlektTrackedWatchRow(r)));
     row.playHistory = matches.map(playHistoryEntry).filter((entry) => entry.watched_at);
     row.playHistory.sort((a, b) => a.watched_at.localeCompare(b.watched_at));
   } else {
@@ -4108,7 +4111,7 @@ export async function updateWatchRecord(id, fields = {}, { preserveDispatchState
     status: "updated",
     details: preserveDispatchState
       ? "Provider IDs enriched from TMDB metadata without resetting outbound dispatch state."
-      : "Stored watch history record updated in Plembfin.",
+      : "Stored watch history record updated in Plekt.",
     payload: { fields, previousRecord: existing, updatedAt, preserveDispatchState },
   });
   if (normalizedWatchedAt && existing.media_key) {
@@ -4137,7 +4140,7 @@ export async function updateWatchRecord(id, fields = {}, { preserveDispatchState
   // outcome depend on how much work happens between the two writes here.
   if (identityChanged && newMediaKey !== oldMediaKey) {
     if (oldMediaKey) {
-      const oldRemaining = selectByMediaKeyStmt.all(oldMediaKey).filter(isPlembfinTrackedWatchRow);
+      const oldRemaining = selectByMediaKeyStmt.all(oldMediaKey).filter(isPlektTrackedWatchRow);
       if (oldRemaining.length) {
         const oldLatest = oldRemaining.reduce((best, row) => (String(row.watched_at || "") > String(best.watched_at || "") ? row : best));
         updatePlaystateWatchedAtStmt.run(oldLatest.watched_at, updatedAt, oldMediaKey);
@@ -4145,7 +4148,7 @@ export async function updateWatchRecord(id, fields = {}, { preserveDispatchState
         deletePlaystateByKeyStmt.run(oldMediaKey);
       }
     }
-    const newSiblings = selectByMediaKeyStmt.all(newMediaKey).filter(isPlembfinTrackedWatchRow);
+    const newSiblings = selectByMediaKeyStmt.all(newMediaKey).filter(isPlektTrackedWatchRow);
     if (newSiblings.length) {
       const newLatest = newSiblings.reduce((best, row) => (String(row.watched_at || "") > String(best.watched_at || "") ? row : best));
       const existingNewPlaystate = selectPlaystateStmt.get(newMediaKey);
@@ -4213,11 +4216,11 @@ export async function updateWatchDates(updates = []) {
       ? selectByIdStmt.get(requestedId)
       : requestedMediaKey
         ? selectByMediaKeyStmt.all(requestedMediaKey)
-          .filter(isPlembfinTrackedWatchRow)
+          .filter(isPlektTrackedWatchRow)
           .sort((a, b) => String(b.watched_at || "").localeCompare(String(a.watched_at || "")))[0]
         : null;
     if (!existing) return { ok: false, error: `Watch record not found${requestedId ? `: ${requestedId}` : ""}` };
-    if (!isPlembfinTrackedWatchRow(existing)) return { ok: false, error: "Only watched records can be date-edited" };
+    if (!isPlektTrackedWatchRow(existing)) return { ok: false, error: "Only watched records can be date-edited" };
     if (seenIds.has(existing.id)) return { ok: false, error: `Duplicate watch record: ${existing.id}` };
 
     const date = new Date(update?.watched_at);
@@ -4259,7 +4262,7 @@ export async function updateWatchDates(updates = []) {
     // for each media key, even when the edit moves the representative row
     // earlier than an older or repeated viewing.
     for (const mediaKey of mediaKeys) {
-      const remaining = selectByMediaKeyStmt.all(mediaKey).filter(isPlembfinTrackedWatchRow);
+      const remaining = selectByMediaKeyStmt.all(mediaKey).filter(isPlektTrackedWatchRow);
       const latest = remaining.reduce((best, row) => (
         String(row.watched_at || "") > String(best?.watched_at || "") ? row : best
       ), null);
@@ -5020,7 +5023,7 @@ export function deleteWatchRecordByIdSync(id, { allowDuringRestore = false } = {
       season: row.season,
       episode: row.episode,
       status: "deleted",
-      details: "Watch history row deleted from Plembfin.",
+      details: "Watch history row deleted from Plekt.",
       payload: { record: row },
     });
   }
@@ -5032,7 +5035,7 @@ export function deleteWatchRecordByIdSync(id, { allowDuringRestore = false } = {
   // longer has any record of, which is exactly the drift that let Force Sync
   // and the Movies/TV Shows/History pages disagree with each other.
   if (row?.media_key) {
-    const remaining = selectByMediaKeyStmt.all(row.media_key).filter(isPlembfinTrackedWatchRow);
+    const remaining = selectByMediaKeyStmt.all(row.media_key).filter(isPlektTrackedWatchRow);
     if (remaining.length) {
       const remainingRow = remaining.reduce((best, r) => (String(r.watched_at || "") > String(best.watched_at || "") ? r : best));
       updatePlaystateWatchedAtStmt.run(remainingRow.watched_at, Date.now(), row.media_key);
@@ -5082,7 +5085,7 @@ export function deleteWatchRecordSync(media, { allowDuringRestore = false } = {}
         season: row.season,
         episode: row.episode,
         status: "deleted",
-        details: "Watch history row deleted from Plembfin.",
+        details: "Watch history row deleted from Plekt.",
         payload: { record: row },
       });
     }
@@ -5224,7 +5227,7 @@ export function repairStalePendingWatchRows() {
 // use the exact same fingerprint - returns full rows, not the trimmed shape
 // the audit endpoint reports.
 function findSplitIdentityUnwatchCandidates() {
-  const rows = selectAllEpisodesStmt.all().filter(isPlembfinTrackedEpisodeRow);
+  const rows = selectAllEpisodesStmt.all().filter(isPlektTrackedEpisodeRow);
   const groups = new Map();
   for (const row of rows) {
     const showKey = canonicalTitleKey(showTitleFrom(row.show_title || row.title));
@@ -5338,7 +5341,7 @@ export async function repairSplitIdentityUnwatches() {
 const AUTOMATIC_UNWATCH_ROW_SOURCES = new Set(["plex", "emby", "jellyfin"]);
 
 function findLikelyFalseUnwatchCandidates() {
-  const rows = selectAllEpisodesStmt.all().filter(isPlembfinTrackedEpisodeRow);
+  const rows = selectAllEpisodesStmt.all().filter(isPlektTrackedEpisodeRow);
   const groups = new Map();
   for (const row of rows) {
     const showKey = canonicalTitleKey(showTitleFrom(row.show_title || row.title));
@@ -5514,7 +5517,7 @@ export function historyShowsWatchedSync(media = {}) {
   const ids = media.ids || {};
   const rows = new Map();
   const add = (row) => {
-    if (row?.id && isPlembfinTrackedEpisodeRow(row)) rows.set(row.id, row);
+    if (row?.id && isPlektTrackedEpisodeRow(row)) rows.set(row.id, row);
   };
   const keys = new Set([
     mediaKeyFor(media),
@@ -5548,7 +5551,7 @@ export function findLatestWatchedByAnyMediaKeySync(media) {
   const rows = [];
   const seen = new Set();
   const add = (row) => {
-    if (!row || seen.has(row.id) || !isPlembfinTrackedWatchRow(row)) return;
+    if (!row || seen.has(row.id) || !isPlektTrackedWatchRow(row)) return;
     seen.add(row.id);
     rows.push(row);
   };
@@ -5566,7 +5569,7 @@ export function findLatestWatchedByAnyMediaKeySync(media) {
     const showKey = canonicalShowTitleKey(showTitleFrom(showTitle));
     selectAllEpisodesStmt.all()
       .filter((row) => (
-        isPlembfinTrackedWatchRow(row)
+        isPlektTrackedWatchRow(row)
           && Number(row.season) === season
           && Number(row.episode) === episode
           && canonicalShowTitleKey(showTitleFrom(row.show_title || row.title)) === showKey
@@ -6252,7 +6255,7 @@ async function getCachedHistoryArtworkIndex() {
     if (!pending) {
       pending = timeCacheRebuildAsync("historyArtwork", version, dataVersionTrigger(version), async () => {
         const allEpisodeRows = (await getCachedHistory()).filter((row) => (
-          row?.media_type === "episode" && isPlembfinTrackedEpisodeRow(row)
+          row?.media_type === "episode" && isPlektTrackedEpisodeRow(row)
         ));
         const groups = await groupShowRowsYielding(dedupeHistory(allEpisodeRows));
         const byId = new Map();
@@ -6461,7 +6464,7 @@ export async function queryShows({ search = "", sort = "title_asc", limit = 6, o
 // show. groupShowRows copies each row it keeps, so a shared snapshot is never
 // mutated by the calls that consume it.
 export function loadTrackedEpisodeRows() {
-  return dedupeHistory(selectAllEpisodesStmt.all().map(rowToWatch).filter(isPlembfinTrackedEpisodeRow));
+  return dedupeHistory(selectAllEpisodesStmt.all().map(rowToWatch).filter(isPlektTrackedEpisodeRow));
 }
 
 // Row positions by canonical show title and by each show id, built once per
@@ -6820,7 +6823,7 @@ async function prefetchTmdbMetadataBackground(mediaType, tmdbId, title, recordId
   // assertions have completed. Production processes never include --test;
   // the explicit env switch also lets isolated build/test harnesses opt out.
   const testRuntime = process.env.NODE_ENV === "test"
-    || process.env.PLEMBFIN_DISABLE_METADATA_PREFETCH === "1"
+    || brandEnv("DISABLE_METADATA_PREFETCH") === "1"
     || Boolean(process.env.NODE_TEST_CONTEXT)
     || process.execArgv.includes("--test")
     || process.argv.includes("--test");

@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
 import { bumpDataVersion, db, parseJson, toJson } from "../db.js";
 import { clearWatchlistRemoteProjection, getWatchlistRestoreState, markWatchlistRestorePending } from "./personalWatchlistRepository.js";
+import { BACKUP_FORMAT, LEGACY_REDACTED_SECRETS_FIELD, REDACTED_SECRETS_FIELD, TYPE_FIELD, backupValueType } from "./backupNames.js";
 
-export const BACKUP_FORMAT = "plembfin-backup";
+export { BACKUP_FORMAT };
 export const BACKUP_VERSION = 1;
 export const BACKUP_COLLECTIONS = [
   "watchHistory",
@@ -31,19 +32,19 @@ export const BACKUP_COLLECTIONS = [
 const BROWSER_EXCLUDED_COLLECTIONS = new Set(["mediaAuthDevices", "mediaConnections", "trackerConnections"]);
 export const BROWSER_BACKUP_COLLECTIONS = BACKUP_COLLECTIONS.filter((name) => !BROWSER_EXCLUDED_COLLECTIONS.has(name));
 const WATCHLIST_BACKUP_COLLECTIONS = new Set(BACKUP_COLLECTIONS.filter((name) => name.startsWith("personalWatchlist")));
-const BROWSER_REDACTED_SECRETS_FIELD = "__plembfinRedactedSecrets";
+const BROWSER_REDACTED_SECRETS_FIELD = REDACTED_SECRETS_FIELD;
 const SECRET_SETTING_KEY_PATTERN = /(?:api[_-]?key|access[_-]?token|auth[_-]?token|client[_-]?secret|credential|pass(?:word|phrase)?|private[_-]?key|refresh[_-]?token|session[_-]?secret|webhook[_-]?secret|secret|^token$)/i;
 
 function portableValue(value) {
   if (value == null || typeof value !== "object") return value;
-  if (value instanceof Date) return { __plembfinType: "timestamp", value: value.getTime() };
+  if (value instanceof Date) return { [TYPE_FIELD]: "timestamp", value: value.getTime() };
   if (Array.isArray(value)) return value.map(portableValue);
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, portableValue(item)]));
 }
 
 function reviveValue(value) {
   if (value == null || typeof value !== "object") return value;
-  if (value.__plembfinType === "timestamp") return Number(value.value);
+  if (backupValueType(value) === "timestamp") return Number(value.value);
   if (Array.isArray(value)) return value.map(reviveValue);
   return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reviveValue(item)]));
 }
@@ -74,7 +75,7 @@ function mergeRedactedSettings(existing, incoming) {
     if (!next || typeof next !== "object") return next;
     const result = current && typeof current === "object" && !Array.isArray(current) ? { ...current } : {};
     for (const [key, value] of Object.entries(next)) {
-      if (key === BROWSER_REDACTED_SECRETS_FIELD) continue;
+      if (key === BROWSER_REDACTED_SECRETS_FIELD || key === LEGACY_REDACTED_SECRETS_FIELD) continue;
       result[key] = merge(result[key], value);
     }
     return result;
@@ -86,7 +87,7 @@ function toMs(value) {
   if (value == null || value === "") return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value === "object") {
-    if (value.__plembfinType === "timestamp") return toMs(value.value);
+    if (backupValueType(value) === "timestamp") return toMs(value.value);
     if (typeof value._seconds === "number") return value._seconds * 1000 + Math.floor((value._nanoseconds || 0) / 1e6);
   }
   const parsed = new Date(value).getTime();
@@ -302,10 +303,10 @@ export function backupManifest(origin = "") {
     version: BACKUP_VERSION,
     portable: true,
     exportedAt: new Date().toISOString(),
-    source: { app: "plembfin", storage: "sqlite", origin },
+    source: { app: "plekt", storage: "sqlite", origin },
     collections: BROWSER_BACKUP_COLLECTIONS,
     notes: [
-      "Browser portable exports omit credential-bearing collections and redact secret-bearing settings. Encrypted full backups retain encrypted media credentials; restoring encrypted connections requires the original credential.key or PLEMBFIN_CREDENTIAL_KEY.",
+      "Browser portable exports omit credential-bearing collections and redact secret-bearing settings. Encrypted full backups retain encrypted media credentials; restoring encrypted connections requires the original credential.key or PLEKT_CREDENTIAL_KEY (PLEMBFIN_CREDENTIAL_KEY on older installs).",
       "Artwork binaries, poster cache rows, and TMDB metadata cache rows are not included.",
     ],
   };

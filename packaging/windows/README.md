@@ -8,15 +8,15 @@ included in the Windows package.
 
 The installer:
 
-- installs application files under `Program Files\Plembfin`;
-- registers the server as the `Plembfin` Windows service;
-- stores runtime data under `%ProgramData%\Plembfin`;
+- installs application files under `Program Files\Plekt`;
+- registers the server as the `Plekt` Windows service;
+- stores runtime data under `%ProgramData%\Plekt`;
 - preselects a notification-area companion at user sign-in for quick access and server status;
 - preselects a desktop shortcut for quick access to the dashboard;
 - offers a server-port page, prefilled with 5056 for a new install or the current port
   for an upgrade; the selected port is used by the service, tray, dashboard shortcuts,
   and optional private-network firewall rule;
-- preselects opening Plembfin in the browser after installation so first-time setup is immediately available; and
+- preselects opening Plekt in the browser after installation so first-time setup is immediately available; and
 - preserves runtime data when uninstalled unless the user explicitly confirms its removal.
 
 The server-port choice is optional: keep the prefilled port to use the existing address,
@@ -24,7 +24,7 @@ or enter a different TCP port from 1 to 65535. During an upgrade, the selected p
 replaces the installed port and the firewall rule is updated to match when LAN access is
 selected.
 
-All installer task choices can be cleared. The tray option is only needed if Plembfin
+All installer task choices can be cleared. The tray option is only needed if Plekt
 should appear in the notification area and start automatically at sign-in. The desktop
 shortcut is a convenience. The firewall rule is only needed when the dashboard should
 be reachable from another device on the same private network; local access through
@@ -33,9 +33,14 @@ be reachable from another device on the same private network; local access throu
 The browser launch is independent of the tray choice, so both can be selected together.
 It is skipped for silent installs.
 
-When the tray option is selected, the installer starts `PlembfinTray.exe` immediately
+When the tray option is selected, the installer starts `PlektTray.exe` immediately
 after setup completes in the signed-in user session. On uninstall, the installer stops
-the tray process and unregisters the Plembfin service before removing application files.
+the tray process and unregisters the Plekt service before removing application files.
+Sign-in startup uses `Plekt notification area.lnk` in the current user's Windows
+Startup folder. The tray's `Start Plekt when I sign in` option creates or removes the
+same shortcut; older `Plekt` Run entries are removed when setup or the toggle applies
+the new setting. Windows can delay startup apps after sign-in; acceptance on the test
+computer observed the icon appearing about two minutes after Explorer started.
 The tray menu also includes `Stop server`; stopping the Windows service may show the
 normal Windows administrator-consent prompt.
 
@@ -94,7 +99,7 @@ Install Inno Setup 6, then compile the installer. `AppChannel` can be `release`,
 & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' `
   '/DAppVersion=1.0.0' `
   '/DAppChannel=release' `
-  packaging/windows/Plembfin.iss
+  packaging/windows/Plekt.iss
 ```
 
 The resulting installer is written to `dist/windows/installer`.
@@ -105,3 +110,7 @@ The CI job signs the installer when the repository secrets
 `WINDOWS_SIGNING_CERTIFICATE_BASE64` and `WINDOWS_SIGNING_CERTIFICATE_PASSWORD` are
 configured. Without them, the package is still built and published, but Windows may
 show the normal SmartScreen warning for an unsigned executable.
+
+## Upgrading from Plembfin
+
+The installer retains the original AppId and existing installation directory. It preserves the configured port, stops and removes the old service, and moves `%ProgramData%\Plembfin` to `%ProgramData%\Plekt` before registering the Plekt service. It removes old tray startup entries, shortcuts and the firewall rule. If both data directories already exist, setup stops for manual resolution without merging or overwriting them. `/PLEKTPORT=` is preferred; `/PLEMBFINPORT=` remains accepted. Real in-place upgrade verification is still required before release.

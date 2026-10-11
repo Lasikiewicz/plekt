@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Net.Http;
 using System.ServiceProcess;
 using System.Threading;
@@ -11,12 +13,13 @@ using Microsoft.Win32;
 
 internal static class Program
 {
-    private const string ServiceName = "Plembfin";
+    private const string ServiceName = "Plekt";
     private const int DefaultPort = 5056;
-    private const string PortRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Plembfin";
+    private const string PortRegistryPath = @"HKEY_LOCAL_MACHINE\SOFTWARE\Plekt";
     private static readonly string DashboardUrl = BuildDashboardUrl();
     private const string StartupSubKey = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
-    private const string StartupValueName = "Plembfin";
+    private const string StartupValueName = "Plekt";
+    private const string StartupShortcutName = "Plekt notification area.lnk";
     private static readonly HttpClient Http = new HttpClient
     {
         Timeout = TimeSpan.FromSeconds(3),
@@ -62,7 +65,7 @@ internal static class Program
         }
 
         bool createdNew;
-        singleInstance = new Mutex(true, "Local\\Plembfin.NotificationArea", out createdNew);
+        singleInstance = new Mutex(true, "Local\\Plekt.NotificationArea", out createdNew);
         if (!createdNew)
         {
             return;
@@ -72,14 +75,14 @@ internal static class Program
         Application.SetCompatibleTextRenderingDefault(false);
 
         string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
-        trayIconImage = new Icon(Path.Combine(baseDirectory, "plembfin.ico"));
+        trayIconImage = new Icon(Path.Combine(baseDirectory, "plekt.ico"));
         statusItem = new ToolStripMenuItem("Status: checking...")
         {
             Enabled = false,
         };
 
         ContextMenuStrip menu = new ContextMenuStrip();
-        menu.Items.Add("Open Plembfin", null, delegate { Open(DashboardUrl); });
+        menu.Items.Add("Open Plekt", null, delegate { Open(DashboardUrl); });
         menu.Items.Add(statusItem);
         menu.Items.Add("Refresh status", null, delegate { UpdateStatus(); });
         menu.Items.Add("Stop server", null, delegate { StopServer(); });
@@ -87,7 +90,7 @@ internal static class Program
         menu.Items.Add("Open data folder", null, delegate { Open(GetDataDirectory()); });
         menu.Items.Add("Open logs folder", null, delegate { Open(Path.Combine(GetDataDirectory(), "logs")); });
         menu.Items.Add(new ToolStripSeparator());
-        startupItem = new ToolStripMenuItem("Start Plembfin when I sign in")
+        startupItem = new ToolStripMenuItem("Start Plekt when I sign in")
         {
             CheckOnClick = true,
             Checked = IsStartupEnabled(),
@@ -100,7 +103,7 @@ internal static class Program
         {
             ContextMenuStrip = menu,
             Icon = trayIconImage,
-            Text = "Plembfin",
+            Text = "Plekt",
             Visible = true,
         };
         trayIcon.DoubleClick += delegate { Open(DashboardUrl); };
@@ -192,7 +195,7 @@ internal static class Program
         }
         if (trayIcon != null)
         {
-            trayIcon.Text = "Plembfin - " + status;
+            trayIcon.Text = "Plekt - " + status;
         }
     }
 
@@ -231,8 +234,8 @@ internal static class Program
     private static void StopServer()
     {
         DialogResult confirmation = MessageBox.Show(
-            "Stop the Plembfin server? The dashboard and background synchronisation will be unavailable until the service is started again.",
-            "Stop Plembfin server",
+            "Stop the Plekt server? The dashboard and background synchronisation will be unavailable until the service is started again.",
+            "Stop Plekt server",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Warning,
             MessageBoxDefaultButton.Button2);
@@ -296,7 +299,7 @@ internal static class Program
             }
 
             ShowWarning(
-                "Plembfin could not find its Windows service. It may not be installed yet.",
+                "Plekt could not find its Windows service. It may not be installed yet.",
                 error);
         }
         catch (System.ComponentModel.Win32Exception error)
@@ -311,12 +314,12 @@ internal static class Program
             }
 
             ShowWarning(
-                "Plembfin could not stop its Windows service. Windows may require administrator approval.",
+                "Plekt could not stop its Windows service. Windows may require administrator approval.",
                 error);
         }
         catch (Exception error)
         {
-            ShowWarning("Plembfin could not stop its Windows service.", error);
+            ShowWarning("Plekt could not stop its Windows service.", error);
         }
     }
 
@@ -377,7 +380,7 @@ internal static class Program
     {
         MessageBox.Show(
             message + "\r\n\r\n" + error.Message,
-            "Plembfin",
+            "Plekt",
             MessageBoxButtons.OK,
             MessageBoxIcon.Warning);
     }
@@ -386,13 +389,14 @@ internal static class Program
     {
         return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),
-            "Plembfin");
+            "Plekt");
     }
 
     private static bool IsStartupEnabled()
     {
         try
         {
+            if (File.Exists(StartupShortcutPath())) return true;
             using (RegistryKey key = Registry.CurrentUser.OpenSubKey(StartupSubKey, false))
             {
                 string value = key == null ? null : key.GetValue(StartupValueName) as string;
@@ -410,26 +414,59 @@ internal static class Program
     {
         try
         {
-            using (RegistryKey key = Registry.CurrentUser.CreateSubKey(StartupSubKey))
-            {
-                if (enabled)
-                {
-                    key.SetValue(StartupValueName, "\"" + Application.ExecutablePath + "\"", RegistryValueKind.String);
-                }
-                else
-                {
-                    key.DeleteValue(StartupValueName, false);
-                }
-            }
+            UpdateStartup(enabled, Application.ExecutablePath);
         }
         catch (Exception error)
         {
             startupItem.Checked = !enabled;
             MessageBox.Show(
-                "Plembfin could not update its sign-in setting.\r\n\r\n" + error.Message,
-                "Plembfin",
+                "Plekt could not update its sign-in setting.\r\n\r\n" + error.Message,
+                "Plekt",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
+        }
+    }
+
+    private static string StartupShortcutPath()
+    {
+        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), StartupShortcutName);
+    }
+
+    private static void UpdateStartup(bool enabled, string executablePath)
+    {
+        string shortcutPath = StartupShortcutPath();
+        if (enabled)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(shortcutPath));
+            object shell = null;
+            object shortcut = null;
+            try
+            {
+                Type shellType = Type.GetTypeFromProgID("WScript.Shell", true);
+                shell = Activator.CreateInstance(shellType);
+                shortcut = shellType.InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { shortcutPath });
+                Type shortcutType = shortcut.GetType();
+                string directory = Path.GetDirectoryName(executablePath);
+                shortcutType.InvokeMember("TargetPath", BindingFlags.SetProperty, null, shortcut, new object[] { executablePath });
+                shortcutType.InvokeMember("WorkingDirectory", BindingFlags.SetProperty, null, shortcut, new object[] { directory });
+                shortcutType.InvokeMember("IconLocation", BindingFlags.SetProperty, null, shortcut, new object[] { Path.Combine(directory, "plekt.ico") });
+                shortcutType.InvokeMember("Description", BindingFlags.SetProperty, null, shortcut, new object[] { "Start Plekt in the notification area at sign-in" });
+                shortcutType.InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+            }
+            finally
+            {
+                if (shortcut != null) Marshal.FinalReleaseComObject(shortcut);
+                if (shell != null) Marshal.FinalReleaseComObject(shell);
+            }
+        }
+        else
+        {
+            File.Delete(shortcutPath);
+        }
+        // Migrate the former Run mechanism and avoid two startup registrations.
+        using (RegistryKey key = Registry.CurrentUser.OpenSubKey(StartupSubKey, true))
+        {
+            if (key != null) key.DeleteValue(StartupValueName, false);
         }
     }
 
@@ -446,8 +483,8 @@ internal static class Program
         catch (Exception error)
         {
             MessageBox.Show(
-                "Plembfin could not open the requested location.\r\n\r\n" + error.Message,
-                "Plembfin",
+                "Plekt could not open the requested location.\r\n\r\n" + error.Message,
+                "Plekt",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }

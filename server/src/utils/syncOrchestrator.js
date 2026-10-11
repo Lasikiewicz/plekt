@@ -28,6 +28,7 @@ import {
   watchTargetPolicy,
 } from "./watchSyncPolicy.js";
 import { compoundEpisodeForMedia } from "./compoundEpisode.js";
+import { brandEnv } from "./brandEnv.js";
 
 const LOOP_CACHE_TTL_SECONDS = 60;
 const LOOP_WINDOW_MS = 15_000;
@@ -45,7 +46,7 @@ const LOOP_WINDOW_MS = 15_000;
 // flashing the indicator open and shut on its own.
 const DISPATCH_PROGRESS_IDLE_MS = 2_000;
 const DISPATCH_PROGRESS_HEARTBEAT_MS = 15_000;
-const DISPATCH_PROGRESS_INSTANCE_ID = process.env.PLEMBFIN_INSTANCE_ID
+const DISPATCH_PROGRESS_INSTANCE_ID = brandEnv("INSTANCE_ID")
   || `${process.env.ROLE || "process"}:${process.pid}:${Date.now()}`;
 let dispatchBurstTotal = 0;
 let dispatchBurstCompleted = 0;

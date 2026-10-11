@@ -376,9 +376,9 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
       return { status: 409, error: "This Trakt issue does not retain its source watch-history row." };
     }
     row = await getWatchRecordById(storedIssue.sourceRowId).catch(() => null);
-    if (!row) return { status: 404, error: "The Plembfin watch-history row for this issue no longer exists." };
+    if (!row) return { status: 404, error: "The Plektwatch-history row for this issue no longer exists." };
     if (["unwatched", "unplayed"].includes(String(row.sync_action || "").toLowerCase())) {
-      return { status: 409, error: "This Plembfin watch-history row is no longer watched, so it cannot be repaired as part of the restore." };
+      return { status: 409, error: "This Plektwatch-history row is no longer watched, so it cannot be repaired as part of the restore." };
     }
     const rows = requireDb().prepare("SELECT * FROM watch_history WHERE sync_action IS NULL OR sync_action NOT IN ('unwatched', 'unplayed')").all();
     repair = await retryTraktRestoreItem(row, { rows });
@@ -390,7 +390,7 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
     if (!row && historyRow) row = historyRow;
     if (!row && sourceKey) row = requireDb().prepare("SELECT * FROM playstate WHERE media_key = ?").get(sourceKey) || null;
     if (!row && storedIssue.sourceRowId) row = await getWatchRecordById(storedIssue.sourceRowId).catch(() => null);
-    if (!row) return { status: 404, error: "The Plembfin playstate row for this issue no longer exists." };
+    if (!row) return { status: 404, error: "The Plektplaystate row for this issue no longer exists." };
     if (historyRow) {
       row = {
         ...row,

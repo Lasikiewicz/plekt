@@ -1,15 +1,15 @@
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=1.3.1.1.2";
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { isWatchedHistoryAction } from "./sync.js?v=1.3.1.1.2";
-import { mergeShowDetail } from "./explorer.js?v=1.3.1.1.2";
-import { dedupeMediaRecords } from "./media-records.js?v=1.3.1.1.2";
-import { tvSeasonAvailability } from "./media-detail-shared.js?v=1.3.1.1.2";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=1.3.1.1.2";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=1.3.1.1.2";
-import { tmdbPoster } from "./images.js?v=1.3.1.1.2";
-import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=1.3.1.1.2";
-import { ifLoaded } from "./route-modules.js?v=1.3.1.1.2";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=1.3.1.2.1";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { isWatchedHistoryAction } from "./sync.js?v=1.3.1.2.1";
+import { mergeShowDetail } from "./explorer.js?v=1.3.1.2.1";
+import { dedupeMediaRecords } from "./media-records.js?v=1.3.1.2.1";
+import { tvSeasonAvailability } from "./media-detail-shared.js?v=1.3.1.2.1";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=1.3.1.2.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=1.3.1.2.1";
+import { tmdbPoster } from "./images.js?v=1.3.1.2.1";
+import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=1.3.1.2.1";
+import { ifLoaded } from "./route-modules.js?v=1.3.1.2.1";
 
 const resetPartWatchedView = ifLoaded("dashboard", "resetPartWatchedView");
 const renderPartWatched = ifLoaded("dashboard", "renderPartWatched");
@@ -80,7 +80,7 @@ function manualWatchFailureOptions(action, records, error) {
   return {
     title: "Watch update failed",
     summary: `Could not mark ${mediaLabel} watched. Server response: ${failure}`,
-    explanation: "The manual watch request did not return a successful confirmation, so Plembfin left the page's watch state unchanged. Retrying is safe; matching existing watch rows are reused where possible.",
+    explanation: "The manual watch request did not return a successful confirmation, so Plekt left the page's watch state unchanged. Retrying is safe; matching existing watch rows are reused where possible.",
     route,
     context: {
       actionLabel: "Manual watch update",
@@ -1874,7 +1874,7 @@ export async function confirmAndDeleteMedia(button) {
 
   const first = await _openConfirmDialog({
     title: "Delete from library?",
-    body: `This permanently deletes the ${mediaLabel} "${label}" and ${historyLabel} from Plembfin. This does NOT affect Plex, Emby or Jellyfin - it only removes the local record.`,
+    body: `This permanently deletes the ${mediaLabel} "${label}" and ${historyLabel} from Plekt. This does NOT affect Plex, Emby or Jellyfin - it only removes the local record.`,
     confirmLabel: "Continue",
     cancelLabel: "Keep it",
     danger: true,

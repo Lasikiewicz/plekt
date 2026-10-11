@@ -34,7 +34,7 @@ test("full watchlist export and staged restore preserve local state but require 
   db.prepare("INSERT OR REPLACE INTO settings (id, data, updated_at) VALUES (?, ?, ?)").run("mediaConfig", JSON.stringify({ plex: { token: browserSecret }, watchlistSync: { enabled: true } }), Date.now());
   const browserSettings = exportCollectionPage("settings").documents.find((document) => document.id === "mediaConfig");
   assert.equal(browserSettings.data.plex.token, undefined);
-  assert.equal(browserSettings.data.__plembfinRedactedSecrets, true);
+  assert.equal(browserSettings.data.__plektRedactedSecrets, true);
   assert.equal(JSON.stringify(browserSettings.data).includes(browserSecret), false);
   assert.throws(() => exportCollectionPage("mediaConnections"), /not available in browser portable exports/);
 

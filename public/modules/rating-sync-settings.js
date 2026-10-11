@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml } from "./utils.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml } from "./utils.js?v=1.3.1.2.1";
 
 const PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
 const PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin", trakt: "Trakt" };
@@ -117,11 +117,11 @@ function renderStatus(nextStatus = status) {
   const issues = queueIssueCount(nextStatus.queue);
   if (ui.help) {
     ui.help.textContent = !config.enabled
-      ? "Disabled: ratings stay in Plembfin and are not sent to any provider."
+      ? "Disabled: ratings stay in Plekt and are not sent to any provider."
       : issues
         ? "Some ratings need attention. Review the provider rows and run sync again."
         : configured
-        ? `Plembfin is syncing ratings across ${configured} connected service${configured === 1 ? "" : "s"}. Changes made anywhere are sent to the others.`
+        ? `Plekt is syncing ratings across ${configured} connected service${configured === 1 ? "" : "s"}. Changes made anywhere are sent to the others.`
         : "Connect at least one media server or Trakt to sync ratings.";
   }
 }

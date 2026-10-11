@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
 import { getMediaConnection } from "./mediaConnectionRepo.js";
+import { brandEnv } from "./brandEnv.js";
 import * as plexAdapter from "./plexWatchlistClient.js";
 import {
   WATCHLIST_PROVIDERS,
@@ -38,7 +39,7 @@ import { personalWatchlistMediaAliases, normalizePersonalWatchlistMedia } from "
 
 const ADAPTERS = { plex: plexAdapter };
 const SNAPSHOT_FUNCTIONS = { plex: plexAdapter.fetchPlexWatchlistSnapshot };
-const WORKER_OWNER = `${process.env.PLEMBFIN_INSTANCE_ID || process.pid}:watchlist:${crypto.randomUUID()}`;
+const WORKER_OWNER = `${brandEnv("INSTANCE_ID") || process.pid}:watchlist:${crypto.randomUUID()}`;
 const DEFAULT_BUDGET_MS = 45_000;
 
 function clean(value, max = 500) { return String(value ?? "").trim().slice(0, max); }

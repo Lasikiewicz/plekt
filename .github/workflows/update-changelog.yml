@@ -1,3 +1,4 @@
+# Keep legacy image targets for at least six months after the Plekt release.
 name: Publish Main Release
 
 # Builds and publishes the release image and the formatted GitHub Release notes
@@ -21,8 +22,10 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
-  DOCKERHUB_IMAGE: docker.io/plembfin/plembfin
+  IMAGE_NAME: lasikiewicz/plekt
+  LEGACY_IMAGE_NAME: lasikiewicz/plembfin
+  DOCKERHUB_IMAGE: docker.io/plembfin/plekt
+  LEGACY_DOCKERHUB_IMAGE: docker.io/plembfin/plembfin
 
 jobs:
   update:
@@ -60,7 +63,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Main releases are mirrored to Docker Hub (docker.io/plembfin/plembfin);
+      # Main releases are mirrored to both Docker Hub names during the transition;
       # develop and alpha stay on GHCR only, where ghcr-cleanup.yml prunes them.
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
@@ -86,7 +89,9 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
             ${{ env.DOCKERHUB_IMAGE }}
+            ${{ env.LEGACY_DOCKERHUB_IMAGE }}
           tags: |
             type=raw,value=latest
             type=raw,value=${{ steps.release.outputs.version }}
@@ -121,7 +126,7 @@ jobs:
       contents: read
     env:
       RELEASE_VERSION: ${{ needs.update.outputs.version }}
-      RELEASE_IMAGE: ghcr.io/lasikiewicz/plembfin:${{ needs.update.outputs.version }}
+      RELEASE_IMAGE: ghcr.io/lasikiewicz/plekt:${{ needs.update.outputs.version }}
       OCI_DEMO_HOST: ${{ vars.OCI_DEMO_HOST }}
       OCI_DEMO_USER: ${{ vars.OCI_DEMO_USER || 'opc' }}
       OCI_DEMO_KNOWN_HOSTS: ${{ vars.OCI_DEMO_KNOWN_HOSTS }}
@@ -129,10 +134,10 @@ jobs:
       OCI_DEMO_DATA_DIR: ${{ vars.OCI_DEMO_DATA_DIR }}
       OCI_DEMO_PORT: ${{ vars.OCI_DEMO_PORT || '80' }}
       OCI_DEMO_RUNTIME: ${{ vars.OCI_DEMO_RUNTIME }}
-      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
-      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
-      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEMBFIN_TRAKS_SITE_KEY }}
-      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
+      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEKT_TRAKS_SCRIPT_URL || vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
+      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEKT_TRAKS_COLLECTOR_ORIGIN || vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
+      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEKT_TRAKS_SITE_KEY || vars.PLEMBFIN_TRAKS_SITE_KEY }}
+      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEKT_TRAKS_REQUIRE_CONSENT || vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
     steps:
       - name: Checkout deployment helper
         uses: actions/checkout@v7

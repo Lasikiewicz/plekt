@@ -5,25 +5,25 @@
 // parsed when Settings is opened. app-events.js wires this module through
 // onRouteModuleLoaded() with the same callbacks object it received, so each
 // wrapper below reads the app.js implementation at call time.
-import { rotateWebhookSecret } from "./auth.js?v=1.3.1.1.2";
-import { clearDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { loadSyncHistory, loadSyncJobs, triggerCronSync, triggerStopSync } from "./sync.js?v=1.3.1.1.2";
-import { ifLoaded, lazyExport } from "./route-modules.js?v=1.3.1.1.2";
+import { rotateWebhookSecret } from "./auth.js?v=1.3.1.2.1";
+import { clearDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { loadSyncHistory, loadSyncJobs, triggerCronSync, triggerStopSync } from "./sync.js?v=1.3.1.2.1";
+import { ifLoaded, lazyExport } from "./route-modules.js?v=1.3.1.2.1";
 
 const lazyTools = (name) => lazyExport("tools", name);
 const lazyBackups = (name) => lazyExport("tools-backups", name);
 const renderSettingsInlineHelp = ifLoaded("help-content", "renderSettingsInlineHelp");
 const renderImportPreview = ifLoaded("tools", "renderImportPreview"), appendImportLog = ifLoaded("tools", "appendImportLog");
 const loadCacheStats = lazyTools("loadCacheStats"), parseSelectedFiles = lazyTools("parseSelectedFiles"), startImport = lazyTools("startImport"), runRepairWorkflow = lazyTools("runRepairWorkflow"), runTraktBackfill = lazyTools("runTraktBackfill"), runEpisodeTitleAudit = lazyTools("runEpisodeTitleAudit"), runEpisodeTitleBackfill = lazyTools("runEpisodeTitleBackfill"), runRematchTvShows = lazyTools("runRematchTvShows"), runSystemIntegrityCheck = lazyTools("runSystemIntegrityCheck"), triggerClearMissingTelemetry = lazyTools("triggerClearMissingTelemetry"), triggerRetryAllCategory = lazyTools("triggerRetryAllCategory");
-const selectPlembfinBackupFile = lazyBackups("selectPlembfinBackupFile"), importPlembfinBackup = lazyBackups("importPlembfinBackup");
+const selectPlektBackupFile = lazyBackups("selectPlektBackupFile"), importPlektBackup = lazyBackups("importPlektBackup");
 const restoreRemoteBackupFromCard = lazyBackups("restoreRemoteBackupFromCard"), loadWatchBackups = lazyBackups("loadWatchBackups"), postWatchBackupAction = lazyBackups("postWatchBackupAction");
 const saveWatchBackupSettings = lazyBackups("saveWatchBackupSettings"), createWatchBackupNow = lazyBackups("createWatchBackupNow"), downloadWatchBackup = lazyBackups("downloadWatchBackup");
 const uploadWatchBackupFile = lazyBackups("uploadWatchBackupFile"), restoreWatchBackup = lazyBackups("restoreWatchBackup");
-const savePlembfinBackupSettings = lazyBackups("savePlembfinBackupSettings"), createPlembfinBackupNow = lazyBackups("createPlembfinBackupNow"), downloadPlembfinBackup = lazyBackups("downloadPlembfinBackup");
-const deletePlembfinBackupFile = lazyBackups("deletePlembfinBackupFile"), restorePlembfinBackupFromServer = lazyBackups("restorePlembfinBackupFromServer"), restoreRemotePlembfinBackup = lazyBackups("restoreRemotePlembfinBackup");
-const updatePlembfinButtonsState = lazyBackups("updatePlembfinButtonsState"), savePlembfinBackupRemoteSettings = lazyBackups("savePlembfinBackupRemoteSettings");
-const createPlembfinBackupRemoteNow = lazyBackups("createPlembfinBackupRemoteNow"), createRemoteWatchBackupNow = lazyBackups("createRemoteWatchBackupNow"), saveRemoteWatchBackupSettings = lazyBackups("saveRemoteWatchBackupSettings");
+const savePlektBackupSettings = lazyBackups("savePlektBackupSettings"), createPlektBackupNow = lazyBackups("createPlektBackupNow"), downloadPlektBackup = lazyBackups("downloadPlektBackup");
+const deletePlektBackupFile = lazyBackups("deletePlektBackupFile"), restorePlektBackupFromServer = lazyBackups("restorePlektBackupFromServer"), restoreRemotePlektBackup = lazyBackups("restoreRemotePlektBackup");
+const updatePlektButtonsState = lazyBackups("updatePlektButtonsState"), savePlektBackupRemoteSettings = lazyBackups("savePlektBackupRemoteSettings");
+const createPlektBackupRemoteNow = lazyBackups("createPlektBackupRemoteNow"), createRemoteWatchBackupNow = lazyBackups("createRemoteWatchBackupNow"), saveRemoteWatchBackupSettings = lazyBackups("saveRemoteWatchBackupSettings");
 
 let _cb = {};
 const authHeaders = (...args) => _cb.authHeaders?.(...args), setMessage = (...args) => _cb.setMessage?.(...args), renderLogs = (...args) => _cb.renderLogs?.(...args), logsText = (...args) => _cb.logsText?.(...args), copyToClipboard = (...args) => _cb.copyToClipboard?.(...args), showConfirmModal = (...args) => _cb.showConfirmModal?.(...args), saveAdminCredentials = (...args) => _cb.saveAdminCredentials?.(...args), renderAdminCredentialsStatus = (...args) => _cb.renderAdminCredentialsStatus?.(...args), renderSettingsStatus = (...args) => _cb.renderSettingsStatus?.(...args), runRefreshMetadataWorkflow = (...args) => _cb.runRefreshMetadataWorkflow?.(...args), runRefreshTvdbMetadataWorkflow = (...args) => _cb.runRefreshTvdbMetadataWorkflow?.(...args);
@@ -49,7 +49,7 @@ export function initSettingsEvents(callbacks = {}) {
       const backendLogs = await fetchDiagnosticLogs(authHeaders(), "all");
       const localLogs = logsText();
       const content = [
-        `=== PLEMBFIN DIAGNOSTIC LOGS EXPORT (${new Date().toISOString()}) ===`,
+        `=== PLEKT DIAGNOSTIC LOGS EXPORT (${new Date().toISOString()}) ===`,
         ...backendLogs,
         "",
         "=== FRONTEND DEBUG LOGS ===",
@@ -61,7 +61,7 @@ export function initSettingsEvents(callbacks = {}) {
       const link = document.createElement("a");
       const dateStr = new Date().toISOString().slice(0, 10);
       link.href = url;
-      link.download = `plembfin-logs-${dateStr}.log`;
+      link.download = `plekt-logs-${dateStr}.log`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -189,7 +189,7 @@ export function initSettingsEvents(callbacks = {}) {
               <li><b>Plex Media Server:</b> Update the Webhook URL in Plex Web Settings ➔ Webhooks.</li>
               <li><b>Emby Server:</b> Update the Webhook URL in Emby Server Settings ➔ Webhooks.</li>
               <li><b>Jellyfin Server:</b> Update the generic webhook URL in Jellyfin Dashboard ➔ Plugins ➔ Webhooks.</li>
-              <li><b>Automation Clients:</b> Update any scripts, daemons, or tools passing <code>X-Plembfin-Webhook-Secret</code> or <code>Authorization: Bearer</code> headers.</li>
+              <li><b>Automation Clients:</b> Update any scripts, daemons, or tools passing <code>X-Plekt-Webhook-Secret</code> or <code>Authorization: Bearer</code> headers.</li>
             </ol>
           </div>
         `,
@@ -227,31 +227,31 @@ export function initSettingsEvents(callbacks = {}) {
   });
 
   elements.backupExportPassphrase?.addEventListener("input", () => {
-    updatePlembfinButtonsState();
+    updatePlektButtonsState();
   });
   elements.backupExportRememberPassphrase?.addEventListener("change", () => {
-    updatePlembfinButtonsState();
+    updatePlektButtonsState();
   });
-  elements.plembfinBackupEnabled?.addEventListener("change", () => {
-    updatePlembfinButtonsState();
-  });
-
-  elements.plembfinBackupRemotePassphrase?.addEventListener("input", () => {
-    updatePlembfinButtonsState();
-  });
-  elements.plembfinBackupRemoteRememberPassphrase?.addEventListener("change", () => {
-    updatePlembfinButtonsState();
-  });
-  elements.plembfinBackupRemoteEnabled?.addEventListener("change", () => {
-    updatePlembfinButtonsState();
+  elements.plektBackupEnabled?.addEventListener("change", () => {
+    updatePlektButtonsState();
   });
 
-  elements.savePlembfinBackupRemoteButton?.addEventListener("click", () => {
-    savePlembfinBackupRemoteSettings().catch((error) => setMessage(error.message, "error"));
+  elements.plektBackupRemotePassphrase?.addEventListener("input", () => {
+    updatePlektButtonsState();
+  });
+  elements.plektBackupRemoteRememberPassphrase?.addEventListener("change", () => {
+    updatePlektButtonsState();
+  });
+  elements.plektBackupRemoteEnabled?.addEventListener("change", () => {
+    updatePlektButtonsState();
   });
 
-  elements.createPlembfinBackupRemoteButton?.addEventListener("click", () => {
-    createPlembfinBackupRemoteNow().catch((error) => setMessage(error.message, "error"));
+  elements.savePlektBackupRemoteButton?.addEventListener("click", () => {
+    savePlektBackupRemoteSettings().catch((error) => setMessage(error.message, "error"));
+  });
+
+  elements.createPlektBackupRemoteButton?.addEventListener("click", () => {
+    createPlektBackupRemoteNow().catch((error) => setMessage(error.message, "error"));
   });
 
   elements.createRemoteWatchBackupButton?.addEventListener("click", () => {
@@ -262,38 +262,38 @@ export function initSettingsEvents(callbacks = {}) {
     saveRemoteWatchBackupSettings().catch((error) => setMessage(error.message, "error"));
   });
 
-  elements.savePlembfinBackupConfigButton?.addEventListener("click", () => {
-    savePlembfinBackupSettings().catch((error) => setMessage(error.message, "error"));
+  elements.savePlektBackupConfigButton?.addEventListener("click", () => {
+    savePlektBackupSettings().catch((error) => setMessage(error.message, "error"));
   });
 
-  elements.createPlembfinBackupButton?.addEventListener("click", () => {
-    createPlembfinBackupNow().catch((error) => setMessage(error.message, "error"));
+  elements.createPlektBackupButton?.addEventListener("click", () => {
+    createPlektBackupNow().catch((error) => setMessage(error.message, "error"));
   });
 
-  elements.plembfinBackupList?.addEventListener("click", (event) => {
-    const downloadBtn = event.target.closest("[data-plembfin-backup-download]");
+  elements.plektBackupList?.addEventListener("click", (event) => {
+    const downloadBtn = event.target.closest("[data-plekt-backup-download]");
     if (downloadBtn) {
-      const filename = downloadBtn.dataset.plembfinBackupDownload;
-      downloadPlembfinBackup(filename).catch((error) => setMessage(error.message, "error"));
+      const filename = downloadBtn.dataset.plektBackupDownload;
+      downloadPlektBackup(filename).catch((error) => setMessage(error.message, "error"));
     }
-    const restoreBtn = event.target.closest("[data-plembfin-backup-restore]");
+    const restoreBtn = event.target.closest("[data-plekt-backup-restore]");
     if (restoreBtn) {
-      const filename = restoreBtn.dataset.plembfinBackupRestore;
-      restorePlembfinBackupFromServer(filename).catch((error) => setMessage(error.message, "error"));
+      const filename = restoreBtn.dataset.plektBackupRestore;
+      restorePlektBackupFromServer(filename).catch((error) => setMessage(error.message, "error"));
     }
-    const deleteBtn = event.target.closest("[data-plembfin-backup-delete]");
+    const deleteBtn = event.target.closest("[data-plekt-backup-delete]");
     if (deleteBtn) {
-      const filename = deleteBtn.dataset.plembfinBackupDelete;
-      deletePlembfinBackupFile(filename).catch((error) => setMessage(error.message, "error"));
+      const filename = deleteBtn.dataset.plektBackupDelete;
+      deletePlektBackupFile(filename).catch((error) => setMessage(error.message, "error"));
     }
   });
 
-  elements.remotePlembfinBackupList?.addEventListener("click", (event) => {
-    const restoreBtn = event.target.closest("[data-plembfin-remote-backup-restore]");
+  elements.remotePlektBackupList?.addEventListener("click", (event) => {
+    const restoreBtn = event.target.closest("[data-plekt-remote-backup-restore]");
     if (restoreBtn) {
-      const filename = restoreBtn.dataset.plembfinRemoteBackupRestore;
+      const filename = restoreBtn.dataset.plektRemoteBackupRestore;
       const destinationId = restoreBtn.dataset.restoreDestId;
-      restoreRemotePlembfinBackup(destinationId, filename).catch((error) => setMessage(error.message, "error"));
+      restoreRemotePlektBackup(destinationId, filename).catch((error) => setMessage(error.message, "error"));
     }
   });
 
@@ -318,12 +318,12 @@ export function initSettingsEvents(callbacks = {}) {
 
   elements.backupImportFile?.addEventListener("change", async () => {
     const file = elements.backupImportFile.files?.[0] || null;
-    await selectPlembfinBackupFile(file);
+    await selectPlektBackupFile(file);
     elements.backupImportButton.disabled = !file;
   });
 
   elements.backupImportButton?.addEventListener("click", () => {
-    importPlembfinBackup().catch((error) => setMessage(error.message, "error"));
+    importPlektBackup().catch((error) => setMessage(error.message, "error"));
   });
 
   if (elements.runCompleteCheckButton) {

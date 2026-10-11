@@ -2,7 +2,7 @@ import { fetchWithTimeout } from "./outbound.js";
 
 const API_BASE = "https://api.trakt.tv";
 const API_VERSION = "2";
-const USER_AGENT = "Plembfin (https://github.com/Lasikiewicz/plembfin)";
+const USER_AGENT = "Plekt (https://github.com/Lasikiewicz/plekt)";
 
 async function request(url, { method = "GET", body, clientId, accessToken, timeoutMs = 20_000, includePagination = false, lane = "sync" } = {}) {
   const response = await fetchWithTimeout(url, {

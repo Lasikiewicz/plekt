@@ -1,6 +1,6 @@
-import { readStoredAdminToken } from "./auth.js?v=1.3.1.1.2";
-import { readStoredDebugLogs } from "./logs.js?v=1.3.1.1.2";
-import { isDemoMode } from "./utils.js?v=1.3.1.1.2";
+import { readStoredAdminToken } from "./auth.js?v=1.3.1.2.1";
+import { readStoredDebugLogs } from "./logs.js?v=1.3.1.2.1";
+import { isDemoMode } from "./utils.js?v=1.3.1.2.1";
 
 const TOKEN_KEY = "adminToken";
 const LEGACY_UPPER_TOKEN_KEY = "ADMIN_TOKEN";
@@ -54,8 +54,8 @@ const initialState = {
   activeBackupsTab: localStorage.getItem("activeBackupsTab") || "settings",
   remoteBackupFiles: [],
   remoteBackupFilesLoading: false,
-  remotePlembfinBackupFiles: [],
-  remotePlembfinBackupFilesLoading: false,
+  remotePlektBackupFiles: [],
+  remotePlektBackupFilesLoading: false,
   historyWeekStart: _startOfWeek(new Date()),
   history: [],
   historyVersion: "",

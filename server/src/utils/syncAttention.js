@@ -202,7 +202,7 @@ function restoreIssueItems(result = {}, trakt = null, runId = "", reason = "") {
       candidate: input.candidate === true,
     };
     item.localHref = localHrefForRestoreIssue(item);
-    item.localLinkLabel = item.localHref?.startsWith("/search?") ? "Search in Plembfin" : "Open in Plembfin";
+    item.localLinkLabel = item.localHref?.startsWith("/search?") ? "Search in Plekt" : "Open in Plekt";
     // Media-server restore issues may only retain the playstate media key
     // when the matching watch-history row was not available during the
     // restore pass. That key is still enough for the repair route to reload
@@ -251,7 +251,7 @@ function recommendationsFor(reason, { source = "sync", provider = "", requiresMa
   if (source === "restore" && requiresMatch) {
     const target = providerLabel(provider || "the affected app");
     return [
-      `Use Fix match on each affected Plembfin item to confirm its title, season, episode, and provider IDs match the ${target} library.`,
+      `Use Fix match on each affected Plekt item to confirm its title, season, episode, and provider IDs match the ${target} library.`,
       "Retry each affected item after saving the match; the retry will use the corrected local identity.",
       "If the item is intentionally unavailable on that app, skip the issue to let the remaining restore targets complete.",
     ];
@@ -266,7 +266,7 @@ function recommendationsFor(reason, { source = "sync", provider = "", requiresMa
   if (source === "restore" && /no matching item|not found|did not confirm|projection/.test(lower)) {
     const target = providerLabel(provider || "the target app");
     return [
-      `Open the listed item in Plembfin and confirm its title, season, episode, and provider IDs match the ${target} library.`,
+      `Open the listed item in Plekt and confirm its title, season, episode, and provider IDs match the ${target} library.`,
       `Refresh or reconnect ${target}, then retry the individual item once it is available.`,
       "If this item is intentionally unavailable on that app, skip the issue; the other restored targets can remain complete.",
     ];
@@ -280,7 +280,7 @@ function recommendationsFor(reason, { source = "sync", provider = "", requiresMa
   }
   if (/timeout|network|refused|connect|fetch|econn|socket/.test(lower)) {
     return [
-      `Confirm ${provider || "the target"} is running and reachable from the Plembfin server.`,
+      `Confirm ${provider || "the target"} is running and reachable from the Plekt server.`,
       "Check firewall, proxy, and DNS settings, then retry once the connection is stable.",
       "If the source is intentionally unavailable, skip the issue to continue.",
     ];
@@ -329,7 +329,7 @@ function restoreAttention(runtime = {}) {
     return `${count} ${providerLabel(provider)}`;
   }).join(", ");
   const explanation = traktOnly
-    ? `${operationLabel} is still paused because Trakt rejected ${traktSummary.rejectedCount} restored play${traktSummary.rejectedCount === 1 ? "" : "s"}. This can happen when a source represents a split, combined, or special episode differently from Trakt (for example, two parts versus one longer episode), so Plembfin cannot confirm those records are the same plays. Normal sync is fenced so it cannot overwrite the partially restored state while this issue is unresolved.`
+    ? `${operationLabel} is still paused because Trakt rejected ${traktSummary.rejectedCount} restored play${traktSummary.rejectedCount === 1 ? "" : "s"}. This can happen when a source represents a split, combined, or special episode differently from Trakt (for example, two parts versus one longer episode), so Plekt cannot confirm those records are the same plays. Normal sync is fenced so it cannot overwrite the partially restored state while this issue is unresolved.`
     : targetIssues.length
       ? `${operationLabel} is still paused because ${providerSummary || "one or more connected apps"} did not confirm every restored item. ${expectedSkipCount ? `${expectedSkipCount} item${expectedSkipCount === 1 ? " was" : "s were"} absent from a connected library and was recorded as an expected skip. ` : ""}${requiresMatch ? "At least one failed item no longer has enough saved row data for a direct retry; fix its local match and run the restore again to capture a fresh item-level repair. " : ""}Other targets and Trakt may already have completed; normal sync remains fenced until each outstanding item is repaired or skipped.`
     : `${operationLabel} is still paused because this failure means the connected projections are not known to be complete. Normal sync is fenced so it cannot overwrite the partially restored state while this issue is unresolved.`;
@@ -391,7 +391,7 @@ function initialImportAttention(provider, entry = {}) {
     severity: "blocking",
     title: `${sourceLabel} initial import needs attention`,
     summary: reason,
-    explanation: `The initial ${sourceLabel} import is marked as failed, so Plembfin cannot treat the initial sync as complete for this source.`,
+    explanation: `The initial ${sourceLabel} import is marked as failed, so Plekt cannot treat the initial sync as complete for this source.`,
     recommendations: recommendationsFor(reason, { source: "initial_import", provider: sourceLabel }),
     canSkip: true,
     skipLabel: `Skip ${sourceLabel} import`,
@@ -413,7 +413,7 @@ function pushSyncAttention(onboarding = {}) {
     severity: "blocking",
     title: "Initial push sync needs attention",
     summary: reason,
-    explanation: "The initial push did not complete, so connected apps may not match Plembfin's canonical watch history yet.",
+    explanation: "The initial push did not complete, so connected apps may not match Plekt's canonical watch history yet.",
     recommendations: recommendationsFor(reason, { source: "initial_import", provider: "connected apps" }),
     canSkip: true,
     skipLabel: "Skip initial push",

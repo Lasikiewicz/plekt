@@ -175,7 +175,7 @@ test("real web replicas and workers coordinate through an isolated local server"
   assert.ok(logs.logs.some((line) => line.includes("[worker:")), "worker diagnostics were not merged");
   assert.ok(logs.logs.some((line) => line.includes("[web:")), "web diagnostics were not merged");
 
-  const leaseDb = new Database(path.join(dataDir, "plembfin.db"), { readonly: true });
+  const leaseDb = new Database(path.join(dataDir, "plekt.db"), { readonly: true });
   const holderId = String(leaseDb.prepare("SELECT holder_id FROM scheduler_lease WHERE id='scheduler'").get()?.holder_id || "");
   leaseDb.close();
   const leader = holderId.includes(`:${workerA.child.pid}:`) ? workerA : workerB;
@@ -188,7 +188,7 @@ test("real web replicas and workers coordinate through an isolated local server"
   );
 
   await Promise.all([stopProcess(webA), stopProcess(webB), stopProcess(standby)]);
-  const database = new Database(path.join(dataDir, "plembfin.db"), { readonly: true });
+  const database = new Database(path.join(dataDir, "plekt.db"), { readonly: true });
   assert.equal(database.pragma("integrity_check", { simple: true }), "ok");
   database.close();
 });

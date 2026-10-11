@@ -1,10 +1,13 @@
 #!/usr/bin/env node
+import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 
 try {
   const dataDir = path.resolve(process.env.DATA_DIR || path.join(process.cwd(), "data"));
-  const db = new Database(path.join(dataDir, "plembfin.db"), { readonly: true, fileMustExist: true });
+  const legacyDbPath = path.join(dataDir, "plembfin.db");
+  const dbPath = fs.existsSync(legacyDbPath) ? legacyDbPath : path.join(dataDir, "plekt.db");
+  const db = new Database(dbPath, { readonly: true, fileMustExist: true });
   // This probe runs in a separate Node process so a synchronous maintenance
   // batch in the application cannot make a healthy worker look dead. Keep the
   // query deliberately small; a full quick_check here would recreate the same

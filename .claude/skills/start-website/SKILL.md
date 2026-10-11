@@ -11,7 +11,7 @@ This workflow is for local editing and testing only.
 
 ## Boundaries
 
-- Use the website in `website/`; do not start the Plembfin application server unless
+- Use the website in `website/`; do not start the Plekt application server unless
   the user separately asks for app-backed testing.
 - Reuse an existing healthy website dev server at `http://localhost:4321/` when one is
   already running.

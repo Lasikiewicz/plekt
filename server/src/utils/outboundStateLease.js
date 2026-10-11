@@ -1,11 +1,12 @@
 import crypto from "node:crypto";
 import { db } from "../db.js";
+import { brandEnv } from "./brandEnv.js";
 
 const LEASE_TTL_MS = 60_000;
 const LEASE_RENEW_MS = 15_000;
 const LEASE_RETRY_MS = 10;
 const LEASE_ACQUIRE_TIMEOUT_MS = 5 * 60_000;
-const INSTANCE_ID = process.env.PLEMBFIN_INSTANCE_ID
+const INSTANCE_ID = brandEnv("INSTANCE_ID")
   || `${process.env.ROLE || "process"}:${process.pid}:${Date.now()}`;
 
 const claimLeaseStmt = db.prepare(`

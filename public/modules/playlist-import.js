@@ -1,10 +1,10 @@
 // "Import from apps" dialog (plan/archive/custom-playlist-sync/plan.md decisions 21 to 28).
-// Lists each connected app's playlists that no Plembfin playlist is linked to
+// Lists each connected app's playlists that no Plekt playlist is linked to
 // yet. A picked row offers Merge / Import separately on a name clash (Merge by
 // default) and the apps to sync to, with only its own app ticked. Smart
 // playlists are counted, not listed. playlists.js passes its helpers in, so
 // this module imports only utils.
-import { escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.1.2";
+import { escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.2.1";
 
 const APP_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
 const APP_ORDER = ["plex", "emby", "jellyfin"];
@@ -28,7 +28,7 @@ function kindsMerge(left, right) {
   return kinds.size < 2 || kinds.has("mixed");
 }
 
-// How a candidate can merge: into an existing Plembfin playlist
+// How a candidate can merge: into an existing Plekt playlist
 // ({ mergeInto }), with same-name playlists picked from other apps
 // ({ apps }), or not at all (null).
 export function importMergeOption(candidate = {}, candidates = new Map()) {
@@ -65,7 +65,7 @@ function modeHtml(candidate, option) {
     : `Merge with "${candidate.title}" from ${option.apps.map(appLabel).join(" and ")}, if picked`;
   return `
     <fieldset class="playlist-import-mode">
-      <legend class="playlist-import-note">Same name as ${option.mergeInto ? "a Plembfin playlist" : "a playlist in another app"}. Merging keeps everything from both, nothing is removed.</legend>
+      <legend class="playlist-import-note">Same name as ${option.mergeInto ? "a Plekt playlist" : "a playlist in another app"}. Merging keeps everything from both, nothing is removed.</legend>
       <label><input type="radio" name="mode:${escapeAttribute(key)}" value="merge" checked /> <span>${escapeHtml(merge)}</span></label>
       <label><input type="radio" name="mode:${escapeAttribute(key)}" value="separate" /> <span>${escapeHtml(separate)}</span></label>
     </fieldset>
@@ -170,7 +170,7 @@ export function importResultMessage(result = {}) {
 export function openPlaylistImportDialog({ helpers, connected = [] }) {
   const overlay = helpers.dialogFrame("Import from apps", `
     <form class="personal-media-create-form playlist-import">
-      <p class="personal-media-dialog-copy">Pick playlists you made in Plex, Emby, or Jellyfin. Each one becomes a Plembfin playlist and stays in sync from then on.</p>
+      <p class="personal-media-dialog-copy">Pick playlists you made in Plex, Emby, or Jellyfin. Each one becomes a Plekt playlist and stays in sync from then on.</p>
       <div class="playlist-import-apps" data-import-body><p class="personal-media-dialog-copy">Loading playlists from your apps...</p></div>
       <p class="personal-media-dialog-error hidden" data-personal-dialog-error role="alert"></p>
       <div class="personal-media-dialog-actions"><button class="button-ghost personal-media-dialog-close" type="button">Cancel</button><button class="button-primary" type="submit" disabled>Import</button></div>

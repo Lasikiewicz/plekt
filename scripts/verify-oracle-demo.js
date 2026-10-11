@@ -39,4 +39,4 @@ if (!/Public demo/i.test(page)) {
   throw new Error("Demo homepage does not contain the public-demo guardrail");
 }
 
-console.log(`Verified ${origin.origin} is healthy and serving Plembfin v${expectedVersion}.`);
+console.log(`Verified ${origin.origin} is healthy and serving Plekt v${expectedVersion}.`);

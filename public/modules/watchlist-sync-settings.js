@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml } from "./utils.js?v=1.3.1.1.2";
+import { state } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml } from "./utils.js?v=1.3.1.2.1";
 
 // Plex-only: Emby and Jellyfin have no watchlist concept, so they were retired
 // from this projection. See the note on WATCHLIST_SYNC_PROVIDERS in configStore.js.
@@ -95,7 +95,7 @@ function issueCopy(issue) {
   if (issue.status === "reauth_required") {
     return {
       tone: "error",
-      title: `${label} rejected Plembfin's saved sign-in`,
+      title: `${label} rejected Plekt's saved sign-in`,
       body: `${items} could not be written to the ${label} watchlist because the stored ${label} credentials were refused. Reconnect ${label} in Settings → Media Servers, then retry the queued changes.`,
       titles,
       action: { label: `Reconnect ${label}`, href: "/settings/media-servers" },
@@ -107,7 +107,7 @@ function issueCopy(issue) {
     return {
       tone: "info",
       title: `${items} could not be matched in the Plex catalogue`,
-      body: `Plembfin could not find ${count === 1 ? "a matching title" : "matching titles"} in Plex, so ${count === 1 ? "it" : "they"} cannot be added to your Plex watchlist. This usually means the entry is missing the provider IDs Plex matches on. ${count === 1 ? "It stays" : "They stay"} on the Plembfin watchlist and Plembfin keeps trying.`,
+      body: `Plekt could not find ${count === 1 ? "a matching title" : "matching titles"} in Plex, so ${count === 1 ? "it" : "they"} cannot be added to your Plex watchlist. This usually means the entry is missing the provider IDs Plex matches on. ${count === 1 ? "It stays" : "They stay"} on the Plekt watchlist and Plekt keeps trying.`,
       titles,
       action: null,
     };
@@ -123,8 +123,8 @@ function issueCopy(issue) {
 }
 
 // A provider whose snapshot read fails is invisible in the queue: nothing can be
-// queued for a list Plembfin could not fetch. That read is also the only way an
-// addition made in the provider reaches the Plembfin watchlist, so a failed run
+// queued for a list Plekt could not fetch. That read is also the only way an
+// addition made in the provider reaches the Plekt watchlist, so a failed run
 // silently stops imports in both directions and has to be reported on its own.
 function runFailureCards(nextStatus) {
   return (nextStatus?.providers || [])
@@ -134,8 +134,8 @@ function runFailureCards(nextStatus) {
       const reason = String(entry.lastRun?.last_error || "").trim();
       return {
         tone: "error",
-        title: `Plembfin could not read the ${label} watchlist`,
-        body: `${reason || `${label} did not return a usable watchlist.`} Until this read succeeds, items added in ${label} are not imported into the Plembfin watchlist and Plembfin cannot confirm what ${label} already holds.${entry.lastRun?.updated_at ? ` Last attempted ${formatTime(entry.lastRun.updated_at)}.` : ""}`,
+        title: `Plekt could not read the ${label} watchlist`,
+        body: `${reason || `${label} did not return a usable watchlist.`} Until this read succeeds, items added in ${label} are not imported into the Plekt watchlist and Plekt cannot confirm what ${label} already holds.${entry.lastRun?.updated_at ? ` Last attempted ${formatTime(entry.lastRun.updated_at)}.` : ""}`,
         titles: "",
         action: null,
       };
@@ -227,14 +227,14 @@ function renderStatus(nextStatus = status) {
   const enabled = (nextStatus.providers || []).filter((entry) => entry.configured && entry.read && entry.add && entry.remove).length;
   if (ui.summary) {
     ui.summary.textContent = !config.enabled
-      ? "Plembfin remains the canonical list. Turn sync on to keep it aligned with your Plex account watchlist."
+      ? "Plekt remains the canonical list. Turn sync on to keep it aligned with your Plex account watchlist."
       : blocking
         ? `${blocking} watchlist change${blocking === 1 ? " needs" : "s need"} attention. The details below explain what each service reported and what to do about it.`
         : unavailable
           ? `${unavailable} watchlist item${unavailable === 1 ? "" : "s"} could not be matched in the Plex catalogue. The details below name ${unavailable === 1 ? "it" : "them"}.`
           : enabled
-            ? "Plembfin and your Plex watchlist are in sync. A change in either one is sent to the other."
-            : "Connect a Plex account to sync your Plembfin watchlist.";
+            ? "Plekt and your Plex watchlist are in sync. A change in either one is sent to the other."
+            : "Connect a Plex account to sync your Plekt watchlist.";
   }
   renderProviderRows(config);
   renderIssues(nextStatus, config);

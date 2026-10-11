@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, platformName, formatDate, formatNumber } from "./utils.js?v=1.3.1.1.2";
-import { categorizeIssues } from "./sync.js?v=1.3.1.1.2";
-import { openFixMatchDialog } from "./edit-dialogs.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, platformName, formatDate, formatNumber } from "./utils.js?v=1.3.1.2.1";
+import { categorizeIssues } from "./sync.js?v=1.3.1.2.1";
+import { openFixMatchDialog } from "./edit-dialogs.js?v=1.3.1.2.1";
 
 let _setMessage = () => {};
 let _showConfirmModal = () => {};
@@ -347,10 +347,10 @@ export async function runSystemIntegrityCheck() {
       else if (res.name === "Webhook Listener Endpoint") { fixInstruction = "Fix: Confirm the server is running and accessible at the expected host and port. Check for firewall or reverse-proxy rules blocking /api/webhook."; }
       else if (res.name === "Outbound Playstate Sync") { fixInstruction = "Fix: Open the latest history row debug details, review sync_dispatch_telemetry, then correct the failed platform credentials or provider-ID match."; }
       else if (res.name === "Cross-Platform Library Matching") { fixInstruction = "Fix: Open Sync Activity and use Issues only to see which media each platform could not find, then correct its metadata or external IDs."; settingsPath = "/sync-activity"; }
-      else if (res.name === "Plex Media Server") { fixInstruction = "Fix: Sign in with Plex or enter the Plex Server URL and Plex Token in Settings → Media Servers, then confirm the server is reachable from the machine running Plembfin."; settingsPath = "/settings/media-servers"; }
+      else if (res.name === "Plex Media Server") { fixInstruction = "Fix: Sign in with Plex or enter the Plex Server URL and Plex Token in Settings → Media Servers, then confirm the server is reachable from the machine running Plekt."; settingsPath = "/settings/media-servers"; }
       else if (res.name === "Plex Realtime Notifications") { fixInstruction = "Fix: Ensure any reverse proxy / Cloudflare in front of Plex forwards WebSocket upgrades on /:/websockets/notifications, or set the Plex Server URL to the direct LAN address (e.g. http://192.168.x.x:32400). Adaptive polling and unwatch sync will continue working."; settingsPath = "/settings/media-servers"; }
-      else if (res.name === "Emby Media Server") { fixInstruction = "Fix: Sign in to Emby or enter the Emby Server URL, API Key, and User ID in Settings → Media Servers, then confirm the server is reachable from the machine running Plembfin."; settingsPath = "/settings/media-servers"; }
-      else if (res.name === "Jellyfin Media Server") { fixInstruction = "Fix: Sign in / Quick Connect to Jellyfin or enter the Jellyfin Server URL, API Key, and User ID in Settings → Media Servers, then confirm the server is reachable from the machine running Plembfin."; settingsPath = "/settings/media-servers"; }
+      else if (res.name === "Emby Media Server") { fixInstruction = "Fix: Sign in to Emby or enter the Emby Server URL, API Key, and User ID in Settings → Media Servers, then confirm the server is reachable from the machine running Plekt."; settingsPath = "/settings/media-servers"; }
+      else if (res.name === "Jellyfin Media Server") { fixInstruction = "Fix: Sign in / Quick Connect to Jellyfin or enter the Jellyfin Server URL, API Key, and User ID in Settings → Media Servers, then confirm the server is reachable from the machine running Plekt."; settingsPath = "/settings/media-servers"; }
     }
 
     return `
@@ -477,7 +477,7 @@ export async function triggerFixAllMatches(platformTarget = "all", button) {
       await _loadSyncHistory({ force: true });
 
       // Only items whose identity is unresolved are answerable by hand. An item
-      // that already carries a provider id is not unmatched because Plembfin
+      // that already carries a provider id is not unmatched because Plekt
       // picked the wrong title - it is unmatched because that library does not
       // hold it, and no search result can change that.
       const matchable = manualQueue.filter(identityIsUnresolved);
@@ -644,7 +644,7 @@ export async function triggerRescanMatchReport(button) {
 }
 
 export function renderSyncMatchReport(report = {}) {
-  // Only media Plembfin could not identify is worth showing. A record that
+  // Only media Plekt could not identify is worth showing. A record that
   // carries a provider id and still finds no match means that library has no
   // copy - a difference between libraries, not a fault, and nothing here can
   // act on it. The full unfiltered figures remain in `GET /api/sync-match-report`
@@ -796,7 +796,7 @@ export async function triggerClearMissingTelemetry(button) {
         elements.retryTerminalOutput.scrollTop = elements.retryTerminalOutput.scrollHeight;
       }
 
-      termLog("plembfin@server:~$ ./clear-missing-telemetry", "header");
+      termLog("plekt@server:~$ ./clear-missing-telemetry", "header");
       termLog("Initiating request to clear missing dispatch telemetry...", "info");
       termLog("POST /api/clear-missing-telemetry HTTP/1.1", "info");
 

@@ -4,6 +4,7 @@ import https from "node:https";
 import { outboundTimeoutMs } from "./tuning.js";
 import { acquireOutboundSlot, noteOutboundResponse, configureOutboundGovernor } from "./outboundGovernor.js";
 import { isDemoMode } from "./demoMode.js";
+import { brandEnv } from "./brandEnv.js";
 
 const DEFAULT_FETCH_TIMEOUT_MS = 10_000;
 const MAX_FETCH_TIMEOUT_MS = 120_000;
@@ -174,11 +175,11 @@ async function fetchFollowingSafeRedirects(url, options) {
   throw outboundPolicyError("Upstream request exceeded the redirect limit", OUTBOUND_POLICY_CODES.REDIRECT_LIMIT);
 }
 
-// Set PLEMBFIN_DEBUG_OUTBOUND=1 to log a per-host outbound request count once
+// Set PLEKT_DEBUG_OUTBOUND=1 to log a per-host outbound request count once
 // a minute (visible in Settings → Logs via the diagnostic logger). Useful for
 // measuring how much traffic each upstream (TMDB, TVDB, fanart.tv, media
 // servers) actually receives before/after a caching change.
-const DEBUG_OUTBOUND = ["1", "true"].includes(String(process.env.PLEMBFIN_DEBUG_OUTBOUND || "").toLowerCase());
+const DEBUG_OUTBOUND = ["1", "true"].includes(String(brandEnv("DEBUG_OUTBOUND") || "").toLowerCase());
 const outboundCounts = new Map();
 let outboundWindowStartedAt = 0;
 

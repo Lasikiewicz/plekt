@@ -5,6 +5,7 @@ import { normalizeSyncRoles, validateSyncRolesSection, normalizeAuthority } from
 import { getMediaConnection, resolveConnectedProviderConfig } from "./mediaConnectionRepo.js";
 import { getValidPlexServerToken, getValidPlexToken } from "./plexTokenManager.js";
 import { activityGroupKeyFor, activityGroupMediaType, activityGroupTitleFromRecord, activityItemKeyFor } from "./syncActivityIdentity.js";
+import { brandEnv } from "./brandEnv.js";
 
 const SETTINGS_ID = "mediaConfig";
 const RUNTIME_ID = "main";
@@ -72,7 +73,7 @@ function envValue(...names) {
 }
 
 export function mediaAccountAuthEnabled() {
-  return !new Set(["false", "0", "off", "no"]).has(String(process.env.PLEMBFIN_MEDIA_AUTH_ENABLED || "").trim().toLowerCase());
+  return !new Set(["false", "0", "off", "no"]).has(String(brandEnv("MEDIA_AUTH_ENABLED") || "").trim().toLowerCase());
 }
 
 function envEnabled(name) {
@@ -356,7 +357,7 @@ const upsertSettingsStmt = db.prepare(
 export async function loadMediaConfig({ resolveConnections = true } = {}) {
   const row = selectSettingsStmt.get(SETTINGS_ID);
   const merged = mergeEnvDefaults(parseJson(row?.data, {}) || {});
-  merged.publicBaseUrl = normalizePublicBaseUrl(envValue("PLEMBFIN_PUBLIC_URL") || merged.publicBaseUrl);
+  merged.publicBaseUrl = normalizePublicBaseUrl(envValue("PLEKT_PUBLIC_URL", "PLEMBFIN_PUBLIC_URL") || merged.publicBaseUrl);
   if (resolveConnections) {
     const plexConnection = getMediaConnection("plex");
     if (merged.plex.authMode === "account" && ["plex_jwt", "plex_managed_jwt"].includes(plexConnection?.authKind)) {

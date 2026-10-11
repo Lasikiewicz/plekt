@@ -39,7 +39,7 @@ function clean(value) {
 }
 
 function modeLabel(mode = "push") {
-  return mode === "pull" ? "Import Watched Status" : "Set Plembfin as Source of Truth";
+  return mode === "pull" ? "Import Watched Status" : "Set Plekt as Source of Truth";
 }
 
 function modeFrom(input = {}) {
@@ -131,7 +131,7 @@ async function listCanonicalWatchedItems(logger = () => {}, isCancelled = () => 
     items.push(...rows.map(canonicalRowToPlannerMedia).filter((item) => item.type === "movie" || item.type === "episode"));
     if (rows.length < CANONICAL_PAGE_SIZE) break;
   }
-  logger(`Plembfin: loaded ${items.length} canonical watched item${items.length === 1 ? "" : "s"}.`);
+  logger(`Plekt: loaded ${items.length} canonical watched item${items.length === 1 ? "" : "s"}.`);
   return items;
 }
 
@@ -146,7 +146,7 @@ async function listCanonicalProgressItems(logger = () => {}, isCancelled = () =>
     if (rows.length < CANONICAL_PAGE_SIZE) break;
     offset += rows.length;
   }
-  logger(`Plembfin: loaded ${items.length} canonical resume position${items.length === 1 ? "" : "s"}.`);
+  logger(`Plekt: loaded ${items.length} canonical resume position${items.length === 1 ? "" : "s"}.`);
   return items;
 }
 
@@ -370,10 +370,10 @@ async function syncOneLibraryItem(media, requested, config, loopStore, logger) {
     const summary = {
       skipped: false,
       status: "success",
-      details: "Watched state pulled into Plembfin; no outbound targets selected.",
+      details: "Watched state pulled into Plekt; no outbound targets selected.",
       targetStates: [],
     };
-    logger(`[pull] ${media.title}: imported watched state into Plembfin.`);
+    logger(`[pull] ${media.title}: imported watched state into Plekt.`);
     return { record, inserted, summary };
   }
 

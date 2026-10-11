@@ -3,6 +3,32 @@
 How to run, check, ship, and release the app: npm scripts, the build check, git hooks,
 GitHub Actions, Docker, and the changelog/versioning machinery.
 
+## Formerly Plembfin
+
+Use the new image and repository names in new examples. Existing Docker installs
+change only the image name and retain their tag, volumes, data and secrets; both
+old image names remain published for at least six months after the rebrand release.
+Stable releases publish both GHCR names and both Docker Hub names; alpha/develop
+publish both GHCR names only. `PLEKT_*` variables are preferred, with nonblank new
+values taking precedence over `PLEMBFIN_*`; both webhook-secret header names work.
+
+Persisted identifiers remain deliberately unchanged: old databases (`plembfin.db`),
+`backups/plembfin`, cookies, browser storage, provider device ids, database source
+values and `/api/plembfin-backups` routes. Fresh databases and new backups use Plekt
+names. Old backups remain supported, but new ones cannot restore on older builds.
+The Windows installer prepares an in-place service/data-folder migration; real
+upgrade verification remains required. See [decision 44](decisions.md#44-plekt-keeps-legacy-identifiers-to-preserve-existing-installs).
+
+The local checkout path, lifecycle skill directory, server log and release lock
+retain their current names. Renaming the checkout also requires migrating local
+agent memory and path settings. The demo hostname and Cloudflare project retain
+their configured names until the separate website release work.
+
+GHCR cleanup targets `plekt` explicitly and stays in dry-run mode until the new
+package results are reviewed. The repository rename, raw changelog redirect probe,
+registry publication and live upgrade checks have not been performed as part of
+this local preparation.
+
 ## Local development
 
 ```bash
@@ -32,7 +58,7 @@ writes `data/config.json` with the admin credentials, a generated API key, and a
 channel. The `dev` command uses the same channel with file watching enabled. Set
 `BUILD_CHANNEL=release` or `BUILD_CHANNEL=alpha` explicitly when you need to inspect
 another local channel. When the user says **“Start the server”**, treat that as the
-Plembfin application-server workflow: start or reuse `npm start` (or `npm run dev` when
+Plekt application-server workflow: start or reuse `npm start` (or `npm run dev` when
 auto-reload is requested) on `http://localhost:5056`. When the server is started by
 Codex on Windows, the command must run through `exec_command` with
 `sandbox_permissions: "require_escalated"` and a justification that network access is
@@ -111,7 +137,7 @@ Grandfathered files, already over their limit (measured 2026-09-08):
    calls must use `fetchWithTimeout`, which enforces timeouts and validates both
    initial and redirected URLs
 7. boots the real server once against a temp `DATA_DIR` with
-   `PLEMBFIN_BUILD_CHECK=1` (the server exits immediately after `listening`)
+   `PLEKT_BUILD_CHECK=1` (the server exits immediately after `listening`)
 
 ## Git hooks
 
@@ -168,7 +194,7 @@ values already committed" - none of them write anything back to their branch.
   cases, the pre-push hook independently verifies that the committed changelog covers
   every user-facing commit before allowing the push. `docker-publish-develop.yml` checks README
   consistency, then builds, verifies, and publishes a rolling image to
-  `ghcr.io/lasikiewicz/plembfin:develop` (also tagged `develop-<build>`) using the build
+  `ghcr.io/lasikiewicz/plekt:develop` (also tagged `develop-<build>`) using the build
   number already in the pushed commit. `develop` carries the current main release in
   `changelog.develop.json` and starts each release cycle at build 0. Its build counter
   increments when a rebuild finds user-facing work; "Force to alpha" clears the current
@@ -196,7 +222,7 @@ values already committed" - none of them write anything back to their branch.
   `origin/main` into `develop` first if it has moved on). The alpha publish workflow
   checks README consistency again before building and publishing. This is where
   secret/vulnerability scanning first applies. `docker-publish-alpha.yml` builds,
-  verifies, and publishes to `ghcr.io/lasikiewicz/plembfin:alpha` (also tagged
+  verifies, and publishes to `ghcr.io/lasikiewicz/plekt:alpha` (also tagged
   `alpha-<build>`) using the build number already in the pushed commit, creates or updates
   the matching numbered GitHub prerelease with the formatted notes from
   `scripts/generate-release-notes.js`, then posts that one build's own changelog entry to
@@ -230,7 +256,7 @@ values already committed" - none of them write anything back to their branch.
   The promotion command refuses to mutate anything without `--confirm`.
 - After the main image workflow succeeds, its `Deploy public demo to OCI` job pulls the
   exact released tag on the dedicated Oracle Cloud Compute instance serving
-  [demo.plembfin.com](https://demo.plembfin.com/), keeps `PLEMBFIN_DEMO_MODE=1` and the
+  [demo.plembfin.com](https://demo.plembfin.com/), keeps `PLEKT_DEMO_MODE=1` and the
   existing `/data` mount, and verifies the released version plus the public-demo
   health/guardrail checks. Publishing to GHCR alone does not restart this container.
   Portainer is local-only and is not used by the release gate.
@@ -344,7 +370,7 @@ in `scripts/promote-alpha-to-main.js`, run before the force-push:
 runs on the push to `main` - in practice this means every "Force to main" run, not every
 individual commit - reads the version already committed, checks README consistency, runs
 the full build gate again in CI, builds and pushes a multi-architecture Docker image to
-GHCR and to Docker Hub (`docker.io/plembfin/plembfin`, logged in with the
+GHCR and to Docker Hub (`docker.io/plembfin/plekt`, logged in with the
 `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` repository secrets) tagged `latest` + the
 version, creates
 or updates the matching GitHub Release with the formatted body from
@@ -360,8 +386,8 @@ changelog step.
 
 The public application demo at [demo.plembfin.com](https://demo.plembfin.com/) runs on
 the dedicated Oracle Cloud Compute instance in `uk-london-1`, behind the Cloudflare
-reverse proxy. The release job deploys the exact `ghcr.io/lasikiewicz/plembfin:<version>`
-image with `PLEMBFIN_DEMO_MODE=1`, `BUILD_CHANNEL=main`, and the existing isolated data
+reverse proxy. The release job deploys the exact `ghcr.io/lasikiewicz/plekt:<version>`
+image with `PLEKT_DEMO_MODE=1`, `BUILD_CHANNEL=main`, and the existing isolated data
 mount. It does not use the local Portainer installation or the local-only
 `plembfin.lasikie.co.uk` environment.
 
@@ -383,8 +409,8 @@ missing or the deployment/verification fails, the main release workflow remains
 failed instead of reporting the demo as current.
 
 Optional Traks analytics for `demo.plembfin.com` are configured with repository
-Variables `PLEMBFIN_TRAKS_COLLECTOR_ORIGIN` and `PLEMBFIN_TRAKS_SITE_KEY`. The existing
-`PLEMBFIN_TRAKS_SCRIPT_URL` variable remains accepted as a legacy collector-origin
+Variables `PLEKT_TRAKS_COLLECTOR_ORIGIN` and `PLEKT_TRAKS_SITE_KEY`; workflows also accept their existing `PLEMBFIN_TRAKS_*` counterparts. The existing
+`PLEKT_TRAKS_SCRIPT_URL` variable remains accepted as a legacy collector-origin
 fallback. If the Traks origin or site key is empty, the demo loads no tracking. These
 values are public configuration; never place a Cloudflare API token or R2 credential in
 the demo container or Actions variables. The demo proxies the browser's first-party
@@ -449,9 +475,9 @@ It has its own build/deploy tooling independent of this repo's CI - see
 | `security.yml` | `npm audit --audit-level=high` + CodeQL, on push to `main`/`alpha`, PRs targeting `main`, and daily. CodeQL loads `.github/codeql/codeql-config.yml`, which excludes the `js/request-forgery` query repo-wide - every outbound request funnels through the centralized, validated fetch guard in `server/src/utils/outbound.js`, and admin-configured LAN media server URLs make that query permanently false-positive for this app |
 | `secret-scan.yml` | TruffleHog verified-secret scan on push to `main`/`alpha`/`develop` and PRs targeting `main`/`develop` |
 | `docker-build-check.yml` | Checks README consistency, then builds the image on every PR targeting `main`, without pushing anything, and runs `better-sqlite3` and `sharp` inside it, so a broken Dockerfile or dependency install is caught before a PR merges. The runtime probe matters because production dependencies install with `--ignore-scripts`: a native module with no usable binary for the platform still builds cleanly and would fail on first database open |
-| `docker-publish-alpha.yml` | On every push to `alpha`: checks README consistency, builds the image, runs the same native-module probe as `docker-build-check.yml`, then pushes it to `ghcr.io/lasikiewicz/plembfin:alpha` and `ghcr.io/lasikiewicz/plembfin:alpha-<build>` (reading the build number already committed by "Force to alpha"), creates or updates the matching numbered GitHub prerelease with generated notes, and posts the changelog entry to Discord (see "Discord release notifications"). Never writes anything back to `alpha`; never touches `changelog.json`, the package version, or the `:latest` tag |
+| `docker-publish-alpha.yml` | On every push to `alpha`: checks README consistency, builds the image, runs the same native-module probe as `docker-build-check.yml`, then pushes it to `ghcr.io/lasikiewicz/plekt:alpha` and `ghcr.io/lasikiewicz/plekt:alpha-<build>` (reading the build number already committed by "Force to alpha"), creates or updates the matching numbered GitHub prerelease with generated notes, and posts the changelog entry to Discord (see "Discord release notifications"). Never writes anything back to `alpha`; never touches `changelog.json`, the package version, or the `:latest` tag |
 | `windows-installer.yml` | On every push to `main` or `alpha` (and on manual dispatch), builds the x64 Windows installer on a Windows runner, probes native modules, packages the Node server as a Windows service with an opt-in notification-area companion, uploads a checksum, and publishes main installers to GitHub Releases plus alpha installers to numbered GitHub prereleases |
-| `ghcr-cleanup.yml` | Weekly (and on manual dispatch): prunes numbered `develop-<n>`/`alpha-<n>` tags beyond the newest 15 of each, and deletes untagged images older than a day left behind whenever a mutable tag (`latest`/`develop`/`alpha`) moves to a new manifest. Never touches those mutable tags or a semantic-version release tag |
+| `ghcr-cleanup.yml` | Weekly (and on manual dispatch): currently dry-run only against the `plekt` package pending review. When enabled, prunes numbered `develop-<n>`/`alpha-<n>` tags beyond the newest 15 of each, and deletes untagged images older than a day left behind whenever a mutable tag (`latest`/`develop`/`alpha`) moves to a new manifest. Never touches those mutable tags or a semantic-version release tag |
 | `dependabot.yml` | Dependency update PRs |
 
 ## Docker
@@ -467,7 +493,8 @@ It has its own build/deploy tooling independent of this repo's CI - see
   for this platform, which is the binary its loader prefers. better-sqlite3 is the only
   production dependency with an install script.
 - **`docker-compose.yml`** - base setup: port 5056, `./data:/data`, admin env vars,
-  `no-new-privileges`, cpu/memory limits.
+  `no-new-privileges`, cpu/memory limits. It sets `PLEKT_PUBLISHED_PORT=5056`, which the startup
+  webhook port advisory uses (see [webhooks.md](webhooks.md#port-advisory)).
 - **`docker-compose.split.yml`** - optional same-host overlay that runs one
   `ROLE=web` service and one HTTP-less `ROLE=worker` service on the same local data
   volume: `docker compose -f docker-compose.yml -f docker-compose.split.yml up -d`.
@@ -481,8 +508,8 @@ It has its own build/deploy tooling independent of this repo's CI - see
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/exportPlexHistory.js` | Import a Plex server's watch history into Plembfin via `/api/import` (env: `PLEX_URL`, `PLEX_TOKEN`, `API_KEY`) |
-| `scripts/forcePushHistory.js` | Replay Plembfin's `/api/history` against Plex/Emby/Jellyfin as mark-played calls (env: all three platforms' credentials + `API_KEY`) |
+| `scripts/exportPlexHistory.js` | Import a Plex server's watch history into Plekt via `/api/import` (env: `PLEX_URL`, `PLEX_TOKEN`, `API_KEY`) |
+| `scripts/forcePushHistory.js` | Replay Plekt's `/api/history` against Plex/Emby/Jellyfin as mark-played calls (env: all three platforms' credentials + `API_KEY`) |
 | `scripts/seed-demo-content.js` | Seed fictional demo content for screenshots/dev |
 | `scripts/generate-synthetic-library.js` | Build a disposable library at a stated scale for performance measurement: `node scripts/generate-synthetic-library.js --data-dir <path> [--movies 3000] [--shows 400] [--episodes-per-show 24] [--history-rows N] [--tmdb-entries N] [--tmdb-blob-kb 24] [--posters 8] [--seed 1]`. Refuses the repository's own `data/` directory and any directory holding a database it did not create. |
 | `scripts/benchmark-surfaces.js` | Record the server-side surface baseline against a generated library: `node scripts/benchmark-surfaces.js --data-dir <path> [--runs 5] [--output docs/benchmarks/<file>.json]` |
@@ -491,15 +518,15 @@ It has its own build/deploy tooling independent of this repo's CI - see
 ## Performance measurement
 
 Two debug env flags produce numbers without a profiler, in the same style as
-`PLEMBFIN_DEBUG_OUTBOUND`. Both log through the diagnostic logger, so their output is
+`PLEKT_DEBUG_OUTBOUND`. Both log through the diagnostic logger, so their output is
 visible in Settings → Logs as well as the console.
 
-- `PLEMBFIN_DEBUG_CACHE_REBUILDS=1` logs one line per derived-cache rebuild: which cache,
+- `PLEKT_DEBUG_CACHE_REBUILDS=1` logs one line per derived-cache rebuild: which cache,
   the generation it rebuilt for, the labelled caller that advanced that generation, and
   how long the rebuild took. Counting invalidations alone cannot tell an expensive one
   from a free one, because a bump only costs something when a cache it invalidated is
   then read.
-- `PLEMBFIN_DEBUG_SCHEDULER=1` logs each scheduler step's name, its start offset within
+- `PLEKT_DEBUG_SCHEDULER=1` logs each scheduler step's name, its start offset within
   the tick, its duration, and whether it exhausted its time budget, plus a per-tick
   summary carrying the achieved interval between tick starts.
 

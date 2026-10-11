@@ -191,7 +191,7 @@
   async function run({ mode = "document", populations = 2, runs = 6, routes = DEFAULT_ROUTES } = {}) {
     if (!host || host.closed) throw new Error("Open the measurement window with start() from a click first.");
     const report = { mode, runs, startedAt: new Date().toISOString(), userAgent: navigator.userAgent, populations: [] };
-    window.plembfinBench.progress = { mode, done: 0, total: populations * runs * routes.length, error: null };
+    window.plektBench.progress = { mode, done: 0, total: populations * runs * routes.length, error: null };
     for (let p = 0; p < populations; p += 1) {
       const samples = [];
       if (mode === "spa") {
@@ -205,7 +205,7 @@
           const sample = mode === "spa" ? await spaSample(route) : await documentSample(route, `${mode}-${p}-${i}`);
           sample.controllerHidden = hiddenBefore || document.hidden;
           samples.push(sample);
-          window.plembfinBench.progress.done += 1;
+          window.plektBench.progress.done += 1;
           await sleep(PACE_MS);
         }
       }
@@ -219,16 +219,16 @@
       });
     }
     report.finishedAt = new Date().toISOString();
-    window.plembfinBench.last = report;
+    window.plektBench.last = report;
     return report;
   }
 
   function start(options = {}) {
     host = window.open("about:blank", "plembfin-bench", "width=1280,height=800");
     if (!host) throw new Error("The measurement window was blocked; start it from a click.");
-    window.plembfinBench.last = null;
+    window.plektBench.last = null;
     return run(options).catch((error) => {
-      window.plembfinBench.progress = { ...(window.plembfinBench.progress || {}), error: String(error?.message || error) };
+      window.plektBench.progress = { ...(window.plektBench.progress || {}), error: String(error?.message || error) };
     });
   }
 
@@ -237,9 +237,9 @@
   button.type = "button";
   button.textContent = "Start route benchmark";
   button.style.cssText = "position:fixed;right:16px;bottom:16px;z-index:99999;padding:10px 14px;font:600 14px sans-serif";
-  button.addEventListener("click", () => start(window.plembfinBench.nextOptions || {}));
+  button.addEventListener("click", () => start(window.plektBench.nextOptions || {}));
   document.getElementById("plembfinBenchStart")?.remove();
   document.body.appendChild(button);
 
-  window.plembfinBench = { start, run, routes: DEFAULT_ROUTES, nextOptions: null, progress: null, last: null };
+  window.plektBench = { start, run, routes: DEFAULT_ROUTES, nextOptions: null, progress: null, last: null };
 })();

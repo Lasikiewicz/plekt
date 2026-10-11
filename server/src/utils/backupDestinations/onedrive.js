@@ -4,8 +4,9 @@
 // Settings: { clientId, tenant?, folder? }  Secrets: { refreshToken }
 import fs from "node:fs";
 import { fetchWithTimeout } from "../outbound.js";
+import { REMOTE_BACKUP_FILE_PATTERN } from "../backupNames.js";
 
-const FILE_PATTERN = /^plembfin-(?:watch-history-\d{8}T\d{6}Z\.json\.gz|backup-\d{8}T\d{6}Z\.encrypted\.json)$/;
+const FILE_PATTERN = REMOTE_BACKUP_FILE_PATTERN;
 export const ONEDRIVE_SCOPE = "offline_access Files.ReadWrite.AppFolder";
 
 // access_token cache keyed by destination id (refresh tokens live in the DB).

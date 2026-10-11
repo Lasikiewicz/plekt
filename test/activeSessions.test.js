@@ -59,3 +59,29 @@ test("persisted Emby Up Next seed rows are purged from the active-session projec
   assert.deepEqual(await listActiveSessions(), []);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM active_sessions").get().count, 0);
 });
+
+test("an Emby Up Next seed session is rejected at the active-session write boundary", async () => {
+  const sessions = await upsertActiveSession({
+    source: "emby",
+    type: "movie",
+    title: "Synthetic Seed Movie",
+    ids: { tmdb: "329865" },
+    deviceId: UP_NEXT_SEED_DEVICE_ID,
+    client: { deviceId: UP_NEXT_SEED_DEVICE_ID, deviceName: "Plekt Up Next" },
+    progress: 0,
+    durationMs: 3_600_000,
+  });
+
+  assert.deepEqual(sessions, []);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM active_sessions WHERE title = ?").get("Synthetic Seed Movie").count, 0);
+});
+
+test("a Jellyfin Up Next seed cannot be persisted or projected as Now Playing", async () => {
+  await upsertActiveSession({
+    source: "jellyfin", type: "movie", title: "Jellyfin Synthetic Seed",
+    ids: { tmdb: "329865" }, deviceId: UP_NEXT_SEED_DEVICE_ID,
+    client: { deviceId: UP_NEXT_SEED_DEVICE_ID }, durationMs: 3_600_000,
+  });
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM active_sessions WHERE source = 'jellyfin'").get().count, 0);
+  assert.deepEqual(await listActiveSessions(), []);
+});

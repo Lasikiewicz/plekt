@@ -1,12 +1,13 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=1.3.1.1.2";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=1.3.1.1.2";
-import { ifLoaded } from "./route-modules.js?v=1.3.1.1.2";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=1.3.1.1.2";
-import { dedupeMediaRecords } from "./media-records.js?v=1.3.1.1.2";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit } from "./dashboard-modern.js?v=1.3.1.1.2";
-import { cardArtAttribute } from "./card-art.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=1.3.1.2.1";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=1.3.1.2.1";
+import { ifLoaded } from "./route-modules.js?v=1.3.1.2.1";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=1.3.1.2.1";
+import { dedupeMediaRecords } from "./media-records.js?v=1.3.1.2.1";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit } from "./dashboard-modern.js?v=1.3.1.2.1";
+import { cardArtAttribute } from "./card-art.js?v=1.3.1.2.1";
+import { renderWebhookPortBanner } from "./webhook-port-banner.js?v=1.3.1.2.1";
 
 // The setup wizard loads only when setup is unfinished or its checklist has
 // items (see the deferred check in app.js); until then there is nothing to show.
@@ -442,6 +443,9 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
   const titleHtml = isInteractive
     ? `<a class="history-card-title history-card-title-link" href="${escapeAttribute(href)}" ${isUpNext ? `data-media-card-href="${escapeAttribute(href)}"` : `data-part-watched-href="${escapeAttribute(href)}"`} title="${escapeAttribute(displayTitle)}">${escapeHtml(displayTitle)}</a>`
     : `<b class="history-card-title" title="${escapeAttribute(displayTitle)}">${escapeHtml(displayTitle)}</b>`;
+  const titleRowHtml = isUpNext
+    ? `<div class="history-card-title-row">${titleHtml}${options.upNextChecking ? `<span class="up-next-checking-status" role="status">Checking…</span>` : ""}</div>`
+    : titleHtml;
   const menuHtml = isUpNext
     ? posterOverflowMenu(entry, { menuMode: "up-next", showTitle: displayTitle, title: displayTitle, label: displayTitle, mediaType: isEpisode ? "tv" : "movie", kind: isEpisode ? "episode" : "movie", queueKind: entry.queue_kind })
     : (!isPartWatched ? posterOverflowMenu(entry, isEpisode ? { showTitle: displayTitle, label: displayTitle } : {}) : "");
@@ -546,7 +550,7 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
       </div>
       <div class="history-card-details">
         <div class="history-card-header">
-          ${titleHtml}
+          ${titleRowHtml}
           ${options.explorerSummary !== undefined ? `<p class="history-card-summary" data-overview-text>${escapeHtml(options.explorerSummary)}</p>` : isEpisode ? `<span class="history-card-episode"${!isUpNext ? ` data-episode-title-key="${escapeAttribute(dashboardEpisodeTitleKey(entry))}"` : ""} title="${escapeAttribute(epTitle)}">${escapeHtml(epTitle)}</span>` : ""}
           ${seasonEpisodeBelowName ? seasonEpisodeRow : ""}
         </div>
@@ -561,7 +565,7 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
 }
 
 export function renderDashboardUpNextCard(entry) {
-  return renderDashboardHistoryPageCard({ ...entry, up_next: true }, { upNext: true });
+  return renderDashboardHistoryPageCard({ ...entry, up_next: true }, { upNext: true, upNextChecking: entry.checking === true });
 }
 
 export function observeDashboardPosters() {
@@ -942,6 +946,7 @@ export function refreshDashboardHistoryInPlace() {
 }
 
 export function renderDashboard() {
+  renderWebhookPortBanner();
   renderDashboardChecklist();
   if (partWatchedTargets().length) renderPartWatched({ renderInline: false });
   setDashboardHistoryRowMode(elements.tvHistoryRow);

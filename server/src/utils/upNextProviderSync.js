@@ -23,7 +23,7 @@ import {
 import {
   completeUpNextProviderFeed,
   failUpNextProviderFeed,
-  isPlembfinPrimaryUpNextFeed,
+  isPlektPrimaryUpNextFeed,
   startUpNextProviderFeed,
   withUpNextFeedSeriesIdentity,
 } from "./upNextRepository.js";
@@ -369,7 +369,7 @@ export function planUpNextProviderSync({ desiredItems = [], feeds = [] } = {}) {
     // Continue Watching is not the desired Jellyfin rail, and native Emby
     // Next Up is not the desired Emby rail. Keep those feeds available for
     // observation/protection, but never reconcile or dismiss them here.
-    if (!isPlembfinPrimaryUpNextFeed(provider, feedKind)) continue;
+    if (!isPlektPrimaryUpNextFeed(provider, feedKind)) continue;
     const candidates = Array.isArray(feed.items) ? feed.items : [];
     const seen = new Set();
     for (const candidate of candidates) {
@@ -607,7 +607,7 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
     // arrived episode stays a Plembfin-only card; the rail follows the rewatch
     // (user decision 30 September 2026, loose-ends step 20).
     if (item.up_next_lane === "new") {
-      addSkipped(title, "This show's rewatch card drives the app's own rail; the new episode stays in Plembfin's Up Next.");
+      addSkipped(title, "This show's rewatch card drives the app's own rail; the new episode stays in Plekt's Up Next.");
       continue;
     }
     const legacySeed = seedById.get(providerItemId) || null;
@@ -728,7 +728,7 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
       outcomes[candidate.resultIndex] = {
         ...result,
         status: "skipped",
-        reason: "Plembfin has the preceding episode as unwatched; it was not re-marked watched.",
+        reason: "Plekt has the preceding episode as unwatched; it was not re-marked watched.",
       };
       continue;
     }

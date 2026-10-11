@@ -88,10 +88,10 @@ jobs:
       OCI_DEMO_DATA_DIR: ${{ vars.OCI_DEMO_DATA_DIR }}
       OCI_DEMO_PORT: ${{ vars.OCI_DEMO_PORT || '80' }}
       OCI_DEMO_RUNTIME: ${{ vars.OCI_DEMO_RUNTIME }}
-      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
-      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
-      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEMBFIN_TRAKS_SITE_KEY }}
-      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
+      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEKT_TRAKS_SCRIPT_URL || vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
+      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEKT_TRAKS_COLLECTOR_ORIGIN || vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
+      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEKT_TRAKS_SITE_KEY || vars.PLEMBFIN_TRAKS_SITE_KEY }}
+      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEKT_TRAKS_REQUIRE_CONSENT || vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
     steps:
       - name: Checkout recovery helper
         uses: actions/checkout@v7
@@ -170,10 +170,10 @@ jobs:
       OCI_DEMO_DATA_DIR: ${{ vars.OCI_DEMO_DATA_DIR }}
       OCI_DEMO_PORT: ${{ vars.OCI_DEMO_PORT || '80' }}
       OCI_DEMO_RUNTIME: ${{ vars.OCI_DEMO_RUNTIME }}
-      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
-      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
-      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEMBFIN_TRAKS_SITE_KEY }}
-      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
+      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEKT_TRAKS_SCRIPT_URL || vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
+      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEKT_TRAKS_COLLECTOR_ORIGIN || vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
+      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEKT_TRAKS_SITE_KEY || vars.PLEMBFIN_TRAKS_SITE_KEY }}
+      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEKT_TRAKS_REQUIRE_CONSENT || vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
 
     steps:
       - name: Checkout selected release metadata and deployment helper
@@ -196,8 +196,8 @@ jobs:
             exit 1
           fi
           echo "RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
-          echo "RELEASE_IMAGE=ghcr.io/lasikiewicz/plembfin:$release_version" >> "$GITHUB_ENV"
-          echo "Deploying existing image ghcr.io/lasikiewicz/plembfin:$release_version"
+          echo "RELEASE_IMAGE=ghcr.io/lasikiewicz/plekt:$release_version" >> "$GITHUB_ENV"
+          echo "Deploying existing image ghcr.io/lasikiewicz/plekt:$release_version"
 
       - name: Check OCI deployment configuration
         env:

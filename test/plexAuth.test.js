@@ -41,6 +41,10 @@ test("Plex cloud requests carry the stable device identity and access token", ()
   const headers = plexClientHeaders(device, { token: "account-token" });
   assert.equal(headers["X-Plex-Client-Identifier"], "stable-device");
   assert.equal(headers["X-Plex-Product"], "Plembfin");
+  // Decision D7: a device registered since the rename announces itself as Plekt;
+  // one registered before keeps the name its server already lists.
+  assert.equal(plexClientHeaders({ ...device, deviceName: "Plekt" })["X-Plex-Product"], "Plekt");
+  assert.equal(plexClientHeaders({ ...device, deviceName: "Plembfin" })["X-Plex-Product"], "Plembfin");
   assert.equal(headers["X-Plex-Token"], "account-token");
 });
 

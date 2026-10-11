@@ -49,13 +49,13 @@ test("frontend platform and title helpers normalize user-facing labels", () => {
   );
   assert.match(sourceBadgeHtml("plembfin"), /source-plembfin/);
   assert.match(platformIconMarkup("plembfin"), /source-badge-icon-set/);
-  assert.match(platformIconMarkup("plembfin"), /plembfin-light\.png\?v=[A-Za-z0-9._-]+/);
-  assert.match(platformIconMarkup("plembfin"), /plembfin\.png\?v=[A-Za-z0-9._-]+/);
-  assert.match(sourceBadgeHtml("plembfin"), />Plembfin<\/span>/);
+  assert.match(platformIconMarkup("plembfin"), /plekt-light\.png\?v=[A-Za-z0-9._-]+/);
+  assert.match(platformIconMarkup("plembfin"), /plekt\.png\?v=[A-Za-z0-9._-]+/);
+  assert.match(sourceBadgeHtml("plembfin"), />Plekt<\/span>/);
   // The asset version tracks the build (see scripts/asset-versions.js), so it
   // changes on every alpha promotion. Assert that the icon is versioned, not
   // which version it happens to carry today.
-  assert.match(platformIconUrl("manual"), /^\/icons\/plembfin\.png\?v=.+$/);
+  assert.match(platformIconUrl("manual"), /^\/icons\/plekt\.png\?v=.+$/);
   assert.equal(platformName("jellyfin_webhook"), "Jellyfin");
   assert.equal(showName("Harbor Nine - S02E03 - Low Tide"), "Harbor Nine");
   assert.equal(episodeCode(2, 3), "S02E03");

@@ -74,7 +74,7 @@ function buildMainEmbed() {
   if (entry.websiteUrl) fields.push({ name: "Website", value: String(entry.websiteUrl).slice(0, 1024) });
 
   return {
-    title: `Plembfin v${entry.version} released`.slice(0, 256),
+    title: `Plekt v${entry.version} released`.slice(0, 256),
     description: String(entry.message || "").slice(0, 4096),
     url: commitUrl,
     color: 0x57f287,
@@ -93,7 +93,7 @@ function buildAlphaEmbed() {
   if (list) fields.push({ name: "Changes", value: list });
 
   return {
-    title: `Plembfin v${entry.version} alpha (build ${entry.build})`.slice(0, 256),
+    title: `Plekt v${entry.version} alpha (build ${entry.build})`.slice(0, 256),
     description: String(entry.message || "").slice(0, 4096),
     url: commitUrl,
     color: 0xfaa61a,

@@ -119,7 +119,7 @@ of a premature "no episodes" message.
   with the personal rating aligned to the right, synopsis, and the latest watched date with
   its edit action; older watch rows, source badges, and the watched-state action stay
   available on wider layouts without crowding the mobile tile.
-- **Mobile TV controls** - the phone navigation centers the Plembfin mark with the menu
+- **Mobile TV controls** - the phone navigation centers the Plekt mark with the menu
   trigger at the left. TV season headers keep episode and watched counts inline, suppress
   redundant complete-season progress text, and place season options inline with the watched
   count. Episode cards keep their compact watch state and watch-history controls without a
@@ -182,7 +182,7 @@ of a premature "no episodes" message.
   media identity and timestamp (left behind by an unwatch transition) is separately replaced
   with the new watched record
   instead of being mistaken for an existing one. A mixed season-level mark-watched
-  action dispatches only its eligible unwatched episodes, so episodes Plembfin already
+  action dispatches only its eligible unwatched episodes, so episodes Plekt already
   has as watched are left untouched. When a season has nothing left unwatched, its
   button relabels to "Resync season" so it can still be clicked to re-push the existing
   watched state; show-level mark-watched similarly re-pushes already-watched episodes
@@ -196,7 +196,7 @@ of a premature "no episodes" message.
   /api/manual-watch` awaits the outbound dispatch to every target before responding
   (rather than backgrounding it), and a manual unwatch (`POST /api/manual-unwatch`,
   `POST /api/playback-progress/unwatch`) always forces a live re-push even when
-  Plembfin's own state already says unwatched - so the UI can show a row as busy
+  Plekt's own state already says unwatched - so the UI can show a row as busy
   for the duration of the request and only flip it to watched/unwatched once the
   response confirms the push actually completed, instead of updating optimistically
   on click. Mark-watched/resync busy rows read "Saving..." while mark-unwatched
@@ -223,7 +223,7 @@ of a premature "no episodes" message.
   watched; a later explicit provider Mark played event or genuinely newer watch can
   establish it again. On the server, a manual unwatch stays canonical against every
   generic provider watched flag. Only an exact live-session playback completion whose
-  provider timestamp and Plembfin receive time are both newer than the unwatch can
+  provider timestamp and Plekt receive time are both newer than the unwatch can
   replace it (see `docs/decisions.md` entry 31).
 - **Live import and sync protection** - the detail page consumes the same live
   sync-progress snapshot as the Sync Activity view. When a visible movie or
@@ -261,15 +261,15 @@ of a premature "no episodes" message.
 - **Sync status** - per-platform pills from `sync_dispatch_telemetry`
   (`modules/sync.js`), with retry (`POST /api/retry-sync`). Detail pages also
   expose **Force Sync** for movies and shows. Its dialog offers two independent
-  operations, each explicit about what it does: **Set Plembfin as Source of
-  Truth** sends this title's watched state exactly as Plembfin currently has
+  operations, each explicit about what it does: **Set Plekt as Source of
+  Truth** sends this title's watched state exactly as Plekt currently has
   it recorded to a selected destination (or all), overwriting whatever they
   show, without checking their current state first
   (`syncCanonicalPlaystate` in `syncOrchestrator.js`, and
   `syncMediaUnplayedPlaystate` also clears playback position, not just the
   played flag, on every server an unwatched state is replayed to); and
   **Import Watched Status** reads watched state from a selected server (or
-  all) and adds anything Plembfin doesn't already have, without sending
+  all) and adds anything Plekt doesn't already have, without sending
   anything back out or removing anything. A remote item whose played flag has
   no reliable played date (common for episodes bulk-marked watched through a
   server's own library UI, which sets the played flag but never a played
@@ -318,7 +318,7 @@ of a premature "no episodes" message.
   `runWithConcurrency` in `concurrency.js`) rather than one at a time, so a show with
   many seasons syncs significantly faster; outbound calls to each media server are still
   throttled per host by the outbound governor regardless of how many episodes are in
-  flight. An all-destinations **Set Plembfin as Source of Truth** run uses two awaited
+  flight. An all-destinations **Set Plekt as Source of Truth** run uses two awaited
   phases: it finishes every Plex/Emby/Jellyfin write first, then drains Trakt through its
   own two-item queue. The activity stays open until both phases finish and records one
   combined result per item, with slow cloud history writes kept outside the six-item
@@ -476,7 +476,7 @@ of a premature "no episodes" message.
   connected Plex/Emby/Jellyfin/Trakt server (`propagateWatchDateRemoval` in
   `routes/media.js`, reusing the same `syncCanonicalPlaystate` replay as an
   edited date), so a platform that already received the deleted watch as
-  "watched" gets corrected instead of continuing to disagree with Plembfin;
+  "watched" gets corrected instead of continuing to disagree with Plekt;
   left uncorrected, that platform's own next catch-up scan could otherwise
   re-import its stale "watched" state as a brand-new phantom watch. Once that
   replay finishes, its outcome is written onto the surviving row's own
@@ -513,7 +513,7 @@ of a premature "no episodes" message.
   corrected date to Trakt and every connected Plex/Emby/Jellyfin server as a
   canonical "watched" state in the background (`propagateCorrectedWatchDate` in
   `routes/media.js`, reusing `syncCanonicalPlaystate` - the same replay Force
-  Sync's "Set Plembfin as Source of Truth" uses), so the platforms Plembfin is canonical for don't keep
+  Sync's "Set Plekt as Source of Truth" uses), so the platforms Plekt is canonical for don't keep
   showing a stale or fabricated date after a manual fix; a record currently
   marked unwatched is left alone. Since Trakt's history is an additive play log,
   this replay clears any existing Trakt plays for the item first

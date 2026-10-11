@@ -298,7 +298,7 @@ function sourceLabel(source = "") {
 }
 
 function modeLabel(mode = "push") {
-  return mode === "pull" ? "Import Watched Status" : "Set Plembfin as Source of Truth";
+  return mode === "pull" ? "Import Watched Status" : "Set Plekt as Source of Truth";
 }
 
 export function canonicalStateForShowHistoryRow(row = {}) {
@@ -308,7 +308,7 @@ export function canonicalStateForShowHistoryRow(row = {}) {
 
 async function collectLocalCanonicalItems(requested, { logger = () => {} } = {}) {
   if (requested.type === "show") {
-    logger(`[push] Plembfin: loading canonical episode states for "${requested.title}".`);
+    logger(`[push] Plekt:loading canonical episode states for "${requested.title}".`);
     const show = await queryShowDetail({ title: requested.title });
     const items = (show?.episodes || [])
       .map((row) => ({
@@ -322,7 +322,7 @@ async function collectLocalCanonicalItems(requested, { logger = () => {} } = {})
       .filter((media) => mediaMatchesRequest(media, requested));
     const watchedCount = items.filter((item) => item.canonicalState === "watched").length;
     const unwatchedCount = items.length - watchedCount;
-    logger(`[push] Plembfin: found ${items.length} canonical episode state${items.length === 1 ? "" : "s"} (${watchedCount} watched, ${unwatchedCount} unwatched).`);
+    logger(`[push] Plekt:found ${items.length} canonical episode state${items.length === 1 ? "" : "s"} (${watchedCount} watched, ${unwatchedCount} unwatched).`);
     return {
       items,
       sourceResults: [{ source: "plembfin", status: items.length ? "success" : "not_watched", watchedCount }],
@@ -339,7 +339,7 @@ async function collectLocalCanonicalItems(requested, { logger = () => {} } = {})
   };
   const canonicalState = await getCanonicalWatchState(probe).catch(() => null);
   if (!canonicalState) {
-    logger(`[push] Plembfin: no canonical state exists for "${requested.title}".`);
+    logger(`[push] Plekt:no canonical state exists for "${requested.title}".`);
     return { items: [], sourceResults: [{ source: "plembfin", status: "not_watched", watchedCount: 0 }] };
   }
 
@@ -347,7 +347,7 @@ async function collectLocalCanonicalItems(requested, { logger = () => {} } = {})
   const media = row
     ? { ...watchRowToMedia(row, "manual"), canonicalState, isValid: true }
     : { ...probe, source: "manual", canonicalState, watched_at: "" };
-  logger(`[push] Plembfin: canonical state for "${media.title}" is ${canonicalState}.`);
+  logger(`[push] Plekt:canonical state for "${media.title}" is ${canonicalState}.`);
   return {
     items: [media],
     sourceResults: [{ source: "plembfin", status: "success", watchedCount: 1, state: canonicalState }],
@@ -665,10 +665,10 @@ export async function forceSyncMediaState(input, { config = null, now = Date.now
       summary = {
         skipped: false,
         status: "success",
-        details: "Watched state pulled into Plembfin; no outbound targets selected.",
+        details: "Watched state pulled into Plekt; no outbound targets selected.",
         targetStates: [],
       };
-      logger(`[pull] ${media.title}: imported ${canonicalState} state into Plembfin.`);
+      logger(`[pull] ${media.title}: imported ${canonicalState} state into Plekt.`);
     } else {
       const localTargets = requested.target ? [requested.target] : MEDIA_SERVERS;
       const syncMedia = { ...media, syncTargets: localTargets };

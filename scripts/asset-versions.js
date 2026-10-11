@@ -5,7 +5,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const publicDir = path.join(root, "public");
+const requestedPublicDir = process.argv.find((argument) => argument.startsWith("--public-dir="))?.slice("--public-dir=".length);
+const publicDir = requestedPublicDir ? path.resolve(requestedPublicDir) : path.join(root, "public");
 const packageJson = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
 
 // Versioned assets are cached immutably for a year, so the query has to change
@@ -83,7 +84,7 @@ function managesAsset(assetPath) {
     || assetPath === "/manifest.webmanifest"
     || assetPath === "/theme-boot.js"
     || assetPath.startsWith("/fonts/")
-    || /^\/plembfin_header_logo_(?:dark|light)\.png$/.test(assetPath)
+    || /^\/plekt_header_logo_(?:dark|light)\.png$/.test(assetPath)
     || assetPath.startsWith("./")
     || assetPath.startsWith("../");
 }

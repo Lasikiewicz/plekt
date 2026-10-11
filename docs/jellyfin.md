@@ -1,6 +1,6 @@
 # Jellyfin Integration
 
-How Plembfin talks to Jellyfin: webhooks in, API calls out, plus scheduled catch-up
+How Plekt talks to Jellyfin: webhooks in, API calls out, plus scheduled catch-up
 polling. Jellyfin's integration is structurally the same as Emby's (Jellyfin is an Emby
 fork and keeps most of the API surface) with a few differences noted below. Read
 [architecture.md](architecture.md) first for the big picture.
@@ -25,7 +25,7 @@ the user and store only the encrypted user-scoped token; passwords are never per
 Manual setup remains optional; its values are stored in the `settings` SQLite row and env
 vars `JELLYFIN_SERVER_URL` / `JELLYFIN_API_KEY` / `JELLYFIN_USER_ID` act as defaults:
 
-- **baseUrl** - reachable *from the Plembfin server machine*
+- **baseUrl** - reachable *from the Plekt server machine*
 - **apiKey** - a Jellyfin API key (Dashboard → API Keys)
 - **userId** - the Jellyfin user whose watch state is tracked and written
 
@@ -41,7 +41,7 @@ header; server-side requests do not send both authentication forms.
 
 Jellyfin is not a Personal Watchlist Sync provider. Jellyfin has no native account-level
 watchlist contract; playlists and Favorites are library-bound and cannot represent titles
-the user does not own. Plembfin therefore keeps the personal watchlist projection on Plex,
+the user does not own. Plekt therefore keeps the personal watchlist projection on Plex,
 whose account Universal Watchlist can hold the full catalogue. Jellyfin's watched-state
 and personal-rating integrations remain independent of that feature; see
 [personal-watchlist.md](personal-watchlist.md) for the supported watchlist flow.
@@ -84,7 +84,7 @@ Every minute `fetchLiveSessions` polls `/Sessions` for Now Playing. The catch-up
 
 **Enabled by default** - set `EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED=false` to disable it. Every
 5 minutes (`JELLYFIN_UNWATCHED_POLL_INTERVAL_MS`), **unwatched
-reconciliation** (`checkJellyfinUnwatchedStatus`) re-checks up to 5 items Plembfin thinks
+reconciliation** (`checkJellyfinUnwatchedStatus`) re-checks up to 5 items Plekt thinks
 are watched via Jellyfin against Jellyfin's current played flag. Jellyfin's webhook
 natively reports unwatch via `User Data Saved`, so this is a backstop for a missed or
 misconfigured webhook, not the primary detection path - mirrors `checkPlexUnwatchedStatus`

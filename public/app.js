@@ -1,15 +1,15 @@
-import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=1.3.1.1.2";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs, formatLogLineToHtml } from "./modules/logs.js?v=1.3.1.1.2";
-import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=1.3.1.1.2";
-import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=1.3.1.1.2";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=1.3.1.1.2";
-import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=1.3.1.1.2";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=1.3.1.1.2";
-import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=1.3.1.1.2";
-import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=1.3.1.1.2";
-import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=1.3.1.1.2";
-import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=1.3.1.1.2";
-import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=1.3.1.1.2";
+import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=1.3.1.2.1";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs, formatLogLineToHtml } from "./modules/logs.js?v=1.3.1.2.1";
+import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=1.3.1.2.1";
+import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=1.3.1.2.1";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=1.3.1.2.1";
+import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=1.3.1.2.1";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=1.3.1.2.1";
+import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=1.3.1.2.1";
+import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=1.3.1.2.1";
+import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=1.3.1.2.1";
+import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=1.3.1.2.1";
+import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=1.3.1.2.1";
 
 // Route, dialog, media-detail, and maintenance modules load on demand through
 // modules/route-modules.js: a route downloads only the modules it renders.
@@ -23,7 +23,7 @@ let initSettingsServices = lazyNoop, applyConfigToSettingsUi = lazyNoop, refresh
 let initTools = lazyNoop, loadCacheStats = lazyNoopAsync, renderCachePanel = lazyNoop, parseSelectedFiles = lazyNoop, renderImportPreview = lazyNoop, renderImportActivity = lazyNoop, startImport = lazyNoopAsync, runRepairWorkflow = lazyNoopAsync, runPhantomWatchAudit = lazyNoopAsync, runPhantomWatchRepair = lazyNoopAsync, runTraktBackfill = lazyNoopAsync, runSystemIntegrityCheck = lazyNoopAsync, triggerClearMissingTelemetry = lazyNoopAsync, triggerRetryAllCategory = lazyNoopAsync, runDuplicateWatchCleanup = lazyNoopAsync, loadWipeDataPreview = lazyNoopAsync, runWipeData = lazyNoopAsync;
 let initDashboard = lazyNoop, renderDashboard = lazyNoop, refreshDashboardHistoryInPlace = lazyNoop, updateDashboardSplitState = lazyNoop, resetPartWatchedView = lazyNoop, renderPartWatched = lazyNoop;
 let initUpNext = lazyNoop, renderUpNext = lazyNoop, loadUpNext = lazyNoopAsync, resetUpNext = lazyNoop, removeWatchedUpNextItems = lazyNoop, removeDismissedUpNextItems = lazyNoop, setUpNextWatchSavingState = lazyNoop, setUpNextUnwatchSavingState = lazyNoop;
-let renderWatchBackups = lazyNoop, renderPlembfinBackups = lazyNoop, loadRemoteBackupsForRestoreTab = lazyNoopAsync, loadRemotePlembfinBackupsForRestoreTab = lazyNoopAsync, loadWatchBackups = lazyNoopAsync, loadPlembfinBackups = lazyNoopAsync;
+let renderWatchBackups = lazyNoop, renderPlektBackups = lazyNoop, loadRemoteBackupsForRestoreTab = lazyNoopAsync, loadRemotePlektBackupsForRestoreTab = lazyNoopAsync, loadWatchBackups = lazyNoopAsync, loadPlektBackups = lazyNoopAsync;
 let renderSyncActivity = lazyNoop, renderSyncActivityStatus = renderCoreSyncActivityStatus, setSyncActivityProgress = setCoreSyncActivityProgress, setSyncAttentionSummary = setCoreSyncAttentionSummary, loadSyncAttention = lazyNoopAsync, renderSyncAttention = lazyNoop, skipSyncAttention = lazyNoopAsync, skipSyncAttentionItem = lazyNoopAsync, retrySyncAttentionItem = lazyNoopAsync, skipSyncAttentionShow = lazyNoopAsync, retrySyncAttentionShow = lazyNoopAsync, recordClientAttention = lazyNoop, clearClientAttention = lazyNoop, clearClientAttentionForRoute = lazyNoop, retryClientAttention = lazyNoopAsync, setSyncActivitySearch = lazyNoop, resetSyncActivity = lazyNoop, loadSyncActivity = lazyNoopAsync, queueSyncActivityRefresh = lazyNoop, downloadSyncActivityLog = lazyNoop, retrySyncActivity = lazyNoopAsync, dismissSyncActivity = lazyNoopAsync, dismissSyncActivityGroup = lazyNoopAsync, retrySyncActivityGroup = lazyNoopAsync, startRetryAllSyncActivity = lazyNoopAsync, resumeRetryAllSyncActivityIfRunning = lazyNoop, fetchAllRetryableSyncActivityIds = lazyNoopAsync, toggleSyncActivityRowLog = lazyNoop, setSyncActivityGroupView = lazyNoop, loadOlderSyncActivityGroup = lazyNoopAsync, toggleSyncActivityFailedOnly = lazyNoop, toggleSyncActivityPaused = lazyNoop, startSyncActivityRefresh = lazyNoop, stopSyncActivityRefresh = lazyNoop, initSyncPreview = lazyNoop;
 let initDiscover = lazyNoop, renderDiscover = lazyNoop, loadDiscover = lazyNoopAsync, resetDiscover = lazyNoop, initPersonalMedia = lazyNoop, renderPersonalMedia = lazyNoop, loadPersonalMedia = lazyNoopAsync, resetPersonalMedia = lazyNoop, initStats = lazyNoop, futureListDate = lazyNoop, showStatusLabel = lazyNoop, nextAiringDateValue = lazyNoop, nextAiringCell = lazyNoop, statsReports = [], statsPeriodLabel = lazyNoop, syncStatsPeriodOptions = lazyNoop, selectedStatsReport = lazyNoop, statsFilteredRows = lazyNoop, statsPeriodNoun = lazyNoop, statsTrackingSpanText = lazyNoop, statsPlatformLabel = lazyNoop, statsSelectedMediaLabel = lazyNoop, statsIntroCards = lazyNoop, renderStatsKpis = lazyNoop, renderStatsLeaderboard = lazyNoop, renderStatsMoviesTvSplit = lazyNoop, renderStatsPlatformRows = lazyNoop, renderStatsBookends = lazyNoop, renderMonthChart = lazyNoop, renderStats = lazyNoop, loadStats = lazyNoopAsync, renderRankingTable = lazyNoop, initUpcoming = lazyNoop, openUpcomingToToday = lazyNoop;
 let initExplorer = lazyNoop, syncExplorerControlsState = lazyNoop, syncInlineMediaDetailHeading = lazyNoop, triggerSearchPage = lazyNoop, renderSearchPage = lazyNoop, renderExplorer = lazyNoop, explorerQueryKey = lazyNoop, updateAlphaFilter = lazyNoop, handleAlphaFilterClick = lazyNoop, resetMovieExplorer = lazyNoop, resetShowExplorer = lazyNoop, renderExplorerSentinel = lazyNoop, observeExplorerSentinel = lazyNoop, observeExplorerTmdbPrefetch = lazyNoop, scheduleNextAirResort = lazyNoop, currentExplorerView = lazyNoop, currentExplorerSort = lazyNoop, setCurrentExplorerSort = lazyNoop, applyListHeaderSort = lazyNoop, renderMovieCard = lazyNoop, renderMovieExplorer = lazyNoop, loadExplorerMovies = lazyNoopAsync, refreshMovieExplorerInPlace = lazyNoopAsync, refreshShowExplorerInPlace = lazyNoopAsync,renderHistoryItems = lazyNoop, renderHistoryView = lazyNoop, resetHistoryView = lazyNoop, loadHistoryView = lazyNoopAsync, refreshHistoryViewInPlace = lazyNoopAsync, observeHistorySentinel = lazyNoop, renderShowExplorer = lazyNoop, loadExplorerShows = lazyNoopAsync, loadShowDetail = lazyNoopAsync, matchesExplorerSearch = lazyNoop, sortExplorerItems = lazyNoop, renderShowRecord = lazyNoop, renderShowFolder = lazyNoop, renderSeasonFolder = lazyNoop, seasonsFromShowRecord = lazyNoop, representativeEpisode = lazyNoop, tmdbLookupIdsFromShow = lazyNoop, emptyExplorer = lazyNoop, FILMOGRAPHY_PAGE_SIZE = 24, getFilmographyObserver = lazyNoop, setFilmographyObserver = lazyNoop;
@@ -81,7 +81,7 @@ const ROUTE_MODULE_INITIALIZERS = {
     initUpNext({ setMessage });
   },
   "tools-backups"(module) {
-    ({ renderWatchBackups, renderPlembfinBackups, loadRemoteBackupsForRestoreTab, loadRemotePlembfinBackupsForRestoreTab, loadWatchBackups, loadPlembfinBackups } = module);
+    ({ renderWatchBackups, renderPlektBackups, loadRemoteBackupsForRestoreTab, loadRemotePlektBackupsForRestoreTab, loadWatchBackups, loadPlektBackups } = module);
     module.initBackupTools(backupToolCallbacks());
   },
   "media-detail-shared"(module) {
@@ -361,7 +361,7 @@ const THEME_KEY = "plembfin:theme";
 
 function updateThemeIcon() {
   const isLightMode = document.documentElement.classList.contains("light-mode");
-  const src = isLightMode ? "/plembfin_header_logo_light.png?v=1.3.1.1.2" : "/plembfin_header_logo_dark.png?v=1.3.1.1.2";
+  const src = isLightMode ? "/plekt_header_logo_light.png?v=1.3.1.2.1" : "/plekt_header_logo_dark.png?v=1.3.1.2.1";
   // Several logos can exist at once - the sidebar, setup wizard, and locked
   // login panel all need to track the selected theme.
   for (const logo of document.querySelectorAll(".brand-logo, [data-theme-logo]")) {
@@ -562,26 +562,26 @@ function bindElements() {
     closeTerminalModalButton: document.querySelector("#closeTerminalModalButton"),
     retryTerminalOutput: document.querySelector("#retryTerminalOutput"),
     globalSearchInput: document.querySelector("#globalSearchInput"),
-    backupExportButton: document.querySelector("#createPlembfinBackupButton"),
+    backupExportButton: document.querySelector("#createPlektBackupButton"),
     backupExportPassphrase: document.querySelector("#backupExportPassphrase"),
     backupExportRememberPassphrase: document.querySelector("#backupExportRememberPassphrase"),
     backupExportLog: document.querySelector("#backupExportLog"),
-    backupExportStatus: document.querySelector("#plembfinBackupSummary"),
+    backupExportStatus: document.querySelector("#plektBackupSummary"),
     backupImportButton: document.querySelector("#backupImportButton"),
     backupImportFile: document.querySelector("#backupImportFile"),
     backupRestorePassphrase: document.querySelector("#backupRestorePassphrase"),
     backupRestoreRemotePassphrase: document.querySelector("#backupRestoreRemotePassphrase"),
     backupRestoreLog: document.querySelector("#backupRestoreLog"),
     backupRestoreStatus: document.querySelector("#backupRestoreStatus"),
-    plembfinBackupSummary: document.querySelector("#plembfinBackupSummary"),
-    plembfinBackupEnabled: document.querySelector("#plembfinBackupEnabled"),
-    plembfinBackupTime: document.querySelector("#plembfinBackupTime"),
-    plembfinBackupRetention: document.querySelector("#plembfinBackupRetention"),
-    savePlembfinBackupConfigButton: document.querySelector("#savePlembfinBackupConfigButton"),
-    createPlembfinBackupButton: document.querySelector("#createPlembfinBackupButton"),
-    plembfinBackupRuntime: document.querySelector("#plembfinBackupRuntime"),
-    plembfinBackupList: document.querySelector("#plembfinBackupList"),
-    remotePlembfinBackupList: document.querySelector("#remotePlembfinBackupList"),
+    plektBackupSummary: document.querySelector("#plektBackupSummary"),
+    plektBackupEnabled: document.querySelector("#plektBackupEnabled"),
+    plektBackupTime: document.querySelector("#plektBackupTime"),
+    plektBackupRetention: document.querySelector("#plektBackupRetention"),
+    savePlektBackupConfigButton: document.querySelector("#savePlektBackupConfigButton"),
+    createPlektBackupButton: document.querySelector("#createPlektBackupButton"),
+    plektBackupRuntime: document.querySelector("#plektBackupRuntime"),
+    plektBackupList: document.querySelector("#plektBackupList"),
+    remotePlektBackupList: document.querySelector("#remotePlektBackupList"),
     watchBackupSummary: document.querySelector("#watchBackupSummary"),
     watchBackupEnabled: document.querySelector("#watchBackupEnabled"),
     watchBackupTime: document.querySelector("#watchBackupTime"),
@@ -598,19 +598,19 @@ function bindElements() {
     backupDestinationCards: document.querySelector("#backupDestinationCards"),
     backupDestinationSummary: document.querySelector("#backupDestinationSummary"),
     remoteWatchBackupSummary: document.querySelector("#remoteWatchBackupSummary"),
-    plembfinBackupRemoteEnabled: document.querySelector("#plembfinBackupRemoteEnabled"),
-    plembfinBackupRemotePassphrase: document.querySelector("#plembfinBackupRemotePassphrase"),
-    plembfinBackupRemoteRememberPassphrase: document.querySelector("#plembfinBackupRemoteRememberPassphrase"),
-    savePlembfinBackupRemoteButton: document.querySelector("#savePlembfinBackupRemoteButton"),
-    createPlembfinBackupRemoteButton: document.querySelector("#createPlembfinBackupRemoteButton"),
-    plembfinBackupRemoteSummary: document.querySelector("#plembfinBackupRemoteSummary"),
-    plembfinBackupRemoteRuntime: document.querySelector("#plembfinBackupRemoteRuntime"),
+    plektBackupRemoteEnabled: document.querySelector("#plektBackupRemoteEnabled"),
+    plektBackupRemotePassphrase: document.querySelector("#plektBackupRemotePassphrase"),
+    plektBackupRemoteRememberPassphrase: document.querySelector("#plektBackupRemoteRememberPassphrase"),
+    savePlektBackupRemoteButton: document.querySelector("#savePlektBackupRemoteButton"),
+    createPlektBackupRemoteButton: document.querySelector("#createPlektBackupRemoteButton"),
+    plektBackupRemoteSummary: document.querySelector("#plektBackupRemoteSummary"),
+    plektBackupRemoteRuntime: document.querySelector("#plektBackupRemoteRuntime"),
     createRemoteWatchBackupButton: document.querySelector("#createRemoteWatchBackupButton"),
     watchBackupRemoteRuntime: document.querySelector("#watchBackupRemoteRuntime"),
     watchBackupProgress: document.querySelector("#watchBackupProgress"),
-    plembfinBackupProgress: document.querySelector("#plembfinBackupProgress"),
+    plektBackupProgress: document.querySelector("#plektBackupProgress"),
     remoteWatchBackupProgress: document.querySelector("#remoteWatchBackupProgress"),
-    plembfinBackupRemoteProgress: document.querySelector("#plembfinBackupRemoteProgress"),
+    plektBackupRemoteProgress: document.querySelector("#plektBackupRemoteProgress"),
     remoteWatchBackupEnabled: document.querySelector("#remoteWatchBackupEnabled"),
     remoteWatchBackupTime: document.querySelector("#remoteWatchBackupTime"),
     remoteWatchBackupRetention: document.querySelector("#remoteWatchBackupRetention"),
@@ -1575,6 +1575,9 @@ function applyActiveView() {
 }
 
 function handleRoutingNow(path) {
+  // A deferred route replay may finish after auth discovers a fresh install.
+  // Keep every route in setup until the administrator has claimed it.
+  if (state.claimRequired && !state.token) path = "/setup";
   const parts = path.split('#');
   const pathPart = parts[0];
   const hashPart = parts[1] || "";
@@ -2503,7 +2506,7 @@ function applyActiveViewNow() {
     if (routePanels.has("backups")) {
       state.activeBackupsTab = route.backupTab || "settings";
       renderWatchBackups();
-      renderPlembfinBackups();
+      renderPlektBackups();
       // The remote listing feeds both the Remote Watch History card's storage count
       // and the Remote Restore list, and it needs the backup status (destinations)
       // first - chain it behind loadWatchBackups so a cold direct link to any
@@ -2514,13 +2517,13 @@ function applyActiveViewNow() {
           if (!state.remoteBackupFilesLoading && !state.remoteBackupFiles.length) {
             jobs.push(loadRemoteBackupsForRestoreTab());
           }
-          if (!state.remotePlembfinBackupFilesLoading && !state.remotePlembfinBackupFiles.length) {
-            jobs.push(loadRemotePlembfinBackupsForRestoreTab());
+          if (!state.remotePlektBackupFilesLoading && !state.remotePlektBackupFiles.length) {
+            jobs.push(loadRemotePlektBackupsForRestoreTab());
           }
           return Promise.all(jobs);
         })
         .catch((error) => setMessage(error.message, "error"));
-      loadPlembfinBackups().catch((error) => setMessage(error.message, "error"));
+      loadPlektBackups().catch((error) => setMessage(error.message, "error"));
     }
     if (routePanels.has("tools")) loadWipeDataPreview().catch((error) => setMessage(error.message, "error"));
     if (routePanels.has("logs")) renderLogs().catch(() => { });
@@ -3289,7 +3292,7 @@ function showErrorExplainModal(title, errorMsg) {
   } else if (errLower.includes("unauthorized") || errLower.includes("401") || errLower.includes("forbidden") || errLower.includes("key") || errLower.includes("token")) {
     resolutionInstructions = "Authentication failed. Check the app under Settings and verify that the server URL, API key, user ID, or access token is correct and still valid.";
   } else if (errLower.includes("timeout") || errLower.includes("refused") || errLower.includes("network") || errLower.includes("fetch") || errLower.includes("connect")) {
-    resolutionInstructions = "The media server could not be reached. Verify that it is online and reachable from Plembfin, and check that no firewall or proxy is blocking the request.";
+    resolutionInstructions = "The media server could not be reached. Verify that it is online and reachable from Plekt, and check that no firewall or proxy is blocking the request.";
   } else {
     resolutionInstructions = "Check Settings → Logs for a detailed traceback, then test the media server credentials under Settings → Media Servers.";
   }
@@ -3486,7 +3489,7 @@ function initialize() {
   renderDashboard();
   renderActiveSessions();
   renderWatchBackups();
-  renderPlembfinBackups();
+  renderPlektBackups();
   renderDbStatus(false);
   renderSettingsStatus("Configuration not loaded yet.");
 

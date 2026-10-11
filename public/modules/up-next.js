@@ -1,15 +1,15 @@
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.1.2";
-import { state, elements } from "./state.js?v=1.3.1.1.2";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=1.3.1.1.2";
-import { hydratePosters } from "./images.js?v=1.3.1.1.2";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=1.3.1.1.2";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=1.3.1.1.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state, elements } from "./state.js?v=1.3.1.2.1";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=1.3.1.2.1";
+import { hydratePosters } from "./images.js?v=1.3.1.2.1";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=1.3.1.2.1";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=1.3.1.2.1";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, withoutNowPlaying, upNextRemovalMatches,
-} from "./up-next-shared.js?v=1.3.1.1.2";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=1.3.1.1.2";
-import { renderMediaCard } from "./media-card.js?v=1.3.1.1.2";
+} from "./up-next-shared.js?v=1.3.1.2.1";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=1.3.1.2.1";
+import { renderMediaCard } from "./media-card.js?v=1.3.1.2.1";
 
 const UP_NEXT_TTL_MS = 2 * 60 * 1000;
 const UP_NEXT_TIMEOUT_MS = 20000;
@@ -20,7 +20,7 @@ const UP_NEXT_CACHE_KEY = "plembfin:upNextCache:v6";
 const UP_NEXT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const UP_NEXT_SYNC_TIMEOUT_MS = 60_000;
 const UP_NEXT_PROVIDERS = new Set(["plex", "emby", "jellyfin"]);
-const UP_NEXT_CONNECTION_HELP_URL = "https://plembfin.com/docs/troubleshooting/#media-server-connection-failures";
+const UP_NEXT_CONNECTION_HELP_URL = "https://plekt.net/docs/troubleshooting/#media-server-connection-failures";
 const UP_NEXT_CONNECTION_HELP_THRESHOLD = 2;
 // Mirrors dashboard.js's DASHBOARD_CARD_EXIT_MS so overlapping refreshes wait
 // for a removal exit to finish before repainting the rail with a fresh
@@ -51,17 +51,17 @@ export function upNextAttentionOptions(error, action = "update") {
   if (error?.code === "UP_NEXT_SHOW_ROUTE_MISSING") {
     return {
       title: `Could not ${verb} show in Up Next`,
-      explanation: "The media page is newer than the Plembfin server currently handling requests. The server returned HTTP 404 for the Up Next show endpoint, so it does not have this feature loaded.",
+      explanation: "The media page is newer than the Plekt server currently handling requests. The server returned HTTP 404 for the Up Next show endpoint, so it does not have this feature loaded.",
       recommendations: [
-        "Stop and restart Plembfin so the local server loads the current build.",
+        "Stop and restart Plekt so the local server loads the current build.",
         "Reload the media page after the restart, then add the show to Up Next again.",
-        "If it still fails, open Settings → Logs and check that the page and server are using the same Plembfin installation.",
+        "If it still fails, open Settings → Logs and check that the page and server are using the same Plekt installation.",
       ],
     };
   }
   return {
     title: `Could not ${verb} show in Up Next`,
-    explanation: `Plembfin could not ${verb} this show in the dashboard Up Next rail. The request reported: ${message}`,
+    explanation: `Plekt could not ${verb} this show in the dashboard Up Next rail. The request reported: ${message}`,
     recommendations: [
       "Try the action again once; this may be a temporary request failure.",
       "If it keeps failing, open Settings → Logs and check the Up Next request details.",
@@ -93,7 +93,7 @@ export async function addShowToUpNext(button) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
       const error = new Error(response.status === 404 && body.error === "Not found"
-        ? "The running Plembfin server does not support adding TV shows to Up Next (POST /api/up-next/show). Restart Plembfin, reload this page, and try again."
+        ? "The running Plekt server does not support adding TV shows to Up Next (POST /api/up-next/show). Restart Plekt, reload this page, and try again."
         : body.error || `Could not add "${title}" to Up Next`);
       error.status = response.status;
       if (response.status === 404 && body.error === "Not found") error.code = "UP_NEXT_SHOW_ROUTE_MISSING";
@@ -767,7 +767,7 @@ export function openDismissedUpNextModal() {
   const body = items.length
     ? `<p class="up-next-dismissed-intro">Dismissed on every device. Adding a card back returns it to Up Next and pushes the queue to your media servers.</p>
        <div class="up-next-dismissed-card-grid">${cards}</div>`
-    : `<p class="up-next-dismissed-intro">Nothing dismissed is currently unwatched in Plembfin.</p>`;
+    : `<p class="up-next-dismissed-intro">Nothing dismissed is currently unwatched in Plekt.</p>`;
   overlay.innerHTML = `
     <div class="edit-dialog settings-modal up-next-dismissed-modal" role="dialog" aria-modal="true" aria-label="Dismissed Up Next items">
       <header class="settings-modal-head">
@@ -948,7 +948,7 @@ function renderUpNextSourceStatus() {
     }).join("");
     const copy = `${providerLabels} ${providerIssues.size === 1 ? "is" : "are"} unavailable.`;
     status.innerHTML = rows;
-    status.title = `${details}\n\nPlembfin retries failed provider connections every few minutes. If a retry keeps failing, check Settings → Connections.`;
+    status.title = `${details}\n\nPlekt retries failed provider connections every few minutes. If a retry keeps failing, check Settings → Connections.`;
     status.setAttribute("aria-label", copy);
   } else {
     status.innerHTML = "";
@@ -1118,19 +1118,19 @@ function renderUpNextSyncControl() {
   button.setAttribute("aria-busy", String(syncing));
   if (label) label.textContent = syncing ? "Syncing…" : "";
   button.title = syncing
-    ? "Pushing Plembfin Up Next to Plex, Emby, and Jellyfin…"
+    ? "Pushing Plekt Up Next to Plex, Emby, and Jellyfin…"
     : !signedIn
       ? "Sign in to push Up Next to your media servers"
       : !syncEnabled
         ? "Up Next sync is disabled in Settings → Sync → Sync Tuning"
-        : "Push Plembfin Up Next to Plex, Emby, and Jellyfin";
+        : "Push Plekt Up Next to Plex, Emby, and Jellyfin";
   button.setAttribute("aria-label", syncing
-    ? "Pushing Plembfin Up Next to connected media servers"
+    ? "Pushing Plekt Up Next to connected media servers"
     : !signedIn
       ? "Sign in to push Up Next to your media servers"
       : !syncEnabled
         ? "Up Next sync is disabled in Settings, Sync Tuning"
-        : "Push Plembfin Up Next to Plex, Emby, and Jellyfin");
+        : "Push Plekt Up Next to Plex, Emby, and Jellyfin");
 }
 
 function upNextSyncPayloadItem(item = {}) {
@@ -1189,8 +1189,8 @@ function upNextSyncMessage(body = {}) {
     }
   }
   const intro = pushedProviders.length
-    ? `Plembfin Up Next pushed to ${upNextListLabel(pushedProviders)}.`
-    : "Plembfin Up Next push completed.";
+    ? `Plekt Up Next pushed to ${upNextListLabel(pushedProviders)}.`
+    : "Plekt Up Next push completed.";
   const details = [];
   const railSummaries = providerRails.length ? providerRails : (jellyfinRail.provider ? [jellyfinRail] : []);
   const railFailures = railSummaries.reduce((total, rail) => total + Number(rail?.failed_count || 0), 0);
@@ -1225,7 +1225,7 @@ export async function syncUpNextToProviders() {
     return null;
   }
   // The rendered rail is intentionally capped at 30 cards, but the loaded
-  // Plembfin snapshot (up to the server's 100-item bound) is authoritative.
+  // Plekt snapshot (up to the server's 100-item bound) is authoritative.
   // Push the complete snapshot so off-screen provider items are reconciled too.
   const items = visibleUpNextItems().slice(0, 100).map(upNextSyncPayloadItem);
   state.upNextSyncing = true;
@@ -1251,7 +1251,7 @@ export async function syncUpNextToProviders() {
     return body;
   } catch (error) {
     const detail = error?.name === "AbortError" ? "The provider push timed out." : (error?.message || "Try again later.");
-    _cb.setMessage?.(`Could not push Plembfin Up Next to your media servers: ${detail}`, "muted");
+    _cb.setMessage?.(`Could not push Plekt Up Next to your media servers: ${detail}`, "muted");
     return null;
   } finally {
     window.clearTimeout(timeout);
@@ -1333,7 +1333,7 @@ export function resetUpNext({ preserveItems = false } = {}) {
 function upNextErrorPresentation() {
   if (state.upNextErrorCode === "SERVER_ROUTE_MISSING" || /\bnot found\b/i.test(state.upNextError)) {
     return {
-      title: "Restart Plembfin to load Up Next",
+      title: "Restart Plekt to load Up Next",
       detail: "The local server is running an older build. Restart it, then try again.",
     };
   }
@@ -1385,14 +1385,6 @@ export function renderUpNext({ exitIds = [] } = {}) {
 
   const items = withoutNowPlaying(visibleUpNextItems(), state.activeSessions || []);
 
-  // Browser storage is only a paint hint. Do not put an unverified saved
-  // projection back on the dashboard while the server is reconciling it.
-  if (state.upNextFromCache && (state.upNextLoading || (!state.upNextLoadedAt && !state.upNextError))) {
-    if (section) section.classList.remove("hidden");
-    commitPanel(`<div class="empty-log up-next-empty-state"><b>Loading Up Next…</b></div>`);
-    return;
-  }
-
   if (state.upNextLoading && !state.upNextItems.length) {
     if (section) section.classList.remove("hidden");
     commitPanel(`<div class="empty-log up-next-empty-state"><b>Loading Up Next…</b></div>`);
@@ -1413,8 +1405,11 @@ export function renderUpNext({ exitIds = [] } = {}) {
   }
 
   if (section) section.classList.remove("hidden");
+  const checkingCachedItems = state.upNextFromCache
+    && (state.upNextLoading || (!state.upNextLoadedAt && !state.upNextError));
   const html = items.slice(0, 30).map((item, index) => renderDashboardUpNextCard({
     ...item,
+    checking: checkingCachedItems,
     saving: item.pending_sync === true || isUpNextWatchSaving(item),
     pending_removal: isUpNextRemovalPending(item),
     eager_poster: index < 12,

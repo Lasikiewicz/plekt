@@ -10,7 +10,7 @@ The existing per-process overlap guard remains in place.
 
 The lease prevents concurrent scheduler ownership. A process crash during an
 already-issued media-server API call cannot make that remote call exactly-once;
-Plembfin's persisted loop detection and idempotent watched/unwatched writes provide
+Plekt's persisted loop detection and idempotent watched/unwatched writes provide
 recovery protection.
 
 The same logic runs on demand via:
@@ -65,11 +65,11 @@ restart-safe cancellation behavior.
 
 After confirmation, `POST /api/force-sync` with `{ "planId": "..." }` rechecks the
 server fingerprints and configuration revision. Any drift expires the plan before writes.
-Destructive plans create and checksum-verify a local Plembfin watch-history snapshot first;
-snapshot failure blocks execution. This snapshot covers Plembfin watch history, playstate,
+Destructive plans create and checksum-verify a local Plekt watch-history snapshot first;
+snapshot failure blocks execution. This snapshot covers Plekt watch history, playstate,
 and resume progress, not the databases owned by Plex, Emby, or Jellyfin.
 
-Force Sync is a canonical replay from Plembfin history. It never imports a watched item
+Force Sync is a canonical replay from Plekt history. It never imports a watched item
 that exists only on a connected server, and it never writes to a server whose watched
 library scan failed. Source-only and monitor-only sync roles are scanned for information
 but are excluded from outbound writes. Force Sync, Full Sync Watchstates, backup restore,
@@ -81,8 +81,8 @@ unplayed callbacks are additionally matched against a 14-day outbound unmark led
 The detail-page endpoint is deliberately separate from that library-wide policy. It is a
 user-requested repair for one title, with two independent, explicit operations: Import
 Watched Status (pull) queries configured servers for that title and imports any watched
-movie or episode found there into Plembfin - the import only, nothing is sent back out and
-nothing is removed. Set Plembfin as Source of Truth (push) replays Plembfin's existing
+movie or episode found there into Plekt - the import only, nothing is sent back out and
+nothing is removed. Set Plekt as Source of Truth (push) replays Plekt's existing
 canonical state to the selected destination(s) without checking their current state first.
 It does not change the behavior or safety guarantees of the library-wide `/api/force-sync`
 planner and executor. Jellyfin episode lookups return every matching season/episode item so
@@ -121,7 +121,7 @@ retry backoff, and redacted errors.
 The first run takes a safe union of the local and Plex lists. `POST
 /api/watchlist-sync/preview` remains available for a read-only snapshot and resolution
 check; `POST /api/watchlist-sync/run` performs the reconcile. Plex-only additions are
-imported into Plembfin, and a complete later snapshot is required before a missing
+imported into Plekt, and a complete later snapshot is required before a missing
 previously managed item can be treated as a provider removal.
 
 Missing remote items only become provider-originated removals after a successful, complete
@@ -143,17 +143,17 @@ Trakt and media servers can resolve to the same watched item when provider IDs a
 
 ## One canonical state, input from every connected service
 
-Plembfin stores the canonical `playstate`/watch-history decision, but accepts explicit
-watched and unwatched actions from Plembfin, Plex, Emby, Jellyfin, and a connected Trakt
+Plekt stores the canonical `playstate`/watch-history decision, but accepts explicit
+watched and unwatched actions from Plekt, Plex, Emby, Jellyfin, and a connected Trakt
 account. Each accepted transition is committed locally and distributed to every other
 eligible destination. Trakt is read as a complete snapshot each minute: additions become
 watches, removals become unwatches, and a changed watched timestamp updates the canonical
-playstate. Persisted tracker state and echo markers prevent Plembfin's own outbound write
+playstate. Persisted tracker state and echo markers prevent Plekt's own outbound write
 from being read back as a second user action.
 
 Trakt records every individual play of an item, not just its most recent one. Alongside
-the snapshot diff above, Plembfin separately reads Trakt's play-by-play history
-(`/sync/history/movies` and `/sync/history/episodes`) and imports each play Plembfin
+the snapshot diff above, Plekt separately reads Trakt's play-by-play history
+(`/sync/history/movies` and `/sync/history/episodes`) and imports each play Plekt
 doesn't already have as its own `watch_history` row, so rewatches show up individually in
 History and Stats instead of being collapsed into one watched record. The first poll after
 connecting imports the full history; later polls only fetch plays since the last-seen
@@ -164,7 +164,7 @@ happened on Trakt rather than triggering a new watch event - and pushing a local
 Trakt (`setTraktWatchState`) already sends each individual play with its own timestamp, so
 rewatches recorded locally reach Trakt as separate history entries too.
 
-Before importing a play, the history importer checks it against Plembfin's own most recent
+Before importing a play, the history importer checks it against Plekt's own most recent
 outbound "watched" push for that item (the same `tracker_item_state` ledger the snapshot
 diff's echo markers use, captured before that poll's snapshot rewrite so a not-yet-reflected
 push isn't lost). A play timestamped within 30 minutes of that push is treated as an echo of
@@ -181,7 +181,7 @@ without changing watched state or sending another dispatch:
 (`auditStaleTraktImportRows`/`repairStaleTraktImportRows` in `dataRepo.js`).
 
 During an authoritative watch-history restore, an explicit manual unwatch or clear-
-progress action commits Plembfin's local unwatched state immediately. Its outbound
+progress action commits Plekt's local unwatched state immediately. Its outbound
 fan-out is recorded as pending and the scheduler dispatches it after the restore fence
 is released; provider callbacks and automatic transitions remain fenced while the
 restore is active.
@@ -202,7 +202,7 @@ watch history.
 unwatch events from Plex, Emby, Jellyfin, and Trakt. It tracks a shared `loop_keys`-
 backed sliding-window count in SQLite and holds back an automatic unwatch when the burst
 threshold is exceeded. The guard applies across split web/worker deployments and does
-not affect explicit actions from Plembfin, Force Sync, Set Plembfin as Source of Truth,
+not affect explicit actions from Plekt, Force Sync, Set Plekt as Source of Truth,
 or Trakt import. Trakt also has a per-show suspicious-drop guard; the shared guard covers
 bursts distributed across multiple shows.
 
@@ -327,7 +327,7 @@ Implementation lives in `server/src/scheduled.js`.
      transient hiccup and nothing is sent out. A normal removal of a couple of episodes is never
      affected by this and still propagates the same minute (`partitionSuspiciousUnwatches` in
      `trackerSync.js`).
-   - A watched mark Plembfin just pushed to Trakt does not always appear in the very next
+   - A watched mark Plekt just pushed to Trakt does not always appear in the very next
      watched-snapshot fetch - Trakt's API can lag a few seconds behind its own write. A poll
      landing in that window would otherwise see the item as missing and read it as a genuine
      remote unwatch, deleting the watch it had just created. The unwatch-candidate filter
@@ -340,7 +340,7 @@ it defers scheduled media sync and the Trakt poll until the next tick. Backups, 
 prewarm, next-airing, and upcoming-calendar maintenance still run. A scheduled sync
 already in flight is not cancelled; the guard only prevents new competing outbound work.
    - **Sync Now** is a one-way repair pass for the current Trakt snapshot: it compares
-     unchanged Trakt watches with Plembfin's canonical state and restores missing
+     unchanged Trakt watches with Plekt's canonical state and restores missing
      watched state. It does not infer unwatches from items missing in that one response,
      so a partial Trakt result cannot clear a whole show such as Oak Island. The normal
      minute-by-minute poll still handles genuine remote removals, with the safety checks
@@ -353,7 +353,7 @@ already in flight is not cancelled; the guard only prevents new competing outbou
      notification omitted the series GUID; this is a direct parent lookup, not a title guess.
      Title-only episodes can still be hydrated once because they have no identity to protect.
      An episode that already carries an identity remains tied to it: if Trakt rejects that
-     identity (`not_found` in `/sync/history`), Plembfin does not retry with a title-derived
+     identity (`not_found` in `/sync/history`), Plekt does not retry with a title-derived
      series id. It records the mismatch as an error so the media can be fixed or matched
      explicitly. Movies retain their one title-derived retry because their Trakt payload is
      title-level rather than series-plus-episode.
@@ -365,18 +365,18 @@ already in flight is not cancelled; the guard only prevents new competing outbou
      coordinate is retained for audit and matching.
    - A Plex notification episode unwatch whose every configured Emby/Jellyfin destination
      reports no matching episode after its one index refresh is kept out of Trakt.
-     Plembfin still records the incoming local transition and the no-match audit, but
+     Plekt still records the incoming local transition and the no-match audit, but
      does not let an unresolved Plex episode identity change Trakt's state.
    - Dispatches accepted transitions to media servers and signals the authenticated
      browser update stream after each committed item.
    - After the snapshot diff, a separate step reads Trakt's per-play history and imports
-     any rewatch Plembfin hasn't recorded yet (see "One canonical state" above). A failure
+     any rewatch Plekt hasn't recorded yet (see "One canonical state" above). A failure
      here is logged and does not fail the poll - the snapshot-driven playstate sync above
      still completes normally.
 4. **Catch-up library sync** - **runs every 15 minutes** (configurable via `CATCHUP_SYNC_INTERVAL_MS` env variable) to avoid heavy redundant API queries:
    - Pulls recently-watched and continue-watching (resumable) items from each active server: `syncRecentlyWatchedFromPlex`/`syncRecentlyResumableFromPlex` (and Emby/Jellyfin equivalents) in `scheduled.js`.
-   - Runs a full paginated availability reconciliation after watched imports. For every active provider, an item must be present in that provider's successful library inventory, explicitly unplayed there, and canonically watched in Plembfin before the scheduler marks it played. This catches bulk-added 4K/alternate-library copies, uses the exact native item id, and is positive-only: missing items, failed/partial scans, and canonical unwatches never trigger an unwatch.
-   - Refreshes the provider Up Next feeds in the same catch-up window. Plembfin uses Plex's
+   - Runs a full paginated availability reconciliation after watched imports. For every active provider, an item must be present in that provider's successful library inventory, explicitly unplayed there, and canonically watched in Plekt before the scheduler marks it played. This catches bulk-added 4K/alternate-library copies, uses the exact native item id, and is positive-only: missing items, failed/partial scans, and canonical unwatches never trigger an unwatch.
+   - Refreshes the provider Up Next feeds in the same catch-up window. Plekt uses Plex's
      account-scoped **Continue Watching** hub, Emby's user-scoped **Continue Watching/Resume**
      endpoint, and Jellyfin's user-scoped **Next Up** endpoint as the three target rails. The
      Jellyfin **Continue Watching/Resume** endpoint is also read separately to protect genuine
@@ -387,14 +387,14 @@ already in flight is not cancelled; the guard only prevents new competing outbou
      `up_next_provider_items`, not as watched-state authority. Each feed is generation-based:
      only a complete response becomes active, while a failed or partial response leaves the
      last good generation available and records a redacted status for the dashboard.
-     The newest 50 resume rows are propagated into Plembfin's canonical progress table in
+     The newest 50 resume rows are propagated into Plekt's canonical progress table in
      that pass; the complete provider observation remains available to the queue.
    - The queue builder merges those observations by verified provider identity and
      episode coordinates, keeps resume cards ahead of released next-up episodes, and
      uses bounded local TVDB/TMDB lookup when a configured provider has no usable Next Up
      feed. The active source-ledger IDs are also preferred for later provider mutations,
      including all matching Jellyfin item variants.
-   - A recently-watched row counts in Plembfin's visible history and show progress when it
+   - A recently-watched row counts in Plekt's visible history and show progress when it
      carries the configured source user and either an explicit server played timestamp or
      a configured policy for app-marked watched flags. The default policy dates a manual
      watched flag at the current time; release-day and same-season episode-timing policies
@@ -406,13 +406,13 @@ already in flight is not cancelled; the guard only prevents new competing outbou
       matched to its show through the same cached TMDB `find` / TVDB proof the playstate
       alias repair uses; uncached ids are looked up by that repair's background job
       (`repair_playstate_episode_ids`). A library import never queues a review for an item
-      Plembfin already has watched, and a pending review that local state already answers is
+      Plekt already has watched, and a pending review that local state already answers is
       closed (`dismissed`, `resolved_by_local_state`, status only) rather than kept pending out
       of sight (`docs/decisions.md` entry 39). Unscoped library scans remain diagnostic evidence
       rather than asserted watches.
-   - Emby/Jellyfin episode resume rows retain series provider IDs so the corresponding SxxExx item can be found on another server. Resume and playstate records sharing any IMDb, TMDB, or TVDB ID are treated as one media item even when app titles differ. When a server reads back the same position with a stale or missing `LastPlayedDate`, Plembfin retains the newer timestamp already stored for that position; generic item-save/create dates never outrank an explicit watch-state change, and a genuinely newer unwatch still clears older progress.
+   - Emby/Jellyfin episode resume rows retain series provider IDs so the corresponding SxxExx item can be found on another server. Resume and playstate records sharing any IMDb, TMDB, or TVDB ID are treated as one media item even when app titles differ. When a server reads back the same position with a stale or missing `LastPlayedDate`, Plekt retains the newer timestamp already stored for that position; generic item-save/create dates never outrank an explicit watch-state change, and a genuinely newer unwatch still clears older progress.
    - Propagates playstate changes that were missed by webhooks. A server-side unwatch
-     that conflicts with Plembfin's watched state is repaired instead of imported as a
+     that conflicts with Plekt's watched state is repaired instead of imported as a
      local unwatch. Each platform check is wrapped in try/catch so one failure doesn't
      abort the run.
    - **Unwatched reconciliation** - `checkPlexUnwatchedStatus` re-checks up to 30
@@ -420,7 +420,7 @@ already in flight is not cancelled; the guard only prevents new competing outbou
      played state (a single cheap lookup per item), repairing an unwatch that the
      notification WebSocket missed - Plex's webhook cannot report unwatch at all, so this
      poll is a primary detection path, not just a backstop. "Recently-tracked" here means
-     Plembfin last *learned about* the record (`listRecentlyUpdatedTrackedWatchRows`,
+     Plekt last *learned about* the record (`listRecentlyUpdatedTrackedWatchRows`,
      ordered by `updated_at`), not the media's own reported watched date - Plex can
      legitimately report an old watch date (and sparse notifications have historically
      fallen back to release dates), which otherwise made a newly inserted watched item
@@ -466,7 +466,7 @@ disappear, and completes it.
 ## Echo suppression
 
 Marking an item played on a media server bumps that server's own "last played"
-timestamp. That makes Plembfin's own outbound write indistinguishable from a user's
+timestamp. That makes Plekt's own outbound write indistinguishable from a user's
 play the next time the same server is read back - through library polling, the Plex
 notification listener, or a delayed webhook. Left unchecked it records a watch that
 never happened, and each phantom re-propagates and produces another one.
@@ -477,7 +477,7 @@ Three mechanisms keep inbound state honest:
   `loop_keys` under a `mark:` prefix with a 14-day TTL
   (`recordOutboundPlayedMarks` / `lastOutboundPlayedMarkAt` in `syncOrchestrator.js`).
   The Plex notification listener consults it: a view timestamp within 10 minutes of
-  a mark Plembfin wrote is treated as its own echo, not a new play. This outlives the
+  a mark Plekt wrote is treated as its own echo, not a new play. This outlives the
   15-second loop-detection window, which only breaks immediate ping-pong.
 - **Existing-record guard** - the Plex, Emby, and Jellyfin library pollers record a
   watch only for an item with no watch record at all. When a record exists but the
@@ -485,7 +485,7 @@ Three mechanisms keep inbound state honest:
   watch for the same play.
 - **Played-flag rule** - a bare "marked played" webhook never opens a rewatch for an
   item already watched; see [webhooks.md](webhooks.md#rewatch-detection).
-- **Canonical unwatch handling** - an explicit Plembfin unwatch is propagated and an
+- **Canonical unwatch handling** - an explicit Plekt unwatch is propagated and an
   echo that arrives after the 15-second loop window closes is already represented as
   unwatched, so it is a no-op. An explicit unwatched event from an eligible platform
   supersedes the watched state and propagates to the other configured destinations.
@@ -509,7 +509,7 @@ lingered through a restart is not backdated to the restart time.
 `live_tracking_cache` goes empty and Now Playing shows idle - even though the UI and
 webhooks are fine.
 
-**Reachability:** the poller runs on the same machine as the Plembfin server process.
+**Reachability:** the poller runs on the same machine as the Plekt server process.
 It can reach any URL that machine can reach - including `localhost`, LAN IPs, and VPN
 addresses.
 
@@ -519,12 +519,12 @@ addresses.
   (the response streams a line-by-line log identical to what the scheduler runs).
 - Or watch the server process stdout. A background tick that changed nothing logs
   nothing, so silence between ticks is normal - errors and completed work still log.
-- Set `PLEMBFIN_DEBUG_SCHEDULER=1` to log each step's name, where in the tick it started,
+- Set `PLEKT_DEBUG_SCHEDULER=1` to log each step's name, where in the tick it started,
   how long it ran, and whether it exhausted its time budget, followed by a per-tick summary
   carrying the achieved interval between tick starts. That is the measurement to reach for
   when a later step looks starved by an earlier one, because the claim is about wall-clock
   offsets inside a tick rather than about any one step's own duration.
-- A step that runs past its time budget (a large Plembfin backup, a long catch-up pass) is
+- A step that runs past its time budget (a large Plekt backup, a long catch-up pass) is
   not stopped: the tick moves on, the log says "`<step>` is still running after Nms", and
   "finished in the background" (or "`<step>` failed" with the real error) follows when it
   settles. Later ticks skip that step with "still running from a previous tick" meanwhile.

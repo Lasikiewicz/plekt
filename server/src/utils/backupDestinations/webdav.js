@@ -3,8 +3,9 @@
 import fs from "node:fs";
 import { fetchWithTimeout } from "../outbound.js";
 import path from "node:path";
+import { REMOTE_BACKUP_FILE_PATTERN } from "../backupNames.js";
 
-const FILE_PATTERN = /^plembfin-(?:watch-history-\d{8}T\d{6}Z\.json\.gz|backup-\d{8}T\d{6}Z\.encrypted\.json)$/;
+const FILE_PATTERN = REMOTE_BACKUP_FILE_PATTERN;
 
 function baseUrl(destination) {
   let url = String(destination.settings?.url || "").trim();

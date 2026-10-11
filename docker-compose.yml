@@ -1,14 +1,16 @@
 services:
-  plembfin:
+  plekt:
     build: .
-    image: plembfin:latest
-    container_name: plembfin
+    image: plembfin/plekt:latest
+    container_name: plekt
     ports:
       - "5056:5055"
     volumes:
       # SQLite database, cached artwork, and generated config.json live here.
       - ./data:/data
     environment:
+      # Host port Plekt is published on, used by the startup webhook port check.
+      - PLEKT_PUBLISHED_PORT=5056
       # Admin login for the dashboard.
       # REQUIRED: set a strong password before first boot - do not leave this commented out.
       - ADMIN_USERNAME=admin
@@ -23,7 +25,7 @@ services:
       # - WEBHOOK_SECRET=your-long-random-secret
       # Optional: pin the session signing secret (otherwise auto-generated).
       # - SESSION_SECRET=your-long-random-secret
-      # Optional: official Plembfin Trakt OAuth app. Values remain server-side.
+      # Optional: official Plekt Trakt OAuth app. Values remain server-side.
       - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
       - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET:-}
     security_opt:

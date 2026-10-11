@@ -84,7 +84,7 @@ import {
   getCachedShows,
   getCachedMovies,
   getCachedHistory,
-  isPlembfinTrackedWatchRow,
+  isPlektTrackedWatchRow,
   normalizeMediaType,
   findExistingWatch,
   findWatchedByAnyMediaKey,
@@ -782,7 +782,7 @@ export async function handleFullSyncWatchstates(req, res) {
     targets,
     summary,
     errors,
-    note: total ? "" : "No Plembfin archive rows are available to restore.",
+    note: total ? "" : "No Plekt archive rows are available to restore.",
   });
 }
 
@@ -989,11 +989,11 @@ async function findDuplicateWatchGroups(mediaType) {
     // count as a "duplicate" alongside a real watched row - and since it can
     // sort first (same or earlier timestamp), the cleanup deleted the actual
     // watched row and kept the unwatched marker, wrongly unwatching the item.
-    const episodeRows = allHistory.filter((row) => row.media_type === "episode" && isPlembfinTrackedWatchRow(row));
+    const episodeRows = allHistory.filter((row) => row.media_type === "episode" && isPlektTrackedWatchRow(row));
     return dedupeHistory(episodeRows).filter((row) => Array.isArray(row.playHistory) && row.playHistory.length > 1);
   }
   if (normalized === "movie") {
-    const movieRows = allHistory.filter((row) => row.media_type === "movie" && isPlembfinTrackedWatchRow(row));
+    const movieRows = allHistory.filter((row) => row.media_type === "movie" && isPlektTrackedWatchRow(row));
     return dedupeHistory(movieRows).filter((row) => Array.isArray(row.playHistory) && row.playHistory.length > 1);
   }
   return [];

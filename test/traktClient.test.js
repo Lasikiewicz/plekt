@@ -16,7 +16,7 @@ test("Trakt device authorization uses the API device endpoints", async () => {
     await pollTraktDeviceAuth({ deviceCode: "device", clientId: "client", clientSecret: "secret" });
     assert.equal(requests[0].url, "https://api.trakt.tv/oauth/device/code");
     assert.equal(requests[1].url, "https://api.trakt.tv/oauth/device/token");
-    assert.match(requests[0].headers["user-agent"], /^Plembfin/);
+    assert.match(requests[0].headers["user-agent"], /^Plekt/);
     assert.deepEqual(requests[1].body, { code: "device", client_id: "client", client_secret: "secret" });
   } finally { globalThis.fetch = originalFetch; }
 });

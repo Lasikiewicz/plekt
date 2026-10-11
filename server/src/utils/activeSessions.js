@@ -45,7 +45,7 @@ function fromRow(row) {
 }
 
 function isSyntheticUpNextSession(media = {}) {
-  if (String(media.source || "").trim().toLowerCase() !== "emby") return false;
+  if (!["emby", "jellyfin"].includes(String(media.source || "").trim().toLowerCase())) return false;
   const client = media.client && typeof media.client === "object" ? media.client : {};
   return [media.deviceId, media.device_id, client.deviceId, client.device_id, client.DeviceId]
     .some(isUpNextSeedDeviceId);

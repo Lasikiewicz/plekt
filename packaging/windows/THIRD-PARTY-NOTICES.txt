@@ -1,4 +1,4 @@
-Plembfin Windows installer third-party notices
+Plekt Windows installer third-party notices
 
 WinSW v2.11.0
 https://github.com/winsw/winsw/releases/tag/v2.11.0

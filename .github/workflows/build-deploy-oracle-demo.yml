@@ -54,7 +54,7 @@ jobs:
             exit 1
           fi
           source_sha="$(git rev-parse --short=12 HEAD)"
-          image="ghcr.io/lasikiewicz/plembfin:demo-main-$source_sha"
+          image="ghcr.io/lasikiewicz/plekt:demo-main-$source_sha"
           echo "version=$release_version" >> "$GITHUB_OUTPUT"
           echo "image=$image" >> "$GITHUB_OUTPUT"
           echo "Building demo-only image $image from $source_sha"
@@ -110,10 +110,10 @@ jobs:
       OCI_DEMO_DATA_DIR: ${{ vars.OCI_DEMO_DATA_DIR }}
       OCI_DEMO_PORT: ${{ vars.OCI_DEMO_PORT || '80' }}
       OCI_DEMO_RUNTIME: ${{ vars.OCI_DEMO_RUNTIME }}
-      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
-      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
-      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEMBFIN_TRAKS_SITE_KEY }}
-      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
+      PLEMBFIN_TRAKS_SCRIPT_URL: ${{ vars.PLEKT_TRAKS_SCRIPT_URL || vars.PLEMBFIN_TRAKS_SCRIPT_URL }}
+      PLEMBFIN_TRAKS_COLLECTOR_ORIGIN: ${{ vars.PLEKT_TRAKS_COLLECTOR_ORIGIN || vars.PLEMBFIN_TRAKS_COLLECTOR_ORIGIN }}
+      PLEMBFIN_TRAKS_SITE_KEY: ${{ vars.PLEKT_TRAKS_SITE_KEY || vars.PLEMBFIN_TRAKS_SITE_KEY }}
+      PLEMBFIN_TRAKS_REQUIRE_CONSENT: ${{ vars.PLEKT_TRAKS_REQUIRE_CONSENT || vars.PLEMBFIN_TRAKS_REQUIRE_CONSENT || 'true' }}
     steps:
       - name: Checkout selected demo source
         uses: actions/checkout@v7

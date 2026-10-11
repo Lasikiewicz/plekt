@@ -16,10 +16,10 @@ export const PLEX_HISTORICAL_SYNC_CHOICES = Object.freeze([
     label: "On -",
     inlineDescription: "Recommended",
     descriptionLines: [
-      "Send older watched items to Plex so its library matches Plembfin.",
+      "Send older watched items to Plex so its library matches Plekt.",
       "Plex may date their activity as today.",
     ],
-    description: "Send older watched items to Plex so its library matches Plembfin. Plex may date their activity as today.",
+    description: "Send older watched items to Plex so its library matches Plekt. Plex may date their activity as today.",
   },
   {
     value: "off",
@@ -34,7 +34,7 @@ export const PLEX_HISTORICAL_SYNC_CHOICES = Object.freeze([
 ]);
 
 export const PLEX_HISTORICAL_SYNC_HELP_HTML = [
-  "Sends older watched items to Plex so its library matches Plembfin.",
+  "Sends older watched items to Plex so its library matches Plekt.",
   "Plex may date them today because Plex controls the activity date.",
   "Turn this off to skip older watched history; new watches still sync normally.",
 ].join("<br>");
@@ -88,7 +88,7 @@ function providerLabel(target) {
 
 /**
  * A short sentence for the outcomes a plain "pushed N of M" count cannot
- * express: a provider Plembfin deliberately did not write to, and a provider
+ * express: a provider Plekt deliberately did not write to, and a provider
  * that already agreed. Returns "" when there is nothing of that kind to say,
  * so the caller can append it unconditionally.
  */

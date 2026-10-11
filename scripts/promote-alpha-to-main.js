@@ -36,7 +36,7 @@ const alphaChangelogPath = path.join(root, "changelog.alpha.json");
 const developChangelogPath = path.join(root, "changelog.develop.json");
 const packagePath = path.join(root, "package.json");
 const packageLockPath = path.join(root, "package-lock.json");
-const PUBLIC_WEBSITE_URL = "https://plembfin.com";
+const PUBLIC_WEBSITE_URL = "https://plekt.net";
 
 export function bumpPatchVersion(currentVersion = "0.0.0") {
   const parts = currentVersion.split(".").map((n) => Number(n) || 0);
@@ -150,6 +150,10 @@ function computeAlphaToMainRelease({ targetVersion = "", sourceDate = new Date()
     (acc, entry) => mergeSections(acc, entry.sections || {}),
     { newFeatures: [], majorBugFixes: [], tweaks: [] },
   );
+  const brandMigration = !changelog.entries.some((entry) => entry.brandMigration === "plekt");
+  if (brandMigration) {
+    sections.tweaks.push("Plembfin is now Plekt. Docker users: change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt, keep the same tag, volumes and settings. Both old image names receive updates for at least six months after this release.");
+  }
   const simplifiedDetails = formatSections(sections);
   // Alpha entries remain detailed and build-specific, but the final Main release
   // must carry one concise, human-approved headline instead of concatenating every
@@ -171,6 +175,7 @@ function computeAlphaToMainRelease({ targetVersion = "", sourceDate = new Date()
     commit: commit || publicEntries[0]?.commit || "",
     message: mainMessage,
     websiteUrl: PUBLIC_WEBSITE_URL,
+    ...(brandMigration ? { brandMigration: "plekt" } : {}),
     author: sourceAuthor,
     details: simplifiedDetails,
     sections,

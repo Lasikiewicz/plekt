@@ -30,7 +30,7 @@ server console. Redact secrets and personal information before sharing.
 
 ## Environment
 
-- Plembfin version (Settings → About):
+- Plekt version (Settings → About):
 - Deployment method: [Docker / npm start / other]
 - Media server(s) and version(s), if relevant: [Plex / Emby / Jellyfin]
 - Browser and version, if relevant:

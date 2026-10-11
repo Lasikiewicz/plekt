@@ -90,7 +90,7 @@ export async function handleTrackerConnections(req, res, path) {
   if (req.method === "DELETE") {
     const removed = deleteTrackerConnection("trakt");
     writeAuditLog("tracker-auth.trakt.disconnected", { ip: req.ip || req.socket?.remoteAddress, detail: { removed } });
-    return sendJson(res, { ok: true, removed, guidance: "Plembfin deleted its encrypted Trakt credentials. You can also revoke the app in Trakt's connected-app settings." });
+    return sendJson(res, { ok: true, removed, guidance: "Plekt deleted its encrypted Trakt credentials. You can also revoke the app in Trakt's connected-app settings." });
   }
   if (req.method === "POST") {
     if (isAuthoritativeRestoreActive()) {

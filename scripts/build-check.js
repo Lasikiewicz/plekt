@@ -114,6 +114,7 @@ for (const file of sourceRoots.flatMap(javascriptFiles)) {
 
 run(process.execPath, ["scripts/docs-check.js"]);
 run(process.execPath, ["scripts/asset-versions.js"]);
+run(process.execPath, ["scripts/rebrand-name-check.js"]);
 
 run(process.execPath, ["--import", "./scripts/test-data-setup.js", "--test"]);
 
@@ -151,11 +152,11 @@ try {
       ...process.env,
       DATA_DIR: temporaryData,
       PORT: "0",
-      PLEMBFIN_BUILD_CHECK: "1",
+      PLEKT_BUILD_CHECK: "1",
     },
   });
 } finally {
   fs.rmSync(temporaryData, { recursive: true, force: true });
 }
 
-console.log("Plembfin build check passed.");
+console.log("Plekt build check passed.");

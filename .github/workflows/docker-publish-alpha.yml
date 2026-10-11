@@ -1,3 +1,4 @@
+# Keep legacy image targets for at least six months after the Plekt release.
 name: Publish Alpha Image
 
 # Publishes a rolling pre-release image and the formatted GitHub Release notes
@@ -21,7 +22,8 @@ concurrency:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: lasikiewicz/plekt
+  LEGACY_IMAGE_NAME: lasikiewicz/plembfin
 
 jobs:
   publish:
@@ -51,7 +53,7 @@ jobs:
           context: .
           push: false
           load: true
-          tags: plembfin:alpha-check
+          tags: plekt:alpha-check
           build-args: BUILD_CHANNEL=alpha
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -62,7 +64,7 @@ jobs:
       # database open.
       - name: Verify native modules load inside the image
         run: |
-          docker run --rm --entrypoint node plembfin:alpha-check -e "
+          docker run --rm --entrypoint node plekt:alpha-check -e "
             const Database = require('better-sqlite3');
             const sharp = require('sharp');
             const db = new Database(':memory:');
@@ -99,7 +101,9 @@ jobs:
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+            ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
           tags: |
             type=raw,value=alpha
             type=raw,value=alpha-${{ steps.alpha.outputs.build }}

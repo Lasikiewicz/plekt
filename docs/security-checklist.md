@@ -1,6 +1,6 @@
 # Security Checklist
 
-This page describes the security controls that apply to a Plembfin deployment and
+This page describes the security controls that apply to a Plekt deployment and
 the checks to complete before exposing it beyond a trusted local network.
 
 ## Authentication and sessions
@@ -26,15 +26,15 @@ the checks to complete before exposing it beyond a trusted local network.
   parameters.
 - Tautulli is the compatibility exception: its REST API uses the `apikey` query
   parameter on supported older versions. Protect Tautulli and reverse-proxy access
-  logs accordingly; Plembfin does not write outbound URLs to its own diagnostics.
+  logs accordingly; Plekt does not write outbound URLs to its own diagnostics.
 - Webhook access logs redact sensitive query parameters.
 - Configured media-server URLs are administrator-controlled destinations; keep the
-  Plembfin administration surface behind a trusted network, VPN, or authenticated
+  Plekt administration surface behind a trusted network, VPN, or authenticated
   reverse proxy.
 
 ## Container and filesystem controls
 
-- The Docker image runs as the non-root `plembfin` user and exposes a health check at
+- The Docker image runs as the non-root `plekt` user and exposes a health check at
   `/api/ping`.
 - `docker-compose.secure.yml` supplies a read-only root filesystem, a `/tmp` tmpfs,
   required secrets, and `COOKIE_SECURE=true`.

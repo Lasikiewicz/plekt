@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Deploy one exact, already-published Plembfin release to the dedicated OCI
+# Deploy one exact, already-published Plekt release to the dedicated OCI
 # demo instance. The script is intentionally self-contained so the GitHub
 # main-release job can copy it over SSH without copying the repository or any
 # credentials to the instance.
@@ -144,12 +144,12 @@ run_runtime run "${runtime_arch_args[@]}" --detach \
   --env COOKIE_SECURE=true \
   --env HOST=0.0.0.0 \
   --env PORT=5055 \
-  --env PLEMBFIN_DEMO_MODE=1 \
-  --env PLEMBFIN_DEMO_SEED=1 \
-  --env PLEMBFIN_TRAKS_SCRIPT_URL="$TRAKS_SCRIPT_URL" \
-  --env PLEMBFIN_TRAKS_COLLECTOR_ORIGIN="$TRAKS_COLLECTOR_ORIGIN" \
-  --env PLEMBFIN_TRAKS_SITE_KEY="$TRAKS_SITE_KEY" \
-  --env PLEMBFIN_TRAKS_REQUIRE_CONSENT="$TRAKS_REQUIRE_CONSENT" \
+  --env PLEKT_DEMO_MODE=1 \
+  --env PLEKT_DEMO_SEED=1 \
+  --env PLEKT_TRAKS_SCRIPT_URL="$TRAKS_SCRIPT_URL" \
+  --env PLEKT_TRAKS_COLLECTOR_ORIGIN="$TRAKS_COLLECTOR_ORIGIN" \
+  --env PLEKT_TRAKS_SITE_KEY="$TRAKS_SITE_KEY" \
+  --env PLEKT_TRAKS_REQUIRE_CONSENT="$TRAKS_REQUIRE_CONSENT" \
   --env TRUST_PROXY=1 \
   --security-opt no-new-privileges:true \
   --memory 512m \

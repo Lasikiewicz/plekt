@@ -1,4 +1,4 @@
-# Privacy Policy — Plembfin Release Bot
+# Privacy Policy — Plekt Release Bot
 
 This Devvit app ("the bot") posts release announcements to r/plembfin. It is operated
 by the moderators of r/plembfin for that single subreddit.
@@ -7,14 +7,14 @@ by the moderators of r/plembfin for that single subreddit.
 
 On a fixed schedule, the bot fetches a public JSON file
 (`changelog.json`) from the public GitHub repository
-[Lasikiewicz/plembfin](https://github.com/Lasikiewicz/plembfin). If it contains a
+[Lasikiewicz/plekt](https://github.com/Lasikiewicz/plekt). If it contains a
 release the bot hasn't announced yet, the bot submits a text post to r/plembfin
 describing that release, and pins it (un-pinning whichever earlier release post the
 bot itself previously pinned).
 
 ## Data the bot accesses
 
-- The public `changelog.json` file in the plembfin GitHub repository. This file
+- The public `changelog.json` file in the plekt GitHub repository. This file
   contains only release notes - version numbers, dates, and a description of
   code changes. It contains no personal or user data of any kind.
 - Public Reddit content in r/plembfin (post listings), to determine which post, if

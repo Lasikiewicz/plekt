@@ -8,6 +8,7 @@ globalThis.window ??= { addEventListener() {}, location: { origin: "http://local
 globalThis.document = { addEventListener() {}, querySelector: () => null, documentElement: { getAttribute: (name) => (name === "data-style" ? style : null) } };
 
 const { bindDashboardRuns, dashboardTvRowUnits, isDashboardRowCompact, setDashboardRowCompact, setDashboardRunExpanded } = await import("../public/modules/dashboard-modern.js");
+const { renderDashboardUpNextCard } = await import("../public/modules/dashboard.js");
 
 const episode = (id, show, season, number) => ({ id, media_type: "episode", show_tmdb_id: show, show_title: `Show ${show}`, season, episode: number });
 
@@ -28,6 +29,31 @@ test("full cards never collapse a run", () => {
   const units = dashboardTvRowUnits(history);
   assert.deepEqual(units.map((unit) => unit.entries.map((entry) => entry.id)), [[5], [4], [3], [2], [1]]);
   assert.ok(units.every((unit) => !unit.key && !unit.expanded));
+});
+
+test("cached Up Next cards put an accessible checking status beside the title", () => {
+  const card = renderDashboardUpNextCard({
+    id: "cached-episode",
+    media_type: "episode",
+    title: "The Testaments - S01E03",
+    show_title: "The Testaments",
+    season: 1,
+    episode: 3,
+    episode_title: "Daisy",
+    checking: true,
+  });
+  assert.match(card, /class="history-card-title-row"/);
+  assert.match(card, /class="up-next-checking-status" role="status">Checking/);
+  const settled = renderDashboardUpNextCard({
+    id: "cached-episode",
+    media_type: "episode",
+    title: "The Testaments - S01E03",
+    show_title: "The Testaments",
+    season: 1,
+    episode: 3,
+    episode_title: "Daisy",
+  });
+  assert.doesNotMatch(settled, /up-next-checking-status/);
 });
 
 test("Classic collapses runs the same as Modern in posters-only mode", () => {

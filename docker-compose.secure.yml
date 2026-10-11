@@ -13,7 +13,7 @@
 #   - Place the app behind an HTTPS reverse proxy and set COOKIE_SECURE=true
 
 services:
-  plembfin:
+  plekt:
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -21,6 +21,7 @@ services:
       - no-new-privileges:true
     environment:
       - COOKIE_SECURE=true
+      - PLEKT_PUBLISHED_PORT=5056
       # Required - must be set to a strong password before first boot.
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:?ADMIN_PASSWORD must be set}
       # Required - pin secrets so they survive container replacement.

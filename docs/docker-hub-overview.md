@@ -1,20 +1,20 @@
 <p align="center">
-  <img alt="Plembfin" src="https://raw.githubusercontent.com/Lasikiewicz/plembfin/main/public/plembfin_header_logo_light.png" width="600">
+  <img alt="Plekt" src="https://raw.githubusercontent.com/Lasikiewicz/plekt/main/public/plekt_header_logo_light.png" width="600">
 </p>
 
-**Plembfin** keeps your watch history in sync across Plex, Emby, Jellyfin, and Trakt.
-Your media servers don't talk to each other; Plembfin remembers what you've watched and
+**Plekt** keeps your watch history in sync across Plex, Emby, Jellyfin, and Trakt.
+Your media servers don't talk to each other; Plekt remembers what you've watched and
 keeps every one of them up to date.
 
-[Website](https://plembfin.com) ·
-[Documentation](https://github.com/Lasikiewicz/plembfin/blob/main/docs/README.md) ·
-[Changelog](https://github.com/Lasikiewicz/plembfin/blob/main/CHANGELOG.md) ·
-[Source and issues](https://github.com/Lasikiewicz/plembfin) ·
+[Website](https://plekt.net) ·
+[Documentation](https://github.com/Lasikiewicz/plekt/blob/main/docs/README.md) ·
+[Changelog](https://github.com/Lasikiewicz/plekt/blob/main/CHANGELOG.md) ·
+[Source and issues](https://github.com/Lasikiewicz/plekt) ·
 [Discord](https://discord.gg/7ZmEGKcRC5) ·
 [Reddit](https://www.reddit.com/r/plembfin/) ·
 [Public demo](https://demo.plembfin.com/) (`demo` / `demo`)
 
-> Plembfin writes watched state and playback progress to your connected media servers.
+> Plekt writes watched state and playback progress to your connected media servers.
 > Back up first (Settings > Backup > Local).
 
 ## What it does
@@ -29,7 +29,7 @@ keeps every one of them up to date.
 - **Automated backups**, local and optionally offsite to Backblaze B2
 - **Self-hosted and private**: runs entirely on your own hardware
 
-![Plembfin dashboard](https://plembfin.com/assets/app-captures/dashboard-home-modern-light.png)
+![Plekt dashboard](https://plekt.net/assets/app-captures/dashboard-home-modern-light.png)
 
 ## Quick start (Docker Compose)
 
@@ -40,9 +40,9 @@ keeps every one of them up to date.
 2. Create `docker-compose.yml`:
    ```yaml
    services:
-     plembfin:
-       image: plembfin/plembfin:latest
-       container_name: plembfin
+     plekt:
+       image: plembfin/plekt:latest
+       container_name: plekt
        ports:
          - "5056:5055"
        volumes:
@@ -55,12 +55,12 @@ keeps every one of them up to date.
 3. Run `docker compose up -d`, open `http://localhost:5056`, and log in. A setup wizard
    walks you through connecting your media servers, metadata, webhooks, and Trakt.
 
-On **Docker Desktop for macOS or Windows**, use a named volume (`plembfin-data:/data`)
+On **Docker Desktop for macOS or Windows**, use a named volume (`plekt-data:/data`)
 instead of a folder bind mount; bind mounts there can corrupt the SQLite database under
 heavy writes. Linux hosts are not affected.
 
 For a hardened setup (read-only filesystem, required secrets, secure cookies), see the
-[hardening guide](https://github.com/Lasikiewicz/plembfin/blob/main/docs/hardening.md).
+[hardening guide](https://github.com/Lasikiewicz/plekt/blob/main/docs/hardening.md).
 
 ## Tags
 
@@ -70,15 +70,19 @@ For a hardened setup (read-only filesystem, required secrets, secure cookies), s
 | `<version>`, for example `1.3.0` | A specific release, for pinning |
 
 Images are built for `linux/amd64` and `linux/arm64`. Pre-release `alpha` and `develop`
-builds are published only on GitHub Container Registry at `ghcr.io/lasikiewicz/plembfin`.
+builds are published only on GitHub Container Registry at `ghcr.io/lasikiewicz/plekt`.
 
 ## Configuration
 
 | Setting | Purpose |
 |---|---|
-| Port `5056` | Web UI and API |
+| Container port `5055` (host example: `5056`) | Web UI and API |
 | Volume `/data` | Database, artwork cache, logs, and backups. Keep it on persistent storage. |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | The first admin account |
 
 Every other setting is in the
-[full documentation](https://github.com/Lasikiewicz/plembfin/blob/main/docs/README.md).
+[full documentation](https://github.com/Lasikiewicz/plekt/blob/main/docs/README.md).
+
+## Moving from Plembfin
+
+Change only the image from `plembfin/plembfin` to `plembfin/plekt`, keeping the same tag, volume and settings. Both old image names receive updates for at least six months after the rebrand release. Existing databases, sign-in, provider connections, environment variables and webhook-secret headers remain supported. New backups use Plekt names and do not restore on older builds. This overview is prepared locally for the unreleased rebrand; publication and new registry targets still require live verification.

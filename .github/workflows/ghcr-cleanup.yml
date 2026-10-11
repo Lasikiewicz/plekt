@@ -1,3 +1,4 @@
+# Rebrand gate: keep dry-run enabled until the new package results are reviewed.
 name: GHCR Cleanup
 
 # Every push to develop/alpha publishes a brand-new image tag (develop-<n>,
@@ -30,7 +31,9 @@ jobs:
       - name: Prune old numbered develop tags
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          dry-run: false
+          owner: Lasikiewicz
+          package: plekt
+          dry-run: true
           delete-tags: 'develop-*'
           exclude-tags: 'develop,alpha,latest'
           keep-n-tagged: 15
@@ -38,7 +41,9 @@ jobs:
       - name: Prune old numbered alpha tags
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          dry-run: false
+          owner: Lasikiewicz
+          package: plekt
+          dry-run: true
           delete-tags: 'alpha-*'
           exclude-tags: 'develop,alpha,latest'
           keep-n-tagged: 15
@@ -46,6 +51,8 @@ jobs:
       - name: Prune dangling untagged images
         uses: dataaxiom/ghcr-cleanup-action@v1
         with:
-          dry-run: false
+          owner: Lasikiewicz
+          package: plekt
+          dry-run: true
           delete-untagged: true
           older-than: '1 day'

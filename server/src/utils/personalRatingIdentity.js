@@ -16,6 +16,13 @@ function titleKey(value) {
     .replace(/^-|-$/g, "");
 }
 
+// A show title can carry its release year ("Ludwig (2024)") when one provider
+// sends it and another does not. The year is not part of the show's identity,
+// so it is dropped before the title key is built.
+export function showTitleKey(value) {
+  return titleKey(clean(value, MAX_TITLE_LENGTH).replace(/\s*\(\d{4}\)$/, ""));
+}
+
 function numberOrNull(value) {
   if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
@@ -46,7 +53,7 @@ export function personalRatingMediaKey(item = {}) {
     if (showTmdbId) return `episode:tmdb:${showTmdbId}:${coordinate}`;
     if (showTvdbId) return `episode:tvdb:${showTvdbId}:${coordinate}`;
     if (showImdbId) return `episode:imdb:${showImdbId}:${coordinate}`;
-    return `episode:title:${titleKey(showTitle)}:${coordinate}`;
+    return `episode:title:${showTitleKey(showTitle)}:${coordinate}`;
   }
   if (tmdbId) return `${type}:tmdb:${tmdbId}`;
   if (tvdbId) return `${type}:tvdb:${tvdbId}`;
