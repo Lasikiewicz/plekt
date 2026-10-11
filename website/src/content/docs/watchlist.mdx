@@ -3,7 +3,7 @@ title: Watchlist
 description: Save movies and TV shows for later without changing watched state.
 category: Media and discovery
 order: 3.31
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/personal-media.js
@@ -35,11 +35,11 @@ marks a title watched by itself.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/watchlist-dark.png"
   lightSrc="/assets/app-captures/watchlist-light.png"
-  alt="Plembfin Watchlist page showing saved movie and TV show cards"
+  alt="Plekt Watchlist page showing saved movie and TV show cards"
   caption="Open Watchlist from the sidebar to review every title saved for later."
 />
 
-Select **Watchlist** in the sidebar. Cards load from Plembfin's local private-data store,
+Select **Watchlist** in the sidebar. Cards load from Plekt's local private-data store,
 so the page remains useful even when a provider feed or media server is temporarily
 unavailable.
 
@@ -48,7 +48,7 @@ unavailable.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/watchlist-card-dark.png"
   lightSrc="/assets/app-captures/watchlist-card-light.png"
-  alt="Plembfin Watchlist cards with posters, titles, rating actions, and remove controls"
+  alt="Plekt Watchlist cards with posters, titles, rating actions, and remove controls"
   caption="A Watchlist card identifies the saved media and keeps its personal actions beside it."
 />
 
@@ -61,7 +61,7 @@ changing the underlying watch record.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-action-row-dark.png"
   lightSrc="/assets/app-captures/media-action-row-light.png"
-  alt="Plembfin media detail page showing Add to watch list beside the other title actions"
+  alt="Plekt media detail page showing Add to watch list beside the other title actions"
   caption="Add to watch list is available on the detail action row when the title is not saved."
 />
 
@@ -109,7 +109,7 @@ full Tools menu. Personal actions and maintenance tools are intentionally separa
 ## Empty state and privacy
 
 An empty Watchlist means no titles are currently saved; it does not mean the library or
-Discover feed is empty. Watchlist data belongs to the local Plembfin instance and does not
+Discover feed is empty. Watchlist data belongs to the local Plekt instance and does not
 become a watched event. If Plex sync is enabled, its provider changes appear as Watchlist
 sync activity, but they are not watched-state destinations.
 

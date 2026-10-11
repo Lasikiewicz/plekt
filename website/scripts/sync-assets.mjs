@@ -7,8 +7,8 @@ const repositoryRoot = path.resolve(websiteRoot, "..");
 const assetsRoot = path.join(websiteRoot, "public", "assets");
 
 const copies = [
-  ["public/plembfin_header_logo_dark.png", "plembfin_header_logo_dark.png"],
-  ["public/plembfin_header_logo_light.png", "plembfin_header_logo_light.png"],
+  ["public/plekt_header_logo_dark.png", "plembfin_header_logo_dark.png"],
+  ["public/plekt_header_logo_light.png", "plembfin_header_logo_light.png"],
   ["public/favicon.svg", "favicon.svg"],
   ["docs/plembfin-hub.svg", "plembfin-hub.svg"],
 ];

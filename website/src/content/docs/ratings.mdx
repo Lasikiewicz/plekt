@@ -3,7 +3,7 @@ title: Ratings
 description: Give movies, TV shows, and episodes private scores from 1 to 10.
 category: Media and discovery
 order: 3.32
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/personal-media.js
@@ -25,14 +25,14 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-Ratings is the private scorebook for your Plembfin instance. It supports a 1–10 score for
+Ratings is the private scorebook for your Plekt instance. It supports a 1–10 score for
 movies, TV shows, and episodes and keeps that score separate from provider ratings and
 canonical watched state.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/ratings-dark.png"
   lightSrc="/assets/app-captures/ratings-light.png"
-  alt="Plembfin Ratings overview showing personal movie, show, and episode ratings"
+  alt="Plekt Ratings overview showing personal movie, show, and episode ratings"
   caption="Ratings groups your personal scores by media type while keeping provider ratings separate."
 />
 
@@ -41,7 +41,7 @@ canonical watched state.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/ratings-cards-dark.png"
   lightSrc="/assets/app-captures/ratings-cards-light.png"
-  alt="Plembfin Ratings page grouped into Movies, TV Shows, and Episodes"
+  alt="Plekt Ratings page grouped into Movies, TV Shows, and Episodes"
   caption="Open Ratings from the sidebar to review personal scores by media type."
 />
 
@@ -51,7 +51,7 @@ Shows**, and **Episodes**, so a show-level score is not confused with one of its
 ## Rate a title from a card
 
 Choose **Rate** on an unrated card or **Rate again** on a rated card. Select a value from
-1 to 10 and save it. The updated score is written to Plembfin's local private data and the
+1 to 10 and save it. The updated score is written to Plekt's local private data and the
 card remains in its media-type group.
 
 ## Rate from a detail page
@@ -59,8 +59,8 @@ card remains in its media-type group.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-rating-focus-dark.png"
   lightSrc="/assets/app-captures/media-rating-focus-light.png"
-  alt="Plembfin media detail page showing the personal rating control in the media facts"
-  caption="The detail page keeps the current personal score beside provider ratings and availability."
+  alt="Plekt media detail page showing the personal rating control in the media facts"
+  caption="Use Rate this beside the provider rating to set your separate personal score."
 />
 
 On a movie or TV detail page, use the personal rating control in the media facts area. It
@@ -78,14 +78,14 @@ sends a watched-state correction to a connected service.
 
 Rating sync is optional and disabled by default. Enable the single **Sync personal ratings**
 toggle under [Settings → Sync → Personal Rating Sync](/docs/settings/sync/#personal-rating-sync) to reconcile ratings with every
-connected Plex, Emby, Jellyfin, and Trakt account. Plembfin remains the conflict authority. A
+connected Plex, Emby, Jellyfin, and Trakt account. Plekt remains the conflict authority. A
 rating added, changed, or cleared directly on one service is imported and sent out to every
 other service, unless a local edit is genuinely newer. An unchanged rating is not re-imported
 as a remote change on later scans.
 
 The first complete provider snapshot imports existing ratings. Later complete snapshots
 reconcile additions, edits, and removals; a partial or failed read cannot clear the local
-scorebook. Local changes commit to Plembfin first and are delivered through a durable queue,
+scorebook. Local changes commit to Plekt first and are delivered through a durable queue,
 so a provider outage does not roll back a rating or affect watched state.
 
 Use **Sync now** for an immediate full pass. The panel reports provider status, queued work,
@@ -98,7 +98,7 @@ become multiple ratings when provider IDs differ.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/ratings-episode-focus-dark.png"
   lightSrc="/assets/app-captures/ratings-episode-focus-light.png"
-  alt="Plembfin Ratings page showing the Episodes group with episode identity retained"
+  alt="Plekt Ratings page showing the Episodes group with episode identity retained"
   caption="Episode ratings retain show, season, and episode context inside their own group."
 />
 
@@ -111,7 +111,7 @@ score for the same viewing unit.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-action-row-dark.png"
   lightSrc="/assets/app-captures/media-action-row-light.png"
-  alt="Plembfin media detail page showing separate rating and watch-status controls"
+  alt="Plekt media detail page showing separate rating and watch-status controls"
   caption="Personal rating and Watch Status are separate controls on the detail page."
 />
 

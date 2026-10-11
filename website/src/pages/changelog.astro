@@ -1,6 +1,7 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import release from "../generated/release.json";
+import ChangelogText from "../components/ChangelogText.astro";
 
 type ChangelogGroup = { title: string; bullets: string[] };
 type ChangelogSection = { title: string; groups: ChangelogGroup[] };
@@ -23,7 +24,7 @@ const alphaEntries = releaseData.alpha?.entries ?? [];
 const sectionsOf = (entry: ChangelogEntry) => entry.sections ?? [];
 ---
 
-<SiteLayout title="Changelog" description="Release history and current changes in Plembfin.">
+<SiteLayout title="Changelog" description="Release history and current changes in Plekt.">
   <div class="changelog-shell">
     <header class="changelog-header">
       <h1>Changelog</h1>
@@ -39,8 +40,8 @@ const sectionsOf = (entry: ChangelogEntry) => entry.sections ?? [];
             <div class="changelog-entry-meta"><strong>v{entry.version}</strong><span>{entry.date}</span></div>
             <div class="changelog-entry-content">
               <h2>{entry.title}</h2>
-              <p>{entry.summary}</p>
-              {entry.websiteUrl && <p class="changelog-entry-website"><a href={entry.websiteUrl} target="_blank" rel="noopener noreferrer">Visit the Plembfin website</a></p>}
+              <p><ChangelogText text={entry.summary} /></p>
+              {entry.websiteUrl && <p class="changelog-entry-website"><a href={entry.websiteUrl} target="_blank" rel="noopener noreferrer">Visit the Plekt website</a></p>}
               {sectionsOf(entry).length > 0 ? (
                 <div class="changelog-sections">
                   {sectionsOf(entry).map((section) => (
@@ -50,14 +51,14 @@ const sectionsOf = (entry: ChangelogEntry) => entry.sections ?? [];
                         {section.groups.map((group) => (
                           <div class="changelog-subgroup">
                             {group.title && <h4>{group.title}</h4>}
-                            <ul>{group.bullets.map((bullet) => <li>{bullet}</li>)}</ul>
+                            <ul>{group.bullets.map((bullet) => <li><ChangelogText text={bullet} /></li>)}</ul>
                           </div>
                         ))}
                       </div>
                     </section>
                   ))}
                 </div>
-              ) : entry.bullets?.length > 0 ? <ul>{entry.bullets.map((bullet) => <li>{bullet}</li>)}</ul> : null}
+              ) : entry.bullets?.length > 0 ? <ul>{entry.bullets.map((bullet) => <li><ChangelogText text={bullet} /></li>)}</ul> : null}
             </div>
           </article>
         ))}

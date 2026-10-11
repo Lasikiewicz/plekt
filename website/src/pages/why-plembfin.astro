@@ -23,7 +23,7 @@ const reasons = [
   {
     number: "02",
     title: "One bridge, fewer conflicts",
-    text: "Connected services do not need to write directly to each other. Plembfin is the point of comparison that prevents stale state from winning silently.",
+    text: "Connected services do not need to write directly to each other. Plekt is the point of comparison that prevents stale state from winning silently.",
   },
   {
     number: "03",
@@ -41,17 +41,17 @@ const changes = [
 ---
 
 <SiteLayout
-  title="Why Plembfin"
-  description="See how Plembfin fits different media stacks, from private manual tracking to Plex, Emby, Jellyfin, and Trakt working from one local source of truth."
+  title="Why Plekt"
+  description="See how Plekt fits different media stacks, from private manual tracking to Plex, Emby, Jellyfin, and Trakt working from one local source of truth."
   image="/assets/optimized/plembfin-hub.svg"
 >
   <div class="simple-why">
     <header class="simple-why-hero" aria-labelledby="why-plembfin-title">
       <div>
-        <p class="simple-eyebrow">PLEMBFIN / WHY</p>
+        <p class="simple-eyebrow">PLEKT / WHY</p>
         <h1 id="why-plembfin-title">One watch history. Every server in sync.</h1>
         <p>
-          Use Plembfin as a private manual tracker, a bridge to Trakt, or the local source of truth for a whole mixed media stack.
+          Use Plekt as a private manual tracker, a bridge to Trakt, or the local source of truth for a whole mixed media stack.
         </p>
         <div class="simple-actions">
           <a class="simple-button simple-button--primary" href="/docs/getting-started/">Get started <span aria-hidden="true">↗</span></a>
@@ -61,8 +61,8 @@ const changes = [
       <div class="simple-why-hero-proof">
         <ScreenshotFigure
           src="/assets/optimized/plembfin-hub.svg"
-          alt="Plembfin connected as the local hub between Plex, Emby, Jellyfin, Trakt, and supporting services"
-          caption="Every service has a role. Plembfin keeps the record they can agree on."
+          alt="Plekt connected as the local hub between Plex, Emby, Jellyfin, Trakt, and supporting services"
+          caption="Every service has a role. Plekt keeps the record they can agree on."
           width={1200}
           height={540}
         />
@@ -152,7 +152,7 @@ const changes = [
           <p class="simple-why-builder-audience" data-stack-audience>No history to import? Start private and local.</p>
           <p data-stack-description>Search for a title, mark it watched, choose the date, and keep the record on your own instance. Add connections whenever your stack grows.</p>
           <div class="simple-stack-flow" data-stack-flow>
-            <span class="simple-stack-node simple-stack-node--hub"><img data-theme-image src="/assets/icons/plembfin.png" data-dark-src="/assets/icons/plembfin.png" data-light-src="/assets/icons/plembfin-light.png" alt="" aria-hidden="true" width="24" height="24" />Plembfin</span>
+            <span class="simple-stack-node simple-stack-node--hub"><img data-theme-image src="/assets/icons/plembfin.png" data-dark-src="/assets/icons/plembfin.png" data-light-src="/assets/icons/plembfin-light.png" alt="" aria-hidden="true" width="24" height="24" />Plekt</span>
           </div>
           <a class="simple-text-link" data-stack-link href="/docs/media-details/#mark-watched">See manual tracking <span aria-hidden="true">→</span></a>
         </div>
@@ -165,7 +165,7 @@ const changes = [
           <p class="simple-eyebrow">WHY THE MIDDLE MATTERS</p>
           <h2 id="reasons-title">A bridge is useful when it remembers.</h2>
         </div>
-        <p>Media players are good at playback. Trackers are good at sharing. Plembfin keeps the durable, explainable record between them.</p>
+        <p>Media players are good at playback. Trackers are good at sharing. Plekt keeps the durable, explainable record between them.</p>
       </div>
 
       <div class="simple-why-reason-list">
@@ -185,7 +185,7 @@ const changes = [
       <div>
         <p class="simple-eyebrow">WHEN THE STACK CHANGES</p>
         <h2 id="changes-title">Your history does not have to start over.</h2>
-        <p>Servers go offline, libraries get rebuilt, and providers occasionally disagree. Plembfin keeps the local archive steady while the rest catches up.</p>
+        <p>Servers go offline, libraries get rebuilt, and providers occasionally disagree. Plekt keeps the local archive steady while the rest catches up.</p>
         <a class="simple-text-link" href="/docs/sync-tools/">See sync tools and recovery paths <span aria-hidden="true">→</span></a>
       </div>
       <ul class="simple-why-change-list">
@@ -199,7 +199,7 @@ const changes = [
         <h2 id="start-title">Connect one thing. Keep the history yours.</h2>
       </div>
       <div class="simple-actions">
-        <a class="simple-button simple-button--primary" href="/docs/getting-started/">Start with Plembfin <span aria-hidden="true">↗</span></a>
+        <a class="simple-button simple-button--primary" href="/docs/getting-started/">Start with Plekt <span aria-hidden="true">↗</span></a>
         <a class="simple-button" href="/docs/integrations/">Browse integrations <span aria-hidden="true">→</span></a>
       </div>
     </section>
@@ -243,32 +243,32 @@ const changes = [
       nextLabel = "DUAL HISTORY IMPORT";
       nextAudience = "Bring both your shared Trakt archive and completed Plex history into one local record.";
       nextDescription = traktMode === "continuous"
-        ? "Plembfin can import your existing Trakt history and completed Plex history from Tautulli, then keep the combined archive local while Trakt and your selected media servers stay in sync. Tautulli remains a one-time import."
-        : "Plembfin can import your existing Trakt history and completed Plex history from Tautulli, then keep the combined archive local and ready for future watches. Tautulli remains a one-time import; choose Continuous sync to keep Trakt and your selected media servers in sync.";
+        ? "Plekt can import your existing Trakt history and completed Plex history from Tautulli, then keep the combined archive local while Trakt and your selected media servers stay in sync. Tautulli remains a one-time import."
+        : "Plekt can import your existing Trakt history and completed Plex history from Tautulli, then keep the combined archive local and ready for future watches. Tautulli remains a one-time import; choose Continuous sync to keep Trakt and your selected media servers in sync.";
       nextHref = "/docs/integrations/";
       nextLinkLabel = "See the integration setup";
     } else if (hasTrakt) {
       nextLabel = traktMode === "continuous" ? "CONTINUOUS SYNC" : "ONE-TIME IMPORT";
-      nextAudience = traktMode === "continuous" ? "Keep Trakt connected while Plembfin remains your local source of truth." : "Bring an existing Trakt archive into a private local record.";
-      nextDescription = traktMode === "continuous" ? "Import your existing Trakt history, then let future changes flow through Plembfin to your selected media servers." : "Import your existing Trakt history once, then use Plembfin as the archive for future manual or server-reported watches.";
+      nextAudience = traktMode === "continuous" ? "Keep Trakt connected while Plekt remains your local source of truth." : "Bring an existing Trakt archive into a private local record.";
+      nextDescription = traktMode === "continuous" ? "Import your existing Trakt history, then let future changes flow through Plekt to your selected media servers." : "Import your existing Trakt history once, then use Plekt as the archive for future manual or server-reported watches.";
       nextHref = "/docs/integrations/#trakt";
       nextLinkLabel = "See the Trakt setup";
     } else if (hasTautulli) {
       nextLabel = "PLEX HISTORY IMPORT";
       nextAudience = "Bring completed Plex history across before you connect the servers you use today.";
-      nextDescription = "Tautulli provides the completed Plex history. Plembfin previews and matches it, creates a backup, then keeps the imported archive local.";
+      nextDescription = "Tautulli provides the completed Plex history. Plekt previews and matches it, creates a backup, then keeps the imported archive local.";
       nextHref = "/docs/integrations/#tautulli";
       nextLinkLabel = "See the Tautulli setup";
     } else if (servers.length > 1) {
       nextLabel = "MIXED MEDIA STACK";
       nextAudience = "For households and self-hosters who move between more than one media server.";
-      nextDescription = "Watch on whichever server is convenient. Plembfin keeps watched state, resume progress, and genuine rewatches aligned across the stack.";
+      nextDescription = "Watch on whichever server is convenient. Plekt keeps watched state, resume progress, and genuine rewatches aligned across the stack.";
       nextHref = "/docs/concepts/#the-canonical-record";
       nextLinkLabel = "Understand the canonical record";
     } else if (servers.length === 1) {
       nextLabel = "ONE MEDIA SERVER";
       nextAudience = `For ${servers[0].name} users who want their history to outlive the library.`;
-      nextDescription = `${servers[0].name} provides playback events while Plembfin stores the local record, resume progress, and rewatch history.`;
+      nextDescription = `${servers[0].name} provides playback events while Plekt stores the local record, resume progress, and rewatch history.`;
       nextHref = `/docs/integrations/#${servers[0].id}`;
       nextLinkLabel = `See the ${servers[0].name} setup`;
     }
@@ -298,8 +298,8 @@ const changes = [
       svg.setAttribute("viewBox", "0 0 900 430");
       svg.setAttribute("role", "img");
       svg.setAttribute("aria-label", hasTautulli
-        ? "Trakt and Tautulli import into Plembfin; Tautulli is a one-time import, while Trakt and the selected media apps can stay in sync."
-        : "Selected connections flow through Plembfin to the selected media apps.");
+        ? "Trakt and Tautulli import into Plekt; Tautulli is a one-time import, while Trakt and the selected media apps can stay in sync."
+        : "Selected connections flow through Plekt to the selected media apps.");
 
       const addPath = (d: string, className: string) => {
         const path = document.createElementNS(svgNamespace, "path");
@@ -390,7 +390,7 @@ const changes = [
             : "simple-stack-flow-path--import";
         addPath(`M ${x} ${sourceY + 25} C ${x} 112, ${hubX} 128, ${hubX} ${hubY - 34}`, importPathClass);
       });
-      addNode({ name: "Plembfin", icon: "/assets/icons/plembfin.png" }, hubX, hubY, true);
+      addNode({ name: "Plekt", icon: "/assets/icons/plembfin.png" }, hubX, hubY, true);
 
       if (serverNodes.length) {
         serverNodes.forEach((server, index) => {

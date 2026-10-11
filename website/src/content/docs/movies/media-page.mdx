@@ -1,9 +1,9 @@
 ---
 title: Movies media page
-description: Read and use a single movie media page in Plembfin.
+description: Read and use a single movie media page in Plekt.
 category: Dashboard and libraries
 order: 2.1
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/app.js
   - public/index.html
@@ -75,7 +75,7 @@ movie's poster, metadata, watch state, actions, and provider content together.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/movie-detail-page-dark.png"
   lightSrc="/assets/app-captures/movie-detail-page-light.png"
-  alt="Plembfin complete movie detail page showing the header, watch state, cast, images, trailers, collection, and recommendations"
+  alt="Plekt complete movie detail page showing the header, watch state, cast, images, trailers, collection, and recommendations"
   caption="The complete movie detail page keeps the title header, watch state, actions, and loaded detail sections together."
 />
 
@@ -84,7 +84,7 @@ movie's poster, metadata, watch state, actions, and provider content together.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-header-dark.png"
   lightSrc="/assets/app-captures/media-header-light.png"
-  alt="Plembfin movie detail header showing the poster, title, synopsis, facts, ratings, and availability"
+  alt="Plekt movie detail header showing the poster, title, synopsis, facts, ratings, and availability"
   caption="The movie header keeps identity, facts, provider ratings, availability, and destination links together."
 />
 
@@ -107,7 +107,7 @@ local movie record.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-watch-status-dark.png"
   lightSrc="/assets/app-captures/media-watch-status-light.png"
-  alt="Plembfin movie detail Watch Status section showing the watched date and 100% completion"
+  alt="Plekt movie detail Watch Status section showing the watched date and 100% completion"
   caption="The detail page keeps the canonical watched date and completion percentage visible before opening the full history."
 />
 
@@ -124,7 +124,7 @@ sync workflow.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-action-row-dark.png"
   lightSrc="/assets/app-captures/media-action-row-light.png"
-  alt="Plembfin movie detail action row showing watchlist, custom-list, rating, watch-state, trailer, and Tools controls"
+  alt="Plekt movie detail action row showing watchlist, custom-list, rating, watch-state, trailer, and Tools controls"
   caption="Movie actions are split between personal choices, watch-state corrections, playback links, and maintenance tools."
 />
 
@@ -141,7 +141,7 @@ guides for those pages and workflows.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-rating-focus-dark.png"
   lightSrc="/assets/app-captures/media-rating-focus-light.png"
-  alt="Plembfin movie detail media facts showing a personal rating beside provider ratings"
+  alt="Plekt movie detail media facts showing a personal rating beside provider ratings"
   caption="The personal rating control is separate from TMDB and other provider ratings."
 />
 
@@ -163,11 +163,11 @@ when the movie was watched but the date is wrong.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-tools-focus-dark.png"
   lightSrc="/assets/app-captures/media-tools-focus-light.png"
-  alt="Plembfin movie Tools menu showing Force Sync, Info, Edit Images, Fix Match, and Delete"
-  caption="Tools is always available for movie maintenance and evidence."
+  alt="Plekt movie Options menu showing Mark unwatched, Force Sync, Info, Edit Images, Fix Match, and Delete"
+  caption="Options contains the movie's watch-state, maintenance, and information actions."
 />
 
-The **Tools** menu is always present on the movie detail page. It contains the following
+The **Options** menu is always present on the movie detail page. It contains the following
 title-scoped workflows:
 
 #### Force Sync
@@ -179,20 +179,20 @@ does not replace the broader tools under [Settings → Sync](/docs/settings/sync
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-tools-dark.png"
   lightSrc="/assets/app-captures/settings-sync-tools-light.png"
-  alt="Plembfin Sync Tools settings showing repair, push, and pull controls"
+  alt="Plekt Sync Tools settings showing repair, push, and pull controls"
   caption="Sync Tools provides wider repair and source-of-truth directions beside the title-level Force Sync menu."
 />
 
 For one movie:
 
 1. Open **Tools → Force Sync** on the detail page.
-2. Choose the direction and destination shown by the dialog. Push sends Plembfin's recorded
+2. Choose the direction and destination shown by the dialog. Push sends Plekt's recorded
    watched or resume state out; pull imports the selected movie's state from a connected server.
 3. Review the preview before confirming, especially when pushing because remote state can be
    overwritten.
 4. Check the result in [Sync Activity](/docs/sync-tools/).
 
-For wider repairs or source-of-truth operations, use **Repair Recent Items**, **Set Plembfin as
+For wider repairs or source-of-truth operations, use **Repair Recent Items**, **Set Plekt as
 Source of Truth**, or **Import Watched Status** under [Settings → Sync → Sync tools](/docs/settings/sync/#sync-tools).
 The watched threshold and resume minimum are controlled in [Sync Tuning](/docs/settings/sync/#sync-tuning).
 
@@ -201,7 +201,7 @@ The watched threshold and resume minimum are controlled in [Sync Tuning](/docs/s
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-info-focus-dark.png"
   lightSrc="/assets/app-captures/media-info-focus-light.png"
-  alt="Plembfin Jackass Presents: Bad Grandpa Info panel showing its latest watch, Jellyfin source, three synced destinations, and audit events"
+  alt="Plekt Jackass Presents: Bad Grandpa Info panel showing its latest watch, Jellyfin source, three synced destinations, and audit events"
   caption="Info is read-only evidence for the selected movie, including the latest watch, destination results, and audit-event count."
 />
 
@@ -213,7 +213,7 @@ the audit detail. Use **Export** to preserve the evidence without changing the m
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-edit-images-focus-dark.png"
   lightSrc="/assets/app-captures/media-edit-images-focus-light.png"
-  alt="Plembfin movie Edit Images picker showing poster choices"
+  alt="Plekt movie Edit Images picker showing poster choices"
   caption="Edit Images changes the movie's poster, logo, background, or trailer artwork."
 />
 
@@ -225,7 +225,7 @@ artwork type, choose a provider result or upload a custom image, and save.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/fix-match-focus-dark.png"
   lightSrc="/assets/app-captures/fix-match-focus-light.png"
-  alt="Plembfin movie Fix Match dialog showing candidate provider results"
+  alt="Plekt movie Fix Match dialog showing candidate provider results"
   caption="Fix Match changes the movie identity used for metadata and sync."
 />
 
@@ -250,7 +250,7 @@ Some actions are conditional on the movie record, provider data, or connected se
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-sections-overview-dark.png"
   lightSrc="/assets/app-captures/media-sections-overview-light.png"
-  alt="Plembfin movie detail page with Cast, Images, and Trailers and Clips sections"
+  alt="Plekt movie detail page with Cast, Images, and Trailers and Clips sections"
   caption="The movie detail view places Cast, Images, and Trailers & Clips below the title header."
 />
 
@@ -261,7 +261,7 @@ When provider data is available, the page can render:
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-cast-focus-dark.png"
   lightSrc="/assets/app-captures/media-cast-focus-light.png"
-  alt="Plembfin movie detail page showing the Cast section with people cards"
+  alt="Plekt movie detail page showing the Cast section with people cards"
   caption="Cast cards link the movie to person details and the credited role."
 />
 
@@ -273,7 +273,7 @@ biography and filmography without changing the movie record.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-images-focus-dark.png"
   lightSrc="/assets/app-captures/media-images-focus-light.png"
-  alt="Plembfin movie detail page showing the Images gallery"
+  alt="Plekt movie detail page showing the Images gallery"
   caption="Images displays provider scene artwork in a horizontal gallery and opens each tile in a lightbox."
 />
 
@@ -285,7 +285,7 @@ the gallery is separate from the poster, logo, and background choices in Edit Im
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-trailers-focus-dark.png"
   lightSrc="/assets/app-captures/media-trailers-focus-light.png"
-  alt="Plembfin movie detail page showing the Trailers and Clips section"
+  alt="Plekt movie detail page showing the Trailers and Clips section"
   caption="Trailers & Clips keeps stored video previews on the movie detail page."
 />
 
@@ -303,7 +303,7 @@ not the same as your private [Rating](/docs/ratings/) and do not affect watch st
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-collections-recommendations-focus-dark.png"
   lightSrc="/assets/app-captures/media-collections-recommendations-focus-light.png"
-  alt="Plembfin movie detail page showing a populated collection rail and recommended movie cards"
+  alt="Plekt movie detail page showing a populated collection rail and recommended movie cards"
   caption="Collections and recommendations show populated poster rails that link to related movie detail pages."
 />
 
@@ -317,7 +317,7 @@ These sections belong to the selected movie. They are not additional library pag
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-appearance-dark.png"
   lightSrc="/assets/app-captures/media-appearance-light.png"
-  alt="Plembfin Appearance menu on a movie detail page showing optional section switches"
+  alt="Plekt Appearance menu on a movie detail page showing optional section switches"
   caption="The full Appearance panel shows the switches that control optional movie detail sections."
 />
 

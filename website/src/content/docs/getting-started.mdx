@@ -1,9 +1,9 @@
 ---
 title: Getting started
-description: Install Plembfin, claim the instance, and complete the in-app Guided Setup flow.
+description: Install Plekt, claim the instance, and complete the in-app Guided Setup flow.
 category: Start here
 order: 1
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - README.md
   - docs/onboarding.md
@@ -22,13 +22,16 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-Plembfin is a self-hosted Node.js application.
+Plekt is a self-hosted Node.js application.
+
+Already running Plembfin? Follow [Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/)
+to preserve your existing data and settings during the update.
 
 It keeps the watch archive in local SQLite and makes provider requests from the machine
-where Plembfin runs.
+where Plekt runs.
 
 Start with the instance itself. A media server is optional during setup, so you can claim
-Plembfin and configure metadata, private lists, or backups before connecting Plex, Emby,
+Plekt and configure metadata, private lists, or backups before connecting Plex, Emby,
 or Jellyfin.
 
 Trakt, metadata providers, webhooks, and remote backups can be added after the core
@@ -39,49 +42,50 @@ connection is healthy.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-index-focused-dark.png"
   lightSrc="/assets/app-captures/settings-index-focused-light.png"
-  alt="Plembfin Settings landing page used to plan connections, metadata, backups, and setup"
+  alt="Plekt Settings landing page used to plan connections, metadata, backups, and setup"
   caption="The instance can be claimed and configured before any media server is connected."
 />
 
 Have these ready:
 
 - A host that can reach each media server by its configured URL.
-- Persistent storage for Plembfin's `/data` directory.
+- Persistent storage for Plekt's `/data` directory.
 - A strong administrator password.
 - A Plex token, Emby credentials/API key, or Jellyfin credentials/API key if you are connecting
   a media server during setup.
 
 The browser is only the client.
 
-A connection can look reachable from your laptop while the Plembfin host cannot reach it.
+A connection can look reachable from your laptop while the Plekt host cannot reach it.
 
 Network testing must ultimately be done from the host that runs the application.
 
 ## Install with the Windows installer
 
-On 64-bit Windows, download the latest [Plembfin installer from GitHub Releases](https://github.com/Lasikiewicz/plembfin/releases/latest)
-and run it as an administrator. It includes the Plembfin server, Node.js runtime, and
+On 64-bit Windows, download the latest [Plekt installer from GitHub Releases](https://github.com/Lasikiewicz/plekt/releases/latest)
+and run it as an administrator. It includes the Plekt server, Node.js runtime, and
 Windows native dependencies, then registers the server as a background service.
 
 The installer keeps the runtime database, artwork cache, logs, and backups in
-`%ProgramData%\Plembfin`, separate from any source checkout. Uninstalling preserves that
+`%ProgramData%\Plekt`, separate from any source checkout. An existing Plembfin service and
+data folder are moved to the Plekt names when you upgrade. Uninstalling preserves that
 data unless you explicitly confirm its removal.
 
 The installer options are preselected for a ready first launch:
 
-- **Open Plembfin now** opens the local dashboard so you can claim a fresh instance.
+- **Open Plekt now** opens the local dashboard so you can claim a fresh instance.
 - **Start the notification-area companion** adds the tray menu for service status, dashboard
-  access, and stopping the server. Clear it if you do not want Plembfin in the tray.
+  access, and stopping the server. Clear it if you do not want Plekt in the tray.
 - **Create a desktop shortcut** adds a convenience shortcut to the dashboard.
-- **Allow private-network access** opens TCP port 5055 for other devices on the same private
-  network. Leave it cleared when you only use `127.0.0.1` on the Windows machine.
+- **Allow private-network access** opens the dashboard port (5056 by default, changeable during
+  setup) for other devices on the same private network. Leave it cleared when you only use `127.0.0.1` on the Windows machine.
 
 The browser launch and tray choice are independent, so you can select both. Alpha testers
-can use the matching prerelease installer from the [GitHub Releases page](https://github.com/Lasikiewicz/plembfin/releases).
+can use the matching prerelease installer from the [GitHub Releases page](https://github.com/Lasikiewicz/plekt/releases).
 
 ## Install with Docker Compose
 
-Create a folder for Plembfin and put a private `.env` file beside the Compose file:
+Create a folder for Plekt and put a private `.env` file beside the Compose file:
 
 ```dotenv
 ADMIN_PASSWORD=choose-a-strong-private-password
@@ -91,25 +95,28 @@ Create `docker-compose.yml`:
 
 ```yaml
 services:
-  plembfin:
-    image: plembfin/plembfin:latest
-    container_name: plembfin
+  plekt:
+    image: plembfin/plekt:latest
+    container_name: plekt
     ports:
-      - "5055:5055"
+      - "5056:5055"
     volumes:
       - ./data:/data
     environment:
+      PLEKT_PUBLISHED_PORT: "5056"
       ADMIN_USERNAME: admin
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env before starting}"
     restart: unless-stopped
 ```
 
-Stable release images are available as `plembfin/plembfin:latest` on Docker Hub and as
-`ghcr.io/lasikiewicz/plembfin:latest` on GitHub Container Registry. You can pin a stable
-version, such as `plembfin/plembfin:1.3.0`. Alpha and develop images are published on GHCR
-only.
+Stable release images are available as `plembfin/plekt:latest` on Docker Hub and as
+`ghcr.io/lasikiewicz/plekt:latest` on GitHub Container Registry. You can pin a stable
+version, such as `plembfin/plekt:2.0.0`. Alpha and develop images are published on GHCR
+only. Installs that still use the old `plembfin/plembfin` or `ghcr.io/lasikiewicz/plembfin`
+image names keep receiving releases for at least six months after the rebrand; see
+[Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) for the safe update procedure.
 
-Start the container and open `http://localhost:5055`:
+Start the container and open `http://localhost:5056`:
 
 ```bash
 docker compose up -d
@@ -120,7 +127,7 @@ The `/data` volume is essential.
 It keeps the database, settings, credentials, artwork cache, logs, and backups across
 container recreation or upgrades.
 
-Back up this directory and use Plembfin's own backup tools for a portable archive.
+Back up this directory and use Plekt's own backup tools for a portable archive.
 
 ### Docker Desktop on macOS or Windows
 
@@ -131,16 +138,17 @@ malformed`.
 
 ```yaml
 services:
-  plembfin:
+  plekt:
     # image, ports, environment, and restart as above
     volumes:
-      - plembfin-data:/data
+      - plekt-data:/data
 
 volumes:
-  plembfin-data:
+  plekt-data:
 ```
 
-Never open `plembfin.db` from the host while the container is running. Linux hosts are
+Never open the database file (`plekt.db`, or `plembfin.db` on an install that predates the
+rebrand) from the host while the container is running. Linux hosts are
 not affected. To move an existing install, take a backup in
 [Backups and operations](/docs/operations/) and restore it into the new volume.
 
@@ -155,9 +163,9 @@ npm install
 npm start
 ```
 
-Open `http://localhost:5055`.
+Open `http://localhost:5056`.
 
-For connected-service testing, start Plembfin from a host or network-enabled terminal. A
+For connected-service testing, start Plekt from a host or network-enabled terminal. A
 restricted sandbox can reach the local page while still blocking requests to Plex, Emby, or
 Jellyfin.
 
@@ -165,24 +173,24 @@ Use `npm run dev` during development when you want server files to reload as the
 
 ## Claim the instance
 
-On a fresh install with no administrator password, Plembfin shows:
+On a fresh install with no administrator password, Plekt shows:
 
-**Claim this Plembfin instance**
+**Claim this Plekt instance**
 
 Create the administrator username and password there.
 
 Claiming is a one-time action and should only be done by the person who controls the server.
 
-After claiming, Plembfin opens the resumable setup guide.
+After claiming, Plekt opens the resumable setup guide.
 
 You can reopen it from the **Reopen Onboarding** link in [Settings → Tools](/docs/settings/tools/#reopen-onboarding).
 
 ## If you forget the administrator password
 
-Plembfin keeps administrator login local to the instance and does not send email reset links.
+Plekt keeps administrator login local to the instance and does not send email reset links.
 If you can still sign in, change it under [Settings → General → Account](/docs/settings/general/#account).
-If you are locked out, stop Plembfin, set a new `ADMIN_PASSWORD` in the host or container
-environment, and restart it. If the password was previously changed inside Plembfin, remove
+If you are locked out, stop Plekt, set a new `ADMIN_PASSWORD` in the host or container
+environment, and restart it. If the password was previously changed inside Plekt, remove
 only the `authManagedInApp` property from `data/config.json` first so the environment value can
 be applied. The old password cannot be recovered from its stored hash.
 
@@ -194,8 +202,8 @@ settings pages.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-tools-guided-setup-dark.png"
   lightSrc="/assets/app-captures/settings-tools-guided-setup-light.png"
-  alt="Plembfin Guided Setup control showing the resumable onboarding flow"
-  caption="Guided Setup organizes optional services into resumable steps rather than requiring one long first run."
+  alt="Plekt Settings Tools with the Reopen Onboarding button in the top bar"
+  caption="Use Reopen Onboarding in Settings Tools to return to the guided setup."
 />
 
 Work through the stages in this order when possible:
@@ -238,7 +246,7 @@ outcome, and message.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/dashboard-dark.png"
   lightSrc="/assets/app-captures/dashboard-light.png"
-  alt="Plembfin dashboard showing Now Playing, Up Next, watch history, and movie activity"
+  alt="Plekt dashboard showing Now Playing, Up Next, watch history, and movie activity"
   caption="After connecting a server, use the dashboard to confirm that activity is being recorded and the library is populated."
   loading="eager"
 />

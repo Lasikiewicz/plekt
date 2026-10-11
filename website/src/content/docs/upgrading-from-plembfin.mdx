@@ -1,0 +1,152 @@
+---
+title: Upgrading from Plembfin to Plekt
+description: Safely upgrade an existing Plembfin instance while preserving its data, settings, backups, connections, and dashboard address.
+category: Start here
+order: 2
+sourceVersion: "2.0.0"
+sourcePaths:
+  - README.md
+  - docs/development.md
+  - packaging/windows/README.md
+  - packaging/windows/Plekt.iss
+  - server/src/utils/brandEnv.js
+screenshots: []
+---
+
+Plekt is the new name for Plembfin. Upgrade your existing instance with its existing data;
+you do not need to create a new account, reconnect your media servers, or import your history.
+The steps below cover the v2.0.0 update.
+
+## Before you update
+
+1. In [Settings → Backup](/docs/settings/backup/), create a **full encrypted backup** and
+   download a copy somewhere outside the application's data folder. Keep its passphrase
+   separately. A watch-history-only backup does not preserve all settings and personal lists.
+2. Record the current version, image tag or installer, dashboard port, data location, and
+   configuration. Keep your Compose file, `.env` file, or service configuration privately.
+3. Stop the existing instance, then make a separate copy or snapshot of its **entire data
+   directory or volume**. A stopped copy includes SQLite's related files and the existing
+   configuration needed for recovery. Do not copy only the database while the app is running.
+4. Keep that backup and the previous application version until the upgrade is verified.
+
+Run only one instance against the data at a time. Do not rename the database:
+an existing `plembfin.db` remains in use; only fresh installs create `plekt.db`.
+Existing backups still restore, and `PLEMBFIN_` environment settings remain accepted.
+You can leave those settings unchanged during this update.
+
+## Docker Compose
+
+Edit your **existing** Compose file in its existing project directory. Change the image
+name, preserving the service name, container name, volume mapping, credentials, and other
+settings. Keeping those names also avoids accidentally creating a new Compose-managed volume.
+
+| Registry | Old image | New image |
+| --- | --- | --- |
+| Docker Hub | `plembfin/plembfin` | `plembfin/plekt` |
+| GitHub Container Registry | `ghcr.io/lasikiewicz/plembfin` | `ghcr.io/lasikiewicz/plekt` |
+
+For the stable v2.0.0 update, use `plembfin/plekt:2.0.0` or
+`ghcr.io/lasikiewicz/plekt:2.0.0`. Keep your existing channel if you deliberately use an
+alpha or develop tag. Both old image names continue receiving releases for at least six
+months after the rebrand, so changing the image name can wait until you are ready.
+
+For example, an existing service named `plembfin` can keep that name:
+
+```yaml
+services:
+  plembfin:
+    image: ghcr.io/lasikiewicz/plekt:2.0.0
+    # Keep the existing volumes, ports, environment, and other settings here.
+```
+
+This is an image-change example, not a replacement Compose file. Your existing `/data`
+mount must still point to the **same host directory or named volume**. Do not switch to a
+new empty folder or volume, rename the Compose project, or run `docker compose down -v`.
+
+From the same Compose directory, pull and recreate the existing service:
+
+```bash
+docker compose pull plembfin
+docker compose up -d plembfin
+docker compose logs --tail=100 plembfin
+```
+
+Replace `plembfin` in these commands with your actual Compose service name. Check the logs
+privately; do not share credentials or tokens from your configuration.
+
+### Unraid and other container managers
+
+Edit the existing container's repository/image field to the new image and chosen tag,
+then apply the update. Preserve its existing `/data` host path, environment settings,
+and network configuration. You do not need to delete the container template or rename
+the container. If a manager offers to remove its data or volumes, leave those intact.
+
+## Windows installer
+
+After backing up and stopping the old instance, copy `%ProgramData%\Plembfin` to a separate
+safe location. Use the [Plekt installer from GitHub Releases](https://github.com/Lasikiewicz/plekt/releases/latest)
+and run it as an administrator to upgrade the existing installation. Keep its detected
+installation directory; do not uninstall and delete the old data first.
+
+The installer retains the existing installation identity, replaces the old service with
+the `Plekt` service, and moves `%ProgramData%\Plembfin` to `%ProgramData%\Plekt`. It also
+updates the tray integration and shortcuts. The dashboard-port page is prefilled with
+the existing port for an upgrade; keep it to preserve the current address, or choose 5056.
+
+If both data folders already exist, setup stops without merging or overwriting them.
+Back up both and identify which contains the real instance before resolving the conflict;
+do not delete either just to make setup continue. If setup cannot stop the old service or
+move its data, follow the reported error and retry with the preserved data.
+
+## Node.js or a custom service
+
+Stop the existing process or service and deploy the v2.0.0 release using your usual update
+method. Keep the same data directory, `.env` file, credentials, and service environment.
+If you launch from a new application directory, explicitly point `DATA_DIR` at the existing
+data directory so the app does not start an empty instance. Install the release's
+dependencies with `npm ci`, then restart using your existing service or `npm start`.
+
+## Choose the dashboard port
+
+For the simplest update, keep your current host port. Docker still listens on **5055
+inside the container**: an existing `5055:5055` mapping can stay in place. Set
+`PLEKT_PUBLISHED_PORT` to the host port you actually use, such as `5055`.
+
+To move to the new default, use `5056:5055` and `PLEKT_PUBLISHED_PORT=5056` in Docker.
+For a custom Node.js service, preserve its explicit `PORT` value or set it to the port
+you want; without an override, the new default is 5056.
+
+Follow [Moving to port 5056](/docs/moving-to-port-5056/) if you change the address. Update
+bookmarks, reverse-proxy upstreams, firewall rules, and each media-server
+[webhook URL](/docs/settings/webhooks/). Existing webhook secrets and the older
+`X-Plembfin-Webhook-Secret` header remain accepted.
+
+## Verify before resuming normal use
+
+1. Open your chosen dashboard address and sign in with the existing account. Check
+   [Settings → About](/docs/settings/about/) reports v2.0.0.
+2. Check familiar watch history and resume progress, plus your
+   [Watchlist](/docs/watchlist/), [Ratings](/docs/ratings/), and [Playlists](/docs/playlists/).
+3. Check the configured [media servers](/docs/settings/media-servers/) and other
+   [connections](/docs/settings/connections/) are present and reachable.
+4. Send a test webhook or play a short item on a connected server, then check
+   [Sync Activity](/docs/sync-tools/) for the expected event and delivery result.
+5. Check [backup settings](/docs/settings/backup/) and create a fresh backup after the
+   successful update. Retain the pre-upgrade copy until you are satisfied.
+
+If you see **Claim this Plekt instance** or unexpectedly empty history, stop the app and
+check its data mount or `DATA_DIR` first. Do not claim it, reconnect services, or start a
+bulk sync to reconstruct data that should already be present.
+
+## If the update needs to be rolled back
+
+Stop Plekt first and keep a separate copy of the post-upgrade data. Restore the
+**pre-upgrade stopped data snapshot together with the matching previous application
+version and configuration**. Do not assume an older version can safely use data already
+modified by a newer release, and never run both versions on the same data.
+
+For Docker, restore the original volume contents and image tag. For Windows or a custom
+service, restore the matching data location, service configuration, and prior application
+version; obtain help if you are unsure which folder or service is authoritative.
+The [Restore guide](/docs/settings/restore/) covers application backup recovery when a
+full encrypted backup is the recovery source.

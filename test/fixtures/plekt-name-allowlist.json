@@ -809,11 +809,39 @@
       "reason": "history",
       "lines": [
         [
-          "Release history for Plembfin. This file covers published releases on `main` only -",
+          "This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/",
           1
         ],
         [
-          "[Visit the Plembfin website](https://plembfin.com)",
+          "- Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names",
+          1
+        ],
+        [
+          "- Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header",
+          1
+        ],
+        [
+          "- New installs store data in plekt.db; an existing plembfin.db is kept and used",
+          1
+        ],
+        [
+          "- Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change",
+          1
+        ],
+        [
+          "- The Windows installer moves an existing Plembfin service and data folder to the Plekt names",
+          1
+        ],
+        [
+          "- Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.",
+          1
+        ],
+        [
+          "- Plembfin is now Plekt. Docker users: change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt, keep the same tag, volumes and settings. Both old image names receive updates for at least six months after this release.",
+          1
+        ],
+        [
+          "[Visit the Plekt website](https://plembfin.com)",
           4
         ],
         [
@@ -1456,6 +1484,70 @@
     "changelog.json": {
       "reason": "history",
       "lines": [
+        [
+          "\"message\": \"This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/\",",
+          1
+        ],
+        [
+          "\"Feature: Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\",",
+          1
+        ],
+        [
+          "\"Feature: Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header\",",
+          1
+        ],
+        [
+          "\"Feature: New installs store data in plekt.db; an existing plembfin.db is kept and used\",",
+          1
+        ],
+        [
+          "\"Feature: Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change\",",
+          1
+        ],
+        [
+          "\"Feature: The Windows installer moves an existing Plembfin service and data folder to the Plekt names\",",
+          1
+        ],
+        [
+          "\"Fix: Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.\",",
+          1
+        ],
+        [
+          "\"Tweak: Plembfin is now Plekt. Docker users: change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt, keep the same tag, volumes and settings. Both old image names receive updates for at least six months after this release.\"",
+          1
+        ],
+        [
+          "\"Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\",",
+          1
+        ],
+        [
+          "\"Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header\",",
+          2
+        ],
+        [
+          "\"New installs store data in plekt.db; an existing plembfin.db is kept and used\",",
+          2
+        ],
+        [
+          "\"Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change\",",
+          2
+        ],
+        [
+          "\"The Windows installer moves an existing Plembfin service and data folder to the Plekt names\",",
+          2
+        ],
+        [
+          "\"Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.\",",
+          2
+        ],
+        [
+          "\"Plembfin is now Plekt. Docker users: change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt, keep the same tag, volumes and settings. Both old image names receive updates for at least six months after this release.\"",
+          2
+        ],
+        [
+          "\"Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\"",
+          1
+        ],
         [
           "\"websiteUrl\": \"https://plembfin.com\",",
           4
@@ -4410,10 +4502,6 @@
       "reason": "internal",
       "lines": [
         [
-          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=1.3.1.3.0\";",
-          1
-        ],
-        [
           "const explicitFlag = window.__PLEMBFIN_DEMO__ ?? window.document?.documentElement?.dataset?.plektDemo;",
           1
         ],
@@ -4430,10 +4518,6 @@
           1
         ],
         [
-          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=1.3.1.2.2\";",
-          1
-        ],
-        [
           "if (normalizePlatformSource(entry.source) === \"plembfin\") return [\"plembfin\"];",
           1
         ],
@@ -4446,7 +4530,7 @@
           1
         ],
         [
-          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=1.3.1.2.0\";",
+          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=2.0.0.0.0\";",
           1
         ],
         [
@@ -9473,139 +9557,35 @@
       "reason": "website",
       "lines": [
         [
-          "On 64-bit Windows, download the latest [Plekt installer from GitHub Releases](https://github.com/Lasikiewicz/plembfin/releases/latest)",
+          "Already running Plembfin? Follow [Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/)",
           1
         ],
         [
-          "description: Install Plembfin, claim the instance, and complete the in-app Guided Setup flow.",
+          "`%ProgramData%\\Plekt`, separate from any source checkout. An existing Plembfin service and",
           1
         ],
         [
-          "Plembfin is a self-hosted Node.js application.",
+          "image: plembfin/plekt:latest",
           1
         ],
         [
-          "where Plembfin runs.",
+          "Stable release images are available as `plembfin/plekt:latest` on Docker Hub and as",
           1
         ],
         [
-          "Plembfin and configure metadata, private lists, or backups before connecting Plex, Emby,",
+          "version, such as `plembfin/plekt:2.0.0`. Alpha and develop images are published on GHCR",
           1
         ],
         [
-          "alt=\"Plembfin Settings landing page used to plan connections, metadata, backups, and setup\"",
+          "only. Installs that still use the old `plembfin/plembfin` or `ghcr.io/lasikiewicz/plembfin`",
           1
         ],
         [
-          "- Persistent storage for Plembfin's `/data` directory.",
+          "[Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) for the safe update procedure.",
           1
         ],
         [
-          "A connection can look reachable from your laptop while the Plembfin host cannot reach it.",
-          1
-        ],
-        [
-          "On 64-bit Windows, download the latest [Plembfin installer from GitHub Releases](https://github.com/Lasikiewicz/plembfin/releases/latest)",
-          1
-        ],
-        [
-          "and run it as an administrator. It includes the Plembfin server, Node.js runtime, and",
-          1
-        ],
-        [
-          "`%ProgramData%\\Plembfin`, separate from any source checkout. Uninstalling preserves that",
-          1
-        ],
-        [
-          "- **Open Plembfin now** opens the local dashboard so you can claim a fresh instance.",
-          1
-        ],
-        [
-          "access, and stopping the server. Clear it if you do not want Plembfin in the tray.",
-          1
-        ],
-        [
-          "can use the matching prerelease installer from the [GitHub Releases page](https://github.com/Lasikiewicz/plembfin/releases).",
-          1
-        ],
-        [
-          "Create a folder for Plembfin and put a private `.env` file beside the Compose file:",
-          1
-        ],
-        [
-          "plembfin:",
-          2
-        ],
-        [
-          "image: plembfin/plembfin:latest",
-          1
-        ],
-        [
-          "container_name: plembfin",
-          1
-        ],
-        [
-          "Stable release images are available as `plembfin/plembfin:latest` on Docker Hub and as",
-          1
-        ],
-        [
-          "`ghcr.io/lasikiewicz/plembfin:latest` on GitHub Container Registry. You can pin a stable",
-          1
-        ],
-        [
-          "version, such as `plembfin/plembfin:1.3.0`. Alpha and develop images are published on GHCR",
-          1
-        ],
-        [
-          "Back up this directory and use Plembfin's own backup tools for a portable archive.",
-          1
-        ],
-        [
-          "- plembfin-data:/data",
-          1
-        ],
-        [
-          "plembfin-data:",
-          1
-        ],
-        [
-          "Never open `plembfin.db` from the host while the container is running. Linux hosts are",
-          1
-        ],
-        [
-          "For connected-service testing, start Plembfin from a host or network-enabled terminal. A",
-          1
-        ],
-        [
-          "On a fresh install with no administrator password, Plembfin shows:",
-          1
-        ],
-        [
-          "**Claim this Plembfin instance**",
-          1
-        ],
-        [
-          "After claiming, Plembfin opens the resumable setup guide.",
-          1
-        ],
-        [
-          "Plembfin keeps administrator login local to the instance and does not send email reset links.",
-          1
-        ],
-        [
-          "If you are locked out, stop Plembfin, set a new `ADMIN_PASSWORD` in the host or container",
-          1
-        ],
-        [
-          "environment, and restart it. If the password was previously changed inside Plembfin, remove",
-          1
-        ],
-        [
-          "alt=\"Plembfin Guided Setup control showing the resumable onboarding flow\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin dashboard showing Now Playing, Up Next, watch history, and movie activity\"",
+          "Never open the database file (`plekt.db`, or `plembfin.db` on an install that predates the",
           1
         ]
       ]
@@ -9614,11 +9594,7 @@
       "reason": "website",
       "lines": [
         [
-          "description: Choose the right Plembfin guide for setup, daily use, connections, maintenance, or recovery.",
-          1
-        ],
-        [
-          "Guides are task-focused paths through the current Plembfin interface.",
+          "- [Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) preserves an existing instance through the rename, image update, and port choice.",
           1
         ]
       ]
@@ -10535,23 +10511,7 @@
       "reason": "website",
       "lines": [
         [
-          "alt=\"Plembfin Webhooks setup guides for Plex, Emby, and Jellyfin\"",
-          1
-        ],
-        [
-          "reach the Plembfin host and include the authentication value exactly as shown by the app.",
-          1
-        ],
-        [
-          "Plex normally uses Plembfin's realtime WebSocket notification channel. Emby and Jellyfin use their",
-          1
-        ],
-        [
-          "alt=\"Plembfin Webhook Secret settings card for the generated token and rotation controls\"",
-          1
-        ],
-        [
-          "When the sender supports headers, use `X-Plembfin-Webhook-Secret` or the accepted",
+          "When the sender supports headers, use `X-Plekt-Webhook-Secret` (the older `X-Plembfin-Webhook-Secret` still works) or the accepted",
           1
         ]
       ]
@@ -10606,139 +10566,7 @@
       "reason": "website",
       "lines": [
         [
-          "Sync Activity tells you what Plembfin believes happened.",
-          1
-        ],
-        [
-          "alt=\"Plembfin Sync Activity view used to diagnose source and destination results\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Now Playing panel showing live sessions\"",
-          1
-        ],
-        [
-          "caption=\"A live session in Now Playing confirms that active playback is reaching Plembfin; with nothing playing the panel is headed Up Next.\"",
-          1
-        ],
-        [
-          "3. Confirm the Plembfin host can reach the server URL, not just the browser.",
-          1
-        ],
-        [
-          "Emby, Plembfin keeps the saved Up Next items visible while it retries the affected server in the",
-          1
-        ],
-        [
-          "only that server can confirm keep their Watch now links, even across a Plembfin restart.",
-          1
-        ],
-        [
-          "3. Confirm the Plembfin host can reach the media server. Test the URL from the machine running",
-          1
-        ],
-        [
-          "Plembfin, not only from the browser.",
-          1
-        ],
-        [
-          "Plembfin container or host, the API key or user token is current, and the user can read the",
-          1
-        ],
-        [
-          "When the connection recovers, Plembfin queues an Up Next push straight away. Refresh the",
-          1
-        ],
-        [
-          "dashboard; Plembfin replaces the saved snapshot with",
-          1
-        ],
-        [
-          "alt=\"Plembfin dashboard Up Next rail showing resume progress and continuation actions\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Discover page showing current movie and TV feeds\"",
-          1
-        ],
-        [
-          "3. If the page reports that the server route is missing, restart Plembfin so the current",
-          1
-        ],
-        [
-          "alt=\"Plembfin Watchlist page showing saved media cards\"",
-          1
-        ],
-        [
-          "5. If the action fails for every title, restart the current Plembfin build and inspect",
-          1
-        ],
-        [
-          "alt=\"Plembfin Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin movie poster card with the shared three-dot quick-actions menu open\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Appearance menu on a media detail page showing optional content switches\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Refresh Metadata settings section showing the TMDB and TVDB refresh controls\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Webhooks setup section showing the sender configuration for Plex, Emby, and Jellyfin\"",
-          1
-        ],
-        [
-          "Confirm that the source emitted the position fields Plembfin needs:",
-          1
-        ],
-        [
-          "alt=\"Plembfin Metadata Providers settings section showing provider configuration status\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Webhook Secret settings section showing webhook authentication guidance\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin Trakt connection settings section showing the single-bridge configuration\"",
-          1
-        ],
-        [
-          "1. Make Plembfin the only Trakt bridge.",
-          1
-        ],
-        [
-          "5. Correct the title once in Plembfin.",
-          1
-        ],
-        [
-          "A second writer can reapply older state after Plembfin has already corrected it.",
-          1
-        ],
-        [
-          "alt=\"Plembfin Settings landing page showing the settings groups\"",
-          1
-        ],
-        [
-          "alt=\"Plembfin System Integrity settings section showing diagnostic controls\"",
-          1
-        ],
-        [
-          "3. Never open `plembfin.db` from the host while the container is running.",
-          1
-        ],
-        [
-          "alt=\"Plembfin Restore settings section showing watch-history restore controls\"",
-          1
-        ],
-        [
-          "For implementation-level details, use the [technical troubleshooting source on GitHub](https://github.com/Lasikiewicz/plembfin/blob/main/docs/troubleshooting.md).",
+          "3. Never open the database file (`plekt.db`, or `plembfin.db` on an older install) from the host while the container is running.",
           1
         ]
       ]
@@ -10966,22 +10794,6 @@
       "reason": "website",
       "lines": [
         [
-          "name: \"Plembfin\",",
-          1
-        ],
-        [
-          "title: \"Plembfin - The local brain for your media stack.\",",
-          1
-        ],
-        [
-          "\"Plembfin is the self-hosted source of truth that tracks what you watch, remembers canonical state locally, auto-syncs Plex, Emby, Jellyfin, Trakt, and keeps private media choices close at hand.\",",
-          1
-        ],
-        [
-          "url: \"https://plembfin.com\",",
-          1
-        ],
-        [
           "repository: \"https://github.com/Lasikiewicz/plembfin\",",
           1
         ],
@@ -10994,70 +10806,14 @@
           1
         ],
         [
-          "text: \"Plembfin keeps a local canonical record of watched state, resume progress, and rewatches, then distributes the right change to every connected service.\",",
-          1
-        ],
-        [
-          "imageAlt: \"Plembfin dashboard showing the watch archive across TV and movie history\",",
-          1
-        ],
-        [
-          "imageAlt: \"Plembfin Now Playing view showing three active playback sessions\",",
-          1
-        ],
-        [
-          "imageAlt: \"Plembfin TV Shows library with poster grids, watch progress, and filters\",",
-          1
-        ],
-        [
-          "imageAlt: \"Plembfin Discover page showing trending movie and TV rails\",",
-          1
-        ],
-        [
-          "imageAlt: \"Plembfin Watchlist page showing saved media cards and personal actions\",",
-          1
-        ],
-        [
-          "text: \"A local archive is only useful when you can understand what happened. Plembfin keeps source, destination, outcome, and retry context close to the record.\",",
-          1
-        ],
-        [
-          "imageAlt: \"Plembfin Sync Activity view showing events, sources, and delivery state\",",
-          1
-        ],
-        [
-          "columns: [\"Plembfin\", \"A public tracking hub\"],",
-          1
-        ],
-        [
-          "description: \"Install Plembfin and complete the first-run setup.\",",
-          1
-        ],
-        [
-          "description: \"Learn how Plembfin turns events into a durable local archive.\",",
-          1
-        ],
-        [
-          "description: \"How Plembfin becomes the local source of truth.\",",
-          1
-        ],
-        [
-          "description: \"Trace one watch event from its source through Plembfin to the destination.\",",
-          1
-        ],
-        [
-          "// Settings just as their related views do in Plembfin.",
-          1
+          "{ slug: \"upgrading-from-plembfin\", label: \"Upgrading from Plembfin\" },",
+          2
         ]
       ]
     },
     "website/src/generated/capture-manifest.json": {
       "reason": "website",
       "lines": [
-        [
-          "\"public/assets/videos/plembfin-features-poster-57caf32586.webp\"",
-          2
-        ],
         [
           "\"public/assets/icons/plembfin-light.png\",",
           1
@@ -11076,6 +10832,14 @@
         ],
         [
           "\"public/assets/plembfin-hub.svg\",",
+          1
+        ],
+        [
+          "\"public/assets/videos/plembfin-features-poster-57caf32586.webp\"",
+          1
+        ],
+        [
+          "\"slug\": \"upgrading-from-plembfin\",",
           1
         ],
         [
@@ -11108,16 +10872,40 @@
       "reason": "website",
       "lines": [
         [
-          "\"summary\": \"This update refreshes dashboard data on entry and moves Plembfin's default port to 5056 so it can run alongside Seerr.\",",
+          "\"summary\": \"This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/\",",
+          2
+        ],
+        [
+          "\"Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\",",
           1
         ],
         [
-          "\"Fix: Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.\"",
-          1
+          "\"Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header\",",
+          2
         ],
         [
-          "\"websiteUrl\": \"https://plembfin.com\",",
-          4
+          "\"New installs store data in plekt.db; an existing plembfin.db is kept and used\",",
+          2
+        ],
+        [
+          "\"Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change\",",
+          2
+        ],
+        [
+          "\"The Windows installer moves an existing Plembfin service and data folder to the Plekt names\",",
+          2
+        ],
+        [
+          "\"Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.\",",
+          2
+        ],
+        [
+          "\"Plembfin is now Plekt. Docker users: change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt, keep the same tag, volumes and settings. Both old image names receive updates for at least six months after this release.\"",
+          2
+        ],
+        [
+          "\"Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\"",
+          1
         ],
         [
           "\"Full Plembfin backups of any size restore on the server from the backup list or an uploaded file, with progress, a full check of the file before anything changes, and downloads of large backups\",",
@@ -11938,6 +11726,125 @@
         ],
         [
           "/* Homepage overview and feature index: compact Plembfin surfaces. */",
+          1
+        ]
+      ]
+    },
+    "website/src/content/docs/moving-to-port-5056.mdx": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "description: Move an existing Plembfin install to Plekt's new default port 5056, or keep the old port, with Docker, Unraid, Windows, and webhook steps.",
+          1
+        ],
+        [
+          "Updating an existing Plembfin instance? Start with",
+          1
+        ],
+        [
+          "[Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) to protect its data and settings.",
+          1
+        ],
+        [
+          "image: plembfin/plekt:latest",
+          1
+        ],
+        [
+          "- `plembfin/plekt` on Docker Hub, or `ghcr.io/lasikiewicz/plekt` on GitHub Container Registry",
+          1
+        ],
+        [
+          "- old names: `plembfin/plembfin` and `ghcr.io/lasikiewicz/plembfin`",
+          1
+        ]
+      ]
+    },
+    "website/src/content/docs/upgrading-from-plembfin.mdx": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "title: Upgrading from Plembfin to Plekt",
+          1
+        ],
+        [
+          "description: Safely upgrade an existing Plembfin instance while preserving its data, settings, backups, connections, and dashboard address.",
+          1
+        ],
+        [
+          "Plekt is the new name for Plembfin. Upgrade your existing instance with its existing data;",
+          1
+        ],
+        [
+          "an existing `plembfin.db` remains in use; only fresh installs create `plekt.db`.",
+          1
+        ],
+        [
+          "Existing backups still restore, and `PLEMBFIN_` environment settings remain accepted.",
+          1
+        ],
+        [
+          "| Docker Hub | `plembfin/plembfin` | `plembfin/plekt` |",
+          1
+        ],
+        [
+          "| GitHub Container Registry | `ghcr.io/lasikiewicz/plembfin` | `ghcr.io/lasikiewicz/plekt` |",
+          1
+        ],
+        [
+          "For the stable v2.0.0 update, use `plembfin/plekt:2.0.0` or",
+          1
+        ],
+        [
+          "For example, an existing service named `plembfin` can keep that name:",
+          1
+        ],
+        [
+          "plembfin:",
+          1
+        ],
+        [
+          "docker compose pull plembfin",
+          1
+        ],
+        [
+          "docker compose up -d plembfin",
+          1
+        ],
+        [
+          "docker compose logs --tail=100 plembfin",
+          1
+        ],
+        [
+          "Replace `plembfin` in these commands with your actual Compose service name. Check the logs",
+          1
+        ],
+        [
+          "After backing up and stopping the old instance, copy `%ProgramData%\\Plembfin` to a separate",
+          1
+        ],
+        [
+          "the `Plekt` service, and moves `%ProgramData%\\Plembfin` to `%ProgramData%\\Plekt`. It also",
+          1
+        ],
+        [
+          "`X-Plembfin-Webhook-Secret` header remain accepted.",
+          1
+        ]
+      ]
+    },
+    "website/src/data/app-surface.json": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "\"id\": \"upgrading-from-plembfin\",",
+          1
+        ],
+        [
+          "\"label\": \"Upgrading from Plembfin to Plekt\",",
+          1
+        ],
+        [
+          "\"docSlug\": \"upgrading-from-plembfin\",",
           1
         ]
       ]

@@ -24,7 +24,7 @@
 
 ---
 
-> **v1.3.1.** Plekt writes watched state and playback progress to connected media
+> **v2.0.0.** Plekt writes watched state and playback progress to connected media
 > servers, so **back up first** (Settings → Backup → Local). Report
 > issues on the [issue tracker](https://github.com/Lasikiewicz/plekt/issues).
 
@@ -124,9 +124,6 @@ switches.
 
 ## Screenshots
 
-These screenshots predate the rebrand and may show the old Plembfin name or logo.
-They will be refreshed against the approved release candidate.
-
 <p align="center">
   <img src="docs/screenshots/now-playing.png" alt="Now Playing dashboard" width="100%" />
   <em>Dashboard showing live playback status and recent watch history</em>
@@ -194,7 +191,7 @@ before they're officially released.
 | `ghcr.io/lasikiewicz/plekt:develop` | `develop` | Bleeding edge; every commit, least tested | Contributors and the most adventurous testers |
 
 Each channel shows its own version in the sidebar and **About**. Develop builds
-include the current release version and cycle number (for example, `1.3.1 Build 1`). See
+include the current release version and cycle number (for example, `2.0.0 Build 1`). See
 [`CHANGELOG.md`](CHANGELOG.md) for numbered releases, and
 [`docs/development.md`](docs/development.md) for how the three channels relate.
 

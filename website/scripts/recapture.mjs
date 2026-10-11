@@ -4,7 +4,13 @@
 //   node scripts/recapture.mjs <id> [<id> ...]        one or more images
 //   node scripts/recapture.mjs --page=<slug>           every image a website page uses
 //   node scripts/recapture.mjs --all                   every image
+//   node scripts/recapture.mjs --ids-file=<file>       the ids listed in a file, one per line
 //   options: --variant=dark,light,modern-dark,modern-light  --out=<dir>  --headed  --install
+//            --base-url=<url>                        capture from another running app than the catalogue's
+//            --expect-version=<x.y.z> --expect-channel=<channel>   stop unless the app serves that build
+//            --local-storage-file=<json>   browser-local keys ({"key": "value"}) set before each page loads
+//            --storage-state-file=<json>   reuse a private authenticated Playwright state
+//            --live=<state>[,<state>]      the named live states (catalogue `live`) exist in the app now
 //
 // Credentials come from PLEMBFIN_USER and PLEMBFIN_PASSWORD at run time, never from a file.
 // Output goes to .tmp-website-build/captures by default; --install copies the PNGs into
@@ -37,6 +43,7 @@ if (flag("list")) {
 let selected = [];
 if (flag("all")) selected = Object.keys(catalogue.images);
 else if (option("page")) selected = Object.entries(catalogue.images).filter(([, e]) => e.pages.includes(option("page"))).map(([id]) => id);
+else if (option("ids-file")) selected = (await fs.readFile(path.resolve(option("ids-file")), "utf8")).split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("#"));
 else selected = ids;
 const unknown = selected.filter((id) => !catalogue.images[id]);
 if (!selected.length || unknown.length) {
@@ -44,6 +51,7 @@ if (!selected.length || unknown.length) {
   process.exit(2);
 }
 const wantVariants = option("variant") ? option("variant").split(",") : null;
+const extraLocalStorage = option("local-storage-file") ? JSON.parse(await fs.readFile(path.resolve(option("local-storage-file")), "utf8")) : {};
 const outDir = path.resolve(option("out", path.join(websiteRoot, "..", ".tmp-website-build", "captures")));
 await fs.mkdir(outDir, { recursive: true });
 
@@ -54,21 +62,50 @@ if (!user || !password) {
   process.exit(2);
 }
 
-const { baseUrl, browser: browserConfig, storage } = catalogue;
+const { browser: browserConfig, storage } = catalogue;
+const baseUrl = (option("base-url") || catalogue.baseUrl).replace(/\/+$/, "");
 const browser = await chromium.launch({ channel: browserConfig.channel, headless: !flag("headed") });
 
+// --expect-version / --expect-channel: read the served build once, signed in, and stop on a mismatch.
+let buildChecked = !option("expect-version") && !option("expect-channel");
+async function checkBuild(page) {
+  const served = await page.evaluate(async () => {
+    const response = await fetch("/api/changelog", { cache: "no-store" });
+    if (!response.ok) return { status: response.status };
+    const data = await response.json();
+    const normalize = (value) => {
+      const parts = String(value ?? "").replace(/^v/i, "").split(".");
+      if (parts.length < 3 || parts.length > 5 || !parts.every((p) => /^\d+$/.test(p))) return null;
+      while (parts.length > 3 && Number(parts.at(-1)) === 0) parts.pop();
+      return parts.join(".");
+    };
+    const installed = data.channel === "alpha" ? data.alphaBuild?.version : data.channel === "develop" ? data.developBuild?.version : data.current;
+    return { status: response.status, channel: data.channel, buildVersion: normalize(installed), stableVersion: normalize(data.current), sidebarLabel: document.querySelector("#appVersion")?.textContent?.trim() };
+  });
+  console.log(`Build at ${baseUrl}: ${JSON.stringify(served)}`);
+  const wantVersion = option("expect-version");
+  const wantChannel = option("expect-channel");
+  if ((wantVersion && served.buildVersion !== wantVersion) || (wantChannel && served.channel !== wantChannel)) {
+    console.error(`Build mismatch: expected ${wantVersion || "any version"} / ${wantChannel || "any channel"}. Nothing captured.`);
+    await browser.close();
+    process.exit(3);
+  }
+  buildChecked = true;
+}
+
 // The login route is rate limited (10 per 15 minutes), so sign in once and reuse the session.
-let sessionState = null;
+let sessionState = option("storage-state-file") ? JSON.parse(await fs.readFile(path.resolve(option("storage-state-file")), "utf8")) : null;
 
 async function newVariantContext(variant) {
   const v = catalogue.variants[variant];
   const context = await browser.newContext({ viewport: browserConfig.viewport, deviceScaleFactor: browserConfig.deviceScaleFactor, colorScheme: v.mode, ...(sessionState ? { storageState: sessionState } : {}) });
-  await context.addInitScript(([themeKey, themeValue, styleKey, styleValue]) => {
+  await context.addInitScript(([themeKey, themeValue, styleKey, styleValue, extra]) => {
     try {
       localStorage.setItem(themeKey, themeValue);
       if (styleValue) localStorage.setItem(styleKey, styleValue); else localStorage.removeItem(styleKey);
+      for (const [key, value] of Object.entries(extra)) localStorage.setItem(key, value);
     } catch {}
-  }, [storage.mode.key, storage.mode.values[v.mode], storage.style.key, storage.style.values[v.style]]);
+  }, [storage.mode.key, storage.mode.values[v.mode], storage.style.key, storage.style.values[v.style], extraLocalStorage]);
   const page = await context.newPage();
   await page.goto(baseUrl + "/");
   if (await page.locator("#adminEmail").isVisible({ timeout: 4000 }).catch(() => false)) {
@@ -339,6 +376,7 @@ for (const variant of Object.keys(catalogue.variants)) {
   const todo = selected.filter((id) => catalogue.images[id].variants.includes(variant));
   if (!todo.length) continue;
   const { context, page } = await newVariantContext(variant);
+  if (!buildChecked) await checkBuild(page);
   for (const id of todo) {
     const entry = catalogue.images[id];
     const name = `${id}-${variant}.png`;
@@ -350,6 +388,8 @@ for (const variant of Object.keys(catalogue.variants)) {
       if (!entry.steps && /click|open|expanded|toggle|menu|dialog|tab|press/i.test(entry.state)) {
         row.note = "state has interactions but the entry has no `steps`; captured at the route only. ";
       }
+      // An entry can name its own `viewport` when its published frame is not the standard size.
+      await page.setViewportSize(entry.viewport || browserConfig.viewport);
       await page.goto(baseUrl + entry.route + (entry.hash ? `#${entry.hash}` : ""));
       await settle(page);
       await runSteps(page, entry.steps);

@@ -62,7 +62,7 @@ const extractSectionScreenshot = (body: unknown): SectionScreenshot | null => {
   return {
     darkSrc,
     lightSrc,
-    alt: readAttribute(attributes, "alt") || "Plembfin documentation screenshot",
+    alt: readAttribute(attributes, "alt") || "Plekt documentation screenshot",
     caption: readAttribute(attributes, "caption"),
   };
 };
@@ -122,14 +122,14 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
 }));
 ---
 
-<SiteLayout title="Documentation" description="Practical guides for installing, connecting, using, and maintaining Plembfin.">
+<SiteLayout title="Documentation" description="Practical guides for installing, connecting, using, and maintaining Plekt.">
   <div class="docs-shell">
     <DocsSidebar />
     <div class="docs-main">
       <header class="docs-intro">
         <div>
           <h1>Documentation</h1>
-          <p>Practical guides for installing Plembfin, understanding the sync model, using each page, and keeping your archive safe.</p>
+          <p>Practical guides for installing Plekt, understanding the sync model, using each page, and keeping your archive safe.</p>
         </div>
       </header>
 

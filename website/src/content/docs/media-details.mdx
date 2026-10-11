@@ -1,9 +1,9 @@
 ---
 title: Media details and actions
-description: Understand the detail page, watch dates, Fix Match, artwork, the Tools menu, and provider content.
+description: Understand the detail page, watch dates, Fix Match, artwork, the Options menu, and provider content.
 category: Media and discovery
 order: 5
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/modules/media-detail.js
   - public/modules/media-detail-context.js
@@ -64,12 +64,13 @@ actions together so a correction can be made against the correct record.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-detail-overview-dark.png"
   lightSrc="/assets/app-captures/media-detail-overview-light.png"
-  alt="Plembfin media detail action bar with Hide Spoilers, Force Sync, watch state, artwork, match, merge, delete, and info controls"
-  caption="The detail action bar groups presentation, sync, watch-state, artwork, matching, merge, delete, and information controls."
+  alt="Plekt movie detail header with artwork, watch status, facts, ratings, and playback links"
+  caption="The header brings title identity, canonical watch state, ratings, and playback links together."
 />
 
-The action bar at the top of a detail page contains the controls that apply to the current
-movie, show, or episode:
+The top action bar keeps personal actions visible. Open **Options** for watch-state,
+sync, artwork, matching, and information controls for the current title. TV pages also
+show **Hide Spoilers** beside the show-level actions:
 
 - **Hide Spoilers** hides the synopsis and artwork for unwatched episodes while you inspect
   a show. It changes presentation only.
@@ -98,8 +99,8 @@ card-level quick actions live in the [poster three-dot menu](/docs/libraries/#th
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-sections-overview-dark.png"
   lightSrc="/assets/app-captures/media-sections-overview-light.png"
-  alt="Plembfin Appearance menu on a media detail page showing independent section switches"
-  caption="The detail page's optional sections can be shown or hidden independently from Appearance."
+  alt="Plekt movie detail page showing the header, Cast, and Images sections"
+  caption="The movie detail page places provider content below the title header; Appearance controls which sections are shown."
 />
 
 Depending on the media type and configured providers, details can include:
@@ -130,8 +131,8 @@ Use the local match and availability information for that decision.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/tv-spoilers-off-dark.png"
   lightSrc="/assets/app-captures/tv-spoilers-off-light.png"
-  alt="Plembfin Reacher detail page with Season 4 expanded and Hide Spoilers unchecked"
-  caption="The TV detail action bar keeps the Hide Spoilers state beside the show-level controls while the expanded Season 4 shows its episode cards."
+  alt="Plekt Bridgerton detail page with Season 3 expanded and Hide Spoilers unchecked"
+  caption="With Hide Spoilers disabled, Bridgerton Season 3 shows its episode artwork, synopses, watched state, and actions."
 />
 
 TV show details add season and episode controls below the identity and progress summary:
@@ -144,7 +145,7 @@ TV show details add season and episode controls below the identity and progress 
   the mounted detail view visible instead of replacing it with a blank page.
 - Each season row reports its episode total, watched count, and known availability. A season
   with no availability is still a valid metadata record; it simply has no matching copy on
-  the connected media servers currently reporting to Plembfin.
+  the connected media servers currently reporting to Plekt.
 - Episode rows expose the watch, unwatch, date, and title-scoped sync actions appropriate to
   that episode.
 - Episode rows and history cards prefer the real stored episode name. If an episode name is
@@ -170,7 +171,7 @@ If the count is wrong, fix the show identity before applying a bulk action.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-watch-status-dark.png"
   lightSrc="/assets/app-captures/media-watch-status-light.png"
-  alt="Plembfin movie detail Watch Status section showing the watched date and completion percentage"
+  alt="Plekt movie detail Watch Status section showing the watched date and completion percentage"
   caption="The detail page keeps the canonical watched date and completion percentage alongside the movie identity."
 />
 
@@ -224,7 +225,7 @@ If none remain, the title becomes unwatched.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/fix-match-focus-dark.png"
   lightSrc="/assets/app-captures/fix-match-focus-light.png"
-  alt="Plembfin Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback"
+  alt="Plekt Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback"
   caption="Fix Match searches your library, TMDB, and (for TV) TheTVDB at once, and also provides a YouTube fallback for unmatched video content."
 />
 
@@ -284,7 +285,7 @@ If no reliable identity exists, use the
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-edit-images-focus-dark.png"
   lightSrc="/assets/app-captures/media-edit-images-focus-light.png"
-  alt="Plembfin artwork picker showing Poster, Logo, Background, and YouTube Show tabs with provider artwork choices"
+  alt="Plekt artwork picker showing Poster, Logo, Background, and YouTube Show tabs with provider artwork choices"
   caption="Edit Images separates artwork types and lets you choose a provider result or upload a custom image."
 />
 
@@ -311,7 +312,7 @@ Use Fix Match for that.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-action-row-dark.png"
   lightSrc="/assets/app-captures/media-action-row-light.png"
-  alt="Plembfin media detail page showing watchlist, custom-list, rating, and watch-state actions"
+  alt="Plekt media detail page showing watchlist, custom-list, rating, and watch-state actions"
   caption="Personal actions stay visible in the detail header and do not change canonical watch state."
 />
 
@@ -333,11 +334,11 @@ used by sync. A playlist can also sync to Plex, Emby, or Jellyfin. See the dedic
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-tools-focus-dark.png"
   lightSrc="/assets/app-captures/media-tools-focus-light.png"
-  alt="Plembfin media detail Tools menu showing Force Sync, Info, Edit Images, Fix Match, and Delete"
+  alt="Plekt media detail Tools menu showing Force Sync, Info, Edit Images, Fix Match, and Delete"
   caption="The shared Tools menu is a persistent title-scoped entry point for maintenance and evidence, separate from personal actions."
 />
 
-The permanent **Tools** menu is present on movie and TV detail pages. Open it when the
+The permanent **Options** menu is present on movie and TV detail pages. Open it when the
 current title needs maintenance rather than a Watchlist, Ratings, or Playlists change.
 
 #### Force Sync
@@ -349,20 +350,20 @@ does not replace the broader tools under [Settings → Sync](/docs/settings/sync
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-tools-dark.png"
   lightSrc="/assets/app-captures/settings-sync-tools-light.png"
-  alt="Plembfin Sync Tools settings showing repair, push, and pull controls"
+  alt="Plekt Sync Tools settings showing repair, push, and pull controls"
   caption="Sync Tools shows the wider repair and source-of-truth directions beside the title-level Force Sync menu."
 />
 
 For a single title:
 
 1. Open **Tools → Force Sync**.
-2. Choose the direction and destination shown by the dialog. Push sends Plembfin's recorded
+2. Choose the direction and destination shown by the dialog. Push sends Plekt's recorded
    watched or resume state out; pull imports the selected title's state from a connected server.
 3. Review the preview before confirming, especially when pushing because remote state can be
    overwritten.
 4. Check the result in [Sync Activity](/docs/sync-tools/).
 
-For wider scope, use **Repair Recent Items**, **Set Plembfin as Source of Truth**, or
+For wider scope, use **Repair Recent Items**, **Set Plekt as Source of Truth**, or
 **Import Watched Status** under [Settings → Sync → Sync tools](/docs/settings/sync/#sync-tools).
 
 #### Info
@@ -370,7 +371,7 @@ For wider scope, use **Repair Recent Items**, **Set Plembfin as Source of Truth*
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-info-focus-dark.png"
   lightSrc="/assets/app-captures/media-info-focus-light.png"
-  alt="Plembfin Info panel showing watch status, latest watched date, sync results, and audit details"
+  alt="Plekt Info panel showing watch status, latest watched date, sync results, and audit details"
   caption="Info is read-only evidence for the selected title, including per-destination results and audit details."
 />
 
@@ -413,7 +414,7 @@ Create a backup first and read [Backups and operations](/docs/operations/).
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-collections-recommendations-focus-dark.png"
   lightSrc="/assets/app-captures/media-collections-recommendations-focus-light.png"
-  alt="Plembfin media detail page showing a complete collection row and recommended movie row"
+  alt="Plekt media detail page showing a complete collection row and recommended movie row"
   caption="Collections and recommendations stay in complete horizontal rails; related titles open their own detail context."
 />
 

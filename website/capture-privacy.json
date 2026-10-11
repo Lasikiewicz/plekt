@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "policy": "Every image asset must be explicitly reviewed for user-identifiable information. Usernames, email addresses, custom server or library identifiers, hostnames, IP addresses, URLs, tokens, account IDs, and private media labels must be blurred in the image before publication. Provider Reviews and public/example Playlists are approved unblurred content and do not need blurring solely because they appear in those sections. Public media titles, cast names, provider ratings, and watch dates are not user-identifiable by themselves and should remain visible.",
-  "reviewedAt": "2026-09-28",
+  "policy": "Every image is reviewed for user-identifiable information. Blur only visible API keys, tokens, passwords, and other secrets. Usernames, account names, server and library names, URLs without secrets, playlist titles, backup filenames, account identifiers, public media facts, reviews and watch dates remain visible under the user decision of 27 September 2026, reaffirmed for this release.",
+  "reviewedAt": "2026-10-11",
   "derivedAssetPrefixes": [
     "public/assets/optimized/"
   ],
@@ -398,6 +398,12 @@
     "public/assets/icons/jellyfin.svg",
     "public/assets/icons/plembfin-light.png",
     "public/assets/icons/plembfin.png",
+    "public/assets/icons/plekt-light.png",
+    "public/assets/icons/plekt.png",
+    "public/assets/optimized/icons/plekt-184.png",
+    "public/assets/optimized/icons/plekt-184.webp",
+    "public/assets/optimized/icons/plekt-light-184.png",
+    "public/assets/optimized/icons/plekt-light-184.webp",
     "public/assets/icons/plex.svg",
     "public/assets/icons/tmdb.svg",
     "public/assets/icons/trakt.svg",

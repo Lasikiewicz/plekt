@@ -1,9 +1,9 @@
 ---
 title: The sync model
-description: How Plembfin records canonical state, routes changes, and explains delivery.
+description: How Plekt records canonical state, routes changes, and explains delivery.
 category: Understand the app
 order: 2
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - docs/architecture.md
   - docs/webhooks.md
@@ -22,16 +22,16 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-Plembfin sits between your media services.
+Plekt sits between your media services.
 
-Each service can report a watched change or resume position, but Plembfin keeps the local
+Each service can report a watched change or resume position, but Plekt keeps the local
 record that lets the rest of the stack agree. Discovery and local private actions use
 that same instance without becoming watched events. Personal Rating Sync and Plex Watchlist
 Sync are separate optional queues, with their own providers and recovery controls.
 
 ## The canonical record
 
-When Plembfin receives a valid event, it normalizes the title and identifiers, records the
+When Plekt receives a valid event, it normalizes the title and identifiers, records the
 source, and updates local watch state.
 
 A record can include:
@@ -51,8 +51,8 @@ when the media is added later.
 
 <ScreenshotFigure
   src="/assets/optimized/plembfin-hub.svg"
-  alt="Diagram connecting Plembfin to media servers, Trakt, metadata providers, and request tools"
-  caption="Plembfin gives each service a focused role while the local archive remains the point of comparison."
+  alt="Diagram connecting Plekt to media servers, Trakt, metadata providers, and request tools"
+  caption="Plekt gives each service a focused role while the local archive remains the point of comparison."
 />
 
 ## The event lifecycle
@@ -60,14 +60,14 @@ when the media is added later.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/sync-activity-focused-dark.png"
   lightSrc="/assets/app-captures/sync-activity-focused-light.png"
-  alt="Plembfin Sync Activity view showing event sources, destinations, and outcomes"
+  alt="Plekt Sync Activity view showing event sources, destinations, and outcomes"
   caption="Sync Activity is the visible end of the event lifecycle, with a result for each destination."
 />
 
 The normal path for a watched or resume update is:
 
-1. Plex, Emby, Jellyfin, Trakt, or a Plembfin action produces an event.
-2. Plembfin validates the payload and normalizes its identifiers.
+1. Plex, Emby, Jellyfin, Trakt, or a Plekt action produces an event.
+2. Plekt validates the payload and normalizes its identifiers.
 3. The event is written to local history and playstate.
 4. Matching connected destinations are selected.
 5. Each delivery is queued with retry and duplicate protection.
@@ -81,7 +81,7 @@ A successfully recorded event can therefore have one successful destination and 
 destination at the same time.
 
 Ratings and tiny progress updates do not count as completed watches. Completed playback and
-valid replays on a later day remain watch events. When a Jellyfin event is processed, Plembfin
+valid replays on a later day remain watch events. When a Jellyfin event is processed, Plekt
 keeps its native item ID available for the corresponding provider update.
 
 Personal ratings and Watchlist changes do not enter this watched-state event path. Rating sync
@@ -93,7 +93,7 @@ account-level Watchlist as its only provider and keeps the local movie/show list
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-tuning-dark.png"
   lightSrc="/assets/app-captures/settings-sync-tuning-light.png"
-  alt="Plembfin Sync Tuning settings showing watched-flag policy, playback thresholds, sync timing, and Up Next provider sync"
+  alt="Plekt Sync Tuning settings showing watched-flag policy, playback thresholds, sync timing, and Up Next provider sync"
   caption="Sync Tuning defines watched-state policy, playback thresholds, resume retention, and Up Next provider sync."
 />
 
@@ -101,7 +101,7 @@ Watched state is not the same as a resume marker.
 
 A stopped item can have a resume position without counting as watched.
 
-When playback passes the configured watched threshold (90% by default), Plembfin records a
+When playback passes the configured watched threshold (90% by default), Plekt records a
 completed watch and propagates it.
 
 If a media server reports Mark Played without enough timing information to choose a trustworthy
@@ -125,27 +125,27 @@ different operations, even when they happen close together.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/history-dark.png"
   lightSrc="/assets/app-captures/history-light.png"
-  alt="Plembfin History page showing separate watch records for repeated viewing"
+  alt="Plekt History page showing separate watch records for repeated viewing"
   caption="History keeps genuine rewatches visible while collapsing duplicate delivery echoes."
 />
 
-Plembfin keeps separate watch events so a real rewatch is not lost.
+Plekt keeps separate watch events so a real rewatch is not lost.
 
 Duplicate delivery of the same event is collapsed instead of creating noisy history rows.
 
 Retrying a network request is therefore safe, while a new play at a later time remains
 visible in History and Stats.
 
-When a Trakt write has a temporary failure, Plembfin retries it. Before retrying a watched
+When a Trakt write has a temporary failure, Plekt retries it. Before retrying a watched
 play, it checks Trakt history near that play's recorded time; if Trakt already accepted the
-first attempt, Plembfin treats the destination as delivered instead of adding another play.
+first attempt, Plekt treats the destination as delivered instead of adding another play.
 
 ## Webhooks, polling, and scheduled work
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-webhooks-setup-dark.png"
   lightSrc="/assets/app-captures/settings-webhooks-setup-light.png"
-  alt="Plembfin Webhooks setup guide showing platform event sender instructions"
+  alt="Plekt Webhooks setup guide showing platform event sender instructions"
   caption="Webhook setup provides fast inbound events while scheduled polling supplies reconciliation."
 />
 
@@ -212,16 +212,16 @@ Quick links:
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-overview-focused-dark.png"
   lightSrc="/assets/app-captures/settings-sync-overview-focused-light.png"
-  alt="Plembfin Sync settings showing the boundary between local state and destination operations"
+  alt="Plekt Sync settings showing the boundary between local state and destination operations"
   caption="Sync settings make the local record, timing rules, and destination operations explicit."
 />
 
-- The server running Plembfin must reach the media-server URLs. Browser reachability alone is
+- The server running Plekt must reach the media-server URLs. Browser reachability alone is
   not enough.
 - Webhook URLs need the full secret token or an accepted authentication header.
-- A local Plembfin backup protects Plembfin's archive; it is not a replacement for each
+- A local Plekt backup protects Plekt's archive; it is not a replacement for each
   media server's own database backup.
-- Disable Emby or Jellyfin Trakt plugins when Plembfin is the Trakt bridge. Two writers can
+- Disable Emby or Jellyfin Trakt plugins when Plekt is the Trakt bridge. Two writers can
   reintroduce stale state or create loops.
 - Metadata and artwork failures should not erase the local watch archive; they affect
   enrichment and presentation rather than the canonical event record.

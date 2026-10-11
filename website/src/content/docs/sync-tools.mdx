@@ -3,7 +3,7 @@ title: Sync Activity and tools
 description: Read grouped per-destination results, retry safely, run repairs, and understand match reports.
 category: Sync and maintain
 order: 8
-sourceVersion: "1.3.1"
+sourceVersion: "2.0.0"
 sourcePaths:
   - public/index.html
   - public/modules/sync-activity.js
@@ -63,7 +63,7 @@ group.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/sync-activity-focused-dark.png"
   lightSrc="/assets/app-captures/sync-activity-focused-light.png"
-  alt="Plembfin Sync Activity showing grouped destination results and the current issue state"
+  alt="Plekt Sync Activity showing grouped destination results and the current issue state"
   caption="Sync Activity keeps each destination result and its recorded reason visible for review."
 />
 
@@ -110,7 +110,7 @@ row.
 ## Retry all failed
 
 **Retry all failed** retries failed or skipped items across the full history, not only the
-visible page. Plembfin discovers the real total before confirming and runs the retry as a
+visible page. Plekt discovers the real total before confirming and runs the retry as a
 background job that survives navigation, reloads, and a closed tab.
 
 It runs as a background job, so it can continue while the tab is closed or you navigate
@@ -135,7 +135,7 @@ is repaired or deliberately skipped.
 ### Trakt show-match repair
 
 When an episode's Trakt result is `not_found`, the saved show identity may no longer resolve in
-Trakt. Open the affected show group and choose **Fix show match & retry all**. Plembfin repairs
+Trakt. Open the affected show group and choose **Fix show match & retry all**. Plekt repairs
 the show identity, rematches every stored episode, warms the corrected TV metadata and posters,
 and retries the current failed entries. The individual **Fix show match** action is available
 when only one result needs attention.
@@ -150,7 +150,7 @@ events are preserved, while retry actions operate only on the newest unresolved 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-sync-tools-dark.png"
   lightSrc="/assets/app-captures/settings-sync-tools-light.png"
-  alt="Plembfin Sync Tools settings showing repair and force-sync controls"
+  alt="Plekt Sync Tools settings showing repair and force-sync controls"
   caption="Sync Tools contains recent repairs, full watch-state sync, and deliberate import or source-of-truth actions."
 />
 
@@ -180,7 +180,7 @@ Completed batches remain applied.
 
 Force Sync has two deliberate directions:
 
-- **Set Plembfin as Source of Truth** replays local watched and resume state to one selected
+- **Set Plekt as Source of Truth** replays local watched and resume state to one selected
   destination or all destinations, overwriting the selected destination's state.
 - **Import Watched Status** reads watched state from one selected media server or all
   configured servers and adds missing records locally. It does not send those changes back
@@ -198,8 +198,8 @@ items; the current canonical remove/add pair is allowed to finish before queued 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/sync-activity-issues-focused-dark.png"
   lightSrc="/assets/app-captures/sync-activity-issues-focused-light.png"
-  alt="Plembfin Sync Activity showing current sync issues, failed groups, and the Issues only filter"
-  caption="Sync Activity keeps destination failures and cross-platform match issues visible for review and retry."
+  alt="Plekt Sync Activity showing current sync issues, failed groups, and the Issues only filter"
+  caption="Issues only filters Sync Activity to current problems and shows the issue and media-group counts beside the failed groups."
 />
 
 Open [Settings → Sync → Sync Issues](/docs/settings/sync/#sync-issues-and-match-report) for unresolved jobs and the
@@ -233,7 +233,7 @@ Adding the title to that server allows a later catch-up to apply the local state
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-logs-controls-dark.png"
   lightSrc="/assets/app-captures/settings-logs-controls-light.png"
-  alt="Plembfin Logs settings showing log filters and diagnostic controls"
+  alt="Plekt Logs settings showing log filters and diagnostic controls"
   caption="Logs provides filters and controls for reviewing, downloading, and clearing diagnostic output."
 />
 
