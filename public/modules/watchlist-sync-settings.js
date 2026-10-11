@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=1.3.1.2.1";
-import { escapeHtml } from "./utils.js?v=1.3.1.2.1";
+import { state } from "./state.js?v=1.3.1.2.2";
+import { escapeHtml } from "./utils.js?v=1.3.1.2.2";
 
 // Plex-only: Emby and Jellyfin have no watchlist concept, so they were retired
 // from this projection. See the note on WATCHLIST_SYNC_PROVIDERS in configStore.js.

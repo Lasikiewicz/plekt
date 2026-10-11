@@ -3,11 +3,11 @@
 // "Missing from <app>" notes, held-change banners, and Recently deleted.
 // personal-media.js imports this module one way and injects its helpers
 // through initPlaylists(), so there is no import cycle.
-import { state } from "./state.js?v=1.3.1.2.1";
-import { episodeCode, escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.2.1";
-import { openEpisodePicker } from "./playlist-episode-picker.js?v=1.3.1.2.1";
-import { openPlaylistImportDialog } from "./playlist-import.js?v=1.3.1.2.1";
-import { bindRuleEditor, choiceCardHtml, handleRuleClick, isAutomaticPlaylist, playlistRefreshIndicatorHtml, playlistRuleHeadingHtml, playlistRuleMenuItemsHtml, playlistRulePanelHtml, readRuleFromForm, ruleEditorHtml } from "./playlist-rules.js?v=1.3.1.2.1";
+import { state } from "./state.js?v=1.3.1.2.2";
+import { episodeCode, escapeAttribute, escapeHtml, platformIconUrl } from "./utils.js?v=1.3.1.2.2";
+import { openEpisodePicker } from "./playlist-episode-picker.js?v=1.3.1.2.2";
+import { openPlaylistImportDialog } from "./playlist-import.js?v=1.3.1.2.2";
+import { bindRuleEditor, choiceCardHtml, handleRuleClick, isAutomaticPlaylist, playlistRefreshIndicatorHtml, playlistRuleHeadingHtml, playlistRuleMenuItemsHtml, playlistRulePanelHtml, readRuleFromForm, ruleEditorHtml } from "./playlist-rules.js?v=1.3.1.2.2";
 
 export const PLAYLIST_PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
 const PLAYLIST_KIND_LABELS = { movie: "Movies", tv: "TV Shows", mixed: "Mixed" };

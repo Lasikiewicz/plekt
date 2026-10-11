@@ -1,40 +1,30 @@
 {
-  "version": "1.3.1.2.1",
-  "build": 1,
+  "version": "1.3.1.2.2",
+  "build": 2,
   "resetCommit": "185c523623f6c1dda2b2bbd226e242f22a8c8111",
-  "updatedAt": "2026-10-11T13:05:59.810Z",
+  "updatedAt": "2026-10-11T13:06:17.239Z",
   "entries": [
     {
-      "build": 1,
-      "date": "2026-10-11T13:05:59.810Z",
-      "commit": "d85a9ea9bdd774b529a7557cd4659f9dd038618d",
-      "message": "This update includes add the Plekt logo and icon set, redraw the Plekt lettering in the old logo's style, accept old Plembfin names alongside the new Plekt ones, and rename the app to Plekt.",
+      "build": 2,
+      "date": "2026-10-11T13:06:17.239Z",
+      "commit": "2b8ae2cadf53d4af32256248219aa0863b57e650",
+      "message": "Feature - Rename the app to Plekt",
       "author": "Lasikiewicz",
       "details": [
-        "New Plekt wordmark in the sidebar, sign-in, setup and About pages, in dark and light",
+        "New Plekt wordmark in the sidebar, sign-in, setup and About pages, in dark and light, with the old logo's heavier lettering and diagonal cut",
         "New app icon for the browser tab, home screen and Windows, with a dark background that fills the icon on phones",
         "New icon for the app's own entries in watch rows and Force Sync",
-        "The Plekt wordmark and icons now use the heavier lettering of the old logo, with its diagonal cut",
-        "Settings supplied as PLEMBFIN_ environment variables keep working; the same settings can now be given under PLEKT_ names, and the server log notes once at startup when an old name is in use",
-        "Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header",
-        "New backups are named plekt-backup and plekt-watch-history; backups made earlier still restore, still appear in local and remote lists, and still count toward retention",
-        "Remote backup retention now orders files by the date in their name, so older-named files are removed first",
-        "New installs store their data in plekt.db; an existing plembfin.db is always kept and used",
-        "The app, sign-in, setup, About pages and browser tab now say Plekt throughout, with the new wordmark and icons",
+        "The app, sign-in, setup, About pages and browser tab now say Plekt throughout",
         "Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names",
+        "Webhooks accept the secret in an X-Plekt-Webhook-Secret header as well as the older X-Plembfin-Webhook-Secret header",
         "New backups are named plekt-backup and plekt-watch-history; backups made earlier still restore, still appear in lists and still count toward retention",
+        "Remote backup retention orders files by the date in their name, so older-named files are removed first",
         "New installs store data in plekt.db; an existing plembfin.db is kept and used",
         "Docker images publish under the plekt name, and the old plembfin image name keeps receiving releases with an in-app notice about the change",
         "The Windows installer moves an existing Plembfin service and data folder to the Plekt names",
         "The default published port moves from 5055 to 5056 (set with PLEKT_PUBLISHED_PORT), and a banner warns when a Jellyfin webhook still targets the old port",
         "In-app help links point to plekt.net",
         "Audit history payloads are size-limited so the database grows more slowly, and unexpected process errors are handled more safely"
-      ],
-      "messageFragments": [
-        "Feature - Add the Plekt logo and icon set",
-        "Fix - Redraw the Plekt lettering in the old logo's style",
-        "Feature - Accept old Plembfin names alongside the new Plekt ones",
-        "Feature - Rename the app to Plekt"
       ]
     }
   ]

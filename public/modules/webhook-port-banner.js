@@ -1,9 +1,9 @@
 // Dashboard banner for the startup webhook port check (server/src/utils/webhookPortCheck.js).
 // Shown while a webhook still points at an old port. Dismissal is remembered per
 // findings text, so a new or changed finding shows the banner again.
-import { state } from "./state.js?v=1.3.1.2.1";
-import { escapeHtml, isDemoMode } from "./utils.js?v=1.3.1.2.1";
-import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.1";
+import { state } from "./state.js?v=1.3.1.2.2";
+import { escapeHtml, isDemoMode } from "./utils.js?v=1.3.1.2.2";
+import { buildAuthHeaders } from "./auth.js?v=1.3.1.2.2";
 
 const DISMISS_KEY = "plekt.webhookPortBannerDismissed";
 let checkedThisLoad = false;
