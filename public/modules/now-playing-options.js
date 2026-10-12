@@ -1,5 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.0";
-import { state } from "./state.js?v=2.0.0.0.0";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.1";
+import { state } from "./state.js?v=2.0.0.0.1";
 
 // The Now Playing / Up Next panel options (cog beside the Dashboard heading).
 // Saved server-wide in the `nowPlaying` config section, so every device shows

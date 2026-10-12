@@ -1,7 +1,19 @@
 {
-  "version": "2.0.0.0.0",
-  "build": 0,
+  "version": "2.0.0.0.1",
+  "build": 1,
   "resetCommit": "37edb9abccb543d77dc2b6eb28e7852f628db4d4",
-  "updatedAt": "2026-10-11T21:31:10.551Z",
-  "entries": []
+  "updatedAt": "2026-10-12T08:01:25.185Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-10-12T08:01:25.185Z",
+      "commit": "b422ecf08b78a1cfb6fc4fc82216499328186317",
+      "message": "Fix - Keep dashboard cards readable in Safari",
+      "author": "Lasikiewicz",
+      "details": [
+        "Keep dashboard history card details visible beside episode artwork across desktop widths.",
+        "Give the playlist import dialog more room for its app list."
+      ]
+    }
+  ]
 }
