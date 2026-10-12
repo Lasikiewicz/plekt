@@ -14430,13 +14430,14 @@ html.light-mode #timeline-view .part-watched-app-badge {
   }
 }
 
-/* At 641-760px the rows lose their fixed height and the cards keep the
-   poster beside the text, so a poster sized from the card height grows with
-   the wrapping text until it fills the card. Give it a fixed width instead. */
-@media (min-width: 641px) and (max-width: 760px) {
+/* Keep a fixed poster column at desktop widths. Safari can derive an automatic
+   flex basis from a landscape episode still, then let the poster grow with the
+   card's wrapping text until the details are squeezed out. */
+@media (min-width: 641px) {
   #timeline-view .dashboard-history-card-row .dashboard-history-page-card > .history-card-poster-wrapper {
     flex: 0 0 7.5rem;
     width: 7.5rem;
+    min-width: 7.5rem;
     aspect-ratio: auto;
   }
 }
@@ -22190,10 +22191,15 @@ html.light-mode .personal-media-dialog-head .icon-button:hover {
 }
 
 /* "Import from apps" dialog (playlist-import.js). */
+.personal-media-dialog:has(.playlist-import) {
+  width: min(100%, 46rem);
+  max-height: 90vh;
+}
+
 .playlist-import-apps {
   display: grid;
   gap: 0.75rem;
-  max-height: 60vh;
+  max-height: calc(90vh - 15rem);
   overflow-y: auto;
 }
 
