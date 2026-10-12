@@ -1,4 +1,5 @@
 ---
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import captureManifest from "../generated/capture-manifest.json";
@@ -104,10 +105,29 @@ const readDimensions = (value: string | undefined): { width: number; height: num
 const dimensions: { width?: number; height?: number } = readDimensions(darkSrc) || readDimensions(fallbackSource) || {};
 const resolvedWidth = width || dimensions.width;
 const resolvedHeight = height || dimensions.height;
+// Assets are served with a one-year immutable cache, so every image URL carries a hash of
+// its source file. A retaken capture then gets a new URL instead of a stale cached copy.
+const versionCache = new Map<string, string>();
+const sourceVersion = (value: string | undefined) => {
+  if (!value || !value.startsWith("/")) return "";
+  if (versionCache.has(value)) return versionCache.get(value) ?? "";
+  const absolutePath = path.join(process.cwd(), "public", value.replace(/^\//, ""));
+  const version = fs.existsSync(absolutePath)
+    ? crypto.createHash("sha256").update(fs.readFileSync(absolutePath)).digest("hex").slice(0, 10)
+    : "";
+  versionCache.set(value, version);
+  return version;
+};
+const withVersion = (url: string | undefined, source: string | undefined = url) => {
+  const version = sourceVersion(source);
+  return url && version ? `${url}?v=${version}` : url;
+};
+const variantUrl = (value: string | undefined, variantWidth: number, format: string) =>
+  withVersion(getImageVariantPath(value, variantWidth, format), value);
 const variantWidths = (value: string | undefined) =>
   getImageVariantWidths(readDimensions(value)?.width || width || 1440);
 const srcsetFor = (value: string | undefined, format: string) =>
-  variantWidths(value).map((variantWidth) => `${getImageVariantPath(value, variantWidth, format)} ${variantWidth}w`).join(", ");
+  variantWidths(value).map((variantWidth) => `${variantUrl(value, variantWidth, format)} ${variantWidth}w`).join(", ");
 const darkVariantWidths = variantWidths(darkSrc);
 const lightVariantWidths = variantWidths(lightSrc);
 const sourceVariantWidths = variantWidths(fallbackSource);
@@ -116,28 +136,28 @@ const useOptimizedRaster = Boolean(optimized)
   && (!hasThemePair || isOptimizableRasterPath(lightSrc))
   && (!hasModernPair || (isOptimizableRasterPath(modernDarkSrc) && isOptimizableRasterPath(modernLightSrc)));
 const darkFallback = useOptimizedRaster
-  ? getImageVariantPath(darkSrc, darkVariantWidths.at(-1) || 1440, "webp")
-  : darkSrc;
+  ? variantUrl(darkSrc, darkVariantWidths.at(-1) || 1440, "webp")
+  : withVersion(darkSrc);
 const lightFallback = useOptimizedRaster
-  ? getImageVariantPath(lightSrc, lightVariantWidths.at(-1) || 1440, "webp")
-  : lightSrc;
+  ? variantUrl(lightSrc, lightVariantWidths.at(-1) || 1440, "webp")
+  : withVersion(lightSrc);
 const darkSrcset = useOptimizedRaster ? srcsetFor(darkSrc, "webp") : undefined;
 const lightSrcset = useOptimizedRaster ? srcsetFor(lightSrc, "webp") : undefined;
 const optimizedFallbackFor = (value: string | undefined) =>
-  value && useOptimizedRaster ? getImageVariantPath(value, variantWidths(value).at(-1) || 1440, "webp") : value;
+  value && useOptimizedRaster ? variantUrl(value, variantWidths(value).at(-1) || 1440, "webp") : withVersion(value);
 const modernDarkFallback = optimizedFallbackFor(modernDarkSrc);
 const modernLightFallback = optimizedFallbackFor(modernLightSrc);
 const modernDarkSrcset = hasModernPair && useOptimizedRaster ? srcsetFor(modernDarkSrc, "webp") : undefined;
 const modernLightSrcset = hasModernPair && useOptimizedRaster ? srcsetFor(modernLightSrc, "webp") : undefined;
 const useOptimizedSingleRaster = Boolean(optimized) && !hasThemePair && isOptimizableRasterPath(fallbackSource);
 const singleFallback = useOptimizedSingleRaster
-  ? getImageVariantPath(fallbackSource, sourceVariantWidths.at(-1) || 1440, "webp")
-  : fallbackSource;
+  ? variantUrl(fallbackSource, sourceVariantWidths.at(-1) || 1440, "webp")
+  : withVersion(fallbackSource);
 const singleSrcset = useOptimizedSingleRaster ? srcsetFor(fallbackSource, "webp") : undefined;
 const optimizedLightboxSource = (value: string | undefined) => {
-  if (!value || !isOptimizableRasterPath(value)) return value;
+  if (!value || !isOptimizableRasterPath(value)) return withVersion(value);
   const width = getImageVariantWidths(readDimensions(value)?.width || 1440).at(-1) || 1440;
-  return getImageVariantPath(value, width, "webp");
+  return variantUrl(value, width, "webp");
 };
 const linkHref = optimizedLightboxSource(lightboxSrc)
   || (hasModernPair ? optimizedLightboxSource(modernDarkSrc) : undefined)
@@ -234,7 +254,7 @@ const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
         </picture>
       ) : (
         <img
-          src={hasModernPair ? modernDarkSrc : hasThemePair ? darkSrc : fallbackSource}
+          src={hasModernPair ? modernDarkFallback : hasThemePair ? darkFallback : singleFallback}
           alt={alt}
           width={resolvedWidth}
           height={resolvedHeight}
@@ -243,10 +263,10 @@ const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
           decoding="async"
           fetchpriority={fetchpriority}
           data-theme-image={hasThemePair ? "true" : undefined}
-          data-dark-src={hasThemePair ? darkSrc : undefined}
-          data-light-src={hasThemePair ? lightSrc : undefined}
-          data-modern-dark-src={hasModernPair ? modernDarkSrc : undefined}
-          data-modern-light-src={hasModernPair ? modernLightSrc : undefined}
+          data-dark-src={hasThemePair ? darkFallback : undefined}
+          data-light-src={hasThemePair ? lightFallback : undefined}
+          data-modern-dark-src={hasModernPair ? modernDarkFallback : undefined}
+          data-modern-light-src={hasModernPair ? modernLightFallback : undefined}
         />
       )}
     </div>

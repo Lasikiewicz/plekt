@@ -144,7 +144,15 @@ The gate has three phases, all checked against the same approved release build:
    not the `develop` app. Stop after writing the capture list and hand it to phase B.
 2. **B — capture only:** Give a cheaper agent the one-line handoff naming `captures.md`.
    It reads that file alone, uses the still-running approved app, and saves only into its
-   staging folder. It does not edit `website/` or commit. Failed images remain failed.
+   staging folder. It runs the capture tool first (`node scripts/recapture.mjs` with
+   `--ids-file`, `--base-url`, `--expect-version`, `--expect-channel` and `--out`; sign-in
+   comes from `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which it sets for the tool call from
+   `.claude/local-environment.md`) and takes by hand only the images the tool could not.
+   Images that need a live state (muted playback for Now Playing, a pending Manual Watch
+   review item, a dismissed Up Next item) are produced in the local test environment that
+   file describes and then taken with the tool's `--live=<state>` option. An image with a
+   non-standard frame size has its own `viewport` in `website/capture-catalogue.json`.
+   It does not edit `website/` or commit. Failed images remain failed.
 3. **C — place and check:** Review every staged image and its composition/privacy, place
    accepted images and captions, update the privacy manifest, run the website checks, and
    commit the completed website work on local `develop`. Only after phase C does the release

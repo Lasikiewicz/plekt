@@ -7,7 +7,9 @@ publishing paths:
   separate `plembfin-website` Cloudflare Pages project. It does not push GitHub, run
   GitHub Actions, or rebuild the Plekt application.
 - **"Force to main"** remains the release-driven path for publishing the reviewed
-  website tree alongside an application release.
+  website tree alongside an application release. After the release is pushed and the demo
+  is verified, it deploys the website from the release commit with the same Wrangler
+  command and checks the live site (skill step 8b).
 
 The public application demo is hosted on the dedicated Oracle Cloud Compute instance;
 the existing Cloudflare Pages project named `plembfin` is not part of the application
@@ -210,8 +212,13 @@ release staging branches rather than public Pages deployment sources.
 
 ## 7. Operate and recover
 
-- The `Force to main` workflow's push to `main` creates the production deployment
-  automatically.
+- The `Force to main` workflow publishes the production deployment itself with Wrangler
+  after its push to `main`, then verifies the live site; it does not rely on the
+  Git-connected build.
+- `/assets/*` is cached as immutable for a year, so `ScreenshotFigure` adds a `?v=` hash of
+  the source file to every screenshot URL. A retaken capture then gets a new address
+  instead of a stale cached copy. Images referenced outside that component have no hash:
+  rename the file when its content changes.
 - Ordinary pushes to `develop` and `alpha` do not create Pages deployments.
 - Keep the Cloudflare GitHub app access scoped to the repository and review build logs
   for accidental secret output.

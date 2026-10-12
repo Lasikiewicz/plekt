@@ -1,6 +1,6 @@
 ---
 name: force-to-main
-description: "Promote Plekt alpha's current tip onto main as a single release when the user says \"Force to main\" exactly, or resume a named phase B/C handoff. Get changelog and running-build approval first, complete website phases A/B/C against that build, then promote, obtain final approval, force-push main, and verify the OCI demo. Never push develop."
+description: "Promote Plekt alpha's current tip onto main as a single release when the user says \"Force to main\" exactly, or resume a named phase B/C handoff. Get changelog and running-build approval first, complete website phases A/B/C against that build, then promote, obtain final approval, force-push main, verify the OCI demo, and publish the website. Never push develop."
 ---
 
 # Force to main
@@ -32,7 +32,7 @@ so the user can follow the stage at a glance:
 - [ ] 7 Release promoted and committed locally (website carried in)
 - [ ] 8 Final review: release build presented for the user
 - [ ] 9 Force-push main and publish workflow
-- [ ] 10 OCI demo verified, local develop reconciled
+- [ ] 10 OCI demo verified, website published, local develop reconciled
 ```
 
 ### 0 - Pre-checks, release lock, and run plan
@@ -227,6 +227,22 @@ states, style/mode, viewport width and height, framing, scroll container and com
 instructions, key risk, and intended website section/caption. The file must stand alone:
 copy in all capture and privacy instructions rather than asking phase B to read this skill,
 the run summary, local credentials, or website docs. Keep credentials out of the file.
+Phase B takes the list with the capture tool first and uses a browser only for images the
+tool could not take: write the image ids, one per line, to `capture-ids.txt` beside
+`captures.md`, fill the tool command in the template (`--ids-file`, `--base-url` for the
+candidate's port, `--expect-version`, `--expect-channel=release`, `--out` to
+`captures/auto`), and name each entry that needs a live state. The capture tool
+(`website/scripts/recapture.mjs`) is the capture method on every Force to main run; a
+browser by hand is only the fallback for a frame the tool fails twice. The tool signs in
+with `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which phase B sets for its own tool call from
+`.claude/local-environment.md` (the template carries the command), so the user is not
+asked to set anything. Live states (`playback`, `manual-review-item`, `dismissed-up-next`)
+are created by phase B in that file's local test environment, as the template describes:
+muted playback in the connected test media apps, an episode marked played in a test app
+for a review item. They are not a reason to skip or fail an image. An image whose
+published frame is not the standard 1440 x 683 gets its own `viewport` in
+`website/capture-catalogue.json` (for example `manual-watch-review`, 2560 x 1290), so the
+tool takes it at true size; fix the catalogue entry rather than capturing by hand.
 Verify the browser session and capture-tool/dependency availability before handing off;
 if sign-in cannot be shared, record that phase B must report the login blocker.
 Verify the served channel/build through `/api/changelog` as described in the capture
@@ -244,7 +260,9 @@ Force to main v<version>, phase B (capture only): read plan/active/force-to-main
 
 When invoked with **phase B (capture only)**, read only the named `captures.md` for
 instructions and execute its list; do not restart the full release procedure or acquire,
-release, or renew its lock. Use the approved running app, save project outputs only in
+release, or renew its lock. Run its capture tool command first, create the live states it
+names in the local test environment and take those with the tool too, and take by hand
+only what the tool could not. Use the approved running app, save project outputs only in
 the staging folder, do not edit `website/` or commit, and write `captures/results.md`
 with a pass/fail table, source/version checks, actual dimensions/scroll positions, and
 privacy findings. A failed item stays failed; do not substitute a different view or build.
@@ -447,9 +465,41 @@ and report the release as incomplete rather than claiming that the demo is curre
 Do not call `npm run demo:assets` or `npm run demo:seed` as part of this refresh; those
 commands prepare fixture content and are separate from pulling the released image.
 
+### 8b - Publish the reviewed website
+
+The user's final approval in step 6 covers this publish; do not ask again (user decision,
+12 October 2026). Run it once the release workflow and the demo check have passed, from
+the main checkout while it still holds the pushed release commit, so the live website is
+exactly the reviewed tree:
+
+```bash
+git status --short            # must be empty: publish the release commit, nothing else
+cd website
+npm run check:deploy
+npm run build
+npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Publish Plekt website for v<version>" --commit-dirty=true
+```
+
+Do not deploy when a check or the build fails, and never deploy the `plembfin`
+application Pages project. If Wrangler needs a Cloudflare login, stop and ask the user to
+complete it; do not treat the Git-connected Pages build as a substitute.
+
+Then verify the live site, not only the returned `pages.dev` URL:
+
+- `https://plekt.net/changelog/` shows the new version, and every guide link in the new
+  changelog entry returns 200.
+- On the homepage, fetch each screenshot URL the live page references and compare it with
+  the local file of the same path in `website/public/`. Each URL must carry its `?v=`
+  content hash and return the same bytes. Assets are cached as immutable for a year, so a
+  retaken image that keeps an unversioned URL stays stale on the live site (v2.0.0 showed
+  the old logo in the large light images for this reason).
+
+If the publish or a check fails, report the release as incomplete: the application is
+released but the website is not current.
+
 ### 9 - Point local develop at the release (local only, never pushed)
 
-Once the workflow and the demo check have passed, move local `develop` onto the release
+Once the workflow, the demo check, and the website publish have passed, move local `develop` onto the release
 commit so all further work starts from the released build. Do not merge, and do not push
 `develop`: it reaches `origin/develop` only with the user's next "Push to git", together
 with their new work.
