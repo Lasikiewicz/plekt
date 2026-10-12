@@ -1,18 +1,25 @@
 {
-  "version": "2.0.0.0.1",
-  "build": 1,
+  "version": "2.0.0.0.2",
+  "build": 2,
   "resetCommit": "37edb9abccb543d77dc2b6eb28e7852f628db4d4",
-  "updatedAt": "2026-10-12T08:01:25.185Z",
+  "updatedAt": "2026-10-12T09:07:31.617Z",
   "entries": [
     {
-      "build": 1,
-      "date": "2026-10-12T08:01:25.185Z",
-      "commit": "b422ecf08b78a1cfb6fc4fc82216499328186317",
-      "message": "Fix - Keep dashboard cards readable in Safari",
+      "build": 2,
+      "date": "2026-10-12T09:07:31.617Z",
+      "commit": "2153ecc63036a8cedcaf2c3cd301e230f220271e",
+      "message": "This update includes keep dashboard cards readable in Safari and add a text size slider to the sidebar Appearance panel.",
       "author": "Lasikiewicz",
       "details": [
         "Keep dashboard history card details visible beside episode artwork across desktop widths.",
-        "Give the playlist import dialog more room for its app list."
+        "Give the playlist import dialog more room for its app list.",
+        "Text size slider from 100% to 130% in the sidebar Appearance panel scales the text across Plekt",
+        "The chosen text size is saved on the Plekt server and applied when Plekt loads",
+        "Dashboard history posters use a wider fixed column on desktop so the posters fill the card height"
+      ],
+      "messageFragments": [
+        "Fix - Keep dashboard cards readable in Safari",
+        "Feature - Add a text size slider to the sidebar Appearance panel"
       ]
     }
   ]

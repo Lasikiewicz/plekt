@@ -140,7 +140,7 @@ or pushed. It yields exactly the release the final promotion will produce, excep
 reviewed website and README, which are carried in later (step 5). The worktree's
 `changelog.alpha.json` `releaseMessage` edit from step 1 must be in place first.
 
-Stop the develop server on 5055 before starting the candidate: both use the main checkout's
+Stop the develop server on 5056 before starting the candidate: both use the main checkout's
 data, and must never run against it concurrently. Verify the listening process belongs to
 this app before stopping it; record how to restore it if the release is abandoned. Do not
 copy `.env` or credentials into the worktree. Read `.claude/local-environment.md` in the
@@ -153,22 +153,22 @@ PowerShell example (the variables are from step 1):
 Set-Location -LiteralPath $releaseWorktree
 npm ci
 node scripts/promote-alpha-to-main.js --confirm
-$releaseListeners = Get-NetTCPConnection -LocalPort 5055 -State Listen -ErrorAction SilentlyContinue
+$releaseListeners = Get-NetTCPConnection -LocalPort 5056 -State Listen -ErrorAction SilentlyContinue
 # Inspect ownership first, then stop only the verified Plekt listener(s).
 $releaseListeners | Select-Object OwningProcess -Unique |
   ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }
 $env:DATA_DIR = Join-Path $releaseRepo "data"
-$env:PORT = "5055"
+$env:PORT = "5056"
 $env:BUILD_CHANNEL = "main"
 $releaseServer = Start-Process -FilePath (Get-Command node).Source -ArgumentList "scripts/start-local.js" -WorkingDirectory $releaseWorktree -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $releaseWorktree "server.stdout.log") -RedirectStandardError (Join-Path $releaseWorktree "server.stderr.log")
-Invoke-WebRequest http://localhost:5055/health
+Invoke-WebRequest http://localhost:5056/health
 ```
 
 Wait for readiness before the health request. Record the PID and paths; inspect errors
 if startup fails. Verify the served source is the pinned alpha hash plus the `--confirm`
 changes (`git rev-parse HEAD` equals the pin), and that `/version.json` and `/api/changelog`
 report the new version with channel `release` and `current` equal to `<version>`. The
-sidebar should read `v<version>` with no channel label. Give the user `http://localhost:5055/`
+sidebar should read `v<version>` with no channel label. Give the user `http://localhost:5056/`
 to check, with a short checklist (sidebar version, Settings → Changelog Stable tab showing
 the new entry, the pages the release changed, mobile width). Show the changelog entry text
 alongside it.
@@ -194,7 +194,7 @@ handoff.
 
 Return to the main checkout on `develop`. Follow `docs/websiteupdate.md` for baseline
 discovery, change review, content quality, and visual/privacy checks. Its Force-to-main
-section defines phases A/B/C; the app target is the running main-build candidate on 5055. Never
+section defines phases A/B/C; the app target is the running main-build candidate on 5056. Never
 restart the develop app to review or take captures. Only describe behaviour present in
 the approved release source, including in website pages already edited on develop.
 
@@ -376,7 +376,7 @@ mistaken for the release:
 
 ```powershell
 # Windows: verify ownership, then find and stop anything on the app and website ports
-Get-NetTCPConnection -LocalPort 5055,4321 -State Listen -ErrorAction SilentlyContinue |
+Get-NetTCPConnection -LocalPort 5056,4321 -State Listen -ErrorAction SilentlyContinue |
   ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }
 ```
 
@@ -385,7 +385,7 @@ Then start both against this commit, with network access permitted. Set
 
 ```powershell
 $env:BUILD_CHANNEL = "main"
-npm start                 # application, http://localhost:5055
+npm start                 # application, http://localhost:5056
 # In a separate terminal at the main checkout:
 Set-Location website
 npm run dev               # website, http://localhost:4321
@@ -400,7 +400,7 @@ Report all four of these together:
    release and that their `sourceVersion` markers are stamped to the new version, so the
    user knows the published documentation describes this release and not the previous one.
    List any website items the user agreed in phase C to ship without (or say there are none).
-3. **The application, running this exact commit**, at `http://localhost:5055`. Name the
+3. **The application, running this exact commit**, at `http://localhost:5056`. Name the
    version it reports so the user can confirm it matches the release.
 4. **The website, running this exact commit**, at `http://localhost:4321`, and point at
    `http://localhost:4321/changelog` specifically, since that is where the release entry

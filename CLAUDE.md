@@ -80,7 +80,7 @@ conversation. Keep both small without cutting any verification.
   - Create and change files with Write/Edit, never `cat > file`, heredoc redirects, `sed -i`,
     `cp` backups, or inline `node`/`python` rewrites.
   - Put probe scripts and temporary files in the session scratchpad, not the repo root, so no
-    `rm` cleanup is needed. Prefer `curl -s http://localhost:5055/...` or `node -e` over a new
+    `rm` cleanup is needed. Prefer `curl -s http://localhost:5056/...` or `node -e` over a new
     script file when a one-off query is enough. Run scratchpad scripts as
     `node "<absolute scratchpad path>/x.mjs" args` (the form a local allowlist can match); never
     through a shell variable (`Q=...; node $Q`) or after `cd`, which prompt every time.
@@ -145,7 +145,7 @@ Rules that hold regardless of which skill is running:
   workflow, after every gate has passed. Never deploy or push to any remote unless the user
   explicitly asked in that request.
 - "Start the server": `npm run server:restart -- --if-down` (reuses a running server) on
-  `http://localhost:5055`; `npm run server:restart` forces a restart. It needs outbound network
+  `http://localhost:5056`; `npm run server:restart` forces a restart. It needs outbound network
   access for providers; see `docs/development.md` "Windows provider-backed server launches".
 - "Check requests" is local-only and read-only: inspect the registered Plex, Emby, and Jellyfin
   request pages in connected Chrome, compare status/votes/comments with the ignored local
@@ -265,7 +265,7 @@ confirmation, a seemingly redundant guard), check `docs/decisions.md` first.
 
 ## Commands
 
-`npm start` (UI + API + scheduler on `http://localhost:5055`), `npm run dev` (auto-reload),
+`npm start` (UI + API + scheduler on `http://localhost:5056`), `npm run dev` (auto-reload),
 `npm test` (`node:test` suite), `npm run build` (syntax check, tests, JSON validation,
 outbound-fetch guard, one-shot boot). No linter. Details, first-boot credentials, and the
 sandboxed-agent launch and Git-check rules are in [`docs/development.md`](docs/development.md).

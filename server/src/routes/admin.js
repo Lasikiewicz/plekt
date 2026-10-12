@@ -162,6 +162,7 @@ const APPEARANCE_DEFAULTS = {
   showReviews: true,
   showImages: true,
   showRelated: true,
+  textScale: 100,
 };
 
 export async function handleAppearance(req, res) {
@@ -178,8 +179,9 @@ export async function handleAppearance(req, res) {
     const body = await readJson(req);
     const merged = { ...APPEARANCE_DEFAULTS };
     for (const key of Object.keys(APPEARANCE_DEFAULTS)) {
-      if (typeof body[key] === "boolean") merged[key] = body[key];
+      if (typeof APPEARANCE_DEFAULTS[key] === "boolean" && typeof body[key] === "boolean") merged[key] = body[key];
     }
+    if (Number.isFinite(Number(body.textScale))) merged.textScale = Math.min(130, Math.max(100, Number(body.textScale)));
     db.prepare(
       `INSERT INTO settings (id, data, updated_at) VALUES (?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`

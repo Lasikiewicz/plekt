@@ -14,6 +14,7 @@
     "test:multiprocess": "node --test test/multiprocess.test.js",
     "build": "node scripts/build-check.js",
     "docs:check": "node scripts/docs-check.js",
+    "todo:check": "node scripts/check-todo.mjs",
     "assets:check": "node scripts/asset-versions.js",
     "assets:update": "node scripts/asset-versions.js --write",
     "demo:assets": "node scripts/build-demo-assets.js",

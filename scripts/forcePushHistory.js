@@ -8,7 +8,7 @@ function requiredEnv(name) {
   return value;
 }
 
-const HISTORY_ENDPOINT = process.env.PLEKT_HISTORY_ENDPOINT || process.env.PLEMBFIN_HISTORY_ENDPOINT ||"http://localhost:5055/api/history?limit=25000";
+const HISTORY_ENDPOINT = process.env.PLEKT_HISTORY_ENDPOINT || process.env.PLEMBFIN_HISTORY_ENDPOINT ||"http://localhost:5056/api/history?limit=25000";
 const API_KEY = requiredEnv("API_KEY");
 
 const TARGET_CONFIG = {

@@ -168,7 +168,7 @@ this build:
 
 ```bash
 # Windows: stop anything on the app and website ports
-Get-NetTCPConnection -LocalPort 5055,4321 -State Listen -ErrorAction SilentlyContinue |
+Get-NetTCPConnection -LocalPort 5056,4321 -State Listen -ErrorAction SilentlyContinue |
   ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }
 ```
 
@@ -176,7 +176,7 @@ Then start the application as an alpha build, using the approved elevated
 network-enabled execution path:
 
 ```bash
-BUILD_CHANNEL=alpha npm start   # http://localhost:5055
+BUILD_CHANNEL=alpha npm start   # http://localhost:5056
 ```
 
 `BUILD_CHANNEL=alpha` matters. Without it the local run reports the release channel,
@@ -185,7 +185,7 @@ would show the published releases rather than this alpha entry.
 
 Report these together and wait:
 
-1. **The app at `http://localhost:5055`**, naming the version it reports, so the user can
+1. **The app at `http://localhost:5056`**, naming the version it reports, so the user can
    confirm it matches the alpha version about to be published.
 2. **Settings -> Changelog**, where the Alpha tab shows this entry as the current build.
 3. **Anything in the cycle worth exercising**, named specifically - the features the

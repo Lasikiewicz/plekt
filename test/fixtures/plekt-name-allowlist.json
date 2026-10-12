@@ -4534,7 +4534,7 @@
           1
         ],
         [
-          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=2.0.0.0.1\";",
+          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=2.0.0.0.2\";",
           1
         ],
         [
@@ -4894,7 +4894,7 @@
       "reason": "compatibility",
       "lines": [
         [
-          "const IMPORT_ENDPOINT = process.env.PLEKT_IMPORT_ENDPOINT || process.env.PLEMBFIN_IMPORT_ENDPOINT ||\"http://localhost:5055/api/import\";",
+          "const IMPORT_ENDPOINT = process.env.PLEKT_IMPORT_ENDPOINT || process.env.PLEMBFIN_IMPORT_ENDPOINT ||\"http://localhost:5056/api/import\";",
           1
         ]
       ]
@@ -4903,7 +4903,7 @@
       "reason": "compatibility",
       "lines": [
         [
-          "const HISTORY_ENDPOINT = process.env.PLEKT_HISTORY_ENDPOINT || process.env.PLEMBFIN_HISTORY_ENDPOINT ||\"http://localhost:5055/api/history?limit=25000\";",
+          "const HISTORY_ENDPOINT = process.env.PLEKT_HISTORY_ENDPOINT || process.env.PLEMBFIN_HISTORY_ENDPOINT ||\"http://localhost:5056/api/history?limit=25000\";",
           1
         ]
       ]

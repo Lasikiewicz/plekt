@@ -140,7 +140,7 @@ The gate has three phases, all checked against the same approved release build:
    preview, make any edits on local `develop`, and write a standalone `captures.md` list.
    `npm run captures:stale` in `website/` lists the images whose catalogued source files
    changed since `origin/main` (all views of each), with the `captures:retake` command.
-   The application being documented is the pinned alpha candidate running on port 5055,
+   The application being documented is the pinned alpha candidate running on port 5056,
    not the `develop` app. Stop after writing the capture list and hand it to phase B.
 2. **B — capture only:** Give a cheaper agent the one-line handoff naming `captures.md`.
    It reads that file alone, uses the still-running approved app, and saves only into its

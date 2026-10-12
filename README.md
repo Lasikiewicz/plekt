@@ -120,6 +120,9 @@ The **Appearance** menu on movie and TV detail pages controls which optional sec
 such as cast, trailers, and reviews, are shown. It is separate from the style and mode
 switches.
 
+The sidebar **Appearance** panel has a **Text size** slider from 100% to 130%. The setting is
+saved on the Plekt server, so it applies wherever you open Plekt.
+
 ---
 
 ## Screenshots

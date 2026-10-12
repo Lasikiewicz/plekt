@@ -300,7 +300,7 @@ before reversing something that looks unnecessarily cautious.
 | `live-updates.js` | Authenticated watch-state/personal-media, Up Next-cache, and Discover-cache version stream, reconnect/backoff, and debounced background data refresh with targeted visible-row reconciliation. |
 | `logs.js` | Frontend debug-log store (localStorage ring buffer) + fetching backend diagnostic logs. |
 | `images.js` | Poster/artwork frontend: `posterMarkup` (with its loading skeleton), `hydratePosterFallbacks`, `/api/poster` lookups with a persistent cache, TMDB image URL builders, `proxiedArtworkUrl`, `isCachedStorageImageUrl`. See [posters-artwork.md](posters-artwork.md). |
-| `appearance.js` | Small always-available appearance preference helper: defaults, body visibility classes, and saved appearance loading. |
+| `appearance.js` | Small always-available appearance preference helper: defaults, body visibility classes, saved appearance loading, and the text size scale (100% to 130%) applied to font sizes in the stylesheets. |
 | `status-indicators.js` | Small always-available sidebar sync progress/attention and Manual Watch review count helpers, plus compact authenticated summary fetches and polling. |
 | `media-routing.js` | Small core movie lookup and Now Playing route helpers used by the shell and live dashboard links. |
 | `cast-disclosure.js` | Small core cast-card markup and deferred cast disclosure/focus helper used by the shell event wiring and detail renderer. |
