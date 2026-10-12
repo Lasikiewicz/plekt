@@ -20,6 +20,18 @@
         [
           "then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.",
           1
+        ],
+        [
+          "with `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which phase B sets for its own tool call from",
+          1
+        ],
+        [
+          "npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message \"Publish Plekt website for v<version>\" --commit-dirty=true",
+          1
+        ],
+        [
+          "Do not deploy when a check or the build fails, and never deploy the `plembfin`",
+          1
         ]
       ]
     },
@@ -3852,6 +3864,10 @@
         [
           "2. Start the local plembfin server and the local website preview from the `website` folder, and record the local URLs and relevant environment details.",
           1
+        ],
+        [
+          "comes from `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which it sets for the tool call from",
+          1
         ]
       ]
     },
@@ -4515,6 +4531,10 @@
         ],
         [
           "if (normalized === \"plembfin\") return \"Plekt\";",
+          1
+        ],
+        [
+          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=2.0.0.0.1\";",
           1
         ],
         [
