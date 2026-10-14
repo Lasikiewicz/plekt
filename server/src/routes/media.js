@@ -1308,6 +1308,7 @@ export async function handleRematchShow(req, res) {
     showTitle: String(body.show_title || "").trim(),
     tvdbId: String(body.tvdb_id || "").trim(),
     newShowTitle: String(body.new_show_title || "").trim(),
+    posterUrl: String(body.poster_url || "").trim(),
   });
   if (!result.ok) return sendJson(res, { error: result.error }, 400);
   return sendJson(res, {

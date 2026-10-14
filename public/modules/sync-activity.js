@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.2";
-import { state, elements } from "./state.js?v=2.0.0.0.2";
-import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.0.0.0.2";
-import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.0.0.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.4";
+import { state, elements } from "./state.js?v=2.0.0.0.4";
+import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.0.0.0.4";
+import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.0.0.0.4";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -273,10 +273,10 @@ function isActive() {
 // dispatch as Plex here. Sync activity names trackers as well as servers, so it
 // resolves platforms itself.
 const PLATFORMS = {
-  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.0.0.0.2" },
-  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.0.0.0.2" },
-  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.0.0.0.2" },
-  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.0.0.0.2" },
+  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.0.0.0.4" },
+  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.0.0.0.4" },
+  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.0.0.0.4" },
+  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.0.0.0.4" },
   plembfin: { name: "Plekt", icon: "" },
 };
 
@@ -863,6 +863,12 @@ async function dispatchRetry(key, identity = {}) {
       body: JSON.stringify(payload),
     });
     const body = await response.json().catch(() => ({}));
+    if (!response.ok && response.status === 409 && body.code === "SYNC_ACTIVITY_SUPERSEDED") {
+      const text = body.error || "A newer sync result already exists for this item. The activity list was refreshed.";
+      setActivityFeedback(key, { text, tone: "muted" });
+      appendActivityNote(key, text);
+      return { status: "skipped", details: text };
+    }
     if (!response.ok) throw new Error(body.error || `Retry failed with ${response.status}`);
     const text = body.status === "success"
       ? "Retry completed."
@@ -2193,6 +2199,10 @@ function matchAttentionItemMarkup(item = {}) {
 export function renderSyncAttention() {
   const container = elements.syncActivityAttention;
   if (!container) return;
+  // Once attention has loaded, keep the last good panel in place while a
+  // background refresh is in flight. Showing an empty loading card here makes
+  // the content above the activity list grow and shrink on every poll.
+  if (state.syncAttentionLoading === true && state.syncAttentionLoaded === true) return;
   const items = attentionItems();
   const serverItems = serverAttentionItems();
   const count = attentionCount();
@@ -2989,7 +2999,17 @@ function patchActivityRows(rows, expandedKeys = new Set()) {
   for (const [key, row] of existing) {
     if (!nextKeys.has(key)) row.remove();
   }
-  for (const row of nextRows) container.appendChild(row);
+  // Keep rows that are already in the right position where they are. Moving
+  // every row through appendChild, even when its order is unchanged, can
+  // disturb the browser's scroll anchor after a changed activity snapshot.
+  let nextPosition = container.firstElementChild;
+  for (const row of nextRows) {
+    if (row === nextPosition) {
+      nextPosition = nextPosition.nextElementSibling;
+      continue;
+    }
+    container.insertBefore(row, nextPosition);
+  }
 
   for (const row of nextRows) {
     const first = firstRects.get(row.dataset.activityGroupKey);

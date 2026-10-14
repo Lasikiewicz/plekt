@@ -113,9 +113,14 @@ export function activityGroupKeyFor(record = {}) {
     // episode in a bulk Trakt or server reconciliation.
     const showTitle = keyPart(episodeShowTitleOf(record));
     if (showTitle) return `show|title:${showTitle}`;
+    // Some event producers only provide the display title (often the show
+    // name) and episode-level provider IDs. Keep those events together by the
+    // visible title before considering IDs that may identify one episode.
+    const title = keyPart(record.title);
+    if (title) return `show|title:${title}`;
     if (provider) return `show|${provider.provider}:${provider.value}`;
     if (mediaKey) return `show|media:${keyPart(mediaKey).replace(/^episode:[^:]+:[^:]+:/, "")}`;
-    return `show|title:${keyPart(record.title)}`;
+    return "show|title:unknown";
   }
 
   if (mediaType === "movie") {

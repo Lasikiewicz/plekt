@@ -1621,6 +1621,75 @@ const migrations = [
       }
     },
   },
+  {
+    id: 53,
+    up(database) {
+      const columns = new Set(database.pragma("table_info(sync_history)").map((column) => column.name));
+      if (!columns.has("activity_group_key")) return;
+
+      // Older episode events without an explicit show title were grouped by
+      // provider ID, which can be episode-specific. Recompute every group key
+      // using the visible title fallback so those events join their show row.
+      const rows = database.prepare("SELECT id, media_type, title, source, action, target_states, raw_payload_debug FROM sync_history").all();
+      const update = database.prepare("UPDATE sync_history SET activity_group_key = ? WHERE id = ?");
+      for (const row of rows) {
+        const activityGroupKey = activityGroupKeyFor({
+          mediaType: row.media_type,
+          title: row.title,
+          source: row.source,
+          action: row.action,
+          targetStates: parseJsonValue(row.target_states, []),
+          rawPayloadDebug: parseJsonValue(row.raw_payload_debug, {}),
+        });
+        if (activityGroupKey) update.run(activityGroupKey, row.id);
+      }
+      database.exec("CREATE INDEX IF NOT EXISTS idx_sync_history_activity_group ON sync_history(activity_group_key, timestamp DESC, id DESC)");
+    },
+  },
+  {
+    id: 54,
+    up(database) {
+      const columns = new Set(database.pragma("table_info(sync_history)").map((column) => column.name));
+      if (!["activity_group_key", "activity_item_key"].every((column) => columns.has(column))) return;
+
+      // Restoring a portable backup can add sync-history rows after the older
+      // identity migrations have already run. Fill only missing keys so those
+      // legacy rows participate in the same current-result checks as new rows.
+      const rows = database.prepare(`
+        SELECT id, media_type, title, source, action, target_states, raw_payload_debug
+        FROM sync_history
+        WHERE activity_group_key IS NULL OR activity_group_key = ''
+          OR activity_item_key IS NULL OR activity_item_key = ''
+      `).all();
+      const update = database.prepare(`
+        UPDATE sync_history
+        SET activity_group_key = CASE
+              WHEN activity_group_key IS NULL OR activity_group_key = '' THEN ?
+              ELSE activity_group_key
+            END,
+            activity_item_key = CASE
+              WHEN activity_item_key IS NULL OR activity_item_key = '' THEN ?
+              ELSE activity_item_key
+            END
+        WHERE id = ?
+      `);
+      for (const row of rows) {
+        const record = {
+          mediaType: row.media_type,
+          title: row.title,
+          source: row.source,
+          action: row.action,
+          targetStates: parseJsonValue(row.target_states, []),
+          rawPayloadDebug: parseJsonValue(row.raw_payload_debug, {}),
+        };
+        update.run(activityGroupKeyFor(record), activityItemKeyFor(record), row.id);
+      }
+      if (rows.length) {
+        console.info(`[sync-history] backfilled missing activity identities for ${rows.length} restored record${rows.length === 1 ? "" : "s"}`);
+      }
+      database.exec("CREATE INDEX IF NOT EXISTS idx_sync_history_activity_item ON sync_history(activity_item_key, timestamp DESC, id DESC)");
+    },
+  },
 ];
 
 function parseJsonValue(value, fallback) {

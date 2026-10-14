@@ -1,15 +1,15 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.2";
-import { state, elements } from "./state.js?v=2.0.0.0.2";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.0.2";
-import { hydratePosters } from "./images.js?v=2.0.0.0.2";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.0.0.0.2";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.0.0.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.4";
+import { state, elements } from "./state.js?v=2.0.0.0.4";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.0.4";
+import { hydratePosters } from "./images.js?v=2.0.0.0.4";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.0.0.0.4";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.0.0.0.4";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
-  upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, withoutNowPlaying, upNextRemovalMatches,
-} from "./up-next-shared.js?v=2.0.0.0.2";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.0.0.0.2";
-import { renderMediaCard } from "./media-card.js?v=2.0.0.0.2";
+  upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
+} from "./up-next-shared.js?v=2.0.0.0.4";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.0.0.0.4";
+import { renderMediaCard } from "./media-card.js?v=2.0.0.0.4";
 
 const UP_NEXT_TTL_MS = 2 * 60 * 1000;
 const UP_NEXT_TIMEOUT_MS = 20000;
@@ -637,16 +637,20 @@ function preservePendingUpNextItems(nextItems = []) {
   const nextByKey = new Map(nextItems.map((item) => [upNextItemKey(item), item]));
   const seen = new Set();
   const preserved = [];
-  for (const current of currentItems) {
+  currentItems.forEach((current, index) => {
     const key = upNextItemKey(current);
-    if (!key || seen.has(key)) continue;
+    if (!key || seen.has(key)) return;
     if (isUpNextRemovalPending(current) && !nextByKey.has(key)) {
-      preserved.push(current);
+      preserved.push({ item: current, index });
       seen.add(key);
     }
-  }
+  });
   if (!preserved.length) return nextItems;
-  return [...preserved, ...nextItems.filter((item) => !seen.has(upNextItemKey(item)))];
+  // Put each pending card back where it was on the rail, not at the top, so a
+  // refresh during its exit animation does not reorder the cards around it.
+  const result = nextItems.filter((item) => !seen.has(upNextItemKey(item)));
+  for (const { item, index } of preserved) result.splice(Math.min(index, result.length), 0, item);
+  return result;
 }
 
 export function setUpNextRemovalPending(item, pending = true) {
@@ -1383,7 +1387,7 @@ export function renderUpNext({ exitIds = [] } = {}) {
     return;
   }
 
-  const items = withoutNowPlaying(visibleUpNextItems(), state.activeSessions || []);
+  const items = oneCardPerEpisode(nowPlayingFirst(visibleUpNextItems(), state.activeSessions || []));
 
   if (state.upNextLoading && !state.upNextItems.length) {
     if (section) section.classList.remove("hidden");

@@ -1,7 +1,7 @@
-import { buildAuthHeaders, buildNowPlayingUrl } from "./auth.js?v=2.0.0.0.2";
-import { state, elements } from "./state.js?v=2.0.0.0.2";
-import { escapeHtml, escapeAttribute, platformBadge, sourceClass, sourceBadgeHtml, computeProgress, formatDate, formatPlaybackClock, showName } from "./utils.js?v=2.0.0.0.2";
-import { hydratePosters, posterMarkup } from "./images.js?v=2.0.0.0.2";
+import { buildAuthHeaders, buildNowPlayingUrl } from "./auth.js?v=2.0.0.0.4";
+import { state, elements } from "./state.js?v=2.0.0.0.4";
+import { escapeHtml, escapeAttribute, platformBadge, sourceClass, sourceBadgeHtml, computeProgress, formatDate, formatPlaybackClock, showName } from "./utils.js?v=2.0.0.0.4";
+import { hydratePosters, posterMarkup } from "./images.js?v=2.0.0.0.4";
 
 const NOW_PLAYING_POLL_MS = 10000;
 
@@ -778,8 +778,8 @@ export function setActiveSessions(sessions = [], { force = false } = {}) {
   state.activeSessions = sessions;
   state.nowPlayingSessionKey = nextKey;
   renderActiveSessions();
-  // Up Next hides whatever is playing, so it repaints when the playing items
-  // change (not on every progress tick).
+  // Up Next moves whatever is playing to the top, so it repaints when the
+  // playing items change (not on every progress tick).
   const itemsKey = sessions.map((s) => `${s.mediaType}|${s.title}|${s.season ?? ""}|${s.episode ?? ""}`).sort().join("::");
   if (itemsKey !== lastNowPlayingItemsKey) {
     lastNowPlayingItemsKey = itemsKey;

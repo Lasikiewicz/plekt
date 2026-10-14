@@ -8,25 +8,25 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.0.0.0.2" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.0.0.0.4" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.0.0.0.2"></script>
+    <script src="/theme-boot.js?v=2.0.0.0.4"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.0.0.0.2" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.0.0.0.2" />
-    <link rel="stylesheet" href="/styles.css?v=2.0.0.0.2" />
-    <link rel="stylesheet" href="/styles-modern.css?v=2.0.0.0.2" />
+    <link rel="modulepreload" href="/app.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.0.0.0.4" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.0.0.0.4" />
+    <link rel="stylesheet" href="/styles.css?v=2.0.0.0.4" />
+    <link rel="stylesheet" href="/styles-modern.css?v=2.0.0.0.4" />
   </head>
   <body class="auth-locked">
     <div class="app-chassis">
@@ -61,41 +61,6 @@
           </div>
           <div class="sidebar-secondary">
             <button class="nav-tab" type="button" data-view="settings">Settings</button>
-            <button class="nav-tab" type="button" data-view="about">About</button>
-            <div id="sidebarSettingsMenu" class="sidebar-sub-menu hidden">
-              <button id="lockButton" class="settings-tab button-signout hidden" type="button">Sign out</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="sidebar-footer">
-            <div id="sidebarOnboardingCta" class="sidebar-onboarding-cta hidden">
-              <button id="sidebarOnboardingButton" type="button" class="sidebar-onboarding-cta-button">Complete onboarding</button>
-              <button id="sidebarOnboardingDismiss" type="button" class="sidebar-onboarding-cta-dismiss" title="Dismiss permanently" aria-label="Dismiss onboarding reminder permanently">&times;</button>
-            </div>
-            <div id="sidebarSyncAttention" class="sidebar-sync-attention hidden" aria-live="polite">
-              <button id="sidebarSyncAttentionButton" class="sidebar-sync-attention-button" type="button" aria-controls="sync-activity-view" aria-label="Attention - Issue. Open Sync Activity for details.">
-                <span id="sidebarSyncAttentionTitle">Attention</span>
-                <span aria-hidden="true"> - </span>
-                <span id="sidebarSyncAttentionText">Issue</span>
-              </button>
-            </div>
-            <button id="manualWatchReviewButton" class="sync-progress-indicator manual-watch-review-nav hidden" type="button" data-view="manualWatchReview" data-sync-state="attention" title="Review watched flags detected on media apps">
-              <span class="sync-progress-dot" aria-hidden="true"></span>
-              <span class="manual-watch-review-nav-label">Manual Watch review</span>
-              <span id="manualWatchReviewCount" class="manual-watch-review-nav-count" aria-label="0 items waiting">0</span>
-            </button>
-            <div id="demoModeBanner" class="demo-mode-banner hidden" role="status">
-              Public demo: actions are simulated in this browser only. Nothing is saved and no media or metadata services are connected.
-            </div>
-            <div id="startupScanNotice" class="startup-scan-notice hidden" role="status" aria-live="polite">
-              Startup scan running. The app may feel slow until the initial scan completes. Please wait.
-            </div>
-            <button id="syncProgressIndicator" class="sync-progress-indicator" type="button" data-sync-state="idle" title="Open sync activity">
-              <span class="sync-progress-dot" aria-hidden="true"></span>
-              <span id="syncProgressText" class="sync-progress-text" role="status">Sync - Idle</span>
-            </button>
-            <button id="appVersion" class="app-version" type="button" title="Open Changelog">v0.0.0</button>
             <div id="sidebarAppearanceWrap" class="sidebar-appearance-wrap hidden">
               <button id="sidebarAppearanceButton" class="nav-tab sidebar-appearance-button" type="button" aria-expanded="false">
                 <span>Appearance</span>
@@ -159,6 +124,41 @@
                 </div>
               </div>
             </div>
+            <button class="nav-tab" type="button" data-view="about">About</button>
+            <div id="sidebarSettingsMenu" class="sidebar-sub-menu hidden">
+              <button id="lockButton" class="settings-tab button-signout hidden" type="button">Sign out</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-footer">
+            <div id="sidebarOnboardingCta" class="sidebar-onboarding-cta hidden">
+              <button id="sidebarOnboardingButton" type="button" class="sidebar-onboarding-cta-button">Complete onboarding</button>
+              <button id="sidebarOnboardingDismiss" type="button" class="sidebar-onboarding-cta-dismiss" title="Dismiss permanently" aria-label="Dismiss onboarding reminder permanently">&times;</button>
+            </div>
+            <div id="sidebarSyncAttention" class="sidebar-sync-attention hidden" aria-live="polite">
+              <button id="sidebarSyncAttentionButton" class="sidebar-sync-attention-button" type="button" aria-controls="sync-activity-view" aria-label="Attention - Issue. Open Sync Activity for details.">
+                <span id="sidebarSyncAttentionTitle">Attention</span>
+                <span aria-hidden="true"> - </span>
+                <span id="sidebarSyncAttentionText">Issue</span>
+              </button>
+            </div>
+            <button id="manualWatchReviewButton" class="sync-progress-indicator manual-watch-review-nav hidden" type="button" data-view="manualWatchReview" data-sync-state="attention" title="Review watched flags detected on media apps">
+              <span class="sync-progress-dot" aria-hidden="true"></span>
+              <span class="manual-watch-review-nav-label">Manual Watch review</span>
+              <span id="manualWatchReviewCount" class="manual-watch-review-nav-count" aria-label="0 items waiting">0</span>
+            </button>
+            <div id="demoModeBanner" class="demo-mode-banner hidden" role="status">
+              Public demo: actions are simulated in this browser only. Nothing is saved and no media or metadata services are connected.
+            </div>
+            <div id="startupScanNotice" class="startup-scan-notice hidden" role="status" aria-live="polite">
+              Startup scan running. The app may feel slow until the initial scan completes. Please wait.
+            </div>
+            <button id="syncProgressIndicator" class="sync-progress-indicator" type="button" data-sync-state="idle" title="Open sync activity">
+              <span class="sync-progress-dot" aria-hidden="true"></span>
+              <span id="syncProgressText" class="sync-progress-text" role="status">Sync - Idle</span>
+            </button>
+            <button id="appVersion" class="app-version" type="button" title="Open Changelog">v0.0.0</button>
             <button id="themeStyleButton" class="theme-toggle-button theme-style-toggle" type="button" title="Switch between the Classic and Modern theme styles" aria-label="Switch between the Classic and Modern theme styles">
               <span class="theme-toggle-track">
                 <span class="theme-toggle-thumb"></span>
@@ -3079,7 +3079,7 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.0.0.0.2"></script>
-    <script type="module" src="/app.js?v=2.0.0.0.2"></script>
+    <script type="module" src="/modules/analytics.js?v=2.0.0.0.4"></script>
+    <script type="module" src="/app.js?v=2.0.0.0.4"></script>
   </body>
 </html>

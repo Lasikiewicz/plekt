@@ -4534,7 +4534,7 @@
           1
         ],
         [
-          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=2.0.0.0.2\";",
+          "if (normalized === \"plembfin\") return \"/icons/plekt.png?v=2.0.0.0.4\";",
           1
         ],
         [

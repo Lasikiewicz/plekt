@@ -4302,7 +4302,7 @@ function rematchTitleAliasKey(value = "") {
   return canonicalShowTitleKey(String(value || "").replace(/\s*\([^)]*\)\s*$/, ""));
 }
 
-export async function rematchShowWatchRecords({ id = "", showTitle = "", tvdbId = "", newShowTitle = "" } = {}) {
+export async function rematchShowWatchRecords({ id = "", showTitle = "", tvdbId = "", newShowTitle = "", posterUrl = "" } = {}) {
   const cleanTvdbId = cleanString(tvdbId);
   if (!cleanTvdbId) return { ok: false, error: "tvdb_id is required" };
 
@@ -4460,6 +4460,14 @@ export async function rematchShowWatchRecords({ id = "", showTitle = "", tvdbId 
   if (renameTo) clearCachedShowProgress(renameTo);
 
   const refreshedShowTitle = renameTo || resolvedTitle;
+  const selectedPosterUrl = cleanString(posterUrl);
+  if (selectedPosterUrl) {
+    saveCanonicalPoster({
+      media_type: "tv",
+      title: refreshedShowTitle,
+      tvdb_id: cleanTvdbId,
+    }, selectedPosterUrl, { source: "fix-match" });
+  }
   queueShowProgressUpdate(refreshedShowTitle);
   // Fix Match clears the old provider ids and artwork synchronously. Queue the
   // newly selected series identity separately so the homepage's cache-only

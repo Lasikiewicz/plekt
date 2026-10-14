@@ -1525,7 +1525,10 @@ async function retrySyncActivityEntry(rawId, retryContext = {}) {
   if (!entry) throw Object.assign(new Error("Sync activity entry not found"), { status: 404 });
   const latest = await getLatestSyncActivityByItemKey(entry.activityItemKey);
   if (latest && String(latest.id) !== String(entry.id)) {
-    throw Object.assign(new Error("This sync activity entry has been superseded by a newer result for the same item"), { status: 409 });
+    throw Object.assign(new Error("A newer sync result already exists for this item"), {
+      status: 409,
+      code: "SYNC_ACTIVITY_SUPERSEDED",
+    });
   }
   const targets = retryableSyncActivityTargets(entry);
   if (!targets.length) throw Object.assign(new Error("This sync activity entry has no failed targets to retry"), { status: 409 });
@@ -1643,6 +1646,13 @@ export async function handleRetrySyncHistory(req, res) {
     return sendJson(res, { ok: true, ...result });
   } catch (error) {
     const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
+    if (error?.code === "SYNC_ACTIVITY_SUPERSEDED") {
+      console.info("Skipped stale sync-activity retry because a newer result already exists.");
+      return sendJson(res, {
+        code: error.code,
+        error: "A newer sync result already exists for this item. The activity list was refreshed; retry the latest result if it still shows a failure.",
+      }, 409);
+    }
     console.error("Retry sync activity failed", error);
     return sendJson(res, { error: status === 404 ? "Sync activity item not found" : "Retry sync activity failed" }, status);
   }

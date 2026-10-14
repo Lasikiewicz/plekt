@@ -1,10 +1,10 @@
-import { state } from "./state.js?v=2.0.0.0.2";
-import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.0.2";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.2";
-import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.2";
-import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.0.2";
-import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.0.2";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.2";
+import { state } from "./state.js?v=2.0.0.0.4";
+import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.0.4";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.4";
+import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.4";
+import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.0.4";
+import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.0.4";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.4";
 
 // Callbacks injected by app.js at startup.
 let _setMessage = () => {};
@@ -149,8 +149,9 @@ async function apiDeleteWatchDates(ids) {
   return body;
 }
 
-async function apiRematchShow(id, showTitle, tvdbId, newShowTitle = "", traktMatch = null) {
+async function apiRematchShow(id, showTitle, tvdbId, newShowTitle = "", traktMatch = null, posterUrl = "") {
   const payload = { id, show_title: showTitle, tvdb_id: tvdbId, new_show_title: newShowTitle };
+  if (!traktMatch && posterUrl) payload.poster_url = posterUrl;
   if (traktMatch?.tmdbId) {
     payload.trakt_tmdb_id = traktMatch.tmdbId;
     payload.trakt_source_season = traktMatch.sourceSeason;
@@ -1690,7 +1691,14 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
     const rows = fullShowWatchedRows(currentTitle);
     status.textContent = "";
     if (resultButton) setResultBusy(resultButton, "Updating show match...");
-    const result = await apiRematchShow(id, currentTitle, tvdbId, title, traktMatch);
+    const result = await apiRematchShow(
+      id,
+      currentTitle,
+      tvdbId,
+      title,
+      traktMatch,
+      resultButton?.dataset.matchPosterUrl || "",
+    );
     if (traktMatch) {
       overlay.remove();
       _setMessage(
@@ -1793,12 +1801,16 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
     await notifySaved();
   };
 
-  const matchPosterUrl = (item) => {
-    if (item.poster_url) return proxiedArtworkUrl(item.poster_url, "poster") || "/favicon.svg";
-    if (item.poster_path) return tmdbPoster(item.poster_path, item.tmdb_id, tmdbType) || "/favicon.svg";
-    if (item.image_url) return proxiedArtworkUrl(item.image_url, "poster") || "/favicon.svg";
-    return "/favicon.svg";
+  const matchArtworkUrl = (item) => {
+    // Prefer catalogue artwork when results from several sources were merged.
+    // A local row can carry stale or missing artwork even when TMDB/TVDB has
+    // the correct poster for the selected show.
+    if (item.poster_path) return tmdbPoster(item.poster_path, item.tmdb_id, tmdbType);
+    if (item.image_url) return proxiedArtworkUrl(item.image_url, "poster");
+    if (item.poster_url) return proxiedArtworkUrl(item.poster_url, "poster");
+    return "";
   };
+  const matchPosterUrl = (item) => matchArtworkUrl(item) || "/favicon.svg";
 
   const renderMatchResults = (results) => {
     const providerConflict = hasProviderSplitConflict(currentTvdbId, currentTitle, results, options);
@@ -1826,6 +1838,7 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
           data-match-source="${escapeAttribute(item.source || "")}"
           data-tmdb-id="${escapeAttribute(item.tmdb_id || "")}"
           data-tvdb-id="${escapeAttribute(item.tvdb_id || "")}"
+          data-match-poster-url="${escapeAttribute(matchArtworkUrl(item))}"
           data-title="${escapeAttribute(item.title || "")}">
           <span class="shared-media-card-poster-wrap">
             <span class="shared-media-card-poster"><img class="shared-media-card-poster-image" src="${escapeAttribute(matchPosterUrl(item))}" alt="" data-err="fav" /></span>

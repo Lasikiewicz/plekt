@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { bumpDataVersion, db, parseJson, toJson } from "../db.js";
 import { clearWatchlistRemoteProjection, getWatchlistRestoreState, markWatchlistRestorePending } from "./personalWatchlistRepository.js";
+import { activityGroupKeyFor, activityItemKeyFor } from "./syncActivityIdentity.js";
 import { BACKUP_FORMAT, LEGACY_REDACTED_SECRETS_FIELD, REDACTED_SECRETS_FIELD, TYPE_FIELD, backupValueType } from "./backupNames.js";
 
 export { BACKUP_FORMAT };
@@ -170,9 +171,51 @@ const collections = {
   },
   syncHistory: {
     table: "sync_history", key: "id", numericKey: true,
-    rowToData: (r) => ({ timestamp: r.timestamp, mediaType: r.media_type || "unknown", title: r.title || "", source: r.source || "unknown", status: r.status || "unknown", details: r.details || "", action: r.action || "watched", targetStates: parseJson(r.target_states, []), rawPayloadDebug: parseJson(r.raw_payload_debug, {}), createdAt: r.created_at }),
-    insert: db.prepare("INSERT INTO sync_history (timestamp,media_type,title,source,status,details,action,target_states,raw_payload_debug,created_at) VALUES (@timestamp,@media_type,@title,@source,@status,@details,@action,@target_states,@raw_payload_debug,@created_at)"),
-    dataToRow: (_id, d) => ({ timestamp: toMs(d.timestamp) ?? Date.now(), media_type: d.mediaType || "unknown", title: d.title || "", source: d.source || "unknown", status: d.status || "unknown", details: d.details || "", action: d.action || "watched", target_states: toJson(Array.isArray(d.targetStates) ? d.targetStates : []), raw_payload_debug: toJson(d.rawPayloadDebug || {}), created_at: toMs(d.createdAt) ?? Date.now() }),
+    rowToData: (r) => {
+      const rawPayloadDebug = parseJson(r.raw_payload_debug, {});
+      const record = {
+        mediaType: r.media_type || "unknown",
+        title: r.title || "",
+        source: r.source || "unknown",
+        action: r.action || "watched",
+        targetStates: parseJson(r.target_states, []),
+        rawPayloadDebug,
+      };
+      return {
+        timestamp: r.timestamp,
+        ...record,
+        status: r.status || "unknown",
+        details: r.details || "",
+        activityGroupKey: activityGroupKeyFor(record),
+        activityItemKey: activityItemKeyFor(record),
+        createdAt: r.created_at,
+      };
+    },
+    insert: db.prepare("INSERT INTO sync_history (timestamp,media_type,title,source,status,details,action,target_states,raw_payload_debug,activity_group_key,activity_item_key,created_at) VALUES (@timestamp,@media_type,@title,@source,@status,@details,@action,@target_states,@raw_payload_debug,@activity_group_key,@activity_item_key,@created_at)"),
+    dataToRow: (_id, d) => {
+      const record = {
+        mediaType: d.mediaType || "unknown",
+        title: d.title || "",
+        source: d.source || "unknown",
+        action: d.action || "watched",
+        targetStates: Array.isArray(d.targetStates) ? d.targetStates : [],
+        rawPayloadDebug: d.rawPayloadDebug || {},
+      };
+      return {
+        timestamp: toMs(d.timestamp) ?? Date.now(),
+        media_type: record.mediaType,
+        title: record.title,
+        source: record.source,
+        status: d.status || "unknown",
+        details: d.details || "",
+        action: record.action,
+        target_states: toJson(record.targetStates),
+        raw_payload_debug: toJson(record.rawPayloadDebug),
+        activity_group_key: activityGroupKeyFor(record),
+        activity_item_key: activityItemKeyFor(record),
+        created_at: toMs(d.createdAt) ?? Date.now(),
+      };
+    },
   },
   watchAuditEvents: {
     table: "watch_audit_events", key: "id", numericKey: true,

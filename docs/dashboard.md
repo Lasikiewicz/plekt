@@ -49,8 +49,8 @@ history and Up Next cards stay hidden while fresh server data loads. The server 
 refreshes playback and queue state in the background, so updates do not depend on the
 dashboard being open.
 While an item is in Now Playing, its Up Next card (same show, season and episode, or the same
-movie title) is hidden on the dashboard and returns when playback stops (client-side,
-`withoutNowPlaying()` in `public/modules/up-next-shared.js`). Each show has at most one card:
+movie title) moves to the top of the Up Next rail (client-side, `nowPlayingFirst()` in
+`public/modules/up-next-shared.js`). Each show has at most one card:
 a part-watched episode with a known position wins over that show's next-up card, and of several
 part-watched episodes the most recently updated is kept (`collapseUncertainEpisodeQueues()`).
 `GET /api/up-next` combines actionable canonical resume progress with released `next_up`

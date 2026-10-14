@@ -1,12 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.2";
-import { state, elements } from "./state.js?v=2.0.0.0.2";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.0.0.0.2";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.0.0.0.2";
-import { ifLoaded } from "./route-modules.js?v=2.0.0.0.2";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.0.0.0.2";
-import { dedupeMediaRecords } from "./media-records.js?v=2.0.0.0.2";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit } from "./dashboard-modern.js?v=2.0.0.0.2";
-import { cardArtAttribute } from "./card-art.js?v=2.0.0.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.4";
+import { state, elements } from "./state.js?v=2.0.0.0.4";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.0.0.0.4";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.0.0.0.4";
+import { ifLoaded } from "./route-modules.js?v=2.0.0.0.4";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.0.0.0.4";
+import { dedupeMediaRecords } from "./media-records.js?v=2.0.0.0.4";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit } from "./dashboard-modern.js?v=2.0.0.0.4";
+import { cardArtAttribute } from "./card-art.js?v=2.0.0.0.4";
 
 // The setup wizard loads only when setup is unfinished or its checklist has
 // items (see the deferred check in app.js); until then there is nothing to show.
@@ -344,14 +344,16 @@ function findKnownShowPoster(entry = {}) {
 
   const match = (state.history || []).find((h) => {
     if (h.media_type !== "episode") return false;
-    if (showTmdb && (String(h.show_tmdb_id || "") === showTmdb || String(h.tmdb_id || "") === showTmdb)) return true;
-    if (showTvdb && (String(h.show_tvdb_id || "") === showTvdb || String(h.tvdb_id || "") === showTvdb)) return true;
-    if (showImdb && String(h.show_imdb_id || h.imdb_id || "").toLowerCase() === showImdb) return true;
-    if (showTitle && slug(h.show_title || showTitleFrom(h.title) || "") === showTitle) return true;
-    return false;
+    const matchesShow = (showTmdb && (String(h.show_tmdb_id || "") === showTmdb || String(h.tmdb_id || "") === showTmdb))
+      || (showTvdb && (String(h.show_tvdb_id || "") === showTvdb || String(h.tvdb_id || "") === showTvdb))
+      || (showImdb && String(h.show_imdb_id || h.imdb_id || "").toLowerCase() === showImdb)
+      || (showTitle && slug(h.show_title || showTitleFrom(h.title) || "") === showTitle);
+    return Boolean(matchesShow && isLocalArtworkUrl(h.show_poster_url || h.canonical_poster_url));
   });
 
-  const poster = match?.show_poster_url || match?.poster_url || "";
+  // Episode poster_url can be an episode still. Only shared show artwork is
+  // safe to use as the fallback for a dashboard card that represents a show.
+  const poster = match?.show_poster_url || match?.canonical_poster_url || "";
   return isLocalArtworkUrl(poster) ? poster : "";
 }
 
@@ -413,14 +415,18 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
   // /api/poster can resolve. A progress row's generic `id` can be a watch
   // record id (or another source-specific identifier), which leaves the new
   // Part Watched card on the placeholder even when artwork is available.
-  const knownSeasonPoster = isEpisode && !entry.prefer_show_poster
-    ? (entry.season_poster_url || findKnownSeasonPoster(entry))
-    : "";
-  const knownShowPoster = (isEpisode && (!entry.show_poster_url || entry.show_poster_url.startsWith("/api/poster")))
+  const suppliedShowPoster = entry.show_poster_url || entry.canonical_poster_url || entry.canonicalPosterUrl || "";
+  const knownShowPoster = (isEpisode && (!suppliedShowPoster || suppliedShowPoster.startsWith("/api/poster")))
     ? findKnownShowPoster(entry)
     : "";
-  const effectiveShowPoster = knownShowPoster || entry.show_poster_url;
-  const effectiveEpisodePoster = knownSeasonPoster || effectiveShowPoster;
+  const effectiveShowPoster = knownShowPoster || suppliedShowPoster;
+  // Up Next and Part Watched cards are labeled and linked as shows, so use
+  // the selected series poster even when the episode has season artwork.
+  const preferShowPoster = isEpisode && (isUpNext || isPartWatched) && Boolean(effectiveShowPoster);
+  const knownSeasonPoster = isEpisode && !entry.prefer_show_poster && !preferShowPoster
+    ? (entry.season_poster_url || findKnownSeasonPoster(entry))
+    : "";
+  const effectiveEpisodePoster = preferShowPoster ? effectiveShowPoster : knownSeasonPoster || effectiveShowPoster;
   const posterIdentity = entry.id ?? entry.media_key ?? "";
   const hasLocalArtwork = isLocalArtworkUrl(knownSeasonPoster) || isLocalArtworkUrl(entry.poster_url) || isLocalArtworkUrl(effectiveShowPoster);
   const directPosterUrl = !isPartWatched && !isUpNext && posterIdentity && !hasLocalArtwork
@@ -429,7 +435,13 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
   const posterEntry = {
     ...entry,
     ...(isEpisode && effectiveEpisodePoster
-      ? { poster_url: effectiveEpisodePoster, show_poster_url: effectiveShowPoster || entry.show_poster_url, season_poster_url: knownSeasonPoster, prefer_raw_poster: true }
+      ? {
+        poster_url: effectiveEpisodePoster,
+        show_poster_url: effectiveShowPoster || entry.show_poster_url,
+        season_poster_url: knownSeasonPoster,
+        prefer_raw_poster: true,
+        ...(preferShowPoster ? { prefer_show_poster: true } : {}),
+      }
       : {}),
     ...(directPosterUrl ? { poster_url: directPosterUrl, show_poster_url: "", prefer_raw_poster: true } : {}),
     cache_only_artwork: !directPosterUrl,

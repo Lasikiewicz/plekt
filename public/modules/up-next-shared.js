@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.0.0.0.2";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.0.2";
+import { state } from "./state.js?v=2.0.0.0.4";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.0.4";
 
 function identityValues(item = {}, kind = "tmdb") {
   const capitalized = `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;
@@ -37,9 +37,9 @@ export function upNextCoordinateDismissalKey(item = {}) {
   return `episode:${showTitle}:s${season}:e${episode}`;
 }
 
-// Up Next hides what is playing right now: the same episode (show, season and
-// episode) or the same movie as a live session. Title-based, as live sessions
-// carry no show ids; the card returns when playback stops.
+// Up Next puts what is playing right now first: the same episode (show, season
+// and episode) or the same movie as a live session. Title-based, as live
+// sessions carry no show ids.
 function liveSessionUpNextKey(session = {}) {
   const isLiveEpisode = session.mediaType === "episode" || (session.season != null && session.episode != null);
   if (isLiveEpisode) {
@@ -56,10 +56,46 @@ function upNextItemLiveKey(item = {}) {
   return mediaType === "movie" ? `movie:${showTitleSlug({ show_title: item.title })}` : "";
 }
 
-export function withoutNowPlaying(items = [], sessions = []) {
+// A stable split: cards that match a live session come first, in their existing
+// order, followed by the rest in theirs.
+export function nowPlayingFirst(items = [], sessions = []) {
   const liveKeys = new Set(sessions.map(liveSessionUpNextKey).filter((key) => key && key !== "movie:"));
   if (!liveKeys.size) return items;
-  return items.filter((item) => !liveKeys.has(upNextItemLiveKey(item)));
+  const playing = [];
+  const rest = [];
+  for (const item of items) {
+    if (liveKeys.has(upNextItemLiveKey(item))) playing.push(item);
+    else rest.push(item);
+  }
+  return [...playing, ...rest];
+}
+
+// One card per episode: a part-watched card and a next-up card for the same
+// show, season and episode show the same thing, so keep one. The part-watched
+// card wins (it carries the position); it takes the place of the first card for
+// that episode, which keeps the playing card at the top.
+export function oneCardPerEpisode(items = []) {
+  const byKey = new Map();
+  for (const item of items) {
+    const key = upNextCoordinateDismissalKey(item);
+    if (!key) continue;
+    const existing = byKey.get(key);
+    if (!existing) byKey.set(key, item);
+    else if (existing.queue_kind !== "resume" && item.queue_kind === "resume") byKey.set(key, item);
+  }
+  const out = [];
+  const placed = new Set();
+  for (const item of items) {
+    const key = upNextCoordinateDismissalKey(item);
+    if (!key) {
+      out.push(item);
+      continue;
+    }
+    if (placed.has(key)) continue;
+    placed.add(key);
+    out.push(byKey.get(key));
+  }
+  return out;
 }
 
 export function upNextShowDismissalKeys(item = {}) {
