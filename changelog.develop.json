@@ -1,20 +1,7 @@
 {
-  "version": "2.0.0.3.1",
-  "build": 1,
-  "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
-  "updatedAt": "2026-10-15T22:42:33.819Z",
-  "entries": [
-    {
-      "build": 1,
-      "date": "2026-10-15T22:42:33.819Z",
-      "commit": "dc8798342cb396be6c70097f164ba9ffeec7bbd9",
-      "message": "Fix - Restore playback tracking and improve season navigation",
-      "author": "Lasikiewicz",
-      "details": [
-        "Recover interrupted restore locks automatically so live playback and watch history resume.",
-        "Open show pages at the top with the latest regular season expanded.",
-        "Open Season 1 links at the page top and scroll other season links into view after loading."
-      ]
-    }
-  ]
+  "version": "2.0.0.4.0",
+  "build": 0,
+  "resetCommit": "d2783bc48d9c619f565bc0e6c9f27e276df1cc06",
+  "updatedAt": "2026-10-15T22:43:56.319Z",
+  "entries": []
 }

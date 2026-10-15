@@ -1,10 +1,50 @@
 {
   "baseVersion": "2.0.0",
-  "build": 3,
-  "version": "2.0.0.3.0",
-  "updatedAt": "2026-10-15T15:08:16.183Z",
+  "build": 4,
+  "version": "2.0.0.4.0",
+  "updatedAt": "2026-10-15T22:43:56.319Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 4,
+      "version": "2.0.0.4.0",
+      "shortVersion": "2.0.0.4.0",
+      "date": "2026-10-15T22:43:56.319Z",
+      "commit": "d2783bc48d9c619f565bc0e6c9f27e276df1cc06",
+      "message": "Fix - Restore playback tracking and improve season navigation",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Restore playback tracking and improve season navigation",
+        "Fix: Recover interrupted restore locks automatically so live playback and watch history resume.",
+        "Fix: Open show pages at the top with the latest regular season expanded.",
+        "Fix: Open Season 1 links at the page top and scroll other season links into view after loading."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Restore playback tracking and improve season navigation",
+          "Recover interrupted restore locks automatically so live playback and watch history resume.",
+          "Open show pages at the top with the latest regular season expanded.",
+          "Open Season 1 links at the page top and scroll other season links into view after loading."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Restore playback tracking and improve season navigation",
+              "Recover interrupted restore locks automatically so live playback and watch history resume.",
+              "Open show pages at the top with the latest regular season expanded.",
+              "Open Season 1 links at the page top and scroll other season links into view after loading."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 3,
       "version": "2.0.0.3.0",
@@ -178,5 +218,5 @@
       ]
     }
   ],
-  "shortVersion": "2.0.0.3.0"
+  "shortVersion": "2.0.0.4.0"
 }

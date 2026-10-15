@@ -1,10 +1,10 @@
-import { state } from "./state.js?v=2.0.0.3.1";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.1";
-import { escapeHtml, escapeAttribute, slug, movieSlug, movieHref, showName, formatTmdbDate, tvShowTmdbHref, movieTmdbHref, platformIconUrl, isDemoMode } from "./utils.js?v=2.0.0.3.1";
-import { tmdbImage, tmdbPoster, tmdbProfile } from "./images.js?v=2.0.0.3.1";
-import { fetchTmdbDetails } from "./tmdb.js?v=2.0.0.3.1";
-import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.0.0.3.1";
-import { hydrateDeferredCastDisclosure, renderCastActor } from "./cast-disclosure.js?v=2.0.0.3.1";
+import { state } from "./state.js?v=2.0.0.4.0";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.4.0";
+import { escapeHtml, escapeAttribute, slug, movieSlug, movieHref, showName, formatTmdbDate, tvShowTmdbHref, movieTmdbHref, platformIconUrl, isDemoMode } from "./utils.js?v=2.0.0.4.0";
+import { tmdbImage, tmdbPoster, tmdbProfile } from "./images.js?v=2.0.0.4.0";
+import { fetchTmdbDetails } from "./tmdb.js?v=2.0.0.4.0";
+import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.0.0.4.0";
+import { hydrateDeferredCastDisclosure, renderCastActor } from "./cast-disclosure.js?v=2.0.0.4.0";
 
 export { movieById, movieBySlugOrId, nowPlayingHref, hydrateDeferredCastDisclosure };
 
@@ -863,15 +863,15 @@ export async function hydrateMediaAppLinks(root = document, { allowNetwork = tru
       : `
         <b class="media-app-link-row">
           <a class="media-app-link media-app-link--plex media-app-link--disabled" title="Checking Plex..." aria-label="Checking Plex..." style="opacity: 0.4; cursor: not-allowed;">
-            <img class="media-app-link-logo" src="/icons/plex.svg?v=2.0.0.3.1" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
+            <img class="media-app-link-logo" src="/icons/plex.svg?v=2.0.0.4.0" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
             <span>Plex</span>
           </a>
           <a class="media-app-link media-app-link--emby media-app-link--disabled" title="Checking Emby..." aria-label="Checking Emby..." style="opacity: 0.4; cursor: not-allowed;">
-            <img class="media-app-link-logo" src="/icons/emby.svg?v=2.0.0.3.1" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
+            <img class="media-app-link-logo" src="/icons/emby.svg?v=2.0.0.4.0" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
             <span>Emby</span>
           </a>
           <a class="media-app-link media-app-link--jellyfin media-app-link--disabled" title="Checking Jellyfin..." aria-label="Checking Jellyfin..." style="opacity: 0.4; cursor: not-allowed;">
-            <img class="media-app-link-logo" src="/icons/jellyfin.svg?v=2.0.0.3.1" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
+            <img class="media-app-link-logo" src="/icons/jellyfin.svg?v=2.0.0.4.0" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
             <span>Jellyfin</span>
           </a>
         </b>
@@ -953,7 +953,7 @@ export function tvdbSeriesUrl(tvdbId) {
   return `https://thetvdb.com/dereferrer/series/${encodeURIComponent(id)}`;
 }
 
-const RATING_SOURCE_ICONS = { TMDB: "/icons/tmdb.svg?v=2.0.0.3.1", TVDB: "/icons/tvdb.svg?v=2.0.0.3.1", IMDb: "/icons/imdb.svg?v=2.0.0.3.1" };
+const RATING_SOURCE_ICONS = { TMDB: "/icons/tmdb.svg?v=2.0.0.4.0", TVDB: "/icons/tvdb.svg?v=2.0.0.4.0", IMDb: "/icons/imdb.svg?v=2.0.0.4.0" };
 
 export function ratingPillHtml({ label, value = "View", href = "", title = "" } = {}) {
   if (!label || !href) return "";
