@@ -140,7 +140,8 @@ async function loadAllImages(page) {
     // render after the first look; promote on every pass and count unpromoted ones as pending.
     const pending = await page.evaluate(() => {
       const inView = (img) => { const r = img.getBoundingClientRect(); return r.width > 0 && r.right > 0 && r.left < innerWidth; };
-      document.querySelectorAll("img[data-rail-src]").forEach((img) => { if (inView(img)) { img.src = img.getAttribute("data-rail-src"); img.removeAttribute("data-rail-src"); } });
+      // Only an http(s) URL or a site-relative path is assigned; anything else is left unloaded.
+      document.querySelectorAll("img[data-rail-src]").forEach((img) => { if (inView(img)) { const src = img.getAttribute("data-rail-src"); if (/^(https?:\/\/|\/(?!\/))/.test(src)) img.src = src; img.removeAttribute("data-rail-src"); } });
       document.querySelectorAll("img[loading=lazy]").forEach((img) => { if (inView(img)) img.loading = "eager"; });
       // Async decoding lets a frame paint before the bitmap is ready, leaving tiles blank in the shot.
       document.querySelectorAll("img[decoding=async]").forEach((img) => { img.decoding = "sync"; });
