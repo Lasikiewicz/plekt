@@ -1,48 +1,7 @@
 {
-  "version": "2.0.0.0.10",
-  "build": 10,
-  "resetCommit": "37edb9abccb543d77dc2b6eb28e7852f628db4d4",
-  "updatedAt": "2026-10-15T13:35:20.853Z",
-  "entries": [
-    {
-      "build": 10,
-      "date": "2026-10-15T13:35:20.853Z",
-      "commit": "53e9df07b1d0b61982767bd7032b652d9c1ac4e2",
-      "message": "This update includes keep dashboard cards readable in Safari, add a text size slider to the sidebar Appearance panel, up Next order, show grouping, sync activity, and Appearance menu position, restore missing cached posters and keep the app version above the theme switchers, add per-season poster editing for TV shows, and season cards, season posters, and restore status on Backups.",
-      "author": "Lasikiewicz",
-      "details": [
-        "Keep dashboard history card details visible beside episode artwork across desktop widths.",
-        "Give the playlist import dialog more room for its app list.",
-        "Text size slider from 100% to 130% in the sidebar Appearance panel scales the text across Plekt",
-        "The chosen text size is saved on the Plekt server and applied when Plekt loads",
-        "Dashboard history posters use a wider fixed column on desktop so the posters fill the card height",
-        "Up Next shows the episode or movie that is playing at the top of the rail while it plays",
-        "Up Next shows one card per episode: a part-watched card and a next-up card for the same episode are merged into the part-watched one",
-        "Up Next keeps its order on refresh: a card waiting to be removed stays in its place instead of jumping to the top",
-        "Appearance sits between Settings and About in the left menu, with the version and light/dark toggle still at the foot",
-        "TV shows group and pick posters more reliably when a show has several matching entries",
-        "Sync activity refreshes and retries more reliably after a failed request",
-        "A cached poster whose file has gone missing is downloaded again when it is next requested, so it shows instead of a broken image",
-        "A missing poster that has no downloadable source returns not found, so the artwork fallback is used instead of a broken image",
-        "The app version label sits above both theme switches at the foot of the sidebar, instead of between them",
-        "Select or upload a poster for each season in Edit Images from TMDB, TVDB, and fanart.tv",
-        "Keep season overrides separate so episode, dashboard, and upcoming cards can use them without changing show or episode artwork",
-        "Preserve saved season poster choices in portable and encrypted backups",
-        "Open season's episodes sit beside its card on desktop, with one outline that joins the card and the episode box seamlessly, a curved bottom joint, and matching colours in light mode",
-        "Clicking a season scrolls its card to just below the top bar, also when the app is zoomed out",
-        "Season episodes show five to a row on desktop",
-        "Season rows show a poster: the season's own poster, the series poster when a season has none, and one-season shows get posters too; desktop season posters are larger",
-        "Watched-status edits you make are no longer refused while a watch-history restore is running or has failed; automated sync still waits for it",
-        "Settings > Backups shows a running or failed watch-history restore with its error, and a Clear Status button to release it"
-      ],
-      "messageFragments": [
-        "Fix - Keep dashboard cards readable in Safari",
-        "Feature - Add a text size slider to the sidebar Appearance panel",
-        "Fix - Up Next order, show grouping, sync activity, and Appearance menu position",
-        "Fix - Restore missing cached posters and keep the app version above the theme switchers",
-        "Feature - Add per-season poster editing for TV shows",
-        "Feature - Season cards, season posters, and restore status on Backups"
-      ]
-    }
-  ]
+  "version": "2.0.0.1.0",
+  "build": 0,
+  "resetCommit": "b3ed755b6ff4f225f404f429fe9f879343b6e29f",
+  "updatedAt": "2026-10-15T13:52:54.814Z",
+  "entries": []
 }
