@@ -18,11 +18,14 @@ for (const file of files) {
   const buffer = fs.readFileSync(absolute);
   if (buffer.includes(0)) continue;
   const approved = inventory.files[file];
-  const remaining = new Map((approved?.lines || []).map(([line, count]) => [line, count]));
+  // Asset version stamps change on every develop build, so they are ignored when matching lines.
+  const versionless = (text) => text.trim().replace(/\?v=[\d.]+/g, "?v=*");
+  const remaining = new Map();
+  for (const [line, count] of approved?.lines || []) remaining.set(versionless(line), (remaining.get(versionless(line)) || 0) + count);
   buffer.toString("utf8").split(/\r?\n/).forEach((line, index) => {
     if (!/plembfin/i.test(line)) return;
     checked++;
-    const normalized = line.trim();
+    const normalized = versionless(line);
     const count = remaining.get(normalized) || 0;
     if (!approved?.reason || !inventory.reasons[approved.reason] || count < 1) {
       violations.push(`${file}:${index + 1}: ${normalized.slice(0, 200)}`);
