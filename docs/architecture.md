@@ -400,6 +400,8 @@ directory are linked from the app's Reddit developer-platform listing.
 | `mediaForceSync.test.js` | Title-scoped Force Sync mode/target normalization, watched Plex/Emby item shaping, and duplicate-quality Jellyfin episode matching. |
 | `mediaForceSyncTrackerPhases.test.js` | Local-first detail Force Sync ordering, independently bounded Trakt work, combined partial outcomes, and cancellation of queued tracker items. |
 | `scheduledResumeAuthority.test.js` | Timestamp and canonical-state precedence for webhook and scheduled resume candidates, including stale acknowledgements and explicit unwatches. |
+| `staleRestoreScheduler.test.js` | Scheduler admission recovers orphaned restores while preserving fresh heartbeats and replacement operation owners. |
+| `defaultShowSeason.test.js` | Latest regular season selection, preserving collapsed seasons, explicit season links, and load-ready deep-link scrolling. |
 | `syncRetry.test.js` | Scheduled-dispatch retry backoff schedule/eligibility, retry columns, permanent `sync_history` pagination. |
 | `bulkMarkWatchedPerformance.test.js` | Bulk-watch dispatch identity grouping, scheduler deferral threshold, provider fan-out, and single-flight series/episode lookup coverage. |
 | `metadataCaches.test.js` | Fanart response cache (hits and negative misses), TMDB details cache freshness, light-vs-full cache row semantics. |
@@ -473,6 +475,11 @@ The elected worker coordinator (`server/src/workerCoordinator.js`) drives the ti
 `runScheduledTick()` from `server/src/scheduler.js` (wrapping `runScheduledSync` from
 `scheduled.js`) once a minute. The tick is guarded against overlap: if the previous tick is
 still running when the next fires, the new tick is skipped.
+
+Before the restore admission gate, the worker recovers stale operation markers after
+three minutes without a heartbeat. Recovery atomically rechecks the operation owner
+and heartbeat, preserving a replacement operation or a restore that has renewed its
+lease. This recovery runs even when a persisted restore fence blocks normal sync.
 
 Each tick is scheduled from the **start** of the previous one, so the period stays 60 seconds
 whatever a tick costs. `nextTickDelayMs()` computes the delay: a tick that finishes inside its

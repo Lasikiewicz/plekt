@@ -208,10 +208,43 @@ The develop inventory can include later application work: reconcile targets agai
 pinned alpha changes and preview's outstanding list. The definitive impact check is run
 in the alpha checkout after carrying in the reviewed website in step 5.
 
+Before choosing captures, read the actual product commits between the published main
+baseline and the pinned candidate, including their `site-impact:` and `Website review:`
+notes. For older commits without explicit notes, inspect the meaningful diff, ignoring
+asset version stamps and release bookkeeping. A changed source path or shared stylesheet
+is only a review candidate, never proof that every image needs replacing.
+
+
+Poster acceptance is mandatory for every retained or replacement image: inspect the final
+file at its original size and check the visible posters against the live candidate.
+No missing/broken/unloaded poster, clipped poster/card at a frame edge, stretched,
+squashed, skewed, or incorrect-aspect artwork is accepted. Intentional spoiler masks are
+allowed only in the explicitly named spoilers-on view. Inspect natural and rendered image
+dimensions/object-fit when proportions are suspect; never resize a frame non-uniformly,
+hide an error, or alter DOM content/styles to make it pass. Fix the actual capture framing
+or report the app/artwork blocker, then recheck. Tool `ok` and correct output size alone
+are not acceptance. Record poster findings per variant in capture results.
+
+Compare the existing website's affected text, captions, and images with the approved
+running main candidate in the same route, state, viewport, style, and mode. For each
+candidate image record the introducing commit, existing asset, comparison evidence, and
+one decision: **retake - visible difference and reason**, **keep - still accurate and why**,
+or **blocked - comparison not completed**. Keep accurate images. Retake only variants
+whose depicted UI changed; never feed the whole stale-tool output into the capture tool.
+Include a new image only when changed/new guidance needs one and no existing accurate
+image explains it. Update stale or missing website information, instructions, captions,
+and links as well as images; a fresh screenshot alone does not finish a guide review.
+Do not hand off phase B with an unperformed comparison labelled as a required retake.
+Put this decision record in the phase A results and only confirmed retakes/new images in
+`captures.md` and its IDs file. Each capture entry must state why the existing image is
+insufficient and which commit changed it. If none differ, explicitly hand off no captures.
+On a resumed handoff, the user's narrowed scope takes precedence over the inherited list;
+reconcile it before creating live state or taking further images.
+
 Review affected guides and shared site surfaces against the running candidate. Make
 website copy edits on `develop`, identify required captures, and start the website preview
-from `website/` with `npm run dev`. List the images to retake with `npm run captures:stale`
-in `website/` (files changed since `origin/main`, every view of each image), reconciled
+from `website/` with `npm run dev`. Find image review candidates with `npm run captures:stale`
+in `website/` (source paths changed since `origin/main`; this is not a mandatory retake list), reconciled
 against the pinned alpha changes like the inventory; `npm run captures:retake -- <ids>`
 retakes them as `website/capture-catalogue.json` describes. A placed image whose size
 differs from the catalogue fails `npm run check:catalogue`, so update its catalogue sizes. A guide that remains accurate may instead be recorded
@@ -228,7 +261,9 @@ instructions, key risk, and intended website section/caption. The file must stan
 copy in all capture and privacy instructions rather than asking phase B to read this skill,
 the run summary, local credentials, or website docs. Keep credentials out of the file.
 Phase B takes the list with the capture tool first and uses a browser only for images the
-tool could not take: write the image ids, one per line, to `capture-ids.txt` beside
+tool could not take. When phase B reaches those by-hand captures (including the live states
+they need), it proceeds directly and does not ask the user first; the user has said this
+question should not be asked. Write the image ids, one per line, to `capture-ids.txt` beside
 `captures.md`, fill the tool command in the template (`--ids-file`, `--base-url` for the
 candidate's port, `--expect-version`, `--expect-channel=release`, `--out` to
 `captures/auto`), and name each entry that needs a live state. The capture tool
@@ -239,7 +274,12 @@ with `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which phase B sets for its own too
 asked to set anything. Live states (`playback`, `manual-review-item`, `dismissed-up-next`)
 are created by phase B in that file's local test environment, as the template describes:
 muted playback in the connected test media apps, an episode marked played in a test app
-for a review item. They are not a reason to skip or fail an image. An image whose
+for a review item. They are not a reason to skip or fail an image. Phase B starts the
+four test media containers itself with the local-stack lifecycle skill when a live state
+needs them, and may do anything the test servers need for the capture (start muted playback,
+mark items played or unplayed, remove watched status); it does not ask first. This does not
+extend to the live/remote environment. Temporary settings changes that a catalogue entry
+requires (the `dashboard-up-next` Allow part watched items option) are restored after capture. An image whose
 published frame is not the standard 1440 x 683 gets its own `viewport` in
 `website/capture-catalogue.json` (for example `manual-watch-review`, 2560 x 1290), so the
 tool takes it at true size; fix the catalogue entry rather than capturing by hand.

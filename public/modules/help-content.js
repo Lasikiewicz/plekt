@@ -1,5 +1,5 @@
-import { getWebhookToken } from "./auth.js?v=2.0.0.2.1";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.0.0.2.1";
+import { getWebhookToken } from "./auth.js?v=2.0.0.3.1";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.0.0.3.1";
 
 function snippet(code, language = "text") {
   const trimmed = String(code).trim();
@@ -319,6 +319,7 @@ export function cronSyncGuide() {
 
 X-Api-Key: <your-api-key>`, "http")}
       <h3>What this runs</h3>
+      <p>Restores pause automated sync while they own watch state. The scheduler recovers an interrupted restore after three minutes without a heartbeat, allowing live playback tracking and history recording to resume.</p>
       <p>The worker writes a heartbeat timestamp, polls Plex, Emby, and Jellyfin for active playback, updates live-session cache rows, detects completed sessions at the watched threshold (90% by default), writes completed watches to <code>watch_history</code>, dispatches outbound watched-state sync, repairs platform drift against Plekt's canonical watched state, maintains <code>data/next-airing-cache.json</code>, and progressively stores month results in <code>data/upcoming-calendar-cache.json</code>.</p>
     </section>
   `;

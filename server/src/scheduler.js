@@ -7,7 +7,7 @@ import { fetchPlexContainerEpisodes, fetchPlexMetadataItem, findPlexItem, hydrat
 import { buildPlexMediaFromMetadata } from "./utils/parsers.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "./utils/watchProvenance.js";
 import { listActiveSessions } from "./utils/activeSessions.js";
-import { providerWatchFingerprint, runScheduledSync } from "./scheduled.js";
+import { providerWatchFingerprint, recoverStaleSyncOperation, runScheduledSync } from "./scheduled.js";
 import { watchedPlayedSyncEnabled } from "./utils/syncFlags.js";
 import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
@@ -420,6 +420,7 @@ export async function runScheduledTick(options = {}) {
 
 async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
+  if (isAuthoritativeRestoreActive()) await recoverStaleSyncOperation();
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
   pruneSyncPlans();
   await runWithTimeBudget("Loop key prune", () => {

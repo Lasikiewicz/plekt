@@ -87,6 +87,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Personal media organization** - Save movies, shows, and episodes to a watch list or playlists (optionally synced two ways to Plex, Emby, and Jellyfin, or filled automatically from genre, original language, year, and watched rules, with TV playlists holding the next episode of each show, and watched items removed if you choose), and rate them from their media pages; episode ratings use one canonical show/season/episode identity everywhere
 - **Cache-first media detail pages** - Reuse the latest local history snapshot on reload so known artwork, summaries, watched rows, and watch dates stay visible while provider metadata refreshes
 - **Paged media libraries** - Movies and TV Shows load more cards as you scroll without rebuilding the cards already on screen; saved TV pages revalidate after 30 minutes when reopened
+- **Season navigation** - Show pages open the latest regular season at the top; season links select the requested season, with Season 1 opening at the page top and other seasons scrolling into view after loading.
 - **Personal Rating Sync** - One-toggle, two-way rating sync with every connected Plex, Emby, Jellyfin, and Trakt account through an isolated durable queue, with Plekt as the conflict authority
 - **Plex Watchlist Sync** - One-toggle, two-way sync between Plekt and the Plex account watchlist, with safe first-run union, durable retries, a Sync now action, and a plain-language explanation of anything Plex refuses
 - **Upcoming episodes calendar** - Air date schedule for upcoming and past releases, pre-cached for instant loading
@@ -585,6 +586,9 @@ test suite, documentation and JSON validation, an outbound-fetch guard, an asset
 check, and a clean-directory boot test - before it ships. Personal watchlist delivery uses
 its own leased queue, provider ownership ledger, complete-snapshot gate, and failure budget,
 so a provider watchlist outage cannot pause watched-state or rating synchronization.
+
+The scheduler automatically recovers interrupted restore locks after three minutes
+without a heartbeat, allowing live playback tracking and history recording to resume.
 
 For the full picture - file map, subsystem map, and per-feature references - start at
 [`docs/architecture.md`](docs/architecture.md) and the [docs index](docs/README.md).

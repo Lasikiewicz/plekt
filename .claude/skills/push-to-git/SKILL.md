@@ -184,6 +184,25 @@ For every changed feature or setting, check the relevant frontend module in `pub
 - **`cronSyncGuide()`** - update if scheduler endpoint or behaviour changed
 - **`adminTokenGuide()`** - update if auth flow changed
 
+### Website decision on every new commit
+
+Every new commit created by this workflow, including tooling, documentation, and release
+bookkeeping commits, must record an explicit website decision. Use the existing trailer:
+`site-impact: <docSlug>, <docSlug>` means **website check required**;
+`site-impact: none` means **website check not required**. Never omit it. Before committing,
+inspect the staged change and decide whether website readers could encounter changed
+behaviour, controls, layout, setup, limitations, or stale guidance. Required means review
+at Force to main, not an automatic image retake or a cosmetic guide edit.
+
+For each required guide, record in the commit body (as plain non-bullet metadata):
+`Website review: <what changed; copy to check; image IDs/sections to compare, or images: none and why>`.
+For `site-impact: none`, record `Website review: not required - <specific reason>`.
+Do not put these notes in user-facing changelog bullets. Missing metadata must be fixed
+on new local commits before push; do not rewrite already-published history just to add it.
+When squashing, preserve all review reasons and image candidates, union required guides,
+and use `none` only if every constituent change needs no website review. Recheck the
+final commit message after consolidation; bookkeeping commits also need an explicit note.
+
 ### 4 - Write the commit message
 Use this format - the first line becomes the changelog `message`; bullet-point body lines are parsed into `details` by `scripts/rebuild-develop-changelog.js` in step 6:
 

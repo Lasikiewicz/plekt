@@ -312,8 +312,8 @@ export function buildUpdatesMarkdown(model) {
 
   const captures = model.captures;
   if (captures) {
-    lines.push("## Website images to retake", "", "Images whose catalogued source files changed (`website/capture-catalogue.json`); every view of each is retaken during **Force to main**.", "");
-    if (captures.shared.length) lines.push(`- Shared files changed, so every image is listed: ${captures.shared.map((file) => `\`${file}\``).join(", ")}`, "");
+    lines.push("## Website images to retake", "", "Review candidates whose catalogued source paths changed (`website/capture-catalogue.json`). Compare existing images with the approved candidate; retake only visibly changed variants. Source changes and asset stamps alone do not require a retake.", "");
+    if (captures.shared.length) lines.push(`- Shared source paths changed, so every image is a review candidate (not a required retake): ${captures.shared.map((file) => `\`${file}\``).join(", ")}`, "");
     if (captures.images.length) {
       for (const image of captures.images) {
         const commits = image.commits.length ? ` [${image.commits.join(", ")}]` : "";
@@ -321,7 +321,7 @@ export function buildUpdatesMarkdown(model) {
         const files = image.files.filter((file) => !captures.shared.includes(file));
         lines.push(`- \`${image.id}\` (${image.variants.join(", ")})${live}${commits}${files.length ? `: ${files.map((file) => `\`${file}\``).join(", ")}` : ""}`);
       }
-      lines.push("", ...captures.commands.map((command) => `Retake from \`website/\`: \`${command}\``), "");
+      lines.push("", ...captures.commands.map((command) => `Candidate command from \`website/\` (narrow to confirmed retakes first): \`${command}\``), "");
     } else {
       lines.push("- No website images to retake.", "");
     }

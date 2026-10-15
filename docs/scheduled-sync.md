@@ -8,6 +8,12 @@ lease ensures only one `all` or `worker` process runs scheduler work and the Ple
 notification listener. The lease is renewed every 10 seconds and expires after 60.
 The existing per-process overlap guard remains in place.
 
+Before applying the restore admission gate, the worker recovers an operation whose
+heartbeat is more than three minutes old. Recovery rechecks the owner and heartbeat
+inside the SQLite transaction, so a replacement operation or renewed heartbeat stays
+protected. An interrupted restore therefore cannot leave live playback tracking and
+scheduled history recording paused indefinitely.
+
 The lease prevents concurrent scheduler ownership. A process crash during an
 already-issued media-server API call cannot make that remote call exactly-once;
 Plekt's persisted loop detection and idempotent watched/unwatched writes provide

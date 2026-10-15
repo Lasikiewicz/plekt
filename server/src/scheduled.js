@@ -2484,14 +2484,12 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
   };
 }
 
-// Scheduled polling also participates in the shared operation lock. Without
-// this boundary a Force Sync could claim the lock while a scheduler tick that
-// started a moment earlier was still dispatching a watchstate write.
-export async function runScheduledSync(logger = console.log, options = {}) {
-  const ownerId = `scheduled:${brandEnv("INSTANCE_ID") || process.pid}:${Date.now()}`;
+// Run before the scheduler's restore admission check: an orphaned restore must
+// not prevent the scheduler from reaching its own stale-operation recovery.
+export async function recoverStaleSyncOperation(logger = console.log) {
   const staleBefore = Date.now() - 3 * 60 * 1000;
-  let runtime = await loadRuntimeState().catch(() => ({}));
-  let existing = activeSyncOperation(runtime);
+  const runtime = await loadRuntimeState();
+  const existing = activeSyncOperation(runtime);
   if (existing && existing.heartbeat < staleBefore) {
     const staleValues = existing.kind === SYNC_OPERATION_FORCE
       ? {
@@ -2511,12 +2509,22 @@ export async function runScheduledSync(logger = console.log, options = {}) {
         }
         : { scheduledSyncActive: false, scheduledSyncHeartbeat: Date.now() };
     logger(`Scheduled Sync: clearing stale ${existing.kind} operation marker...`);
-    const cleared = await clearSyncOperation({ kind: existing.kind, values: staleValues }).catch(() => ({ ok: false }));
-    if (cleared.ok) {
-      runtime = await loadRuntimeState().catch(() => ({}));
-      existing = activeSyncOperation(runtime);
-    }
+    return clearSyncOperation({
+      kind: existing.kind,
+      expectedOwnerId: existing.ownerId,
+      staleBefore,
+      values: staleValues,
+    });
   }
+  return { ok: false, active: existing };
+}
+
+// Scheduled polling also participates in the shared operation lock. Without
+// this boundary a Force Sync could claim the lock while a scheduler tick that
+// started a moment earlier was still dispatching a watchstate write.
+export async function runScheduledSync(logger = console.log, options = {}) {
+  const ownerId = `scheduled:${brandEnv("INSTANCE_ID") || process.pid}:${Date.now()}`;
+  await recoverStaleSyncOperation(logger);
 
   const claim = await claimSyncOperation({
     kind: SYNC_OPERATION_SCHEDULED,

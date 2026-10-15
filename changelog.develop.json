@@ -1,19 +1,19 @@
 {
-  "version": "2.0.0.2.1",
+  "version": "2.0.0.3.1",
   "build": 1,
-  "resetCommit": "f29edf3ba7781cea1a32929c53555ccea0957965",
-  "updatedAt": "2026-10-15T15:04:47.003Z",
+  "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
+  "updatedAt": "2026-10-15T22:42:33.819Z",
   "entries": [
     {
       "build": 1,
-      "date": "2026-10-15T15:04:47.003Z",
-      "commit": "f7b308d44f417724d3d1a169e099a167bc87f02e",
-      "message": "Fix - Keep season scrolling landing just below the top bar",
+      "date": "2026-10-15T22:42:33.819Z",
+      "commit": "dc8798342cb396be6c70097f164ba9ffeec7bbd9",
+      "message": "Fix - Restore playback tracking and improve season navigation",
       "author": "Lasikiewicz",
       "details": [
-        "Clicking a season, or opening a URL that names one, now lands its card just below the top bar on every show",
-        "Seasons no longer stop hidden under the top bar or short of their position when a season card above them resizes during the scroll",
-        "Scrolling by hand while the page is settling stops the adjustment at once"
+        "Recover interrupted restore locks automatically so live playback and watch history resume.",
+        "Open show pages at the top with the latest regular season expanded.",
+        "Open Season 1 links at the page top and scroll other season links into view after loading."
       ]
     }
   ]

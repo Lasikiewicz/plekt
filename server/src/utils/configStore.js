@@ -994,13 +994,15 @@ export async function releaseSyncOperation({ kind, ownerId = "", values = {} } =
 // Used only by an administrator/recovery path after a heartbeat has gone cold.
 // It is deliberately kind-scoped so resetting a stale Force Sync cannot clear
 // an unrelated restore or rebuild operation that started in the meantime.
-export async function clearSyncOperation({ kind = "", values = {} } = {}) {
+export async function clearSyncOperation({ kind = "", expectedOwnerId, staleBefore, values = {} } = {}) {
   let result = { ok: false, active: null };
   db.transaction(() => {
     const current = parseJson(selectRuntimeStmt.get(RUNTIME_ID)?.data, {}) || {};
     const active = operationMatches(current);
     result = { ok: false, active };
     if (!active || (kind && active.kind !== kind)) return;
+    if (expectedOwnerId !== undefined && active.ownerId !== expectedOwnerId) return;
+    if (staleBefore !== undefined && active.heartbeat >= staleBefore) return;
     const now = Date.now();
     const merged = { ...current, ...values, syncOperation: null, updatedAt: now };
     upsertRuntimeStmt.run(RUNTIME_ID, toJson(merged), now);

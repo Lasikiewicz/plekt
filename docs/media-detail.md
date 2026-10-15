@@ -59,7 +59,14 @@ movie is marked unwatched: when no watched library row exists, the route resolve
 the title through TMDB and renders the normal unwatched detail page. Canonical
 `/movie/tmdb/:id` links remain the unambiguous form for newly generated links.
 
-Expanding a season - by clicking its header, or by loading a URL that names one -
+Opening a show without a season deep link expands its latest regular season once
+metadata is ready, while leaving the page at the top. Specials are used only when no
+regular season exists. Later refreshes preserve a season the user has collapsed.
+
+Season 1 deep links expand Season 1 and start at the top of the page. Other season
+deep links wait for the details to load and smoothly scroll to the named season.
+
+Expanding a season by clicking its header
 scrolls it into view with an eased custom animation (`scrollSeasonAccordionIntoView`
 in `media-detail-show.js`), landing just below the sticky topbar (via `scroll-margin-top`
 on `.season-accordion-trigger`). The app shell keeps `window`/`document` fixed and

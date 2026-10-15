@@ -3,6 +3,11 @@
 The dashboard's "Now Playing" row is backed by the current live-session and scheduler
 data described below.
 
+An authoritative restore pauses live-session tracking while it owns watch state.
+The minute scheduler checks for an orphaned restore before applying that pause and
+recovers it after its heartbeat is more than three minutes old. Playback detection
+then resumes on the live-session poller's next tick.
+
 ## What feeds it
 
 `handleNowPlaying` (`server/src/routes/sync.js`) merges **two** SQLite sources:

@@ -122,6 +122,34 @@ When a website update is requested, carry out the following workflow:
   optional remote backups. Link the two phrases directly to `#local-backups` and
   `#remote-backups` so the distinction cannot be lost in general backup wording.
 
+
+Poster acceptance is mandatory for every retained or replacement image: inspect the final
+file at its original size and check the visible posters against the live candidate.
+No missing/broken/unloaded poster, clipped poster/card at a frame edge, stretched,
+squashed, skewed, or incorrect-aspect artwork is accepted. Intentional spoiler masks are
+allowed only in the explicitly named spoilers-on view. Inspect natural and rendered image
+dimensions/object-fit when proportions are suspect; never resize a frame non-uniformly,
+hide an error, or alter DOM content/styles to make it pass. Fix the actual capture framing
+or report the app/artwork blocker, then recheck. Tool `ok` and correct output size alone
+are not acceptance. Record poster findings per variant in capture results.
+
+## Commit decisions and image selection
+
+Every new commit must state `site-impact: <guide slugs>` (website check required) or
+`site-impact: none` (not required), with a plain non-bullet `Website review:` body note
+explaining the reason, copy to review, and image IDs/sections to compare (or images: none
+and why). Preserve these decisions when consolidating commits. Review means checking
+accuracy; it does not automatically require changing a guide or retaking an image.
+
+During Force to main, read the product commits since the published main baseline and
+compare existing affected website images and copy against the approved candidate.
+Ignore mechanical asset stamps when assessing visible change. Record keep/retake/blocked
+with evidence and commit references. Keep accurate images; capture only visibly changed
+variants or necessary new illustrations. Update stale or missing written guidance,
+captions, and links too. A source-path match, shared stylesheet edit, or generated stale
+list is a review aid, never an instruction to recapture everything. Phase B receives only
+the confirmed capture list; blocked comparisons remain open phase A work.
+
 ## Force-to-main website gate
 
 Run this gate only after the release-candidate phase of **Force to main** has finished.
@@ -139,7 +167,8 @@ The gate has three phases, all checked against the same approved release build:
    read the release's website-impact targets, review affected guides in the local website
    preview, make any edits on local `develop`, and write a standalone `captures.md` list.
    `npm run captures:stale` in `website/` lists the images whose catalogued source files
-   changed since `origin/main` (all views of each), with the `captures:retake` command.
+   changed since `origin/main` as review candidates. Compare their existing images first;
+   use the suggested command only after narrowing it to confirmed retakes and variants.
    The application being documented is the pinned alpha candidate running on port 5056,
    not the `develop` app. Stop after writing the capture list and hand it to phase B.
 2. **B — capture only:** Give a cheaper agent the one-line handoff naming `captures.md`.

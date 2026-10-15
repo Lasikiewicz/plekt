@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.0.0.2.1";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.0.0.2.1";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.0.0.2.1";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.0.0.2.1";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.0.0.2.1";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.2.1";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.0.0.2.1";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.2.1";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.2.1";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.2.1";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.0.0.2.1";
+import { state, elements } from "./state.js?v=2.0.0.3.1";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.0.0.3.1";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.0.0.3.1";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.0.0.3.1";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.0.0.3.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.3.1";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.0.0.3.1";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.3.1";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.3.1";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.3.1";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.0.0.3.1";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -16,7 +16,7 @@ import {
   refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.0.0.2.1";
+} from "./media-detail-shared.js?v=2.0.0.3.1";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
@@ -1627,6 +1627,8 @@ function renderSeasonPanelHtml(seasonNumber, seasonRecord, episodeRows, showTitl
 
 export function renderShowModalContent(show, {
   activeSeasonNum = null,
+  selectLatestSeason = state.activeShowRenderContext?.renderToken !== currentMediaRenderToken()
+    || state.activeShowRenderContext?.selectLatestSeason === true,
   tmdbData = null,
   seasonDetailsByNumber = new Map(),
   loading = false,
@@ -1666,6 +1668,13 @@ export function renderShowModalContent(show, {
   const seasonsList = [...(tmdbData?.seasons?.length ? [...tmdbData.seasons, ...extraSeasons] : fallbackSeasonList(seasonsMap))]
     .sort((a, b) => Number(b.season_number) - Number(a.season_number));
   const regularSeasonsList = seasonsList.filter((season) => Number(season.season_number) > 0);
+  // Opening the show itself reveals the newest season without requesting a scroll.
+  // Preserve explicit season links and, after selection, the user's collapse choice.
+  if (selectLatestSeason && !loading && activeSeasonNum == null && seasonsList.length) {
+    activeSeasonNum = Number((regularSeasonsList[0] || seasonsList[0]).season_number);
+    state.activeShowModalSeason = activeSeasonNum;
+  }
+  if (activeSeasonNum != null) selectLatestSeason = false;
   const selectedSeason = activeSeasonNum == null ? null : Number(activeSeasonNum);
   const episodeRows = buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, tmdbData?.id || show.tmdb_id || "", tmdbData);
   const regularEpisodeRows = episodeRows.filter((episode) => Number(episode.seasonNumber) > 0);
@@ -1742,7 +1751,7 @@ export function renderShowModalContent(show, {
 
   state.showModalEpisodes = episodeRows;
   state.showModalEpisodeIndex = new Map(episodeRows.map((episode) => [episode.key, episode]));
-  state.activeShowRenderContext = { show, activeSeasonNum, tmdbData, seasonDetailsByNumber, loading, watchHistoryLoading, imdbPillHtml };
+  state.activeShowRenderContext = { show, activeSeasonNum, selectLatestSeason, renderToken: currentMediaRenderToken(), tmdbData, seasonDetailsByNumber, loading, watchHistoryLoading, imdbPillHtml };
 
   const allSeasonsExpanded = state.showModalAllSeasonsExpanded;
   const selectedSeasonRecord = selectedSeason == null
@@ -1994,10 +2003,18 @@ export function renderShowModalContent(show, {
   // happened. The flag is consumed and cleared immediately so a later
   // re-render of this same modal (e.g. toggling an episode watched) doesn't
   // scroll again.
-  if (state.pendingSeasonScrollTarget != null && Number(state.pendingSeasonScrollTarget) === selectedSeason) {
-    const targetSeason = state.pendingSeasonScrollTarget;
+  if (!loading && !watchHistoryLoading && state.pendingSeasonScrollTarget != null
+    && Number(state.pendingSeasonScrollTarget) === selectedSeason) {
+    const targetSeason = Number(state.pendingSeasonScrollTarget);
     state.pendingSeasonScrollTarget = null;
-    requestAnimationFrame(() => scrollSeasonAccordionIntoView(targetSeason));
+    requestAnimationFrame(() => {
+      if (targetSeason === 1) {
+        const container = document.querySelector(".page-shell");
+        if (container) container.scrollTop = 0;
+      } else {
+        scrollSeasonAccordionIntoView(targetSeason);
+      }
+    });
   }
   // Refresh when there's no status yet, or when the rendered status came from
   // the persisted cache (`stale`) - the fetch resolves null if nothing
