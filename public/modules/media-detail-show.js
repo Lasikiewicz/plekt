@@ -8,6 +8,7 @@ import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, 
 import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.1.0";
 import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.1.0";
 import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.1.0";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.0.0.1.0";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -167,6 +168,7 @@ export function positionSeasonDetails(root = document) {
       listHeight = Math.max(listHeight, top + detail.offsetHeight);
     });
     list.style.minHeight = isDesktop && listHeight ? `${listHeight}px` : "";
+    watchSeasonCardSizes(list, () => positionSeasonDetails(document));
   });
 }
 

@@ -665,6 +665,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Detail-page watch and sync info summary rendering | `modules/media-info-summary.js` |
 | Route-scoped shared TMDB/Seerr rendering fragments (cast, trailers, images, ratings, recommendations) | `modules/media-detail-shared.js` |
 | TV show detail rendering (seasons, episodes, show modal) | `modules/media-detail-show.js` |
+| Open season episode box placement beside its card (season card size watch) | `modules/season-card-sizes.js` |
 | Movie detail rendering | `modules/media-detail-movie.js` |
 | Person profiles and filmography | `modules/media-person.js` |
 | Edit dialogs and watched-date/image/match tools | `modules/edit-dialogs.js` |
