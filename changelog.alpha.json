@@ -1,10 +1,47 @@
 {
   "baseVersion": "2.0.0",
-  "build": 1,
-  "version": "2.0.0.1.0",
-  "updatedAt": "2026-10-15T13:52:54.814Z",
+  "build": 2,
+  "version": "2.0.0.2.0",
+  "updatedAt": "2026-10-15T14:16:24.544Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 2,
+      "version": "2.0.0.2.0",
+      "shortVersion": "2.0.0.2.0",
+      "date": "2026-10-15T14:16:24.544Z",
+      "commit": "f29edf3ba7781cea1a32929c53555ccea0957965",
+      "message": "This update keeps an open season's episode box level with its season card on desktop.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Keep open season episode box level with its season card",
+        "Fix: Opening a season places its episode box level with the season card on desktop",
+        "Fix: The episode box no longer sits below its card when a season card above it changes height after the page renders"
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Keep open season episode box level with its season card",
+          "Opening a season places its episode box level with the season card on desktop",
+          "The episode box no longer sits below its card when a season card above it changes height after the page renders"
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Keep open season episode box level with its season card",
+              "Opening a season places its episode box level with the season card on desktop",
+              "The episode box no longer sits below its card when a season card above it changes height after the page renders"
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 1,
       "version": "2.0.0.1.0",
@@ -101,5 +138,5 @@
       ]
     }
   ],
-  "shortVersion": "2.0.0.1.0"
+  "shortVersion": "2.0.0.2.0"
 }

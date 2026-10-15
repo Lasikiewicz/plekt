@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.0.0.1.1";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.0.0.1.1";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.0.0.1.1";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.0.0.1.1";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.0.0.1.1";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.1.1";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.0.0.1.1";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.1.1";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.1.1";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.1.1";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.0.0.1.1";
+import { state, elements } from "./state.js?v=2.0.0.2.1";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.0.0.2.1";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.0.0.2.1";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.0.0.2.1";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.0.0.2.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.2.1";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.0.0.2.1";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.2.1";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.2.1";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.2.1";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.0.0.2.1";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -16,7 +16,7 @@ import {
   refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.0.0.1.1";
+} from "./media-detail-shared.js?v=2.0.0.2.1";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
@@ -87,6 +87,11 @@ function nearestScrollableAncestor(el) {
 }
 
 const SCROLL_ANIMATION_MS = 700;
+// After the eased scroll ends, keep re-aiming for this long: a card above the
+// target can still change height (a lazy poster loading, a season collapsing),
+// which would otherwise leave the card short of its mark.
+const SCROLL_SETTLE_MS = 600;
+const SCROLL_CANCEL_EVENTS = ["wheel", "touchstart", "pointerdown", "keydown"];
 
 function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - ((-2 * t + 2) ** 3) / 2;
@@ -95,18 +100,36 @@ function easeInOutCubic(t) {
 // A hand-rolled eased scroll instead of scrollIntoView's native
 // behavior:"smooth": the browser's own smooth scroll duration isn't
 // configurable and reads as an abrupt snap over this kind of distance.
-function animateScrollTop(container, targetTop, duration) {
+// getTargetTop is re-read every frame, so the destination follows the card if
+// the layout moves mid-scroll. The user taking over (wheel, touch, key, click)
+// cancels the correction.
+function animateScrollTop(container, getTargetTop, duration) {
   const isWindowLevel = container === document.scrollingElement || container === document.documentElement;
-  const startTop = isWindowLevel ? window.scrollY : container.scrollTop;
-  const distance = targetTop - startTop;
-  if (Math.abs(distance) < 1) return;
+  const readTop = () => (isWindowLevel ? window.scrollY : container.scrollTop);
+  const writeTop = (top) => {
+    if (isWindowLevel) window.scrollTo(0, top);
+    else container.scrollTop = top;
+  };
+  const startTop = readTop();
   const startTime = performance.now();
+  let animationEnd = 0;
+  let cancelled = false;
+  const cancel = () => { cancelled = true; };
+  const finish = () => SCROLL_CANCEL_EVENTS.forEach((name) => container.removeEventListener(name, cancel));
+  SCROLL_CANCEL_EVENTS.forEach((name) => container.addEventListener(name, cancel, { passive: true }));
   function step(now) {
-    const progress = Math.min((now - startTime) / duration, 1);
-    const nextTop = startTop + distance * easeInOutCubic(progress);
-    if (isWindowLevel) window.scrollTo(0, nextTop);
-    else container.scrollTop = nextTop;
-    if (progress < 1) requestAnimationFrame(step);
+    if (cancelled) return finish();
+    const top = Math.max(0, getTargetTop());
+    if (!animationEnd) {
+      const progress = Math.min((now - startTime) / duration, 1);
+      writeTop(startTop + (top - startTop) * easeInOutCubic(progress));
+      if (progress === 1) animationEnd = now;
+    } else if (now - animationEnd >= SCROLL_SETTLE_MS) {
+      return finish();
+    } else if (Math.abs(readTop() - top) > 1) {
+      writeTop(top);
+    }
+    requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
 }
@@ -118,18 +141,23 @@ function animateScrollTop(container, targetTop, duration) {
 // season-click handler in media-detail-events.js and the initial-render
 // scroll below, so both stay in sync.
 export function scrollSeasonAccordionIntoView(seasonNum, { duration = SCROLL_ANIMATION_MS } = {}) {
-  const target = document.querySelector(`.seasons-section.season-accordions [data-season-accordion="${seasonNum}"]`)
-    || document.querySelector(".seasons-section.season-accordions");
-  if (!target) return;
-  const container = nearestScrollableAncestor(target);
+  const selector = `.seasons-section.season-accordions [data-season-accordion="${seasonNum}"]`;
+  const fallback = ".seasons-section.season-accordions";
+  const initial = document.querySelector(selector) || document.querySelector(fallback);
+  if (!initial) return;
+  const container = nearestScrollableAncestor(initial);
   const isWindowLevel = container === document.scrollingElement || container === document.documentElement;
-  const containerTop = isWindowLevel ? 0 : container.getBoundingClientRect().top;
-  const currentTop = isWindowLevel ? window.scrollY : container.scrollTop;
-  const scrollMarginTop = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
-  // Rects are in zoomed pixels (the app shell's CSS zoom); scrollTop is not.
-  const zoom = isWindowLevel ? 1 : container.currentCSSZoom || 1;
-  const targetTop = currentTop + (target.getBoundingClientRect().top - containerTop) / zoom - scrollMarginTop;
-  animateScrollTop(container, Math.max(0, targetTop), duration);
+  // Re-queried each frame: a re-render during the scroll replaces the element.
+  const getTargetTop = () => {
+    const target = document.querySelector(selector) || document.querySelector(fallback) || initial;
+    const containerTop = isWindowLevel ? 0 : container.getBoundingClientRect().top;
+    const currentTop = isWindowLevel ? window.scrollY : container.scrollTop;
+    const scrollMarginTop = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+    // Rects are in zoomed pixels (the app shell's CSS zoom); scrollTop is not.
+    const zoom = isWindowLevel ? 1 : container.currentCSSZoom || 1;
+    return currentTop + (target.getBoundingClientRect().top - containerTop) / zoom - scrollMarginTop;
+  };
+  animateScrollTop(container, getTargetTop, duration);
 }
 
 // Desktop: an open season's episode box sits beside its card, level with the

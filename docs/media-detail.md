@@ -68,6 +68,10 @@ clicked/targeted season's trigger to find whichever ancestor actually has the ov
 rather than assuming it's page-shell specifically. A URL-named season scrolls into view
 exactly once on that navigation (`state.pendingSeasonScrollTarget`, consumed by the
 first render), not on every later re-render of the same modal.
+The target is re-read every frame, and for about 600ms after the animation ends the page
+keeps re-aiming at the card, so a card above it that finishes loading or resizing (a
+lazy poster, for example) still lands below the topbar. Any wheel, touch, pointer or key
+input from the user cancels that correction.
 
 Series that TMDB has no record of are addressed by `/tvshow/tvdb/:id` instead of
 `/tvshow/tmdb/:id`. Show metadata is TVDB-backed either way, so the page renders the
