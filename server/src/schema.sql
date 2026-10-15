@@ -473,6 +473,17 @@ CREATE TABLE IF NOT EXISTS media_artwork (
 CREATE INDEX IF NOT EXISTS idx_media_artwork_provider_ids
   ON media_artwork(media_type, tmdb_id, tvdb_id, imdb_id);
 
+-- Season-level poster overrides, one row per show alias key and season.
+-- Read by getCanonicalSeasonPosterUrls ahead of the cached TMDB/TVDB season art.
+CREATE TABLE IF NOT EXISTS season_artwork (
+  identity_key TEXT NOT NULL,
+  season_number INTEGER NOT NULL,
+  poster_url TEXT NOT NULL,
+  poster_source TEXT NOT NULL DEFAULT 'manual',
+  updated_at INTEGER NOT NULL,
+  PRIMARY KEY (identity_key, season_number)
+);
+
 CREATE TABLE IF NOT EXISTS tmdb_search_cache (
   id TEXT PRIMARY KEY,
   query TEXT,

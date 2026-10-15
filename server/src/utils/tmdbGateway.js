@@ -651,6 +651,25 @@ export async function getTmdbDetails({ mediaType, tmdbId = "", title = "", ids =
   return getMovieDetails({ tmdbId, title, ids, force, light: light && !force, lane });
 }
 
+// The merged show-details payload uses TVDB for its structural season list,
+// including absolute TVDB artwork URLs. Fetch the provider's actual season
+// endpoint when the Edit Images grid needs TMDB's own season poster.
+export async function getTmdbSeasonArtwork({ tmdbId, seasonNumber, lane = "enrichment" } = {}) {
+  const id = String(tmdbId || "").trim();
+  const number = Number(seasonNumber);
+  if (!/^\d+$/.test(id) || !Number.isInteger(number) || number < 0) {
+    const error = new Error("A valid TMDB ID and season number are required");
+    error.status = 400;
+    throw error;
+  }
+  if (isDemoMode()) {
+    const error = new Error("TMDB season artwork is not available in demo mode");
+    error.status = 503;
+    throw error;
+  }
+  return collapse(`tmdb-season-artwork:${id}:${number}`, () => upstream(`tv/${id}/season/${number}`, {}, 0, { lane }));
+}
+
 async function drainMetadataWarmupQueue() {
   let warmed = 0;
   let failed = 0;

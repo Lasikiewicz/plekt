@@ -68,6 +68,17 @@ const selectCachedTvTvdbIdsStmt = db.prepare(`
   WHERE media_type = 'tv' AND details IS NOT NULL AND json_valid(details)
   ORDER BY rowid
 `);
+const selectSeasonArtworkByKeyStmt = db.prepare(
+  "SELECT season_number, poster_url FROM season_artwork WHERE identity_key = ?",
+);
+const upsertSeasonArtworkStmt = db.prepare(`
+  INSERT INTO season_artwork (identity_key, season_number, poster_url, poster_source, updated_at)
+  VALUES (@identity_key, @season_number, @poster_url, @poster_source, @updated_at)
+  ON CONFLICT(identity_key, season_number) DO UPDATE SET
+    poster_url = excluded.poster_url,
+    poster_source = excluded.poster_source,
+    updated_at = excluded.updated_at
+`);
 const upsertArtworkStmt = db.prepare(`
   INSERT INTO media_artwork
     (identity_key, media_type, title, tmdb_id, tvdb_id, imdb_id, poster_url, poster_source, updated_at)
@@ -227,7 +238,36 @@ export function getCanonicalSeasonPosterUrls(item = {}) {
     const posterUrl = cachedSeasonPosterUrl(row.poster, identity.tmdb_id);
     if (posterUrl) posters.set(seasonNumber, posterUrl);
   }
+  // A chosen season poster outranks the provider art cached above.
+  for (const identityKey of mediaArtworkIdentityKeys(item, { includeTitle: false })) {
+    for (const row of selectSeasonArtworkByKeyStmt.all(identityKey)) {
+      if (row.poster_url) posters.set(Number(row.season_number), row.poster_url);
+    }
+  }
   return posters;
+}
+
+// Season posters follow the show poster's alias rule: one value is written to
+// every known identity key, so a show found under TMDB, TVDB or IMDb converges.
+export function saveCanonicalSeasonPoster(item = {}, seasonNumber, posterUrl = "", { source = "manual" } = {}) {
+  const number = Number(seasonNumber);
+  const url = clean(posterUrl);
+  if (!url || !Number.isInteger(number) || number < 0) return { ok: false, identity_keys: [] };
+  const keys = mediaArtworkIdentityKeys(item, { includeTitle: true });
+  if (!keys.length) return { ok: false, identity_keys: [] };
+  const timestamp = Date.now();
+  transaction(() => {
+    for (const identityKey of keys) {
+      upsertSeasonArtworkStmt.run({
+        identity_key: identityKey,
+        season_number: number,
+        poster_url: url,
+        poster_source: clean(source) || "manual",
+        updated_at: timestamp,
+      });
+    }
+  });
+  return { ok: true, poster_url: url, identity_keys: keys };
 }
 
 function remoteArtworkUrl(url) {

@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.7";
-import { state, elements } from "./state.js?v=2.0.0.0.7";
-import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.0.0.0.7";
-import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.0.0.0.7";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
+import { state, elements } from "./state.js?v=2.0.0.0.8";
+import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.0.0.0.8";
+import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.0.0.0.8";
 
 let _cb = {};
 

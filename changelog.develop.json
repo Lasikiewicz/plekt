@@ -1,14 +1,14 @@
 {
-  "version": "2.0.0.0.7",
-  "build": 7,
+  "version": "2.0.0.0.8",
+  "build": 8,
   "resetCommit": "37edb9abccb543d77dc2b6eb28e7852f628db4d4",
-  "updatedAt": "2026-10-15T07:57:22.238Z",
+  "updatedAt": "2026-10-15T10:18:50.028Z",
   "entries": [
     {
-      "build": 7,
-      "date": "2026-10-15T07:57:22.238Z",
-      "commit": "9464c2333aaa8de0ea139277778e0e515c867b2e",
-      "message": "This update includes keep dashboard cards readable in Safari, add a text size slider to the sidebar Appearance panel, up Next order, show grouping, sync activity, and Appearance menu position, and restore missing cached posters and keep the app version above the theme switchers.",
+      "build": 8,
+      "date": "2026-10-15T10:18:50.028Z",
+      "commit": "c11e5e9b16d7f86a2acd5b26575573ea0ac9868d",
+      "message": "This update includes keep dashboard cards readable in Safari, add a text size slider to the sidebar Appearance panel, up Next order, show grouping, sync activity, and Appearance menu position, restore missing cached posters and keep the app version above the theme switchers, and add per-season poster editing for TV shows.",
       "author": "Lasikiewicz",
       "details": [
         "Keep dashboard history card details visible beside episode artwork across desktop widths.",
@@ -24,13 +24,17 @@
         "Sync activity refreshes and retries more reliably after a failed request",
         "A cached poster whose file has gone missing is downloaded again when it is next requested, so it shows instead of a broken image",
         "A missing poster that has no downloadable source returns not found, so the artwork fallback is used instead of a broken image",
-        "The app version label sits above both theme switches at the foot of the sidebar, instead of between them"
+        "The app version label sits above both theme switches at the foot of the sidebar, instead of between them",
+        "Select or upload a poster for each season in Edit Images from TMDB, TVDB, and fanart.tv",
+        "Keep season overrides separate so episode, dashboard, and upcoming cards can use them without changing show or episode artwork",
+        "Preserve saved season poster choices in portable and encrypted backups"
       ],
       "messageFragments": [
         "Fix - Keep dashboard cards readable in Safari",
         "Feature - Add a text size slider to the sidebar Appearance panel",
         "Fix - Up Next order, show grouping, sync activity, and Appearance menu position",
-        "Fix - Restore missing cached posters and keep the app version above the theme switchers"
+        "Fix - Restore missing cached posters and keep the app version above the theme switchers",
+        "Feature - Add per-season poster editing for TV shows"
       ]
     }
   ]

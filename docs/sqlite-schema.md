@@ -198,6 +198,19 @@ Show-level poster overrides are stored separately from `watch_history`:
 An Edit Images poster change updates all known aliases for the show. It never copies
 the show poster into episode rows.
 
+## `season_artwork`
+
+Season posters chosen in the Edit Images "Season Posters" tab:
+
+- `identity_key` - the same provider alias keys as `media_artwork`
+- `season_number` - season the poster belongs to (`0` for Specials)
+- `poster_url`, `poster_source`, `updated_at` - as in `media_artwork`
+
+Primary key `(identity_key, season_number)`. `getCanonicalSeasonPosterUrls` returns these
+ahead of the cached TMDB/TVDB season art, so Up Next, Recently watched and the upcoming
+calendar pick them up. Saved through `POST /api/update-watch` with `artwork_scope: "season"`
+and `season_number`; the watch row's own `poster_url` is not changed.
+
 ## `personal_ratings`
 
 Personal ratings are local user data. Movie and TV rows use their own provider

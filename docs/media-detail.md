@@ -431,7 +431,10 @@ of a premature "no episodes" message.
   (poster/logo/backdrop picker fed by `GET /api/tmdb-images`, `/api/tvdb-images`,
   `/api/fanart-images`, with tiles previewed through the caching artwork proxy so a
   fanart.tv or TVDB CDN the browser cannot reach still shows its gallery; saves via
-  `POST /api/update-watch`), fix match
+  `POST /api/update-watch`). TV shows also have a **Season Posters** tab: choose a
+  season, select its TMDB, TVDB, or fanart.tv poster, or upload an image. The selected
+  poster is saved for that season without replacing the episode's own artwork and is
+  used on episode cards when available. Fix match
   (TMDB search for movies; TheTVDB search for shows), merge show. All in
   `edit-dialogs.js`. The single-item edit-date dialog lists every recorded watch
   date for that movie/episode (`GET /api/watch-dates?id=`), letting you edit any

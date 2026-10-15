@@ -1,10 +1,11 @@
-import { state } from "./state.js?v=2.0.0.0.7";
-import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.0.7";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.7";
-import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.7";
-import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.0.7";
-import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.0.7";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.7";
+import { state } from "./state.js?v=2.0.0.0.8";
+import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
+import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.8";
+import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.0.8";
+import { createSeasonPostersPanel } from "./season-posters-panel.js?v=2.0.0.0.8";
+import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.0.8";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.8";
 
 // Callbacks injected by app.js at startup.
 let _setMessage = () => {};
@@ -1122,6 +1123,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
   };
   const imageSections = {
     poster: { label: "Poster", searchLabel: "posters", saveLabel: "Save poster", field: "poster_url" },
+    seasons: { label: "Season Posters", searchLabel: "season posters", saveLabel: "Save season poster", field: "poster_url" },
     logo: { label: "Logo", searchLabel: "logo art", saveLabel: "Save logo", field: "logo_url" },
     background: { label: "Background", searchLabel: "background art", saveLabel: "Save background", field: "backdrop_url" },
     youtube: { label: "YouTube Show", searchLabel: "", saveLabel: "Save YouTube show", field: "youtube_url" },
@@ -1151,6 +1153,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
     <div class="edit-dialog edit-dialog--wide edit-image-dialog glass-panel">
       <div class="edit-image-tabs edit-image-sidebar">
         <button class="edit-image-tab active" type="button" data-tab="poster">Poster</button>
+        <button class="edit-image-tab" type="button" data-tab="seasons">Season Posters</button>
         <button class="edit-image-tab" type="button" data-tab="logo">Logo</button>
         <button class="edit-image-tab" type="button" data-tab="background">Background</button>
         <button class="edit-image-tab" type="button" data-tab="youtube">YouTube Show</button>
@@ -1355,6 +1358,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
   };
 
   let fanartImages = null;
+  let tabLoadVersion = 0;
   const getFanartImages = async () => {
     if (fanartImages) return fanartImages;
     if (isDemoMode()) { fanartImages = {}; return fanartImages; }
@@ -1385,10 +1389,11 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
   const fanartItems = (fanartData, kind, seen) => sourceItems(fanartData, kind, seen, "Fanart");
   const tvdbItems = (data, kind, seen) => sourceItems(data, kind, seen, "TVDB");
 
-  const loadPosters = async () => {
+  const loadPosters = async (version = tabLoadVersion) => {
     status.textContent = "Loading posters…";
     urlInput.value = "";
     const tmdbData_ = await getTmdbImages();
+    if (version !== tabLoadVersion || activeTab !== "poster") return;
     const seen = new Set();
     const items = [];
     for (const p of (tmdbData_.posters || []).slice(0, 20)) {
@@ -1396,9 +1401,13 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
       if (url && !seen.has(url)) { seen.add(url); items.push({ url, source: "TMDB" }); }
     }
     status.textContent = "Checking TVDB and fanart.tv...";
-    const tvdbPosterItems = tvdbItems(await getTvdbImages(), "poster", seen);
+    const tvdbData = await getTvdbImages();
+    if (version !== tabLoadVersion || activeTab !== "poster") return;
+    const tvdbPosterItems = tvdbItems(tvdbData, "poster", seen);
     items.push(...tvdbPosterItems);
-    const fanartPosterItems = fanartItems(await getFanartImages(), "poster", seen);
+    const fanartData = await getFanartImages();
+    if (version !== tabLoadVersion || activeTab !== "poster") return;
+    const fanartPosterItems = fanartItems(fanartData, "poster", seen);
     items.push(...fanartPosterItems);
     if (items.length) { status.textContent = ""; renderGrid(items, false); return; }
     const fallback = [];
@@ -1408,11 +1417,12 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
     else { status.textContent = state.savedConfig?.tmdb?.configured ? "No posters found." : "Configure a TMDB API key to browse posters."; gridEl.innerHTML = ""; }
   };
 
-  const loadLogos = async () => {
+  const loadLogos = async (version = tabLoadVersion) => {
     status.textContent = "Loading logos…";
     urlInput.value = "";
     gridEl.innerHTML = "";
     const tmdbData_ = await getTmdbImages();
+    if (version !== tabLoadVersion || activeTab !== "logo") return;
     const seen = new Set();
     const items = [];
     const logos = (tmdbData_.logos || []);
@@ -1426,9 +1436,13 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
       }
     }
     status.textContent = "Checking TVDB and fanart.tv...";
-    const tvdbLogoItems = tvdbItems(await getTvdbImages(), "logo", seen);
+    const tvdbData = await getTvdbImages();
+    if (version !== tabLoadVersion || activeTab !== "logo") return;
+    const tvdbLogoItems = tvdbItems(tvdbData, "logo", seen);
     items.push(...tvdbLogoItems);
-    const fanartLogoItems = fanartItems(await getFanartImages(), "logo", seen);
+    const fanartData = await getFanartImages();
+    if (version !== tabLoadVersion || activeTab !== "logo") return;
+    const fanartLogoItems = fanartItems(fanartData, "logo", seen);
     items.push(...fanartLogoItems);
     if (items.length) {
       const hasEnTmdb = enLogos.length > 0;
@@ -1440,11 +1454,12 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
     status.textContent = state.savedConfig?.tmdb?.configured ? "No logo art found for this title." : "Configure a TMDB API key to browse logos.";
   };
 
-  const loadBackgrounds = async () => {
+  const loadBackgrounds = async (version = tabLoadVersion) => {
     status.textContent = "Loading backgrounds...";
     urlInput.value = "";
     gridEl.innerHTML = "";
     const tmdbData_ = await getTmdbImages();
+    if (version !== tabLoadVersion || activeTab !== "background") return;
     const seen = new Set();
     const items = [];
     for (const b of (tmdbData_.backdrops || []).slice(0, 24)) {
@@ -1452,9 +1467,13 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
       if (url && !seen.has(url)) { seen.add(url); items.push({ url, source: "TMDB" }); }
     }
     status.textContent = "Checking TVDB and fanart.tv...";
-    const tvdbBackgroundItems = tvdbItems(await getTvdbImages(), "background", seen);
+    const tvdbData = await getTvdbImages();
+    if (version !== tabLoadVersion || activeTab !== "background") return;
+    const tvdbBackgroundItems = tvdbItems(tvdbData, "background", seen);
     items.push(...tvdbBackgroundItems);
-    const fanartBackgroundItems = fanartItems(await getFanartImages(), "background", seen);
+    const fanartData = await getFanartImages();
+    if (version !== tabLoadVersion || activeTab !== "background") return;
+    const fanartBackgroundItems = fanartItems(fanartData, "background", seen);
     items.push(...fanartBackgroundItems);
     if (items.length) { status.textContent = ""; renderGrid(items, false, true, true); return; }
     const fallback = [];
@@ -1464,9 +1483,10 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
   };
 
   const reloadActiveTab = () => {
-    if (activeTab === "poster") loadPosters();
-    else if (activeTab === "logo") loadLogos();
-    else if (activeTab === "background") loadBackgrounds();
+    const version = ++tabLoadVersion;
+    if (activeTab === "poster") loadPosters(version);
+    else if (activeTab === "logo") loadLogos(version);
+    else if (activeTab === "background") loadBackgrounds(version);
   };
 
   const doMatchSearch = async () => {
@@ -1518,8 +1538,27 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
   matchBtn.addEventListener("click", doMatchSearch);
   matchInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); doMatchSearch(); } });
 
+  // The show identity is read at call time so a match-search correction applies to season artwork too.
+  const seasonPanel = createSeasonPostersPanel({
+    gridEl,
+    status,
+    getIdentity: () => ({
+      title: match.title || mediaTitle,
+      tmdb_id: match.tmdbId,
+      tvdb_id: match.tvdbId,
+      imdb_id: String(tmdbData?.imdb_id || tmdbData?.external_ids?.imdb_id || ""),
+    }),
+    seasons: Array.isArray(tmdbData?.seasons) ? tmdbData.seasons : [],
+    demo: isDemoMode(),
+    authHeaders,
+    renderOptions: (items) => renderGrid(items, false, true, false),
+    setPickedUrl: (url) => { urlInput.value = url; },
+  });
+
   const switchTab = (tab) => {
     activeTab = tab;
+    const version = ++tabLoadVersion;
+    seasonPanel.hide();
     overlay.querySelectorAll(".edit-image-tab").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tab));
     urlInput.value = "";
     fileInput.value = "";
@@ -1527,20 +1566,26 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
     gridEl.style.display = "";
     gridEl.classList.remove("edit-image-grid--logo", "edit-image-grid--backdrop");
     ytRow.style.display = "none";
-    matchRow.style.display = tab === "youtube" ? "none" : "";
+    matchRow.style.display = tab === "youtube" || tab === "seasons" ? "none" : "";
     matchResults.style.display = "none";
     matchResults.innerHTML = "";
     toolsEl.style.display = tab === "youtube" ? "none" : "";
     titleEl.textContent = imageSections[tab]?.label || "Poster";
-    subtitleEl.textContent = tab === "youtube" ? "Paste a YouTube URL and choose the thumbnail to use." : "Choose TMDB or TVDB artwork, use fanart.tv fallback, or upload your own image.";
+    subtitleEl.textContent = tab === "youtube"
+      ? "Paste a YouTube URL and choose the thumbnail to use."
+      : tab === "seasons"
+        ? "Choose a season, then pick its poster from TMDB, TVDB or fanart.tv, or upload your own image."
+        : "Choose TMDB or TVDB artwork, use fanart.tv fallback, or upload your own image.";
     saveBtn.textContent = imageSections[tab]?.saveLabel || "Save";
-    linksSlot.innerHTML = tab === "youtube" ? "" : searchLinks(tab);
+    linksSlot.innerHTML = tab === "youtube" || tab === "seasons" ? "" : searchLinks(tab);
     if (tab === "poster") {
-      loadPosters();
+      loadPosters(version);
+    } else if (tab === "seasons") {
+      seasonPanel.show();
     } else if (tab === "logo") {
-      loadLogos();
+      loadLogos(version);
     } else if (tab === "background") {
-      loadBackgrounds();
+      loadBackgrounds(version);
     } else if (tab === "youtube") {
       gridEl.innerHTML = "";
       setDialogStatus("");
@@ -1557,6 +1602,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
     const url = urlInput.value.trim();
     if (activeTab === "youtube" && !ytInput.value.trim()) { setDialogStatus("Please enter a YouTube URL."); return; }
     if (activeTab !== "youtube" && !url) { setDialogStatus("Please select or upload an image."); return; }
+    if (activeTab === "seasons" && seasonPanel.selectedSeason() === null) { setDialogStatus("Choose a season first."); return; }
     const originalLabel = saveBtn.textContent;
     saveBtn.disabled = true;
     saveBtn.textContent = "Saving...";
@@ -1567,7 +1613,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
         ? { youtube_url: ytInput.value.trim(), ...(url ? { poster_url: url } : {}) }
         : { [field]: url };
       const artworkIdentity = options.artworkScope === "show" ? (options.artworkIdentity || {}) : null;
-      const savePayload = artworkIdentity
+      const savePayload = activeTab === "seasons" ? seasonPanel.savePayload(url) : artworkIdentity
         ? {
           ...payload,
           artwork_scope: "show",
@@ -1578,7 +1624,9 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
         }
         : payload;
       const saved = await apiUpdateWatch(id, savePayload);
-      onSaved?.({
+      // A season poster must not reach the caller's show-poster update: that would overwrite the episode card's poster.
+      if (activeTab === "seasons") seasonPanel.recordSaved(saved);
+      else onSaved?.({
         ...payload,
         ...(saved?.poster_url ? { poster_url: saved.poster_url } : {}),
         ...(saved?.backdrop_url ? { backdrop_url: saved.backdrop_url } : {}),
@@ -1602,7 +1650,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
   });
 
   document.body.appendChild(overlay);
-  loadPosters();
+  loadPosters(++tabLoadVersion);
 }
 
 // ── Fix match dialog ───────────────────────────────────────────────────────

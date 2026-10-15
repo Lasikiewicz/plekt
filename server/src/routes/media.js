@@ -25,7 +25,7 @@ import { getTmdbDetails, getTmdbImages, getTmdbPerson, getTmdbSeason, searchTmdb
 import { searchTvdbSeriesList, resolveTvdbSeriesId, getTvdbSeriesArtwork } from "../utils/tvdbGateway.js";
 import { getFanartMovieArt, getFanartTvArt, getAllFanartMovieImages, getAllFanartTvImages } from "../utils/fanartGateway.js";
 import { getOmdbRating } from "../utils/omdbGateway.js";
-import { canonicalMediaArtworkCacheKey, saveCanonicalPoster } from "../utils/mediaArtwork.js";
+import { canonicalMediaArtworkCacheKey, saveCanonicalPoster, saveCanonicalSeasonPoster } from "../utils/mediaArtwork.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
 import { formatDispatchTelemetry, recordSyncHistory } from "./sync.js";
 import { statsPayloadForPeriod } from "../utils/statsPayload.js";
@@ -1100,11 +1100,19 @@ export async function handleUpdateWatch(req, res) {
   const rowBeforeUpdate = await getWatchRecordByIdLight(id).catch(() => null);
   const artworkScope = String(body.artwork_scope || body.artworkScope || "").trim().toLowerCase();
   const isShowArtworkEdit = artworkScope === "show" && rowBeforeUpdate?.media_type === "episode";
+  // A season poster is shared by the show's aliases, like a show poster, and is
+  // stored per season in season_artwork. The watch row's own poster is untouched.
+  const seasonNumber = Number(body.season_number ?? body.seasonNumber);
+  const isSeasonArtworkEdit = artworkScope === "season"
+    && Boolean(rowBeforeUpdate)
+    && rowBeforeUpdate.media_type !== "movie"
+    && Number.isInteger(seasonNumber)
+    && seasonNumber >= 0;
   const fields = {};
   if (body.watched_at !== undefined) fields.watched_at = body.watched_at;
   // A show poster is shared artwork, not the poster for the representative
   // episode used to open the edit dialog. Keep episode artwork independent.
-  if (body.poster_url !== undefined && !isShowArtworkEdit) fields.poster_url = body.poster_url;
+  if (body.poster_url !== undefined && !isShowArtworkEdit && !isSeasonArtworkEdit) fields.poster_url = body.poster_url;
   if (body.logo_url !== undefined) fields.logo_url = body.logo_url;
   if (body.backdrop_url !== undefined) fields.backdrop_url = body.backdrop_url;
   if (body.imdb_id !== undefined) fields.imdb_id = body.imdb_id;
@@ -1121,7 +1129,7 @@ export async function handleUpdateWatch(req, res) {
   // its value is persisted below in media_artwork so the representative
   // episode keeps its own poster. Treat that as a valid request; all other
   // empty updates should still receive the repository's validation error.
-  const result = isShowArtworkEdit && !Object.keys(fields).length
+  const result = (isShowArtworkEdit || isSeasonArtworkEdit) && !Object.keys(fields).length
     ? { ok: true }
     : await updateWatchRecord(id, fields);
   if (!result.ok) return sendJson(res, { error: result.error }, 400);
@@ -1140,13 +1148,14 @@ export async function handleUpdateWatch(req, res) {
   let customPosterUrl;
   let customPosterIds;
   let customBackdropUrl;
+  let customSeasonPosterUrl;
   const chosenPoster = String(body.poster_url ?? "").trim();
   const chosenPosterFetchUrl = resolveCustomPosterFetchUrl(chosenPoster);
   if (chosenPosterFetchUrl) {
     const editedRow = await getWatchRecordByIdLight(id).catch(() => null);
     const editedKey = editedRow?.media_key || (editedRow ? mediaKeyFor(editedRow) : null);
     if (editedKey) {
-      const canonicalTarget = isShowArtworkEdit
+      const canonicalTarget = isShowArtworkEdit || isSeasonArtworkEdit
         ? {
           media_type: "tv",
           title: String(body.show_title || body.showTitle || editedRow.show_title || editedRow.title || "").trim(),
@@ -1155,7 +1164,11 @@ export async function handleUpdateWatch(req, res) {
           imdb_id: String(body.show_imdb_id || body.showImdbId || "").trim(),
         }
         : null;
-      const cacheKey = canonicalTarget ? canonicalMediaArtworkCacheKey(canonicalTarget) : editedKey;
+      const cacheKey = canonicalTarget
+        ? (isSeasonArtworkEdit
+          ? `${canonicalMediaArtworkCacheKey(canonicalTarget)}:season:${seasonNumber}`
+          : canonicalMediaArtworkCacheKey(canonicalTarget))
+        : editedKey;
       const cached = isCachedStorageUrl(chosenPoster)
         ? { url: chosenPoster }
         : await cachePosterFromUrl(cacheKey, chosenPosterFetchUrl, "custom").catch(() => null);
@@ -1165,7 +1178,13 @@ export async function handleUpdateWatch(req, res) {
         // poster cache would keep serving the previous image. Append a version
         // token so each change yields a fresh URL that busts those caches.
         const versionedUrl = `${cached.url}${cached.url.includes("?") ? "&" : "?"}v=${Date.now()}`;
-        if (canonicalTarget) {
+        if (isSeasonArtworkEdit) {
+          const savedSeason = saveCanonicalSeasonPoster(canonicalTarget, seasonNumber, versionedUrl, { source: "manual" });
+          if (savedSeason.ok) {
+            customSeasonPosterUrl = versionedUrl;
+            await invalidateHistoryDerivedCaches("handleUpdateWatch").catch(() => null);
+          }
+        } else if (canonicalTarget) {
           const savedCanonical = saveCanonicalPoster(canonicalTarget, versionedUrl, { source: "manual" });
           if (savedCanonical.ok) {
             customPosterUrl = versionedUrl;
@@ -1255,6 +1274,8 @@ export async function handleUpdateWatch(req, res) {
     poster_url: customPosterUrl,
     canonical_poster_url: isShowArtworkEdit ? customPosterUrl : undefined,
     show_poster_url: isShowArtworkEdit ? customPosterUrl : undefined,
+    season_poster_url: isSeasonArtworkEdit ? customSeasonPosterUrl : undefined,
+    season_number: isSeasonArtworkEdit ? seasonNumber : undefined,
     backdrop_url: customBackdropUrl,
     updated_ids: customPosterIds,
   });

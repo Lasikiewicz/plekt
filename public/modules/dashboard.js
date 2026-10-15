@@ -1,12 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.7";
-import { state, elements } from "./state.js?v=2.0.0.0.7";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.0.0.0.7";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.0.0.0.7";
-import { ifLoaded } from "./route-modules.js?v=2.0.0.0.7";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.0.0.0.7";
-import { dedupeMediaRecords } from "./media-records.js?v=2.0.0.0.7";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit } from "./dashboard-modern.js?v=2.0.0.0.7";
-import { cardArtAttribute } from "./card-art.js?v=2.0.0.0.7";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
+import { state, elements } from "./state.js?v=2.0.0.0.8";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.0.0.0.8";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.0.0.0.8";
+import { ifLoaded } from "./route-modules.js?v=2.0.0.0.8";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.0.0.0.8";
+import { dedupeMediaRecords } from "./media-records.js?v=2.0.0.0.8";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit } from "./dashboard-modern.js?v=2.0.0.0.8";
+import { cardArtAttribute } from "./card-art.js?v=2.0.0.0.8";
 
 // The setup wizard loads only when setup is unfinished or its checklist has
 // items (see the deferred check in app.js); until then there is nothing to show.
@@ -420,13 +420,13 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
     ? findKnownShowPoster(entry)
     : "";
   const effectiveShowPoster = knownShowPoster || suppliedShowPoster;
-  // Up Next and Part Watched cards are labeled and linked as shows, so use
-  // the selected series poster even when the episode has season artwork.
-  const preferShowPoster = isEpisode && (isUpNext || isPartWatched) && Boolean(effectiveShowPoster);
-  const knownSeasonPoster = isEpisode && !entry.prefer_show_poster && !preferShowPoster
+  // An episode card shows its season's poster when the series has one, and
+  // the series poster otherwise. If the season image fails to load, the
+  // image falls back to the series poster (see images.js).
+  const knownSeasonPoster = isEpisode && !entry.prefer_show_poster
     ? (entry.season_poster_url || findKnownSeasonPoster(entry))
     : "";
-  const effectiveEpisodePoster = preferShowPoster ? effectiveShowPoster : knownSeasonPoster || effectiveShowPoster;
+  const effectiveEpisodePoster = knownSeasonPoster || effectiveShowPoster;
   const posterIdentity = entry.id ?? entry.media_key ?? "";
   const hasLocalArtwork = isLocalArtworkUrl(knownSeasonPoster) || isLocalArtworkUrl(entry.poster_url) || isLocalArtworkUrl(effectiveShowPoster);
   const directPosterUrl = !isPartWatched && !isUpNext && posterIdentity && !hasLocalArtwork
@@ -440,7 +440,6 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
         show_poster_url: effectiveShowPoster || entry.show_poster_url,
         season_poster_url: knownSeasonPoster,
         prefer_raw_poster: true,
-        ...(preferShowPoster ? { prefer_show_poster: true } : {}),
       }
       : {}),
     ...(directPosterUrl ? { poster_url: directPosterUrl, show_poster_url: "", prefer_raw_poster: true } : {}),

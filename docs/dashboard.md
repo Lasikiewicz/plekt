@@ -491,11 +491,10 @@ this audit data with the rest of the database.
 
 Dashboard posters use the standard fallback -> `/api/poster` hydration pipeline with a
 dedicated IntersectionObserver (`observeDashboardPosters`) so only visible cards
-trigger lookups. Up Next episode cards prefer a cached show poster from the shared artwork
-cache or watched history before asking a provider proxy, so a known show keeps its artwork
-when a provider feed is unavailable. TV Fix Match clears stale identity artwork, queues
-the corrected TVDB/TMDB metadata and canonical poster, and refreshes the dashboard
-snapshot; the interactive dialog waits for the metadata response when the provider is
+trigger lookups. Up Next episode cards use their season poster when available and fall back
+to the shared show poster; a failed season image also switches to the show poster. TV Fix
+Match clears stale identity artwork, queues the corrected TVDB/TMDB metadata and canonical
+poster, and refreshes the dashboard snapshot; the interactive dialog waits for the metadata response when the provider is
 available so the corrected poster is ready when the homepage is revisited. See
 [posters-artwork.md](posters-artwork.md).
 

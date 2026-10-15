@@ -12,8 +12,9 @@ live under **Settings → Restore → Local / Remote** (`/settings/restore#resto
 | Encrypted full backups | Every portable collection, including canonical personal watchlist mutations, provider ledger, queue, runs, and activity (but no provider secret) | AES-256-GCM encrypted JSON (`plekt-backup-<stamp>.encrypted.json`) | `server/src/utils/plektBackups.js` |
 | Full export/import | Same portable collections, plain JSON, paged over the API | `plekt-backup` v1 document | `server/src/utils/backup.js` |
 
-Artwork binaries, poster cache rows, and TMDB metadata cache rows are never included -
-they are derived data that rebuilds itself.
+Saved show and season poster choices are included as database records. Artwork binaries,
+poster cache rows, and TMDB metadata cache rows are not included; copy `data/media/`
+separately when preserving the locally cached images themselves.
 
 The focused watch-history subsystem reference is
 [watch-history-backups.md](watch-history-backups.md); this doc covers all backup

@@ -163,6 +163,19 @@ export async function getAllFanartMovieImages(tmdbId) {
   }
 }
 
+// fanart.tv tags each season poster with its season number as a string.
+export async function getFanartTvSeasonPosters(tvdbId, seasonNumber) {
+  if (!tvdbId) return [];
+  try {
+    const data = await fetchFanart(`tv/${tvdbId}`);
+    const wanted = String(seasonNumber);
+    const matches = (Array.isArray(data?.seasonposter) ? data.seasonposter : []).filter((item) => String(item.season) === wanted);
+    return allImages(matches);
+  } catch {
+    return [];
+  }
+}
+
 export async function getAllFanartTvImages(tvdbId) {
   if (!tvdbId) return null;
   try {

@@ -9,6 +9,7 @@ import { handleAddWatchDate, handleClearMissingTelemetry, handleDeleteHistoryRec
 import { handleActiveSessions, handleCronSync, handleCronSyncStatus, handleForceSync, handleForceSyncPlan, handleForceSyncCancellation, handleLibraryForceSync, handleLibraryForceSyncStatus, handleManualUnwatch, handleMediaForceSync, handleMediaForceSyncStatus, handleManualWatch, handleNowPlaying, handlePlaybackProgressList, handlePlaybackProgressUnwatch, handlePlaybackProgressWatch, handleDismissSyncHistory, handleDismissSyncMatch, handleRetryAllSyncActivity, handleRetrySync, handleRetrySyncActivityGroup, handleRetrySyncHistory, handleStopForceSync, handleSyncActivity, handleSyncActivityGroup, handleSyncHistory, handleSyncJobs, handleSyncLibraries, handleUpNextRemove, handleUpNextSync,
   handleUpNextDismissed,
   handleUpNextRestore, handleWebhook } from "./routes/sync.js";
+import { handleSeasonPosterOptions, handleSeasonPosters } from "./routes/seasonArtwork.js";
 import { handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch, handleOmdbRating, handlePoster, handlePosterBatch, handleRemoteArtwork, handleTmdbCollection, handleTmdbDetails, handleTmdbDetailsBatch, handleTmdbImages, handleTmdbPerson, handleTmdbPoster, handleTmdbProfile, handleTmdbSearch, handleTmdbSeason, handleTvdbImages, handleTvdbSearch, handleUpcoming, handleUpNext, handleUpNextShow, handleYoutubeMeta } from "./routes/metadata.js";
 import { handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats, handleChangelog, handleClearCache, handleDebugPlexMatch, handleDiagnosticLogs, handleMaintenanceStub, handlePing, handleRefreshTmdbMetadata, handleRefreshTvdbMetadata, handleRematchTvShows, handleSyncHealth, handleSyncMatchReport, handleEpisodeTitleAudit, handleEpisodeTitleBackfill, handlePhantomWatchAudit, handlePhantomWatchRepair, handleStaleTraktImportAudit, handleStaleTraktImportRepair, handleStalePendingWatchAudit, handleStalePendingWatchRepair, handleSplitIdentityUnwatchAudit, handleSplitIdentityUnwatchRepair, handleLikelyFalseUnwatchAudit, handleLikelyFalseUnwatchRepair } from "./routes/maintenance.js";
 import { handleWipeDataPreview, handleWipeData } from "./routes/wipeData.js";
@@ -53,7 +54,7 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^(?:test-connection|test-plex-notifications|seerr)(?:\/|$)/i,
   /^(?:tautulli)(?:\/|$)/i,
   /^(?:tmdb-search|tvdb-search|fix-match-search|media-search|refresh-tmdb-metadata|refresh-tvdb-metadata)(?:\/|$)/i,
-  /^(?:remote-artwork|tmdb-poster|tmdb-profile|fanart-images|tvdb-images|tmdb-images|youtube-meta|omdb-rating)(?:\/|$)/i,
+  /^(?:remote-artwork|tmdb-poster|tmdb-profile|fanart-images|tvdb-images|tmdb-images|season-poster-options|youtube-meta|omdb-rating)(?:\/|$)/i,
   /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|likely-false-)/i,
   /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases)/i,
   /^(?:diagnostic-logs|debug-plex-match|webhook)$/i,
@@ -259,6 +260,8 @@ async function dispatch(req, res) {
     if (path === "tmdb-images") return handleTmdbImages(req, res);
     if (path === "tvdb-images") return handleTvdbImages(req, res);
     if (path === "fanart-images") return handleFanartImages(req, res);
+    if (path === "season-posters") return handleSeasonPosters(req, res);
+    if (path === "season-poster-options") return handleSeasonPosterOptions(req, res);
     if (path === "tmdb-person") return handleTmdbPerson(req, res);
     if (path === "youtube-meta") return handleYoutubeMeta(req, res);
     if (path === "omdb-rating") return handleOmdbRating(req, res);

@@ -3,7 +3,7 @@
 // Test / Cancel / Save footer. Consumers describe fields declaratively; secret
 // fields are never prefilled - a "Configured" placeholder stands in for the
 // stored credential (redacted-config semantics).
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.0.0.0.7";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.0.0.0.8";
 
 const CONFIGURED_PLACEHOLDER = "Configured - enter a new key to replace it";
 

@@ -100,6 +100,7 @@ WIPE_SCOPES.factory = {
     "media_connections",
     "loop_keys",
     "media_artwork",
+    "season_artwork",
     "poster_cache",
     "tmdb_metadata_cache",
     "tmdb_search_cache",

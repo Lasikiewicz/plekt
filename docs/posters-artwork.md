@@ -40,7 +40,8 @@ cache-only surfaces (`allowNetwork: false`) never queue a lookup.
 | File | Role |
 | --- | --- |
 | `server/src/utils/posterCache.js` | Fetch → sharp resize → store in `data/media/` → record in `poster_cache` |
-| `server/src/utils/mediaArtwork.js` | Resolve and persist the canonical TV-show poster separately from episode artwork (`media_artwork`) |
+| `server/src/utils/mediaArtwork.js` | Resolve and persist canonical show posters (`media_artwork`) and per-season overrides (`season_artwork`) separately from episode artwork |
+| `server/src/routes/seasonArtwork.js` | List saved season posters and gather season-specific options from TMDB, TVDB, and fanart.tv |
 | `server/src/index.js` | `handlePoster` (`GET /api/poster`) - candidate resolution; `handleTmdbPoster` / `handleTmdbProfile` / `handleRemoteArtwork` proxies |
 | `server/src/utils/tmdbClient.js` | TMDB poster-URL fallback lookup |
 | `public/modules/images.js` | Frontend: `posterMarkup`, fallback hydration, lookup caching, TMDB URL builders |
@@ -158,9 +159,12 @@ Media detail pages let the user pick artwork from TMDB/TVDB/Fanart galleries
 Provider aliases and the normalized show title point to the same canonical value,
 so TV-show cards, the library, dashboard fallbacks, and personal show entries use
 the edit everywhere. Episode rows keep their own `watch_history.poster_url`, so
-episode stills are not overwritten by a show-poster edit. History and upcoming episode cards
-also carry a separate `season_poster_url` from cached show metadata and prefer it when present;
-show-level library cards and detail headers explicitly keep the shared series poster. Movie artwork remains
+episode stills are not overwritten by a show-poster edit. History, dashboard, and upcoming
+episode cards carry a separate `season_poster_url` resolved by `getCanonicalSeasonPosterUrls()`.
+Saved season overrides in `season_artwork` take precedence over cached provider art and are
+keyed by show identity alias and season number. The Edit Images **Season Posters** tab stores
+these selected overrides.
+Show-level library cards and detail headers explicitly keep the shared series poster. Movie artwork remains
 stored on its watch rows and is propagated across repeated plays as before.
 Data-URL uploads are also accepted and persisted through `cacheArtworkFromUrl`.
 

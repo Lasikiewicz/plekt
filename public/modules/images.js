@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.7";
-import { state } from "./state.js?v=2.0.0.0.7";
-import { safeImageUrl, escapeAttribute, isDemoMode } from "./utils.js?v=2.0.0.0.7";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
+import { state } from "./state.js?v=2.0.0.0.8";
+import { safeImageUrl, escapeAttribute, isDemoMode } from "./utils.js?v=2.0.0.0.8";
 
 // /api/poster resolves most requests from an already-cached DB row or webp
 // file (no outbound API call); the actual TMDB fallback downloads are
@@ -264,11 +264,15 @@ export function posterMarkup(item = {}, className = "media-poster") {
   const idValue = item.id != null ? item.id : item.media_key;
   const posterId = idValue != null ? ` data-poster-id="${escapeAttribute(String(idValue))}"` : "";
   if (!url) return `<span class="${className} poster-fallback"${posterId} aria-hidden="true"></span>`;
+  // When the card shows a season poster, keep the series poster so a broken
+  // season image can switch to it (see bindPosterImageErrorHandler).
+  const seriesUrl = item.season_poster_url ? posterUrlFor({ ...item, season_poster_url: "", prefer_show_poster: true }) : "";
+  const seriesAttr = seriesUrl && seriesUrl !== url ? ` data-series-poster-src="${escapeAttribute(seriesUrl)}"` : "";
   const loading = item.eager_poster ? "eager" : "lazy";
   // `poster-img` carries the loading skeleton; app-events swaps in `is-loaded`
   // once the bitmap is there. The fallback span above deliberately omits it -
   // a card with no artwork is finished, not loading.
-  return `<img class="${className} poster-img"${posterId} src="${escapeAttribute(url)}" alt="${escapeAttribute(label)} poster" loading="${loading}" decoding="async" fetchpriority="${item.eager_poster ? "high" : "auto"}" referrerpolicy="no-referrer" />`;
+  return `<img class="${className} poster-img"${posterId}${seriesAttr} src="${escapeAttribute(url)}" alt="${escapeAttribute(label)} poster" loading="${loading}" decoding="async" fetchpriority="${item.eager_poster ? "high" : "auto"}" referrerpolicy="no-referrer" />`;
 }
 
 // Three-dot overflow button rendered on hover over a poster card outside the
@@ -643,6 +647,13 @@ export function bindPosterImageErrorHandler(image, { allowNetwork = true } = {})
   image.dataset.posterErrorBound = "1";
   image.addEventListener("error", async () => {
     const posterId = image.dataset.posterId;
+    // A season poster that fails falls back to the series poster first.
+    const seriesSrc = image.dataset.seriesPosterSrc;
+    if (seriesSrc && image.dataset.seriesPosterTried !== "1" && image.isConnected) {
+      image.dataset.seriesPosterTried = "1";
+      image.src = encodeURI(seriesSrc);
+      return;
+    }
     if (!posterId || image.dataset.posterFallbackAttempted === "1") {
       if (posterId) state.posterLookupCache.set(posterId, "");
       image.replaceWith(posterFallbackElement(image.className, posterId));

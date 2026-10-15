@@ -10,7 +10,7 @@ caches every source (the CSP is `connect-src 'self'`).
 | --- | --- |
 | `server/src/utils/tmdbGateway.js` | TMDB gateway + merged TV details assembly, discovery feeds, collection search/details; caches in `tmdb_metadata_cache`, `tmdb_search_cache`, `tmdb_person_cache` |
 | `server/src/utils/tvdbGateway.js` | TheTVDB v4 gateway; caches in `tvdb_metadata_cache`, `tvdb_season_cache` |
-| `server/src/utils/fanartGateway.js` | Fanart.tv artwork (posters, backdrops, HD logos); caches in `fanart_cache` |
+| `server/src/utils/fanartGateway.js` | Fanart.tv artwork (posters, season posters, backdrops, HD logos); caches in `fanart_cache` |
 | `server/src/utils/omdbGateway.js` | OMDb - IMDb rating/votes by IMDb id (`omdb_cache`, 7-day TTL) |
 | `server/src/utils/nextAiringCache.js` | File-backed next-airing cache used to narrow Upcoming page episode lookups |
 | `server/src/utils/tmdbClient.js` | Thin poster-URL helper for the poster pipeline's TMDB fallback |
@@ -143,6 +143,7 @@ available for a later retry. `POST /api/rematch-show` reports this server-side w
 | `GET /api/discover?mediaType=&genre=` | Cached TMDB feeds for trending, movies currently in theatres, popular/upcoming or on-air titles, optional genre browsing, and a watch-history recommendation rail. The theatrical rail follows TMDB release data and is not a local cinema or streaming-availability check. Watched titles are filtered from every rail, and titles dismissed with Discover's **Don't recommend** action are filtered from the personalized rail. Normal requests serve the cached snapshot and revalidate stale data in the background; `refresh=1` rebuilds before responding. Requires a reachable TMDB API key |
 | `POST /api/discover/dismiss` | Persist a movie or TV TMDB id as excluded from the personalized Discover recommendation rail. |
 | `GET /api/tmdb-images`, `GET /api/tvdb-images`, `GET /api/fanart-images` | Artwork galleries for the edit-image dialog |
+| `GET /api/season-posters`, `GET /api/season-poster-options` | Saved/current season posters for the Season Posters tab, and TMDB/TVDB/fanart.tv options for one season (`routes/seasonArtwork.js`; provider options are demo-disabled) |
 | `GET /api/tmdb-poster`, `GET /api/tmdb-profile` | Image proxies (rate-limited 300/min) |
 | `GET /api/remote-artwork` | Downloads and caches fanart.tv / TVDB / TMDB artwork by URL, then redirects to `/media/...` (see [posters-artwork.md](posters-artwork.md)) |
 | `GET /api/omdb-rating` | IMDb rating pill |

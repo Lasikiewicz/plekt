@@ -100,7 +100,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
 - **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, and HMAC session signing
 - **High-performance artwork cache** - Fast local caching for high-resolution posters, backdrops, and logos from TMDB, TheTVDB, and Fanart.tv; metadata is warmed in the background as media is discovered or a TV show is rematched so the dashboard stays cache-first
-- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB; episode cards use their cached season poster when available; rich cast, trailers, and reviews from TMDB
+- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB; choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB
 - **Unified multi-source search** - Blazingly fast search across your local libraries, TMDB movies/shows/collections, and TheTVDB with local media prioritized
 - **Progressive Web App (PWA)** - Installable directly on iOS, Android, macOS, and Windows with a native app experience
 
@@ -566,6 +566,8 @@ is in [`.env.example`](.env.example).
 | `PLEKT_DEBUG_CACHE_REBUILDS` | _off_ | Set `1` to log one line per derived-cache rebuild: which cache, how long it took, and which change caused it. |
 | `PLEKT_DEBUG_SCHEDULER` | _off_ | Set `1` to log per-step scheduler timing, plus a per-tick summary carrying the real interval between ticks. |
 | `PLEKT_PAUSE_SCHEDULED_WORKER` | _off_ | Diagnostic mode: keep real-time provider listeners available while pausing scheduled sync ticks and background-job polling. |
+
+For SQLite tables and persisted application data, see [`docs/sqlite-schema.md`](docs/sqlite-schema.md).
 
 ---
 

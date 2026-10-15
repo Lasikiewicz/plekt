@@ -106,4 +106,5 @@ prefetches in the background while typing. Clearing the search returns to the no
 scrollable month grid.
 
 Posters use `posterMarkup()` and `hydratePosters()` from `public/modules/images.js`, so
-the standard local poster cache and fallback pipeline applies.
+the standard local poster cache and fallback pipeline applies. Episode cards use a saved
+season-poster override ahead of cached TMDB/TVDB season art when one is available.
