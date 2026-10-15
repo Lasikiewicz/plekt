@@ -1,15 +1,15 @@
-import { state, elements } from "./state.js?v=2.0.0.0.8";
-import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.0.0.0.8";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
-import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.8";
-import { mergeShowDetail } from "./explorer.js?v=2.0.0.0.8";
-import { dedupeMediaRecords } from "./media-records.js?v=2.0.0.0.8";
-import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.0.0.0.8";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.8";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.0.8";
-import { tmdbPoster } from "./images.js?v=2.0.0.0.8";
-import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.0.0.0.8";
-import { ifLoaded } from "./route-modules.js?v=2.0.0.0.8";
+import { state, elements } from "./state.js?v=2.0.0.0.9";
+import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.0.0.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.9";
+import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.9";
+import { mergeShowDetail } from "./explorer.js?v=2.0.0.0.9";
+import { dedupeMediaRecords } from "./media-records.js?v=2.0.0.0.9";
+import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.0.0.0.9";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.9";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.0.9";
+import { tmdbPoster } from "./images.js?v=2.0.0.0.9";
+import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.0.0.0.9";
+import { ifLoaded } from "./route-modules.js?v=2.0.0.0.9";
 
 const resetPartWatchedView = ifLoaded("dashboard", "resetPartWatchedView");
 const renderPartWatched = ifLoaded("dashboard", "renderPartWatched");

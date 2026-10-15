@@ -5,10 +5,10 @@
 // usually sits inside an <a> card - portaling the menu items out of that
 // anchor means clicking them never triggers card navigation.
 
-import { state } from "./state.js?v=2.0.0.0.8";
-import { customListsForPersonalItem, isPersonalWatchlisted, loadPersonalMedia, personalItemFromPosterMenuDataset } from "./personal-media.js?v=2.0.0.0.8";
-import { isShowInUpNext } from "./up-next-shared.js?v=2.0.0.0.8";
-import { playlistAcceptsItem, playlistItemKind } from "./playlists.js?v=2.0.0.0.8";
+import { state } from "./state.js?v=2.0.0.0.9";
+import { customListsForPersonalItem, isPersonalWatchlisted, loadPersonalMedia, personalItemFromPosterMenuDataset } from "./personal-media.js?v=2.0.0.0.9";
+import { isShowInUpNext } from "./up-next-shared.js?v=2.0.0.0.9";
+import { playlistAcceptsItem, playlistItemKind } from "./playlists.js?v=2.0.0.0.9";
 
 let openMenu = null; // { dropdown, button, submenu, submenuTrigger, actionPending, keepOpen, actionButton }
 

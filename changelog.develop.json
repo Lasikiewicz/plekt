@@ -1,14 +1,14 @@
 {
-  "version": "2.0.0.0.8",
-  "build": 8,
+  "version": "2.0.0.0.9",
+  "build": 9,
   "resetCommit": "37edb9abccb543d77dc2b6eb28e7852f628db4d4",
-  "updatedAt": "2026-10-15T10:18:50.028Z",
+  "updatedAt": "2026-10-15T13:35:08.807Z",
   "entries": [
     {
-      "build": 8,
-      "date": "2026-10-15T10:18:50.028Z",
-      "commit": "c11e5e9b16d7f86a2acd5b26575573ea0ac9868d",
-      "message": "This update includes keep dashboard cards readable in Safari, add a text size slider to the sidebar Appearance panel, up Next order, show grouping, sync activity, and Appearance menu position, restore missing cached posters and keep the app version above the theme switchers, and add per-season poster editing for TV shows.",
+      "build": 9,
+      "date": "2026-10-15T13:35:08.807Z",
+      "commit": "e126325481ce9b7f44752e2ff08ca3f64611e30c",
+      "message": "This update includes keep dashboard cards readable in Safari, add a text size slider to the sidebar Appearance panel, up Next order, show grouping, sync activity, and Appearance menu position, restore missing cached posters and keep the app version above the theme switchers, add per-season poster editing for TV shows, season posters on show season rows, open season episodes beside season cards on desktop, seamless season card and episode box join on desktop, match season join outline and transparency in light mode, season joins hold at app zoom, season poster fallback, 5 episodes per row, and manual watch edits skip the restore fence and Backups shows a failed restore.",
       "author": "Lasikiewicz",
       "details": [
         "Keep dashboard history card details visible beside episode artwork across desktop widths.",
@@ -27,14 +27,34 @@
         "The app version label sits above both theme switches at the foot of the sidebar, instead of between them",
         "Select or upload a poster for each season in Edit Images from TMDB, TVDB, and fanart.tv",
         "Keep season overrides separate so episode, dashboard, and upcoming cards can use them without changing show or episode artwork",
-        "Preserve saved season poster choices in portable and encrypted backups"
+        "Preserve saved season poster choices in portable and encrypted backups",
+        "Show page season rows show each season's poster: the poster saved in Edit Images first, then TMDB's.",
+        "Specials use the series poster; the row shows a stacked season name, episode count, watch count and next airing.",
+        "Up Next cards open their episode from anywhere on the card and show a pointer cursor.",
+        "Opening a season on desktop shows its episodes beside the season card, level with it, without pushing the other seasons down",
+        "The open season's episode box now lines up with its card, and the outline curves from the card into the box with no seam",
+        "Season posters are bigger, with rounded corners and roomier text beside them",
+        "Clicking a season scrolls to that season, and the open season no longer shades on hover",
+        "In light mode, the open season's episode box and its curved join now use the same outline colour as the season card",
+        "In the modern light style, season cards and the episode box are see-through like dark mode, so the backdrop shows behind them",
+        "Season episode boxes line up with their open card and the outline joins cleanly when the app is zoomed out; clicking a season scrolls it to the top of the list",
+        "Season rows use the series poster when a season has no poster of its own, and one-season shows get posters",
+        "Season posters are larger on desktop, and season episodes show five to a row instead of six",
+        "Watched-status edits made by you are no longer refused while a watch-history restore is running or has failed; automated sync still waits",
+        "Settings > Backups shows a running or failed watch-history restore with its error and a Clear Status button"
       ],
       "messageFragments": [
         "Fix - Keep dashboard cards readable in Safari",
         "Feature - Add a text size slider to the sidebar Appearance panel",
         "Fix - Up Next order, show grouping, sync activity, and Appearance menu position",
         "Fix - Restore missing cached posters and keep the app version above the theme switchers",
-        "Feature - Add per-season poster editing for TV shows"
+        "Feature - Add per-season poster editing for TV shows",
+        "Feature - Season posters on show season rows",
+        "Feature - Open season episodes beside season cards on desktop",
+        "Fix - Seamless season card and episode box join on desktop",
+        "Fix - Match season join outline and transparency in light mode",
+        "Fix - Season joins hold at app zoom, season poster fallback, 5 episodes per row",
+        "Fix - Manual watch edits skip the restore fence and Backups shows a failed restore"
       ]
     }
   ]

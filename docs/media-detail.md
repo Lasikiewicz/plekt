@@ -112,7 +112,7 @@ of a premature "no episodes" message.
 - **Metadata** - overview, genres, runtime, status, ratings; TV structure (seasons/
   episodes, air dates) comes from TVDB, extras (cast, trailers, recommendations,
   watch providers) from TMDB - see [metadata.md](metadata.md).
-- **Responsive episode cards** - expanded TV seasons use a six-column desktop grid,
+- **Responsive episode cards** - expanded TV seasons use a five-column desktop grid,
   narrowing with the available width and settling into two cards per row on phone-sized
   screens so episode artwork and actions remain scannable without making each tile fill
   the entire viewport. On phone-sized cards, the content is ordered as title, availability

@@ -71,6 +71,9 @@ function assertRestoreWriteAllowed(source = "", { allowDuringRestore = false } =
   if (allowDuringRestore) return;
   const normalizedSource = String(source || "").trim().toLowerCase();
   if (normalizedSource.startsWith("restore")) return;
+  // A user's own watched-status edit is never refused because a restore or sync
+  // owns outbound projection; only automated writes wait behind the fence.
+  if (normalizedSource === "manual") return;
   if (!isAuthoritativeRestoreActive()) return;
   const error = new Error("An authoritative watch-history restore is active; watch-state writes are paused until it completes.");
   error.code = "RESTORE_ACTIVE";

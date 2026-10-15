@@ -1,27 +1,52 @@
-import { state, elements } from "./state.js?v=2.0.0.0.8";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.0.0.0.8";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.0.0.0.8";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.0.0.0.8";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.0.0.0.8";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.0.8";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.0.0.0.8";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.0.8";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.0.8";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.0.8";
+import { state, elements } from "./state.js?v=2.0.0.0.9";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.0.0.0.9";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.0.0.0.9";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.0.0.0.9";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.0.0.0.9";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.0.9";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.0.0.0.9";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.0.0.0.9";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.0.0.0.9";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.0.0.0.9";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
   renderSeasonSeerrControls, renderSeerrRequestPill, fetchSeerrMediaStatus,
-  refreshActiveMediaDetailAfterSeerrStatus, tvSeasonAvailabilityHtml, episodeResolutionPillHtml,
+  refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.0.0.0.8";
+} from "./media-detail-shared.js?v=2.0.0.0.9";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
 let _playbackProgressLoadPromise = null;
 const _seasonDetailsInflight = new Set();
 const SEASON_HYDRATION_CONCURRENCY = 4;
+// Season posters saved in Edit Images (season-posters-panel.js), keyed by show
+// identity, so the season rows show the same poster the user picked.
+const _savedSeasonPosters = new Map();
+
+function savedSeasonPosterKey(tmdbId, tvdbId) {
+  if (tmdbId) return `tmdb:${tmdbId}`;
+  return tvdbId ? `tvdb:${tvdbId}` : "";
+}
+
+async function loadSavedSeasonPosters(tmdbId, tvdbId, title) {
+  const key = savedSeasonPosterKey(tmdbId, tvdbId);
+  if (!key || isDemoMode()) return;
+  const params = new URLSearchParams();
+  if (tmdbId) params.set("tmdbId", String(tmdbId));
+  if (tvdbId) params.set("tvdbId", String(tvdbId));
+  if (title) params.set("title", title);
+  try {
+    const res = await fetch(`/api/season-posters?${params}`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    _savedSeasonPosters.set(key, new Map(Object.entries(data?.seasons || {}).map(([number, url]) => [Number(number), url])));
+  } catch {
+    // Non-admin or offline: the rows fall back to TMDB season posters.
+  }
+}
 
 function canonicalizeBareShowRoute(tmdbData, title = "", seasonNumber = null, episodeNumber = null, tvdbId = "") {
   if (typeof window === "undefined" || !/^\/tvshow\/(?!tmdb\/|tvdb\/)/i.test(window.location.pathname)) return;
@@ -85,22 +110,68 @@ function animateScrollTop(container, targetTop, duration) {
   requestAnimationFrame(step);
 }
 
-// Scrolls the given season's accordion header into view, eased over
+// Scrolls the given season's card to the top of the view, eased over
 // SCROLL_ANIMATION_MS. The scroll-margin-top on .season-accordion-trigger
-// (styles.css) reserves space for the sticky .page-topbar, so the header
-// lands visible just below it instead of hidden underneath. Shared by the
+// (styles.css) reserves space for the sticky .page-topbar, so the card lands
+// visible just below it instead of hidden underneath. Shared by the
 // season-click handler in media-detail-events.js and the initial-render
 // scroll below, so both stay in sync.
 export function scrollSeasonAccordionIntoView(seasonNum, { duration = SCROLL_ANIMATION_MS } = {}) {
-  const trigger = document.querySelector(`[data-season-accordion="${seasonNum}"]`);
-  if (!trigger) return;
-  const container = nearestScrollableAncestor(trigger);
+  const target = document.querySelector(`.seasons-section.season-accordions [data-season-accordion="${seasonNum}"]`)
+    || document.querySelector(".seasons-section.season-accordions");
+  if (!target) return;
+  const container = nearestScrollableAncestor(target);
   const isWindowLevel = container === document.scrollingElement || container === document.documentElement;
   const containerTop = isWindowLevel ? 0 : container.getBoundingClientRect().top;
   const currentTop = isWindowLevel ? window.scrollY : container.scrollTop;
-  const scrollMarginTop = parseFloat(getComputedStyle(trigger).scrollMarginTop) || 0;
-  const targetTop = currentTop + (trigger.getBoundingClientRect().top - containerTop) - scrollMarginTop;
+  const scrollMarginTop = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+  // Rects are in zoomed pixels (the app shell's CSS zoom); scrollTop is not.
+  const zoom = isWindowLevel ? 1 : container.currentCSSZoom || 1;
+  const targetTop = currentTop + (target.getBoundingClientRect().top - containerTop) / zoom - scrollMarginTop;
   animateScrollTop(container, Math.max(0, targetTop), duration);
+}
+
+// Desktop: an open season's episode box sits beside its card, level with the
+// card's top edge. It is positioned absolutely (styles.css), so it doesn't take
+// up row height and the other season cards stay where they are. The list is
+// made tall enough to hold it. Mobile keeps the stacked layout and clears these.
+export function positionSeasonDetails(root = document) {
+  const isDesktop = window.matchMedia?.("(min-width: 761px)").matches;
+  root.querySelectorAll?.(".season-accordion-list").forEach((list) => {
+    const listRect = list.getBoundingClientRect();
+    // Some window widths scale the app shell with CSS zoom: rects come back in
+    // zoomed pixels, but left/top/width apply in the list's own pixels.
+    const zoom = list.currentCSSZoom || 1;
+    // A 1px border draws as whole screen pixels (at least one); the joining
+    // lines in styles.css use this width so they meet the borders exactly.
+    const screenScale = zoom * (window.devicePixelRatio || 1);
+    list.style.setProperty("--season-hairline", `${Math.max(1, Math.floor(screenScale + 1e-6)) / screenScale}px`);
+    const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
+    let listHeight = 0;
+    list.querySelectorAll("[data-season-detail]").forEach((detail) => {
+      const card = list.querySelector(`[data-season-accordion="${detail.dataset.seasonDetail}"]`)?.closest(".season-accordion");
+      if (!isDesktop || !card) {
+        detail.style.left = "";
+        detail.style.top = "";
+        detail.style.width = "";
+        detail.style.removeProperty("--season-card-h");
+        return;
+      }
+      detail.style.setProperty("--season-card-h", `${card.offsetHeight}px`);
+      const cardRect = card.getBoundingClientRect();
+      const left = (cardRect.right - listRect.left) / zoom + gap;
+      const top = (cardRect.top - listRect.top) / zoom;
+      detail.style.left = `${left}px`;
+      detail.style.top = `${top}px`;
+      detail.style.width = `${Math.max(0, listRect.width / zoom - left)}px`;
+      listHeight = Math.max(listHeight, top + detail.offsetHeight);
+    });
+    list.style.minHeight = isDesktop && listHeight ? `${listHeight}px` : "";
+  });
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("resize", () => positionSeasonDetails(document));
 }
 
 // Season episode lists are TVDB-backed. Prefer the show's resolved TVDB id even
@@ -576,6 +647,7 @@ async function renderShowDetailFromMetadata(tmdbData, renderToken, localShowProm
     return loadShowDetail(detailLookup).catch(() => null);
   });
   const playbackProgressPromise = ensurePlaybackProgressLoaded();
+  const savedSeasonPostersPromise = loadSavedSeasonPosters(tmdbData.id ? String(tmdbData.id) : "", tvdbIdCandidate, showTitle);
   const imdbPillPromise = fetchShowImdbPillHtml(
     show,
     tmdbData,
@@ -597,7 +669,7 @@ async function renderShowDetailFromMetadata(tmdbData, renderToken, localShowProm
   });
   if (currentMediaRenderToken() !== renderToken) return;
 
-  const [detailedShow, imdbPillHtml] = await Promise.all([detailPromise, imdbPillPromise]);
+  const [detailedShow, imdbPillHtml] = await Promise.all([detailPromise, imdbPillPromise, savedSeasonPostersPromise]);
   await playbackProgressPromise;
   if (currentMediaRenderToken() !== renderToken) return;
 
@@ -1695,8 +1767,23 @@ export function renderShowModalContent(show, {
   }
   hydrateUnknownSeasonSummaryDetails(show, tmdbData, seasonDetailsByNumber, loading, seasonsList);
 
-  const seasonsAccordionHtml = seasonsList.map((season) => {
+  // Season poster thumbnail in each row: a poster saved in Edit Images wins, then
+  // TMDB's season poster; Specials fall back to the series poster.
+  const savedSeasonPosters = _savedSeasonPosters.get(savedSeasonPosterKey(tmdbData?.id || show.tmdb_id, tmdbData?.external_ids?.tvdb_id || show.tvdb_id)) || new Map();
+  const seasonRowPosterUrl = (season, seasonNumber) => {
+    const saved = savedSeasonPosters.get(seasonNumber);
+    if (saved) return proxiedArtworkUrl(saved, "poster");
+    // Specials, and any season without its own poster, use the series poster.
+    const rawPath = String(season.poster_path || "").trim();
+    if (seasonNumber === 0 || !rawPath) return posterUrl || "";
+    return /^https?:\/\//i.test(rawPath)
+      ? proxiedArtworkUrl(rawPath, "poster")
+      : tmdbPoster(rawPath, tmdbData?.id || show.tmdb_id, "tv");
+  };
+
+  const seasonsAccordionParts = seasonsList.map((season, index) => {
     const seasonNumber = Number(season.season_number);
+    const rowPosterUrl = seasonRowPosterUrl(season, seasonNumber);
     const seasonEpisodes = episodeRows.filter((episode) => episode.seasonNumber === seasonNumber);
     const { watchedInSeason, seasonTotal, nextAiringText, totalWatches } = showSeasonSummary(seasonNumber, seasonEpisodes, season, showTitle, tmdbData, seasonDetailsByNumber);
     const isActive = allSeasonsExpanded || seasonNumber === selectedSeasonNumber;
@@ -1719,24 +1806,30 @@ export function renderShowModalContent(show, {
         : watchedInSeason
           ? `${watchedInSeason} watched${totalWatches > watchedInSeason ? ` · ${totalWatches} plays` : ""}`
           : "";
-    const seasonAvailabilityHtml = tvSeasonAvailabilityHtml(tvSeerrStatus, seasonNumber);
     const mobileSeasonSummaryText = [episodeCountText, watchedText].filter(Boolean).join(" · ");
-    return `
-      <article class="season-accordion ${isActive ? "is-open" : ""} ${(!isActive && (seasonSaving || seasonUnwatching || seasonSyncing)) ? "is-saving" : ""}">
-        <button class="season-accordion-trigger" type="button" data-season-accordion="${seasonNumber}" aria-expanded="${isActive}" aria-controls="${panelId}">
-          <span class="season-row-title"><strong>${escapeHtml(formatSeasonTitle(seasonNumber, season.name))}</strong><span class="season-row-mobile-summary">${mobileSeasonSummaryText ? ` · ${escapeHtml(mobileSeasonSummaryText)}` : ""}</span></span>
-          <span class="season-row-col season-row-episodes">${escapeHtml(episodeCountText)}</span>
-          <span class="season-row-col season-row-watched">${escapeHtml(watchedText)}</span>
-          <span class="season-row-col season-row-availability">${seasonAvailabilityHtml}</span>
-          <span class="season-row-col season-row-next">${escapeHtml(nextAiringText)}</span>
+    // Row lines: "Season N", then the season's own name when it has one.
+    const fullSeasonTitle = formatSeasonTitle(seasonNumber, season.name);
+    const seasonHeading = seasonNumber === 0 ? "Specials" : `Season ${seasonNumber}`;
+    const seasonSubtitle = fullSeasonTitle.startsWith(seasonHeading)
+      ? fullSeasonTitle.slice(seasonHeading.length).replace(/^\s+-\s+/, "").trim()
+      : fullSeasonTitle;
+    const card = `
+      <article class="season-accordion ${isActive ? "is-open" : ""} ${(!isActive && (seasonSaving || seasonUnwatching || seasonSyncing)) ? "is-saving" : ""}" style="order:${index * 2}">
+        <button class="season-accordion-trigger${rowPosterUrl ? " has-row-poster" : ""}" type="button" data-season-accordion="${seasonNumber}" aria-expanded="${isActive}" aria-controls="${panelId}">
+          <span class="season-row-title">${rowPosterUrl ? `<img class="season-row-poster" src="${escapeAttribute(rowPosterUrl)}" alt="" loading="lazy" decoding="async" data-err="hide" />` : ""}<span class="season-row-text"><strong>${escapeHtml(seasonHeading)}</strong>${seasonSubtitle ? `<span class="season-row-name">${escapeHtml(seasonSubtitle)}</span>` : ""}<span class="season-row-col season-row-episodes">${escapeHtml(episodeCountText)}</span><span class="season-row-col season-row-watched">${escapeHtml(watchedText)}</span><span class="season-row-col season-row-next">${escapeHtml(nextAiringText)}</span><span class="season-row-mobile-summary">${mobileSeasonSummaryText ? ` · ${escapeHtml(mobileSeasonSummaryText)}` : ""}</span></span></span>
           <span class="season-accordion-meta">
             <svg class="season-accordion-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7.5 5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </span>
         </button>
-        ${isActive ? `<div class="season-accordion-panel" id="${panelId}">${seasonPanelsByNumber.get(seasonNumber) || ""}</div>` : ""}
       </article>
     `;
-  }).join("");
+    // The open season's episodes sit in their own column beside the season cards
+    // (see .season-accordion-detail in styles.css); mobile places them after their card via order.
+    const detail = isActive ? `<div class="season-accordion-detail" data-season-detail="${seasonNumber}" style="order:${index * 2 + 1}"><div class="season-accordion-panel" id="${panelId}">${seasonPanelsByNumber.get(seasonNumber) || ""}</div></div>` : "";
+    return { card, detail };
+  });
+  const seasonsAccordionHtml = seasonsAccordionParts.map((part) => part.card).join("");
+  const seasonDetailsHtml = seasonsAccordionParts.map((part) => part.detail).join("");
 
   const checkIcon = `<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/></svg>`;
   const imageIcon = `<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/><path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2h-12zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1h12z"/></svg>`;
@@ -1752,7 +1845,7 @@ export function renderShowModalContent(show, {
         </div>
         ${renderSeerrRequestPill("tv", tvSeerrTmdbId, showIsNowPlaying, { compactTvSummary: true })}
       </div>
-      <div class="season-accordion-list">${seasonsAccordionHtml}</div>
+      <div class="season-accordion-list"><div class="season-accordion-cards">${seasonsAccordionHtml}</div>${seasonDetailsHtml}</div>
     </section>
   ` : "";
 
@@ -1864,6 +1957,7 @@ export function renderShowModalContent(show, {
     `;
   if (patchExisting) patchShowModalDom(root, modalMarkup);
   else root.innerHTML = modalMarkup;
+  positionSeasonDetails(root);
   if (!loading && !watchHistoryLoading && !tmdbOnly) markDetailPrimaryReady("show");
   // A season named in the URL on navigation (path segment or #seasonN hash)
   // scrolls into view once, here - not via the click handler, since no click

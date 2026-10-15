@@ -1,12 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
-import { state, elements } from "./state.js?v=2.0.0.0.8";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate, csvRows, normalizeHeader, episodeCode } from "./utils.js?v=2.0.0.0.8";
-import { initBackupTools } from "./tools-backups.js?v=2.0.0.0.8";
-import { initMaintenanceTools } from "./tools-maintenance.js?v=2.0.0.0.8";
-import { initHealthTools } from "./tools-health.js?v=2.0.0.0.8";
-import { initDuplicateWatchTools } from "./tools-duplicates.js?v=2.0.0.0.8";
-import { initWipeDataTools } from "./tools-wipe-data.js?v=2.0.0.0.8";
-import { initPlaystateAliasTools } from "./tools-playstate-aliases.js?v=2.0.0.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.9";
+import { state, elements } from "./state.js?v=2.0.0.0.9";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate, csvRows, normalizeHeader, episodeCode } from "./utils.js?v=2.0.0.0.9";
+import { initBackupTools } from "./tools-backups.js?v=2.0.0.0.9";
+import { initMaintenanceTools } from "./tools-maintenance.js?v=2.0.0.0.9";
+import { initHealthTools } from "./tools-health.js?v=2.0.0.0.9";
+import { initDuplicateWatchTools } from "./tools-duplicates.js?v=2.0.0.0.9";
+import { initWipeDataTools } from "./tools-wipe-data.js?v=2.0.0.0.9";
+import { initPlaystateAliasTools } from "./tools-playstate-aliases.js?v=2.0.0.0.9";
 // Callbacks injected by app.js at startup to avoid circular imports.
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -74,10 +74,10 @@ export {
   setBackupTransferState,
   updatePlektButtonsState,
   uploadWatchBackupFile,
-} from "./tools-backups.js?v=2.0.0.0.8";
-export { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./appearance.js?v=2.0.0.0.8";
-export { loadCacheStats, renderCachePanel, resetFullSyncWatchstates } from "./tools-maintenance.js?v=2.0.0.0.8";
-export { loadSyncHealth } from "./tools-health.js?v=2.0.0.0.8";
+} from "./tools-backups.js?v=2.0.0.0.9";
+export { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./appearance.js?v=2.0.0.0.9";
+export { loadCacheStats, renderCachePanel, resetFullSyncWatchstates } from "./tools-maintenance.js?v=2.0.0.0.9";
+export { loadSyncHealth } from "./tools-health.js?v=2.0.0.0.9";
 // ── Trakt / CSV import ─────────────────────────────────────────────────────
 export async function parseSelectedFiles(files) {
   const selectedFiles = [...files];
@@ -349,9 +349,9 @@ export async function startImport() {
 // ── Maintenance tools ──────────────────────────────────────────────────────
 // History repair, dedup, Trakt backfill, full-sync, and system integrity
 // checks live in tools-maintenance.js (per CLAUDE.md's module table) and are
-// re-exported here so existing imports of these names from "./tools.js?v=2.0.0.0.8"
+// re-exported here so existing imports of these names from "./tools.js?v=2.0.0.0.9"
 // keep working unchanged.
-export { runRepairWorkflow, runPhantomWatchAudit, runPhantomWatchRepair, runTraktBackfill, runRematchTvShows, runFullSyncWatchstates, cancelFullSyncWatchstates, runSystemIntegrityCheck, triggerClearMissingTelemetry, triggerRetryAllCategory } from "./tools-maintenance.js?v=2.0.0.0.8";
-export { runDuplicateWatchCleanup } from "./tools-duplicates.js?v=2.0.0.0.8";
-export { runEpisodeTitleAudit, runEpisodeTitleBackfill } from "./tools-maintenance.js?v=2.0.0.0.8";
-export { loadWipeDataPreview, runWipeData } from "./tools-wipe-data.js?v=2.0.0.0.8";
+export { runRepairWorkflow, runPhantomWatchAudit, runPhantomWatchRepair, runTraktBackfill, runRematchTvShows, runFullSyncWatchstates, cancelFullSyncWatchstates, runSystemIntegrityCheck, triggerClearMissingTelemetry, triggerRetryAllCategory } from "./tools-maintenance.js?v=2.0.0.0.9";
+export { runDuplicateWatchCleanup } from "./tools-duplicates.js?v=2.0.0.0.9";
+export { runEpisodeTitleAudit, runEpisodeTitleBackfill } from "./tools-maintenance.js?v=2.0.0.0.9";
+export { loadWipeDataPreview, runWipeData } from "./tools-wipe-data.js?v=2.0.0.0.9";

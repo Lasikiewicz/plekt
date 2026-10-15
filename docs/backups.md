@@ -43,6 +43,10 @@ Small, automatic backups of just the data needed to restore watch state.
   Uploaded files restore via `importWatchHistoryBackupFile`. Restores pause the cron
   sync (`pauseCronSync`, default 10 minutes) so the catch-up sync can't fight the
   restore, and stamp `lastRestoreAt`.
+  A watch-history restore holds a write fence while it runs. Manual watched-status edits
+  made in the app skip the fence; automated sync writes wait. A failed restore keeps the
+  fence on until someone clicks Clear Status, and Settings → Backups shows the running or
+  failed restore with its error.
 - **API** - everything multiplexes through `GET/POST /api/watch-backups`
   (`handleWatchBackups` in `index.js`): status, list, create, download, upload,
   restore, destination CRUD, destination test, remote list/pull.

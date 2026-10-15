@@ -117,6 +117,14 @@ test("authoritative backup restore preempts active sync work and cancels its job
     (error) => error?.code === "RESTORE_ACTIVE",
   );
 
+  // A user's own watched-status edit is not refused by the restore fence.
+  await assert.doesNotReject(insertWatchRecord({
+    title: "Restore fence manual edit test",
+    media_type: "movie",
+    source: "manual",
+    watched_at: "2020-01-01T00:00:00.000Z",
+  }, { skipInvalidate: true }));
+
   await runtime.releaseSyncOperation({
     kind: runtime.RESTORE_KIND_BACKUP,
     ownerId: "backup-owner",

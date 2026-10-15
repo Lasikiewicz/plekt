@@ -1,10 +1,10 @@
-import { state } from "./state.js?v=2.0.0.0.8";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.0.0.0.8";
+import { state } from "./state.js?v=2.0.0.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.9";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.0.0.0.9";
 import {
   PLEX_HISTORICAL_SYNC_LABEL,
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=2.0.0.0.8";
+} from "./plex-history-policy.js?v=2.0.0.0.9";
 
 let bound = false;
 let preview = null;

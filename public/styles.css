@@ -7,7 +7,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.0.0.0.8") format("woff2");
+  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.0.0.0.9") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -16,7 +16,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.0.0.0.8") format("woff2");
+  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.0.0.0.9") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -25,7 +25,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.0.0.0.8") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.0.0.0.9") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -34,7 +34,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.0.0.0.8") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.0.0.0.9") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -14206,6 +14206,11 @@ h1 {
   position: relative;
 }
 
+/* The whole card opens its episode (app-events.js), so it shows a pointer. */
+.dashboard-up-next-card {
+  cursor: pointer;
+}
+
 .dashboard-part-watched-card .history-card-poster-link,
 .dashboard-up-next-card .history-card-poster-link {
   border-radius: var(--poster-radius);
@@ -18308,10 +18313,51 @@ html.light-mode .history-mini-card-title {
   gap: var(--space-2);
 }
 
+.seasons-section.season-accordions {
+  scroll-margin-top: calc(var(--right-topbar-height) + 12px);
+  /* Outline colour of the open season's card and episode box (matches the card's own open border). */
+  --season-open-line: color-mix(in srgb, var(--text), transparent 24%);
+  /* Background of the open season's card and episode box where the curved join
+     meets them (the episode box's background at the card's bottom edge). */
+  --season-open-fill: color-mix(in srgb, var(--panel-2), transparent 92%);
+  /* Corner radius of the season cards; the row poster takes it on its left corners. */
+  --season-card-radius: 6px;
+}
+
+/* Season poster thumbnail at the start of each season row (media-detail-show.js). */
+.season-row-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.season-row-title-text {
+  min-width: 0;
+}
+
+/* Row poster follows the media card poster: 2:3, flush with the row's left, top
+   and bottom edges. Its left corners follow the card's inner curve, so the card's
+   rounded border shows around it (the open card doesn't clip its contents). */
+.season-accordion-trigger.has-row-poster {
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0;
+}
+
+.season-row-poster {
+  flex: 0 0 auto;
+  width: 84px;
+  height: 126px;
+  object-fit: cover;
+  border-radius: calc(var(--season-card-radius, 6px) - 1px) 0 0 calc(var(--season-card-radius, 6px) - 1px);
+  background: var(--panel-2);
+}
+
 .season-accordion {
   overflow: hidden;
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: var(--season-card-radius, 6px);
   background: color-mix(in srgb, var(--panel-2), transparent 92%);
 }
 
@@ -18338,7 +18384,7 @@ html.light-mode .history-mini-card-title {
 
 .season-accordion-trigger {
   display: grid;
-  grid-template-columns: minmax(110px, 260px) minmax(90px, auto) minmax(84px, auto) minmax(150px, auto) minmax(140px, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   width: 100%;
   min-height: 48px;
   align-items: center;
@@ -18359,8 +18405,13 @@ html.light-mode .history-mini-card-title {
   background: color-mix(in srgb, var(--panel-3), transparent 12%);
 }
 
+/* The open season keeps its background on hover. */
+.season-accordion.is-open .season-accordion-trigger:hover {
+  background: transparent;
+}
+
 .season-accordion.is-open .season-accordion-trigger {
-  border-bottom: 1px solid var(--line-strong);
+  border-bottom: 0;
 }
 
 .season-row-title {
@@ -18381,8 +18432,9 @@ html.light-mode .history-mini-card-title {
 
 .season-row-col {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: flex-start;
   gap: 0.3rem;
   min-width: 0;
   color: var(--muted);
@@ -18390,6 +18442,22 @@ html.light-mode .history-mini-card-title {
   font-weight: 500;
   line-height: 1.35;
   text-align: left;
+}
+
+/* Season row text, stacked: "Season N", season name, episode count, watched, next airing. */
+.season-row-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.season-row-name {
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.25;
 }
 
 .season-row-next {
@@ -18421,6 +18489,160 @@ html.light-mode .history-mini-card-title {
   padding: 0 var(--space-4) var(--space-3);
 }
 
+/* Season cards sit in their own column (.season-accordion-cards). The open
+   season's episodes (.season-accordion-detail) sit in a second column beside
+   them. Mobile drops the columns: the cards flow as one list and each open
+   season's episodes follow its card through the inline order set in
+   media-detail-show.js. */
+.season-accordion-cards {
+  display: contents;
+}
+
+.season-accordion-detail {
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--panel-2), transparent 92%);
+  overflow: hidden;
+}
+
+@media (min-width: 761px) {
+  .season-accordion-list {
+    grid-template-columns: minmax(20rem, 25rem) minmax(0, 1fr);
+    align-items: start;
+    /* positionSeasonDetails sets a min-height to fit the episode box; stretched
+       rows would then push the cards down, away from the box placed beside them. */
+    align-content: start;
+    column-gap: var(--space-4);
+  }
+
+  /* Each season keeps its own row (--season-row, set in media-detail-show.js):
+     the card in column 1 and, when open, its episodes in column 2 of that row,
+     top-aligned to the card. The card keeps its natural height, so the curves
+     meet its top and bottom edges. */
+  .season-accordion-cards {
+    display: contents;
+  }
+
+  .season-accordion-list {
+    position: relative;
+  }
+
+  .season-accordion {
+    grid-column: 1;
+    align-self: start;
+  }
+
+  /* Placed beside its card by positionSeasonDetails (media-detail-show.js). Out
+     of the row flow, so opening a season doesn't push the other cards down. */
+  .season-accordion-detail {
+    position: absolute;
+    /* The visible outline is the ::after frame below; the box's own borders
+       only keep the layout. */
+    border-color: transparent;
+    border-left: 0;
+    /* Square where the card's top line runs in, so the corner clips no notch. */
+    border-top-left-radius: 0;
+    overflow: visible;
+  }
+
+  /* The open season's outline runs from its card into the episode box: the card
+     has no right edge, and two curves in the gap take its top and bottom edges
+     into the episode box's left border. The top curve sits at the box's top
+     edge, the bottom curve at the card's bottom edge. */
+  .seasons-section .season-accordion-cards > .season-accordion.is-open {
+    border-right: 0;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    position: relative;
+    overflow: visible;
+  }
+
+  /* Top: the card's top line runs across the gap into the episode box's rounded
+     top-left corner. */
+  /* --season-hairline (set in positionSeasonDetails) is a 1px border's real
+     drawn width: under the app shell's CSS zoom a border snaps to a whole
+     screen pixel, so a plain 1px line here would sit off the borders it joins. */
+  .season-accordion-detail::before {
+    content: "";
+    position: absolute;
+    top: calc(-1 * var(--season-hairline, 1px));
+    left: calc(-1 * var(--space-4));
+    width: var(--space-4);
+    height: var(--season-hairline, 1px);
+    background: var(--season-open-line);
+  }
+
+  /* The episode box's outline as one frame, so its rounded bottom-left corner
+     draws as a single curve. The frame's left edge is masked beside the card,
+     down to where the bottom curve ends: the card's height (--season-card-h,
+     set in positionSeasonDetails) plus the curve. */
+  .season-accordion-detail::after {
+    --join-y: calc(var(--season-card-h, 0px) - var(--season-hairline, 1px) + var(--season-card-radius, 6px));
+    content: "";
+    position: absolute;
+    inset: calc(-1 * var(--season-hairline, 1px));
+    border: var(--season-hairline, 1px) solid var(--season-open-line);
+    border-radius: inherit;
+    pointer-events: none;
+    -webkit-mask:
+      linear-gradient(#000, #000) right top / calc(100% - var(--season-hairline, 1px)) 100% no-repeat,
+      linear-gradient(transparent var(--join-y), #000 var(--join-y)) left top / var(--season-hairline, 1px) 100% no-repeat;
+    mask:
+      linear-gradient(#000, #000) right top / calc(100% - var(--season-hairline, 1px)) 100% no-repeat,
+      linear-gradient(transparent var(--join-y), #000 var(--join-y)) left top / var(--season-hairline, 1px) 100% no-repeat;
+  }
+
+  /* Bottom: the card's bottom line runs across the gap, then curves down into the
+     episode box's left edge (a quarter circle of the card radius). The corner
+     inside the curve takes the open background, so it reads as one shape. */
+  .seasons-section .season-accordion-cards > .season-accordion.is-open::after {
+    --join-r: var(--season-card-radius, 6px);
+    --join-w: var(--season-hairline, 1px);
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 100%;
+    width: var(--space-4);
+    height: var(--join-r);
+    background:
+      radial-gradient(
+        circle var(--join-r) at 0 100%,
+        transparent calc(var(--join-r) - 1.5 * var(--join-w)),
+        var(--season-open-line) calc(var(--join-r) - var(--join-w)),
+        var(--season-open-line) calc(var(--join-r) - 0.5 * var(--join-w)),
+        var(--season-open-fill) var(--join-r)
+      ) right top / var(--join-r) var(--join-r) no-repeat,
+      linear-gradient(var(--season-open-line), var(--season-open-line)) left top / calc(100% - var(--join-r)) var(--join-w) no-repeat;
+  }
+
+  /* Fills the gap beside the open card with the card's own background, so the
+     card and the episode box read as one surface. */
+  .seasons-section .season-accordion-cards > .season-accordion.is-open::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: var(--space-4);
+    background: inherit;
+  }
+
+  .season-row-poster {
+    width: 150px;
+    height: 225px;
+  }
+
+  /* Keeps wrapped lines (season name, next airing) off the card's top and bottom edges. */
+  .season-row-text {
+    padding-block: var(--space-2);
+  }
+
+  .season-accordion-detail .season-accordion-panel {
+    padding-top: var(--space-3);
+  }
+}
+
 .season-accordion-panel .show-season-block {
   gap: 0;
 }
@@ -18442,7 +18664,7 @@ html.light-mode .history-mini-card-title {
 
 .season-accordion-panel .show-episode-list {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -18645,9 +18867,6 @@ html:not(.light-mode) .episode-progress-fill {
     display: none;
   }
 
-  .season-row-availability {
-    margin-left: auto;
-  }
 
   .season-accordion-meta {
     margin-left: 0;
@@ -20076,6 +20295,11 @@ html.light-mode .season-accordion {
 
 html.light-mode .season-accordion.is-open {
   border-color: var(--line-strong);
+}
+
+/* The open card's episode box and join use the light open border too. */
+html.light-mode .seasons-section.season-accordions {
+  --season-open-line: var(--line-strong);
 }
 
 html.light-mode .season-accordion-trigger:hover {

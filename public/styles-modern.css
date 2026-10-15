@@ -1167,12 +1167,37 @@ html[data-style="modern"]:not(.light-mode) .media-detail-page .season-accordion 
 
 html[data-style="modern"].light-mode .media-detail-page .season-accordion {
   border-color: rgba(15, 23, 42, 0.1);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(241, 245, 249, 0.55) 100%);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
 html[data-style="modern"] .media-detail-page .season-accordion.is-open {
   border-color: color-mix(in srgb, var(--accent), transparent 55%);
+}
+
+html[data-style="modern"] .seasons-section.season-accordions {
+  --season-open-line: color-mix(in srgb, var(--accent), transparent 55%);
+  --season-card-radius: 10px;
+  --season-open-fill: rgba(15, 19, 25, 0.55);
+}
+
+html[data-style="modern"].light-mode .seasons-section.season-accordions {
+  --season-open-fill: rgba(241, 245, 249, 0.55);
+}
+
+html[data-style="modern"] .media-detail-page .season-accordion.is-open .season-accordion-trigger:hover {
+  background: transparent;
+}
+
+/* The gradient runs over the open card's height (--season-card-h, set beside the
+   card on desktop; minus the card's two border lines), then holds its end colour,
+   so the episode box matches the card row for row across the join. */
+html[data-style="modern"]:not(.light-mode) .media-detail-page .season-accordion-detail {
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.55) 0, rgba(15, 19, 25, 0.55) calc(var(--season-card-h, 100%) - 2px), rgba(15, 19, 25, 0.55) 100%);
+}
+
+html[data-style="modern"].light-mode .media-detail-page .season-accordion-detail {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0, rgba(241, 245, 249, 0.55) calc(var(--season-card-h, 100%) - 2px), rgba(241, 245, 249, 0.55) 100%);
 }
 
 html[data-style="modern"] .media-detail-page .season-accordion.is-open .season-accordion-trigger {

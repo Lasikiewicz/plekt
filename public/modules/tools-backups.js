@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.8";
-import { state, elements } from "./state.js?v=2.0.0.0.8";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.0.0.0.8";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.0.0.0.8";
-import { applyAppearanceToBody } from "./appearance.js?v=2.0.0.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.9";
+import { state, elements } from "./state.js?v=2.0.0.0.9";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.0.0.0.9";
+import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.0.0.0.9";
+import { applyAppearanceToBody } from "./appearance.js?v=2.0.0.0.9";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -369,13 +369,19 @@ export function renderWatchBackups() {
     const localPathEl = document.querySelector("#watchBackupLocalPath");
     if (localPathEl && data.backupsDir) localPathEl.textContent = data.backupsDir;
     if (elements.watchBackupRuntime) {
+      // A failed restore keeps automated sync fenced until someone clears it, so show that here.
+      const restoreSync = data.restoreSync || {};
+      // A cleared restore also reports success false, but with a reason rather than an error.
+      const restoreFailed = restoreSync.result?.success === false && Boolean(restoreSync.result.error);
       elements.watchBackupRuntime.innerHTML = `
         <div><span>Last successful backup</span><b>${escapeHtml(watchBackupDate(runtime.lastSuccessAt))}</b></div>
         <div class="backup-runtime-with-action">
           <span>Last restore</span>
           <b>${escapeHtml(watchBackupDate(runtime.lastRestoreAt))}</b>
-          ${runtime.lastRestoreAt ? `<button class="button-ghost" type="button" data-clear-restore-status>Clear Status</button>` : ""}
+          ${runtime.lastRestoreAt || restoreFailed ? `<button class="button-ghost" type="button" data-clear-restore-status>Clear Status</button>` : ""}
         </div>
+        ${restoreSync.active ? `<p class="backup-runtime-error">A watch-history restore is running. Automated sync writes wait until it finishes.</p>` : ""}
+        ${restoreFailed ? `<p class="backup-runtime-error">The last watch-history restore failed: ${escapeHtml(restoreSync.result.error || "unknown error")}. Automated sync writes stay paused until you clear this status.</p>` : ""}
         <div><span>Storage</span><b>${formatNumber(files.length)} file${files.length === 1 ? "" : "s"}</b></div>
         ${runtime.lastError ? `<p class="backup-runtime-error">${escapeHtml(runtime.lastError)}</p>` : ""}
       `;
@@ -1039,14 +1045,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.0.0.0.8");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.0.0.0.9");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.0.0.0.8");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.0.0.0.9");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {
