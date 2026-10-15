@@ -39,6 +39,16 @@ worktree once amended the published v1.1.0 release commit and diverged `develop`
 clear the lock only once you know it is gone.
 If the latest run shows `in_progress`, wait for it to complete before pushing.
 
+Then check the repository's open security alerts, read-only, before any push:
+```bash
+gh api "repos/Lasikiewicz/plekt/code-scanning/alerts?state=open&per_page=100" --jq '.[] | "\(.number) \(.rule.severity) \(.rule.id) \(.most_recent_instance.location.path):\(.most_recent_instance.location.start_line)"'
+gh api "repos/Lasikiewicz/plekt/dependabot/alerts?state=open&per_page=100" --jq '.[] | "\(.number) \(.security_advisory.severity) \(.dependency.package.name)"'
+```
+Report every open alert with its file and severity. Stop before pushing when an alert is
+high or critical, or when it sits in a file this push changes; ask the user how to proceed.
+If `gh` is not signed in, or the Dependabot API reports alerts disabled, say so and continue
+only with the user's agreement. Never dismiss or close an alert to clear the check.
+
 
 Choose the scope from the user's wording before doing anything. Both commands run
 the complete local changelog/build workflow below; they differ in which local work
