@@ -23,7 +23,7 @@
   try { style = localStorage.getItem("plembfin:style"); } catch { /* storage unavailable: Classic */ }
   if (style === "modern") document.documentElement.setAttribute("data-style", "modern");
 
-  const logo = light ? "/plekt_header_logo_light.png?v=2.0.0.0.9" : "/plekt_header_logo_dark.png?v=2.0.0.0.9";
+  const logo = light ? "/plekt_header_logo_light.png?v=2.0.0.0.10" : "/plekt_header_logo_dark.png?v=2.0.0.0.10";
   const preload = document.createElement("link");
   preload.rel = "preload";
   preload.as = "image";

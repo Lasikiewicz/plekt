@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.9";
-import { state, elements } from "./state.js?v=2.0.0.0.9";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.0.0.0.9";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.0.0.0.9";
-import { applyAppearanceToBody } from "./appearance.js?v=2.0.0.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.10";
+import { state, elements } from "./state.js?v=2.0.0.0.10";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.0.0.0.10";
+import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.0.0.0.10";
+import { applyAppearanceToBody } from "./appearance.js?v=2.0.0.0.10";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -1045,14 +1045,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.0.0.0.9");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.0.0.0.10");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.0.0.0.9");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.0.0.0.10");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {
