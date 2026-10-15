@@ -1,20 +1,7 @@
 {
-  "version": "2.0.0.2.1",
-  "build": 1,
-  "resetCommit": "f29edf3ba7781cea1a32929c53555ccea0957965",
-  "updatedAt": "2026-10-15T15:04:47.003Z",
-  "entries": [
-    {
-      "build": 1,
-      "date": "2026-10-15T15:04:47.003Z",
-      "commit": "f7b308d44f417724d3d1a169e099a167bc87f02e",
-      "message": "Fix - Keep season scrolling landing just below the top bar",
-      "author": "Lasikiewicz",
-      "details": [
-        "Clicking a season, or opening a URL that names one, now lands its card just below the top bar on every show",
-        "Seasons no longer stop hidden under the top bar or short of their position when a season card above them resizes during the scroll",
-        "Scrolling by hand while the page is settling stops the adjustment at once"
-      ]
-    }
-  ]
+  "version": "2.0.0.3.0",
+  "build": 0,
+  "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
+  "updatedAt": "2026-10-15T15:08:16.183Z",
+  "entries": []
 }

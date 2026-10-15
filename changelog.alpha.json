@@ -1,10 +1,50 @@
 {
   "baseVersion": "2.0.0",
-  "build": 2,
-  "version": "2.0.0.2.0",
-  "updatedAt": "2026-10-15T14:16:24.544Z",
+  "build": 3,
+  "version": "2.0.0.3.0",
+  "updatedAt": "2026-10-15T15:08:16.183Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 3,
+      "version": "2.0.0.3.0",
+      "shortVersion": "2.0.0.3.0",
+      "date": "2026-10-15T15:08:16.183Z",
+      "commit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
+      "message": "This update keeps a season's card just below the top bar when you open it, on every show.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Keep season scrolling landing just below the top bar",
+        "Fix: Clicking a season, or opening a URL that names one, now lands its card just below the top bar on every show",
+        "Fix: Seasons no longer stop hidden under the top bar or short of their position when a season card above them resizes during the scroll",
+        "Fix: Scrolling by hand while the page is settling stops the adjustment at once"
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Keep season scrolling landing just below the top bar",
+          "Clicking a season, or opening a URL that names one, now lands its card just below the top bar on every show",
+          "Seasons no longer stop hidden under the top bar or short of their position when a season card above them resizes during the scroll",
+          "Scrolling by hand while the page is settling stops the adjustment at once"
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Keep season scrolling landing just below the top bar",
+              "Clicking a season, or opening a URL that names one, now lands its card just below the top bar on every show",
+              "Seasons no longer stop hidden under the top bar or short of their position when a season card above them resizes during the scroll",
+              "Scrolling by hand while the page is settling stops the adjustment at once"
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 2,
       "version": "2.0.0.2.0",
@@ -138,5 +178,5 @@
       ]
     }
   ],
-  "shortVersion": "2.0.0.2.0"
+  "shortVersion": "2.0.0.3.0"
 }
