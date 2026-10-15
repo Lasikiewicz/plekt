@@ -1,5 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.4";
-import { state, elements, THEME_STYLE_KEY } from "./state.js?v=2.0.0.0.4";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.6";
+import { state, elements, THEME_STYLE_KEY } from "./state.js?v=2.0.0.0.6";
 
 export const APPEARANCE_DEFAULTS = {
   showLogoArt: true,

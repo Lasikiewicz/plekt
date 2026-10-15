@@ -273,6 +273,36 @@ export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source 
   }
 }
 
+const ARTWORK_SIZES = {
+  poster: { width: 340, quality: 80 },
+  backdrop: { width: 1600, quality: 82 },
+  profile: { width: 780, quality: 82 },
+  logo: { width: 800, quality: 90 },
+};
+const selectByStoragePathStmt = db.prepare(
+  "SELECT media_key, variant, source, original_url FROM poster_cache WHERE storage_path = ? AND status = 'cached' LIMIT 1",
+);
+const restoresInFlight = new Map();
+
+// A cached file that has gone missing from disk (a restore that skipped it, a moved
+// data folder) is downloaded again from the source recorded for it. Returns the
+// /media URL of the restored file, or null when no downloadable source is recorded.
+export async function restoreMissingCachedArtwork(storagePath = "") {
+  const row = selectByStoragePathStmt.get(storagePath);
+  // Only http(s) sources can be fetched again. Sanitized data-image uploads and
+  // local /media paths have nothing to download.
+  if (!row || !/^https?:\/\//i.test(row.original_url || "")) return null;
+  if (!restoresInFlight.has(storagePath)) {
+    const sizes = ARTWORK_SIZES[row.variant] || ARTWORK_SIZES.poster;
+    const restore = cacheArtworkFromUrl(row.media_key, row.original_url, row.source, { variant: row.variant, ...sizes })
+      .catch(() => null)
+      .finally(() => restoresInFlight.delete(storagePath));
+    restoresInFlight.set(storagePath, restore);
+  }
+  const restored = await restoresInFlight.get(storagePath);
+  return restored?.url || null;
+}
+
 async function markPosterFailure(mediaKey = "", source = "unknown", detail = "", remoteUrl = "", variant = "poster") {
   if (!mediaKey) return;
   upsertStmt.run({

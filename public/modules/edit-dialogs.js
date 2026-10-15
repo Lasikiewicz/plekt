@@ -1,10 +1,10 @@
-import { state } from "./state.js?v=2.0.0.0.4";
-import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.0.4";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.4";
-import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.4";
-import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.0.4";
-import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.0.4";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.4";
+import { state } from "./state.js?v=2.0.0.0.6";
+import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.0.6";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.0.6";
+import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.0.6";
+import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.0.6";
+import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.0.6";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.0.6";
 
 // Callbacks injected by app.js at startup.
 let _setMessage = () => {};

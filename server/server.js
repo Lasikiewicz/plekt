@@ -61,6 +61,7 @@ const { db } = await import("./src/db.js");
 const { enableTmdbMetadataWarmup } = await import("./src/utils/tmdbGateway.js");
 const { clearRestoreSyncState, loadMediaConfig, loadRuntimeState, RESTORE_KIND_FULL_SYNC } = await import("./src/utils/configStore.js");
 const { createCspImageOriginMemo, createHttpTimingMiddleware, createResponseCompression, setPublicAssetCacheHeaders } = await import("./src/utils/httpPerformance.js");
+const { restoreMissingCachedArtwork } = await import("./src/utils/posterCache.js");
 const { recoverInterruptedBackgroundImports } = await import("./src/utils/onboardingStore.js");
 const { schedulerLeaseStatus } = await import("./src/utils/schedulerLease.js");
 const { createWorkerCoordinator } = await import("./src/workerCoordinator.js");
@@ -332,6 +333,18 @@ app.all("/api/*path", express.raw({ type: (req) => !isStreamedUpload(req), limit
 
 // Locally cached posters/backdrops.
 app.use("/media", express.static(MEDIA_DIR, { maxAge: "365d", immutable: true }));
+// The static mount only answers when the file exists. A missing cached poster
+// is downloaded again from its recorded source and redirected to the new file.
+// Without this the SPA fallback below answers 200 with index.html, and the
+// image shows broken.
+app.get("/media/*name", async (req, res) => {
+  const storagePath = decodeURIComponent(req.path.slice("/media/".length));
+  if (!/^(?:posters|backdrops|profiles|logos)\/[\w.-]+$/.test(storagePath)) return res.status(404).end();
+  const url = await restoreMissingCachedArtwork(storagePath).catch(() => null);
+  if (!url) return res.status(404).end();
+  res.setHeader("Cache-Control", "no-cache");
+  res.redirect(302, url);
+});
 // Bundled app and source icons.
 app.use("/icons", express.static(path.join(PUBLIC_DIR, "icons"), { maxAge: "7d" }));
 

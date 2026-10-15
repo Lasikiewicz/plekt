@@ -78,6 +78,13 @@ When an existing cache row is first read or written after this identifier change
 its database ID is re-keyed to SHA-256. Its stored image path remains unchanged, so
 the cached file continues to work until artwork is fetched again.
 
+**Missing files:** a `cached` row whose file is gone from `data/media/` is not served. The
+`/media/*` route downloads it again from the row's `original_url` (for http(s) sources
+only) and redirects to the new file. A missing file with no downloadable source returns
+**404**, never the app page. `original_url` stores query values whose names contain `key`
+or `token` as `redacted`, so a provider URL that carried an API key in its query cannot be
+downloaded again; it returns 404 and the row is marked `failed`.
+
 **Negative caching:** failures are recorded as `failed` (retry after 24h) or `missing`
 (retry after 7 days) so a dead lookup doesn't hammer upstream on every page view.
 HTTP 429/503 are treated as transient and not persisted. `usableCachedPoster` only
