@@ -1463,6 +1463,14 @@
       "reason": "history",
       "lines": [
         [
+          "\"Tweak: Explain that new installs retain the backups/plembfin folder for compatibility.\",",
+          1
+        ],
+        [
+          "\"Explain that new installs retain the backups/plembfin folder for compatibility.\",",
+          2
+        ],
+        [
           "\"Feature: Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\",",
           1
         ],

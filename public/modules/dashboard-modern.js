@@ -1,10 +1,10 @@
-import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.0.0.3.6";
-import { state } from "./state.js?v=2.0.0.3.6";
-import { artKey, requestArtKey } from "./card-art.js?v=2.0.0.3.6";
-import { THEME_STYLE_EVENT, isModernStyle } from "./appearance.js?v=2.0.0.3.6";
-import { nowPlayingOptions } from "./now-playing-options.js?v=2.0.0.3.6";
+import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.0.0.4.0";
+import { state } from "./state.js?v=2.0.0.4.0";
+import { artKey, requestArtKey } from "./card-art.js?v=2.0.0.4.0";
+import { THEME_STYLE_EVENT, isModernStyle } from "./appearance.js?v=2.0.0.4.0";
+import { nowPlayingOptions } from "./now-playing-options.js?v=2.0.0.4.0";
 // The same folded-poster behaviour on the Library and History pages.
-import "./page-card-open.js?v=2.0.0.3.6";
+import "./page-card-open.js?v=2.0.0.4.0";
 
 // Dashboard behaviour added with the Modern theme style (plan/archive/theme-styles/plan.md).
 // Compact rows, collapsed TV runs and the featured Up Next cards apply under

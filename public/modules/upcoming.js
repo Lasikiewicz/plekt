@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.6";
-import { state, elements } from "./state.js?v=2.0.0.3.6";
-import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.0.0.3.6";
-import { posterMarkup, hydratePosters } from "./images.js?v=2.0.0.3.6";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.4.0";
+import { state, elements } from "./state.js?v=2.0.0.4.0";
+import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.0.0.4.0";
+import { posterMarkup, hydratePosters } from "./images.js?v=2.0.0.4.0";
 
 let _cb = {};
 

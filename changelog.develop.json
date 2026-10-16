@@ -1,43 +1,7 @@
 {
-  "version": "2.0.0.3.6",
-  "build": 6,
-  "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
-  "updatedAt": "2026-10-16T13:30:08.159Z",
-  "entries": [
-    {
-      "build": 6,
-      "date": "2026-10-16T13:30:08.159Z",
-      "commit": "d208e6b6ba76765bfdc3ffea39291255f9a48426",
-      "message": "This update includes restore playback tracking and improve season navigation, protect media state and simplify deployment, clarify Jellyfin webhook labels and backup storage, point public demo links to the Plekt domain, and correct website and demo Traks analytics keys.",
-      "author": "Lasikiewicz",
-      "details": [
-        "Recover interrupted restore locks automatically so live playback and watch history resume.",
-        "Open show pages at the top with the latest regular season expanded.",
-        "Open Season 1 links at the page top and scroll other season links into view after loading.",
-        "Pull the published Plekt image by default and require an administrator password before startup.",
-        "Provide separate local-build and secure overlays with documented setup and persistent data storage.",
-        "Hold suspicious rating removals for explicit review and reject malformed or incomplete provider snapshots.",
-        "Report partially applied Force Sync runs with missing titles and targets instead of counting them as completed.",
-        "Retain interrupted restore errors until dismissed while stale guards recover after three minutes.",
-        "Return explanatory restore-conflict responses for paused automated writes while keeping manual watch edits available.",
-        "Serve stable release metadata as JSON with matching current and latest-entry versions, excluding alpha release data.",
-        "Fetch Reddit announcement data from the project release feed and reject invalid or redirected responses before changing announcement state.",
-        "Record the current release without posting when the Reddit bot has no stored baseline.",
-        "Point community links and bot policies at r/plekt while requiring separate domain and installation approvals.",
-        "Patch vulnerable Hono, protobuf, image parsing, YAML, brace expansion and source-map dependencies without upgrading Devvit or crossing dependency major versions.",
-        "Use plekt as the suggested Jellyfin webhook display label while preserving existing labels.",
-        "Explain that new installs retain the backups/plembfin folder for compatibility.",
-        "Open the live Plekt demo from the README, public guides and website homepage using https://demo.plekt.net/.",
-        "Attribute plekt.net traffic to the Plekt website site key using the Traks collector script.",
-        "Attribute demo traffic to its separate site key only in demo mode, with collector access allowed by the demo security policy and tracking disabled for self-hosted installs."
-      ],
-      "messageFragments": [
-        "Fix - Restore playback tracking and improve season navigation",
-        "Fix - Protect media state and simplify deployment",
-        "Docs - Clarify Jellyfin webhook labels and backup storage",
-        "Docs - Point public demo links to the Plekt domain",
-        "Fix - Correct website and demo Traks analytics keys"
-      ]
-    }
-  ]
+  "version": "2.0.0.4.0",
+  "build": 0,
+  "resetCommit": "62004824e873a9fcefe00c19e03a6129478df671",
+  "updatedAt": "2026-10-16T13:33:16.875Z",
+  "entries": []
 }
