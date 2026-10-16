@@ -16,7 +16,7 @@ the current stop marked "here", and a one-line next action:
 - [ ] 2 Suggested changelog updates made
 - [ ] 3 User accepts changelog and build
 - [ ] 4 Website phase A: guides reviewed, capture list written
-- [ ] 5 Website phase B: cheaper agent takes the captures (handoff line)
+- [ ] 5 Website phase B: release-capture subagent takes the captures (report)
 - [ ] 6 Website phase C: images accepted, website checks pass
 - [ ] 7 Release promoted and committed locally (website carried in)
 - [ ] 8 Final review: release build presented for the user
@@ -82,11 +82,9 @@ If no captures are needed, record that explicitly and skip B.
 
 ## 4. Website B handoff and C
 
-STOP after A; hand off, do not take over captures in the phase A session:
-```text
-Force to main v<version>, phase B (capture only): read plan/active/force-to-main-<version>/captures.md and follow it.
-```
-Phase B: follow [website-capture](../website-capture/SKILL.md) and the named assignment only.
+Phase B: delegate to the `release-capture` subagent (`.claude/agents/release-capture.md`) with
+the version and captures.md path, then wait for its report. PASS: continue to phase C
+automatically. NEEDS HUMAN or FAIL: STOP and ask the user.
 
 Phase C reads the run summary, reconciles lock/source and reruns release:candidate.
 Read website operations for image acceptance, privacy manifest, captions/themes/links,
@@ -118,7 +116,7 @@ run `node scripts/workflow-check.js staged`, inspect staged scope and commit one
 Safely stop/remove only this run's verified candidate per publication operations;
 unexpected work blocks cleanup. Preserve the approval/preview records.
 
-## 6. Exact final review — STOP
+## 6. Exact final review: STOP
 
 Start app (BUILD_CHANNEL=main) and website from the exact committed release after verifying
 ownership and stopping old listeners. Show full changelog entry, changed/stamped guides and
