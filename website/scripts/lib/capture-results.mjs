@@ -65,7 +65,7 @@ export function summarize(rows) {
   };
 }
 
-const cell = (value) => String(value || "").replace(/\|/g, "\\|");
+const cell = (value) => String(value || "").replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
 
 export function resultsMarkdown({ build, rows, errors, expect = {}, exitCode, liveNote = "" }) {
   const { captured, failed, warnings } = summarize(rows);

@@ -49,6 +49,11 @@ test("results table lists every row and flags only non-clean rows for phase C", 
   assert.match(phaseC, /`settings-sync-dark\.png`: state has interactions/);
 });
 
+test("table cells escape backslashes before pipes", () => {
+  const md = resultsMarkdown({ ...parseToolOutput("FAIL\ta-dark.png\tC:\\x\\| y\n"), exitCode: 1 });
+  assert.match(md, /\| C:\\\\x\\\\\\\| y \|$/m);
+});
+
 test("a clean run says nothing is flagged", () => {
   const md = resultsMarkdown({ ...parseToolOutput("ok\ta-dark.png\t10x10\n"), exitCode: 0 });
   assert.match(md, /Nothing flagged; every row is clean/);
