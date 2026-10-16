@@ -48,7 +48,7 @@ The scripts only prepare local assets and fixture data. They do not start the
 server, create DNS, publish a container, or deploy the hosted demo. The
 `Force to main` release workflow publishes a multi-architecture image, then
 deploys the exact released tag to the dedicated Oracle Cloud Compute instance
-serving [demo.plembfin.com](https://demo.plembfin.com/). The deployment preserves
+serving [demo.plekt.net](https://demo.plekt.net/). The deployment preserves
 the OCI demo's `/data` mount and verifies the released version over HTTPS.
 Portainer is a local-only environment and is not part of the public-demo release
 gate.

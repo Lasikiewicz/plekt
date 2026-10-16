@@ -145,7 +145,7 @@ gh run list --branch main --limit 1
 ### 8 - Rebuild and verify the OCI public demo
 
 Publishing GHCR does not pull or restart the public demo. The live demo at
-`https://demo.plembfin.com/` is served by the dedicated Oracle Cloud Compute instance
+`https://demo.plekt.net/` is served by the dedicated Oracle Cloud Compute instance
 in `uk-london-1`, behind the Cloudflare reverse proxy. Portainer is local-only and is
 not part of this release gate.
 
@@ -153,7 +153,8 @@ The `Publish Main Release` workflow now builds an AMD64/ARM64 image and its depe
 `Deploy public demo to OCI` job copies `scripts/deploy-oracle-demo.sh` to the instance
 over pinned SSH, pulls the exact `ghcr.io/lasikiewicz/plekt:<version>` tag, and
 recreates only the configured demo container while preserving its `/data` mount. It
-then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.
+then runs `scripts/verify-oracle-demo.js` against its default verification target
+(the legacy demo hostname, which remains supported).
 
 Before the first release using this gate, configure the repository's GitHub Actions
 variables `OCI_DEMO_HOST`, `OCI_DEMO_KNOWN_HOSTS`, `OCI_DEMO_CONTAINER`,

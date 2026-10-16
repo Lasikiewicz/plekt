@@ -209,7 +209,7 @@ everything else about setup is identical.
 
 ### Public demo
 
-Try the [public Plekt demo](https://demo.plembfin.com/) with `demo` / `demo`.
+Try the [public Plekt demo](https://demo.plekt.net/) with `demo` / `demo`.
 It runs in an isolated demo mode on a dedicated Oracle Cloud Compute instance;
 actions are simulated in the browser, media-provider integrations are disabled,
 and the fixed bundled artwork and metadata catalogue is served without contacting
@@ -656,7 +656,7 @@ Every push to `develop`/`alpha` builds and publishes a rolling image
 publishing - a breaking change is caught before release, not after.
 
 The **Force to main** release workflow publishes AMD64 and ARM64 images, then updates
-the Oracle-hosted [public demo](https://demo.plembfin.com/) and verifies its release
+the Oracle-hosted [public demo](https://demo.plekt.net/) and verifies its release
 version. It does not update the local Portainer environment.
 
 The local pre-push gate is never bypassed during promotion. If its test run hits the

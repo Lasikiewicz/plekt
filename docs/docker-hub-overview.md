@@ -12,7 +12,7 @@ keeps every one of them up to date.
 [Source and issues](https://github.com/Lasikiewicz/plekt) ·
 [Discord](https://discord.gg/7ZmEGKcRC5) ·
 [Reddit](https://www.reddit.com/r/plembfin/) ·
-[Public demo](https://demo.plembfin.com/) (`demo` / `demo`)
+[Public demo](https://demo.plekt.net/) (`demo` / `demo`)
 
 > Plekt writes watched state and playback progress to your connected media servers.
 > Back up first (Settings > Backup > Local).

@@ -283,7 +283,7 @@ values already committed" - none of them write anything back to their branch.
   The promotion command refuses to mutate anything without `--confirm`.
 - After the main image workflow succeeds, its `Deploy public demo to OCI` job pulls the
   exact released tag on the dedicated Oracle Cloud Compute instance serving
-  [demo.plembfin.com](https://demo.plembfin.com/), keeps `PLEKT_DEMO_MODE=1` and the
+  [demo.plekt.net](https://demo.plekt.net/), keeps `PLEKT_DEMO_MODE=1` and the
   existing `/data` mount, and verifies the released version plus the public-demo
   health/guardrail checks. Publishing to GHCR alone does not restart this container.
   Portainer is local-only and is not used by the release gate.
@@ -411,7 +411,7 @@ changelog step.
 
 ### Oracle-hosted public-demo release gate
 
-The public application demo at [demo.plembfin.com](https://demo.plembfin.com/) runs on
+The public application demo at [demo.plekt.net](https://demo.plekt.net/) runs on
 the dedicated Oracle Cloud Compute instance in `uk-london-1`, behind the Cloudflare
 reverse proxy. The release job deploys the exact `ghcr.io/lasikiewicz/plekt:<version>`
 image with `PLEKT_DEMO_MODE=1`, `BUILD_CHANNEL=main`, and the existing isolated data
@@ -435,7 +435,7 @@ guardrail, and `/changelog.json` against the release version. If an OCI setting 
 missing or the deployment/verification fails, the main release workflow remains
 failed instead of reporting the demo as current.
 
-Optional Traks analytics for `demo.plembfin.com` are configured with repository
+Optional Traks analytics for `demo.plekt.net` are configured with repository
 Variables `PLEKT_TRAKS_COLLECTOR_ORIGIN` and `PLEKT_TRAKS_SITE_KEY`; workflows also accept their existing `PLEMBFIN_TRAKS_*` counterparts. The existing
 `PLEKT_TRAKS_SCRIPT_URL` variable remains accepted as a legacy collector-origin
 fallback. If the Traks origin or site key is empty, the demo loads no tracking. These
