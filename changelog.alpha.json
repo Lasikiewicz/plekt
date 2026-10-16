@@ -1,10 +1,47 @@
 {
   "baseVersion": "2.0.0",
-  "build": 4,
-  "version": "2.0.0.4.0",
-  "updatedAt": "2026-10-16T13:33:16.875Z",
+  "build": 5,
+  "version": "2.0.0.5.0",
+  "updatedAt": "2026-10-16T15:16:26.803Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 5,
+      "version": "2.0.0.5.0",
+      "shortVersion": "2.0.0.5.0",
+      "date": "2026-10-16T15:16:26.803Z",
+      "commit": "dc5a20f68952fd9e05115ed8a35f795a5a7a520a",
+      "message": "Website guides and screenshots refreshed for v2.1.0.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Tweak: Update dashboard, TV show, media detail, appearance, navigation and integration guides for the release",
+        "Tweak: Explain rating removal holds and Force Sync partial results",
+        "Tweak: Replace dashboard history and TV detail captures with the v2.1.0 layout"
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [],
+        "tweaks": [
+          "Update dashboard, TV show, media detail, appearance, navigation and integration guides for the release",
+          "Explain rating removal holds and Force Sync partial results",
+          "Replace dashboard history and TV detail captures with the v2.1.0 layout"
+        ]
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [],
+        "tweaks": [
+          {
+            "title": "Website guides",
+            "details": [
+              "Update dashboard, TV show, media detail, appearance, navigation and integration guides for the release",
+              "Explain rating removal holds and Force Sync partial results",
+              "Replace dashboard history and TV detail captures with the v2.1.0 layout"
+            ]
+          }
+        ]
+      }
+    },
     {
       "build": 4,
       "version": "2.0.0.4.0",
@@ -285,5 +322,5 @@
       ]
     }
   ],
-  "shortVersion": "2.0.0.4.0"
+  "shortVersion": "2.0.0.5.0"
 }

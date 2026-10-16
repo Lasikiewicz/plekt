@@ -1,21 +1,7 @@
 {
-  "version": "2.0.0.4.1",
-  "build": 1,
-  "resetCommit": "62004824e873a9fcefe00c19e03a6129478df671",
-  "updatedAt": "2026-10-16T15:07:41.772Z",
-  "entries": [
-    {
-      "build": 1,
-      "date": "2026-10-16T15:07:41.772Z",
-      "commit": "d996f6fca5af78e0c8305e8fe2948c45a9e1a00e",
-      "message": "Docs - Review website for the v2.1.0 release",
-      "author": "Lasikiewicz",
-      "details": [
-        "Update dashboard, TV show, media detail, appearance, navigation and integration guides for the release",
-        "Explain rating removal holds and Force Sync partial results",
-        "Replace dashboard history and TV detail captures with the v2.1.0 layout",
-        "Ignore cards cut only by a scrolling rail's own edge in the capture artwork check"
-      ]
-    }
-  ]
+  "version": "2.0.0.5.0",
+  "build": 0,
+  "resetCommit": "dc5a20f68952fd9e05115ed8a35f795a5a7a520a",
+  "updatedAt": "2026-10-16T15:16:26.803Z",
+  "entries": []
 }
