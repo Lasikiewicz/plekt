@@ -24,7 +24,7 @@
 
 ---
 
-> **v2.0.0.** Plekt writes watched state and playback progress to connected media
+> **v2.1.0.** Plekt writes watched state and playback progress to connected media
 > servers, so **back up first** (Settings → Backup → Local). Report
 > issues on the [issue tracker](https://github.com/Lasikiewicz/plekt/issues).
 

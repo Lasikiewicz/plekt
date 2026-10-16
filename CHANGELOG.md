@@ -4,6 +4,56 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.1.0 - 16 October 2026
+
+This update adds season posters and redesigned TV season pages, text size controls, safer rating sync, simpler Docker setup, and improvements to Up Next, dashboard history, and playback recovery.
+
+[Visit the Plekt website](https://plekt.net)
+
+### Bug Fixes
+
+#### Sync & provider recovery
+
+- Recover interrupted restore locks automatically so live playback and watch history resume.
+- Update vulnerable dependencies (Hono, protobuf, image parsing, YAML and others).
+
+### Tweaks
+
+#### Up Next & watch-state
+
+- Up Next shows the episode or movie that is playing at the top of the rail.
+- Up Next merges duplicate part-watched and next-up cards for the same episode.
+- Up Next keeps its order on refresh while a card waits to be removed.
+
+#### Manual Watch review
+
+- Manual watched-status edits remain available during a running or failed watch-history restore; automated sync waits.
+
+#### Sync & connection recovery
+
+- TV show pages open the latest regular season by default while keeping the page at the top.
+- Season 1 links open at the page top; other season links scroll the season into view after loading.
+- Dashboard history cards show details beside episode artwork and larger posters.
+- The playlist import dialog has more room for its app list.
+- Adjust text size from 100% to 130% in Appearance; your choice is saved across sessions.
+- Appearance sits between Settings and About; the version label appears above the theme switches.
+- TV shows group and pick posters more reliably when a show has several matching entries.
+- Sync activity refreshes and retries more reliably after a failed request.
+- Missing cached posters download again; unavailable artwork uses the fallback image.
+- Choose or upload separate season posters in Edit Images using TMDB, TVDB, or fanart.tv artwork.
+- Season poster choices are preserved in portable and encrypted backups.
+- Desktop season pages show larger posters beside their episodes, with five episodes per row.
+- Season cards use the series poster when no season poster is available, including one-season shows.
+- Settings > Backups shows restore progress or errors and provides Clear Status.
+- Docker Compose now pulls the published Plekt image and requires an administrator password in .env before startup.
+- Separate local-build and secure Compose overlays are documented, with persistent data storage.
+- Personal Rating Sync holds suspicious bulk rating removals for your review instead of clearing them.
+- Force Sync reports partially applied runs, listing titles not found on each target.
+- Interrupted restore errors stay until dismissed; stale restore locks recover after three minutes.
+- The suggested Jellyfin webhook label is now plekt; existing labels are kept.
+- New installs keep the backups/plembfin folder name for compatibility.
+- Demo links point to https://demo.plekt.net/ and community links to r/plekt.
+
 ## v2.0.0 - 11 October 2026
 
 This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/
