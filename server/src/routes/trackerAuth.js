@@ -94,7 +94,7 @@ export async function handleTrackerConnections(req, res, path) {
   }
   if (req.method === "POST") {
     if (isAuthoritativeRestoreActive()) {
-      return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; Trakt import is paused until it completes." }, 409);
+      return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; Trakt import is paused until it completes." }, 409);
     }
     const connection = await withFreshTraktConnection();
     if (!connection) return sendJson(res, { error: "Trakt is not connected" }, 409);

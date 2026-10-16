@@ -44,9 +44,13 @@ Small, automatic backups of just the data needed to restore watch state.
   sync (`pauseCronSync`, default 10 minutes) so the catch-up sync can't fight the
   restore, and stamp `lastRestoreAt`.
   A watch-history restore holds a write fence while it runs. Manual watched-status edits
-  made in the app skip the fence; automated sync writes wait. A failed restore keeps the
-  fence on until someone clicks Clear Status, and Settings → Backups shows the running or
-  failed restore with its error.
+  made in the app skip the fence; automated sync writes wait. A heartbeat stale for three
+  minutes releases an orphaned restore fence automatically, after rechecking the owner
+  and heartbeat. Settings → Backups retains the original failure until **Clear Status**
+  is selected; dismissing that notice does not clear a different sync operation.
+  Blocked automated writes return HTTP 409 with `code: RESTORE_ACTIVE` and the restore
+  explanation. Direct manual watch edits stay available, with remote propagation queued
+  until the restore fence releases.
 - **API** - everything multiplexes through `GET/POST /api/watch-backups`
   (`handleWatchBackups` in `index.js`): status, list, create, download, upload,
   restore, destination CRUD, destination test, remote list/pull.

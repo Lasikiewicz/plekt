@@ -1,4 +1,4 @@
-import { sendJson, notFound } from "./utils/http.js";
+import { sendJson, sendApiError, notFound } from "./utils/http.js";
 import { isClaimRequired } from "./appConfig.js";
 import { handleLogin, handleLogout, handleAuthStatus, handleAuthApiKey, handleAuthWebhookSecret, handleAuthCredentials, handleAuthClaim, handleRevokeAllSessions, requireAdmin } from "./utils/auth.js";
 import { backfillUnknownShowTitles } from "./utils/dataRepo.js";
@@ -289,9 +289,9 @@ async function dispatch(req, res) {
     console.error("API route failed", error);
     const status = Number(error?.status);
     if (Number.isInteger(status) && status >= 400 && (status < 500 || error?.expose)) {
-      return sendJson(res, { error: error.message || "Request failed" }, status);
+      return sendApiError(res, error, { error: error.message || "Request failed" }, status);
     }
-    return sendJson(res, { error: "API route failed" }, 500);
+    return sendApiError(res, error, { error: "API route failed" }, 500);
   }
 }
 

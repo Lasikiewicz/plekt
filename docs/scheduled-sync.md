@@ -75,6 +75,13 @@ Destructive plans create and checksum-verify a local Plekt watch-history snapsho
 snapshot failure blocks execution. This snapshot covers Plekt watch history, playstate,
 and resume progress, not the databases owned by Plex, Emby, or Jellyfin.
 
+Confirmed-plan results count only applied actions as completed. Missing provider items
+have a separate count and a persisted title/target list. Mixed results read, for example,
+**Partially applied: 12 of 14 actions applied; 2 not found on Emby**, followed by the
+missing titles. Plans with unresolved actions finish `partial` when some applied, or
+`failed` when none applied; `success` is false and the background job is unsuccessful.
+An exception after a recovery snapshot also finishes failed. Cancellation stays cancelled.
+
 Force Sync is a canonical replay from Plekt history. It never imports a watched item
 that exists only on a connected server, and it never writes to a server whose watched
 library scan failed. Source-only and monitor-only sync roles are scanned for information

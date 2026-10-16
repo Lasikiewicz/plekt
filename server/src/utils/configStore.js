@@ -6,7 +6,7 @@ import { getMediaConnection, resolveConnectedProviderConfig } from "./mediaConne
 import { getValidPlexServerToken, getValidPlexToken } from "./plexTokenManager.js";
 import { activityGroupKeyFor, activityGroupMediaType, activityGroupTitleFromRecord, activityItemKeyFor } from "./syncActivityIdentity.js";
 import { brandEnv } from "./brandEnv.js";
-
+import { retainedRestoreFailure } from "./restoreFailureNotice.js";
 const SETTINGS_ID = "mediaConfig";
 const RUNTIME_ID = "main";
 export const RATING_SYNC_PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
@@ -1004,7 +1004,7 @@ export async function clearSyncOperation({ kind = "", expectedOwnerId, staleBefo
     if (expectedOwnerId !== undefined && active.ownerId !== expectedOwnerId) return;
     if (staleBefore !== undefined && active.heartbeat >= staleBefore) return;
     const now = Date.now();
-    const merged = { ...current, ...values, syncOperation: null, updatedAt: now };
+    const merged = { ...current, ...values, ...retainedRestoreFailure(current, active, staleBefore, now), syncOperation: null, updatedAt: now };
     upsertRuntimeStmt.run(RUNTIME_ID, toJson(merged), now);
     result = { ok: true, active };
   }).immediate();
@@ -1305,23 +1305,22 @@ export async function loadBackgroundSyncProgress({
   return resolved;
 }
 
-// Clear a restore guard after the owning process has stopped or an administrator
-// has explicitly confirmed that the persisted lock is orphaned. The cancellation
-// flag lets an in-flight full-sync request finish its current remote call without
-// accepting another batch under the old run id.
+// Explicit dismissal clears a retained failure as well as an orphaned restore guard.
+// Cancellation prevents the old owner accepting another batch.
 export async function clearRestoreSyncState({ reason = "Restore lock cleared.", expectedKind = "" } = {}) {
   const runtime = await loadRuntimeState();
   const operation = operationMatches(runtime);
   const kind = String(runtime.restoreSyncKind || operation?.kind || "");
-  if (expectedKind && kind !== expectedKind) return { reset: false, skipped: true, kind, runId: String(runtime.restoreSyncRunId || "") };
-
+  if (expectedKind && kind && kind !== expectedKind) {
+    if (runtime.restoreSyncFailureNotice?.kind === expectedKind) await setRuntimeState({ restoreSyncFailureNotice: null, restoreSyncSummary: null });
+    return { reset: false, skipped: true, kind, runId: String(runtime.restoreSyncRunId || "") };
+  }
   const runId = String(runtime.restoreSyncRunId || "");
   const wasActive = runtime.restoreSyncActive === true
-    || Boolean(runId)
+    || Boolean(runId) || Boolean(runtime.restoreSyncFailureNotice)
     || runtime.restoreSyncCancelRequested === true
     || Boolean(operation && (!expectedKind || operation.kind === expectedKind));
   if (!wasActive) return { reset: false, skipped: false, kind, runId };
-
   const finishedAt = Date.now();
   await setRuntimeState({
     restoreSyncActive: false,
@@ -1332,6 +1331,7 @@ export async function clearRestoreSyncState({ reason = "Restore lock cleared.", 
     restoreSyncLog: [],
     restoreSyncReportId: "",
     restoreSyncSummary: null,
+    restoreSyncFailureNotice: null,
     syncOperation: null,
     restoreSyncResult: {
       success: false,

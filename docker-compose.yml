@@ -1,38 +1,16 @@
 services:
   plekt:
-    build: .
-    image: plembfin/plekt:latest
+    image: ghcr.io/lasikiewicz/plekt:latest
     container_name: plekt
     ports:
       - "5056:5055"
     volumes:
-      # SQLite database, cached artwork, and generated config.json live here.
+      # Database, cached artwork and generated config live here. Keep this folder.
       - ./data:/data
     environment:
-      # Host port Plekt is published on, used by the startup webhook port check.
-      - PLEKT_PUBLISHED_PORT=5056
-      # Admin login for the dashboard.
-      # REQUIRED: set a strong password before first boot - do not leave this commented out.
-      - ADMIN_USERNAME=admin
-      # - ADMIN_PASSWORD=
-      # Set to true when the app is served behind an HTTPS reverse proxy so the
-      # session cookie is sent with the Secure flag.
-      # - COOKIE_SECURE=true
-      # Optional: pin the webhook/integration API key (otherwise auto-generated
-      # into data/config.json on first boot).
-      # - API_KEY=your-long-random-key
-      # Optional: pin the webhook URL secret token (otherwise auto-generated).
-      # - WEBHOOK_SECRET=your-long-random-secret
-      # Optional: pin the session signing secret (otherwise auto-generated).
-      # - SESSION_SECRET=your-long-random-secret
-      # Optional: official Plekt Trakt OAuth app. Values remain server-side.
-      - TRAKT_CLIENT_ID=${TRAKT_CLIENT_ID:-}
-      - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET:-}
-    security_opt:
-      - no-new-privileges:true
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: "512M"
+      # Host port Plekt is published on.
+      PLEKT_PUBLISHED_PORT: "5056"
+      # Dashboard login. Set ADMIN_PASSWORD in the .env file beside this file.
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env before starting}"
     restart: unless-stopped

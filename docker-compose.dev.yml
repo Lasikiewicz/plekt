@@ -1,0 +1,15 @@
+# Local source build: docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+services:
+  plekt:
+    build: .
+    image: plekt:dev
+    environment:
+      TRAKT_CLIENT_ID: ${TRAKT_CLIENT_ID:-}
+      TRAKT_CLIENT_SECRET: ${TRAKT_CLIENT_SECRET:-}
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: "512M"

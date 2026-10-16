@@ -94,7 +94,8 @@ operator's responsibility.
 
 ## 3. Docker hardening
 
-The base `docker-compose.yml` already includes `no-new-privileges` and CPU/memory limits.
+The base `docker-compose.yml` pulls the published image and requires an admin password.
+The secure overlay adds `no-new-privileges` and CPU/memory limits.
 
 For a fully hardened setup use the secure overlay:
 

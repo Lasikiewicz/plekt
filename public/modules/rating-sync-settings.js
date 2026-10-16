@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.0.0.3.1";
-import { escapeHtml } from "./utils.js?v=2.0.0.3.1";
+import { state } from "./state.js?v=2.0.0.3.2";
+import { escapeHtml } from "./utils.js?v=2.0.0.3.2";
 
 const PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
 const PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin", trakt: "Trakt" };
@@ -47,9 +47,17 @@ function renderProviderRows(config = currentConfig()) {
       ...queueIssueDetails(entry.queue),
     ].filter(Boolean);
     const stateLabel = !entry.configured ? "Not connected" : queueDetails.length ? queueDetails.join(" · ") : config.enabled ? "Syncing" : "Available";
+    const hold = entry.run?.cursor?.ratingHold;
     return `<div class="personal-rating-sync-provider">
       <strong>${escapeHtml(PROVIDER_LABELS[provider] || provider)}</strong>
       <small>${escapeHtml(entry.configured ? `${connection} · ${stateLabel}` : stateLabel)}</small>
+      ${hold ? `<div role="alert"><strong>Rating scan held for review</strong>
+        <p>${Number(hold.missingCount)} of ${Number(hold.baselineCount)} ratings are missing on ${escapeHtml(PROVIDER_LABELS[provider])}. No ratings were cleared.</p>
+        ${entry.run.last_error ? `<p>${escapeHtml(entry.run.last_error)}</p>` : ""}
+        <details><summary>Review missing titles</summary><ul>${hold.items.map(item => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul></details>
+        <button type="button" class="button-secondary" data-rating-hold="approve" data-provider="${escapeHtml(provider)}" data-run-id="${escapeHtml(entry.run.run_id)}">Approve these removals</button>
+        <button type="button" class="button-ghost" data-rating-hold="dismiss" data-provider="${escapeHtml(provider)}" data-run-id="${escapeHtml(entry.run.run_id)}">Dismiss and keep ratings</button>
+        <small>Approval rechecks this removal set. Dismissal keeps ratings; a later scan may ask again.</small></div>` : ""}
     </div>`;
   }).join("");
 }
@@ -108,13 +116,13 @@ function renderStatus(nextStatus = status) {
     if (ui.status) ui.status.textContent = "Disabled";
   } else {
     const pending = Number(nextStatus.queue?.pending || 0) + Number(nextStatus.queue?.processing || 0);
-    const issues = queueIssueCount(nextStatus.queue);
+    const issues = queueIssueCount(nextStatus.queue) + (nextStatus.providers || []).filter(entry => entry.run?.status === "held").length;
     if (ui.status) ui.status.textContent = issues
       ? `${issues} sync issue${issues === 1 ? "" : "s"}`
       : pending ? `${pending} queued` : "Two-way Active";
   }
   const configured = (nextStatus.providers || []).filter((entry) => entry.configured && entry.direction !== "off").length;
-  const issues = queueIssueCount(nextStatus.queue);
+  const issues = queueIssueCount(nextStatus.queue) + (nextStatus.providers || []).filter(entry => entry.run?.status === "held").length;
   if (ui.help) {
     ui.help.textContent = !config.enabled
       ? "Disabled: ratings stay in Plekt and are not sent to any provider."
@@ -234,6 +242,20 @@ export function initRatingSyncSettings(nextCallbacks = {}) {
   applyControls(currentConfig());
   // Only meaningful while sync is on; a run with it off reconciles nothing.
   ui.syncNow?.addEventListener("click", () => { runSync(); });
+  ui.providerRows?.addEventListener("click", async (event) => {
+    const button = event.target.closest?.("[data-rating-hold]");
+    if (!button || ui.panel.hasAttribute("aria-busy")) return;
+    setBusy(true);
+    try {
+      const response = await fetch("/api/rating-sync/run", { method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({ action: `${button.dataset.ratingHold}-held`, provider: button.dataset.provider, runId: button.dataset.runId }) });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.error || "Could not review held scan");
+      callbacks.setMessage?.(body.status === "dismissed" ? "Scan dismissed. Ratings kept." : body.providers?.some(entry => entry.status === "held") ? "Removal set changed. Review the updated warning." : body.status === "partial" ? "Scan could not be fully applied. Review provider status and retry." : "Approved scan applied.", "muted");
+    } catch (error) { callbacks.setMessage?.(error.message, "error"); }
+    finally { await refreshRatingSyncStatus().catch(() => null); setBusy(false); }
+  });
   ui.enabled?.addEventListener("change", () => {
     if (ui.status) ui.status.textContent = "Saving…";
     saveSettings().catch((error) => {

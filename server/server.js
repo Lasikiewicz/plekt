@@ -322,9 +322,9 @@ app.all("/api/*path", express.raw({ type: (req) => !isStreamedUpload(req), limit
     // internal details never reach the client. Handlers return promises that
     // dispatch() does not await, so their rejections surface here, not in
     // dispatch()'s own catch.
-    const status = Number(error?.status);
+    const status = error?.code === "RESTORE_ACTIVE" ? 409 : Number(error?.status);
     if (Number.isInteger(status) && status >= 400 && status < 500) {
-      res.status(status).json({ error: error.message || "Request failed" });
+      res.status(status).json({ error: error.message || "Request failed", ...(error?.code === "RESTORE_ACTIVE" ? { code: error.code } : {}) });
       return;
     }
     res.status(500).json({ error: "Internal error" });

@@ -1325,6 +1325,46 @@ migrates the service/data folder with conflict checks; actual upgrade verificati
 is still pending. New Unraid installs use `/mnt/user/appdata/plekt`; old paths stay.
 Publish both old image names for at least six months after the rebrand release.
 
+### 45. Large provider rating drops require review before clearing ratings
+**Date:** 2026-10-16 | **Status:** Active
+
+**Context:** A valid but shrunken provider scan can follow a lost library mount or changed
+permissions. Treating all missing ratings as intentional removals can delete Plekt ratings
+and fan those clears out to every connected provider.
+
+**Decision (user, 16 October 2026):** Hold a scan when at least two ratings and more than
+20% of the prior rated provider baseline disappear. Keep a persistent warning with the
+missing titles. Approval rechecks the exact removal set; dismissal keeps ratings and the
+baseline. Malformed/partial scans cannot clear missing ratings. Later scans cannot bypass
+an unresolved hold.
+
+**Rejected:** Clearing every missing item automatically risks irreversible propagation.
+Holding every individual clear adds friction to ordinary rating edits; a 50% threshold
+allows substantial loss before review.
+
+**Enforced by:** `personalRatingSync.js`, `ratingSnapshotSafety.js`, provider adapters,
+and `test/ratingSnapshotSafety.test.js`.
+
+### 46. Recover stale restore fences while retaining the failure notice
+**Date:** 2026-10-16 | **Status:** Active
+
+**Context:** A failed restore retained its automated-write fence for hours and blocked
+playback tracking. Clearing the stale owner alone could erase the error that explains it.
+
+**Decision (user, 16 October 2026):** Recover after a three-minute stale heartbeat,
+rechecking owner and heartbeat inside the transaction. Keep the original failure visible
+until dismissed with Clear Status. Blocked automated writes return HTTP 409 with
+`RESTORE_ACTIVE` and an explanation. Direct manual watched-status edits remain allowed,
+with deferred propagation recorded for retry after recovery.
+
+**Rejected:** A fence that requires manual clearing can freeze playback indefinitely;
+a generic 500 hides a known, temporary restore conflict. Automatic error dismissal hides
+an unresolved failure from the administrator.
+
+**Enforced by:** scheduler stale recovery, `configStore.js`, `restoreFailureNotice.js`,
+restore write guards and HTTP handlers; `staleRestoreScheduler.test.js` and
+`restoreConflictResponses.test.js`.
+
 **Rejected:** A global identifier rename: it can make history disappear, invalidate
 credentials or webhooks, orphan backups and register a second Windows service.
 Compatibility is established before display changes; real upgrades run against

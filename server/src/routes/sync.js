@@ -2,7 +2,7 @@ import fs from "node:fs";
 import nodePath from "node:path";
 import { requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
 import { readFormData, readJson, readRawText } from "../utils/requestBody.js";
-import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
+import { sendJson, sendApiError, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout, assertSafeOutboundUrl } from "../utils/outbound.js";
 import { AUTH, verifyWebhookToken } from "../appConfig.js";
 import { db, parseJson, toJson, writeAuditLog } from "../db.js";
@@ -302,7 +302,7 @@ export function formatDispatchTelemetry(summary, media, action = "watched") {
     `Action: ${actionLabel}`,
     `Media: ${media.title || "unknown"}`,
     `Loop-check: ${summary.skipped ? "Skipped propagation" : "Passed"}`,
-    `Dispatch status: ${summary.status || "unknown"}`,
+    `Dispatch status: ${summary.deferred && /authoritative watch-history restore/i.test(summary.details || "") ? "pending" : summary.status || "unknown"}`,
     `Details: ${summary.details || "No details"}`,
     ...provenanceTelemetryLines(media.watchProvenance || media.watch_provenance),
   ];
@@ -1114,7 +1114,7 @@ export async function handleDismissSyncMatch(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; Sync Activity changes are paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; Sync Activity changes are paused until it completes." }, 409);
   }
 
   const body = await readJson(req);
@@ -1328,7 +1328,7 @@ async function persistDismissedTraktTelemetry(entry = {}) {
 // permanent Trakt mismatch from the current-issue count.
 export async function dismissSyncActivityEntry(rawId, { scope = "item" } = {}) {
   if (isAuthoritativeRestoreActive()) {
-    throw Object.assign(new Error("An authoritative watch-history restore is active; sync activity changes are paused until it completes."), { status: 409 });
+    throw Object.assign(new Error("An authoritative watch-history restore is active; sync activity changes are paused until it completes."), { status: 409, code: "RESTORE_ACTIVE" });
   }
   const id = String(rawId == null ? "" : rawId).trim();
   if (!id) throw Object.assign(new Error("Missing required field: id"), { status: 400 });
@@ -1515,7 +1515,7 @@ async function retryQueuedWatchRecord(watchRecordId) {
 // background job just logs the message and moves on to the next id.
 async function retrySyncActivityEntry(rawId, retryContext = {}) {
   if (isAuthoritativeRestoreActive()) {
-    throw Object.assign(new Error("An authoritative watch-history restore is active; retry sync is paused until it completes."), { status: 409 });
+    throw Object.assign(new Error("An authoritative watch-history restore is active; retry sync is paused until it completes."), { status: 409, code: "RESTORE_ACTIVE" });
   }
   const id = String(rawId == null ? "" : rawId).trim();
   if (!id) throw Object.assign(new Error("Missing required field: id"), { status: 400 });
@@ -1633,7 +1633,7 @@ export async function handleRetrySyncHistory(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
   }
 
   const body = await readJson(req);
@@ -1654,7 +1654,7 @@ export async function handleRetrySyncHistory(req, res) {
       }, 409);
     }
     console.error("Retry sync activity failed", error);
-    return sendJson(res, { error: status === 404 ? "Sync activity item not found" : "Retry sync activity failed" }, status);
+    return sendApiError(res, error, { error: status === 404 ? "Sync activity item not found" : "Retry sync activity failed" }, status);
   }
 }
 
@@ -1663,7 +1663,7 @@ export async function handleDismissSyncHistory(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; sync activity changes are paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; sync activity changes are paused until it completes." }, 409);
   }
 
   const body = await readJson(req);
@@ -1685,6 +1685,7 @@ export async function handleDismissSyncHistory(req, res) {
     } catch (error) {
       failed += 1;
       const code = Number.isInteger(error?.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
+      if (error?.code === "RESTORE_ACTIVE") return sendApiError(res, error, { ok: false }, 409);
       console.error("Dismiss sync activity failed", error);
       results.push({ id, status: "error", error: code === 404 ? "Sync activity item not found" : "Dismiss sync activity failed", code });
     }
@@ -1703,7 +1704,7 @@ export async function handleRetrySyncActivityGroup(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
   }
 
   const body = await readJson(req);
@@ -1719,7 +1720,7 @@ export async function handleRetrySyncActivityGroup(req, res) {
   } catch (error) {
     const status = Number.isInteger(error?.status) && error.status >= 400 && error.status < 600 ? error.status : 500;
     console.error("Retry sync activity group failed", error);
-    return sendJson(res, { ok: false, error: status === 404 ? "Sync activity group not found" : "Retry sync activity group failed" }, status);
+    return sendApiError(res, error, { ok: false, error: status === 404 ? "Sync activity group not found" : "Retry sync activity group failed" }, status);
   }
 }
 
@@ -1788,7 +1789,7 @@ export async function handleRetryAllSyncActivity(req, res) {
 
   // POST: fire-and-forget - return 202 immediately, run in background.
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
   }
   if (!workerAvailable()) return sendJson(res, { ok: false, error: "No background worker is available." }, 503);
   const existingJob = getLatestBackgroundJob("retry_all_sync_activity");
@@ -1824,7 +1825,7 @@ export async function handleMediaForceSync(req, res) {
     const body = await readJson(req);
     const requested = normalizeMediaForceSyncRequest(body);
     if (isAuthoritativeRestoreActive()) {
-      return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; Force Sync is paused until it completes." }, 409);
+      return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; Force Sync is paused until it completes." }, 409);
     }
     const operationId = createMediaForceSyncActivity({
       title: requested.title,
@@ -1852,7 +1853,7 @@ export async function handleMediaForceSync(req, res) {
     return sendJson(res, { ok: true, operationId, status: "running", ...requested, title: requested.title }, 202, { "Cache-Control": "no-store" });
   } catch (error) {
     console.error("Detail-page Force Sync failed", error);
-    return sendJson(res, { ok: false, error: error.message || "Detail-page Force Sync failed" }, 400);
+    return sendApiError(res, error, { ok: false, error: error.message || "Detail-page Force Sync failed" }, 400);
   }
 }
 
@@ -1879,7 +1880,7 @@ export async function handleLibraryForceSync(req, res) {
     const body = await readJson(req);
     const requested = normalizeLibraryForceSyncRequest(body);
     if (isAuthoritativeRestoreActive()) {
-      return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; Force Sync is paused until it completes." }, 409);
+      return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; Force Sync is paused until it completes." }, 409);
     }
     const operationId = createMediaForceSyncActivity({
       title: requested.title,
@@ -1907,7 +1908,7 @@ export async function handleLibraryForceSync(req, res) {
     return sendJson(res, { ok: true, operationId, status: "running", ...requested }, 202, { "Cache-Control": "no-store" });
   } catch (error) {
     console.error("Library Force Sync failed", error);
-    return sendJson(res, { ok: false, error: error.message || "Library Force Sync failed" }, 400);
+    return sendApiError(res, error, { ok: false, error: error.message || "Library Force Sync failed" }, 400);
   }
 }
 
@@ -2033,9 +2034,6 @@ export async function handleManualWatch(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
-  if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; manual watch-state changes are paused until it completes." }, 409);
-  }
 
   const body = await readJson(req);
   const records = Array.isArray(body) ? body : body.records;
@@ -2185,7 +2183,7 @@ export async function handleManualWatch(req, res) {
     // history endpoint accepts grouped season/episode payloads, so keep the
     // media-server fan-out concurrent but move the tracker phase to one
     // bounded batch. Single-item actions retain the normal per-item path.
-    const batchTraktWatch = watchedPlayedSyncEnabled()
+    const batchTraktWatch = watchedPlayedSyncEnabled() && !isAuthoritativeRestoreActive()
       && syncTasks.length > 1
       && syncTasks.every(({ media }) => String(media?.type || media?.mediaType || "").toLowerCase() === "episode");
     const taskSummaries = new Array(syncTasks.length);
@@ -2370,9 +2368,6 @@ export async function handlePlaybackProgressWatch(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
-  if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; manual watch-state changes are paused until it completes." }, 409);
-  }
 
   const body = await readJson(req);
   const mediaKey = String(body.media_key || "").trim();
@@ -2388,7 +2383,7 @@ export async function handlePlaybackProgressWatch(req, res) {
     const record = {
       title: progressRow.title,
       media_type: progressRow.media_type,
-      source: progressRow.source || "manual",
+      source: "manual",
       imdb_id: body.imdb_id || body.imdbId || body.imdb || progressRow.imdb_id || null,
       tmdb_id: body.tmdb_id || body.tmdbId || body.tmdb || progressRow.tmdb_id || null,
       tvdb_id: body.tvdb_id || body.tvdbId || body.tvdb || progressRow.tvdb_id || null,
@@ -2773,7 +2768,7 @@ export async function handleRetrySync(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; retry sync is paused until it completes." }, 409);
   }
 
   const body = await readJson(req);
@@ -2906,7 +2901,7 @@ export async function handleCronSync(req, res) {
   if (!["GET", "POST"].includes(req.method)) return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; scheduled sync is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; scheduled sync is paused until it completes." }, 409);
   }
 
   if (!workerAvailable()) return sendJson(res, { error: "No background worker is available." }, 503);
@@ -2986,7 +2981,7 @@ export async function handleForceSync(req, res) {
   // POST: fire-and-forget â€” return 202 immediately, run in background
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; Force Sync is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; Force Sync is paused until it completes." }, 409);
   }
 
   if (!workerAvailable()) return sendJson(res, { ok: false, error: "No background worker is available." }, 503);
@@ -3057,7 +3052,7 @@ export async function handleForceSyncPlan(req, res) {
 
   if (req.method !== "POST" || id) return methodNotAllowed(res);
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; Force Sync planning is paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; Force Sync planning is paused until it completes." }, 409);
   }
   if (!workerAvailable()) return sendJson(res, { ok: false, error: "No background worker is available." }, 503);
   const body = await readJson(req).catch(() => ({}));
@@ -3067,7 +3062,7 @@ export async function handleForceSyncPlan(req, res) {
   } catch (error) {
     if (error?.code === "JOB_ACTIVE") return sendJson(res, { ok: false, error: error.message }, 409);
     console.error("Force Sync preview enqueue failed", error);
-    return sendJson(res, { ok: false, error: "Force Sync preview failed" }, 500);
+    return sendApiError(res, error, { ok: false, error: "Force Sync preview failed" }, 500);
   }
 }
 

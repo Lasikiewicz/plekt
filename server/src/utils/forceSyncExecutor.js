@@ -21,6 +21,20 @@ const unplayed = { plex: markPlexUnplayed, emby: markEmbyUnplayed, jellyfin: mar
 // server than the governor's profile already allows.
 const FORCE_SYNC_CONCURRENCY = 6;
 
+function finishResult(result) {
+  result.success = !result.error && result.failedActions === 0 && result.missingActions === 0;
+  result.status = result.success ? "completed" : result.completedActions > 0 ? "partial" : "failed";
+  const labels = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
+  const missing = Object.entries(result.missingItems.reduce((counts, item) => {
+    counts[item.target] = (counts[item.target] || 0) + 1;
+    return counts;
+  }, {})).map(([target, count]) => `${count} not found on ${labels[target] || target}`);
+  result.message = `${result.success ? "Applied" : result.completedActions > 0 ? "Partially applied" : "Not applied"}: ${result.completedActions} of ${result.plannedActions} actions applied${missing.length ? `; ${missing.join("; ")}` : ""}${result.failedActions ? `; ${result.failedActions} failed` : ""}.`;
+  if (result.missingItems.length) result.message += ` Missing titles: ${result.missingItems.map(item => `${item.title} (${labels[item.target] || item.target})`).join(", ")}.`;
+  if (result.error) result.message += ` ${result.error}`;
+  return result;
+}
+
 async function remoteWrite(action, config) {
   const fn = action.kind === "mark_played" ? played[action.target] : unplayed[action.target];
   if (!fn) throw new Error(`Unsupported Force Sync target ${action.target}`);
@@ -66,15 +80,16 @@ export async function executeForceSyncPlan(id, config, logger = () => {}, { sign
   setSyncPlanStatus(id, "executing");
   const loopStore = createLoopStore();
   let snapshot = null;
+  const result = { success: true, planId: id, snapshot, plannedActions: plan.actions.length, completedActions: 0, failedActions: 0, missingActions: 0, missingItems: [], scope: plan.scope };
   try {
     if (plan.summary?.destructive > 0) {
       logger("Force Sync: creating verified pre-run recovery snapshot...");
       snapshot = await createWatchHistoryBackup({ reason: "pre-force-sync" });
+      result.snapshot = snapshot;
       verifyWatchBackup(snapshot.name);
       setSyncPlanSnapshot(id, snapshot.name);
       logger(`Force Sync: recovery snapshot verified (${snapshot.name}).`);
     }
-    const result = { success: true, planId: id, snapshot, plannedActions: plan.actions.length, completedActions: 0, failedActions: 0, scope: plan.scope };
     let cancelled = false;
     await runWithConcurrency(plan.actions, async (action) => {
       if (cancelled) return;
@@ -91,6 +106,11 @@ export async function executeForceSyncPlan(id, config, logger = () => {}, { sign
             return;
           }
           const remoteResult = await remoteWrite(action, config);
+          if (remoteResult?.status === "not_found") {
+            result.missingActions += 1;
+            result.missingItems.push({ title: action.media?.title || "Unknown title", target: action.target });
+            return;
+          }
           if (remoteResult?.status !== "not_found") {
             const itemIds = Array.isArray(remoteResult?.itemIds) && remoteResult.itemIds.length
               ? remoteResult.itemIds
@@ -136,13 +156,13 @@ export async function executeForceSyncPlan(id, config, logger = () => {}, { sign
       finishSyncPlan(id, "cancelled", result);
       return result;
     }
-    result.success = result.failedActions === 0;
-    const status = result.failedActions ? "completed" : "completed";
-    finishSyncPlan(id, status, result);
+    finishResult(result);
+    finishSyncPlan(id, result.status, result);
     return result;
   } catch (error) {
-    const result = { success: false, planId: id, snapshot, error: error.message };
-    finishSyncPlan(id, snapshot ? "completed" : "blocked_snapshot_failed", result);
+    finishResult(Object.assign(result, { error: error.message }));
+    result.status = snapshot ? "failed" : "blocked_snapshot_failed";
+    finishSyncPlan(id, result.status, result);
     return result;
   }
 }

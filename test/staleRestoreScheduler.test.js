@@ -4,7 +4,7 @@ import { makeTempDataDir } from "./helpers.js";
 
 makeTempDataDir("plekt-stale-restore-scheduler-");
 const { runScheduledTick } = await import("../server/src/scheduler.js");
-const { setRuntimeState, loadRuntimeState, isAuthoritativeRestoreActive, clearSyncOperation } = await import("../server/src/utils/configStore.js");
+const { setRuntimeState, loadRuntimeState, isAuthoritativeRestoreActive, clearSyncOperation, clearRestoreSyncState } = await import("../server/src/utils/configStore.js");
 
 async function seedRestore(heartbeat, ownerId = "restore-old") {
   await setRuntimeState({
@@ -14,6 +14,9 @@ async function seedRestore(heartbeat, ownerId = "restore-old") {
     restoreSyncStartedAt: heartbeat,
     restoreSyncHeartbeat: heartbeat,
     syncOperation: { kind: "backup_restore", ownerId, startedAt: heartbeat, heartbeat },
+    restoreSyncFailureNotice: null,
+    restoreSyncResult: null,
+    restoreSyncSummary: null,
   });
 }
 
@@ -46,5 +49,30 @@ test("stale recovery cannot clear a replacement owner or a renewed heartbeat", a
   assert.equal((await clearSyncOperation({ kind: "backup_restore", expectedOwnerId: "restore-old", staleBefore })).ok, false);
   await seedRestore(Date.now(), "restore-old");
   assert.equal((await clearSyncOperation({ kind: "backup_restore", expectedOwnerId: "restore-old", staleBefore })).ok, false);
+  assert.equal(isAuthoritativeRestoreActive(), true);
+});
+
+test("three-minute stale recovery preserves the original failure until explicitly dismissed", async () => {
+  await seedRestore(Date.now() - 181_000);
+  const failure = { success: false, error: "5205 restore projections unresolved", restoreIssueCount: 5205 };
+  await setRuntimeState({ restoreSyncResult: failure, restoreSyncSummary: failure });
+  let checks = 0;
+  await runScheduledTick({ isLeader: () => ++checks === 1 });
+  assert.equal(isAuthoritativeRestoreActive(), false);
+  let runtime = await loadRuntimeState();
+  assert.equal(runtime.restoreSyncFailureNotice.error, failure.error);
+  assert.equal(runtime.restoreSyncFailureNotice.restoreIssueCount, 5205);
+  checks = 0;
+  await runScheduledTick({ isLeader: () => ++checks === 1 });
+  assert.equal((await loadRuntimeState()).restoreSyncFailureNotice.error, failure.error);
+  await clearRestoreSyncState({ expectedKind: "backup_restore" });
+  runtime = await loadRuntimeState();
+  assert.equal(runtime.restoreSyncFailureNotice, null);
+  assert.equal(runtime.restoreSyncSummary, null);
+});
+
+test("a heartbeat less than three minutes old stays fenced", async () => {
+  await seedRestore(Date.now() - 179_000);
+  assert.equal((await runScheduledTick()).reason, "authoritative-restore-active");
   assert.equal(isAuthoritativeRestoreActive(), true);
 });

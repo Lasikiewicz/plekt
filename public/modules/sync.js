@@ -1,7 +1,7 @@
-import { buildAuthHeaders, buildNowPlayingUrl } from "./auth.js?v=2.0.0.3.1";
-import { state, elements } from "./state.js?v=2.0.0.3.1";
-import { escapeHtml, escapeAttribute, platformBadge, sourceClass, sourceBadgeHtml, computeProgress, formatDate, formatPlaybackClock, showName } from "./utils.js?v=2.0.0.3.1";
-import { hydratePosters, posterMarkup } from "./images.js?v=2.0.0.3.1";
+import { buildAuthHeaders, buildNowPlayingUrl } from "./auth.js?v=2.0.0.3.2";
+import { state, elements } from "./state.js?v=2.0.0.3.2";
+import { escapeHtml, escapeAttribute, platformBadge, sourceClass, sourceBadgeHtml, computeProgress, formatDate, formatPlaybackClock, showName } from "./utils.js?v=2.0.0.3.2";
+import { hydratePosters, posterMarkup } from "./images.js?v=2.0.0.3.2";
 
 const NOW_PLAYING_POLL_MS = 10000;
 
@@ -1538,13 +1538,13 @@ export async function triggerForceSync({ planId = "", confirmed = false } = {}) 
         _cb.setMessage?.(detail, "muted");
         if (terminal) { terminal.textContent += `\nABORTED: ${detail}\n`; terminal.scrollTop = terminal.scrollHeight; }
         finishSyncProgress("stopped", "Force sync stopped");
-      } else if (finalResult.success) {
+      } else if (finalResult.success || Number.isInteger(finalResult.plannedActions)) {
         const stats = finalResult.stats || {};
         const scanErrorCount = Object.keys(stats.scanErrors || {}).length;
-        const detail = `Force Sync complete! Targets: ${(finalResult.activeTargets || []).join(", ") || "none"}. Found: ${stats.totalWatchedFoundAcrossServers ?? 0}, added: ${stats.addedToHistory ?? 0}, deleted: ${stats.deletedFromHistory ?? 0}, propagated: ${stats.propagatedUpdates ?? 0}${scanErrorCount ? `; ${scanErrorCount} server scan${scanErrorCount === 1 ? "" : "s"} failed` : ""}`;
-        _cb.setMessage?.(detail, "success");
-        if (terminal) { terminal.textContent += `\nSUCCESS: ${detail}\n`; terminal.scrollTop = terminal.scrollHeight; }
-        finishSyncProgress("complete", "Force sync complete");
+        const detail = finalResult.message || `Force Sync complete! Targets: ${(finalResult.activeTargets || []).join(", ") || "none"}. Found: ${stats.totalWatchedFoundAcrossServers ?? 0}, added: ${stats.addedToHistory ?? 0}, deleted: ${stats.deletedFromHistory ?? 0}, propagated: ${stats.propagatedUpdates ?? 0}${scanErrorCount ? `; ${scanErrorCount} server scan${scanErrorCount === 1 ? "" : "s"} failed` : ""}`;
+        _cb.setMessage?.(detail, finalResult.success ? "success" : "muted");
+        if (terminal) { terminal.textContent += `\n${finalResult.success ? "SUCCESS" : "INCOMPLETE"}: ${detail}\n`; terminal.scrollTop = terminal.scrollHeight; }
+        finishSyncProgress(finalResult.success ? "complete" : "error", finalResult.success ? "Force sync complete" : "Force sync incomplete");
       } else {
         throw new Error(finalResult.error || "Force Sync ended with an unknown error.");
       }

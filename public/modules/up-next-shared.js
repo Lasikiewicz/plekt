@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.0.0.3.1";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.3.1";
+import { state } from "./state.js?v=2.0.0.3.2";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.3.2";
 
 function identityValues(item = {}, kind = "tmdb") {
   const capitalized = `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;

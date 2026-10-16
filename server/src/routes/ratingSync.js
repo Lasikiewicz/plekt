@@ -2,7 +2,7 @@ import { requireAdmin } from "../utils/auth.js";
 import { readJson } from "../utils/requestBody.js";
 import { methodNotAllowed, sendJson, sendOptions } from "../utils/http.js";
 import { loadMediaConfig } from "../utils/configStore.js";
-import { getRatingSyncStatus, pushPersonalRatings, retryRatingSync, runRatingSync } from "../utils/personalRatingSync.js";
+import { getRatingSyncStatus, pushPersonalRatings, retryRatingSync, resolveRatingScanHold, runRatingSync } from "../utils/personalRatingSync.js";
 
 function clean(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -31,6 +31,12 @@ export async function handleRatingSync(req, res) {
     const providers = providersFrom(body);
     const config = await loadMediaConfig();
     const logger = (line) => console.log(`[rating-sync] ${line}`);
+
+    if (["approve-held", "dismiss-held"].includes(action)) {
+      if (providers.length !== 1) return sendJson(res, { error: "Choose one provider to review" }, 400);
+      return sendJson(res, await resolveRatingScanHold({ provider: providers[0], runId: body.runId,
+        decision: action === "approve-held" ? "approve" : "dismiss", config, logger }));
+    }
 
     if (["push", "push-local", "force"].includes(action)) {
       const rawItems = Array.isArray(body.items) ? body.items : body.media ? [body.media] : [];

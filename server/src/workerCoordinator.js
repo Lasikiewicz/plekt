@@ -326,7 +326,7 @@ export function createWorkerCoordinator({ holderId, role }) {
       const current = getBackgroundJob(job.id);
       const cancelled = current?.cancelRequested || result?.aborted;
       appendBackgroundJobLog(job.id, `RESULT: ${JSON.stringify(result)}`);
-      finishBackgroundJob({ ...token, status: cancelled ? "cancelled" : "succeeded", result });
+      finishBackgroundJob({ ...token, status: cancelled ? "cancelled" : job.type === "force_sync" && result?.success === false ? "failed" : "succeeded", result });
       if ((job.type === UP_NEXT_AUTO_SYNC_JOB || job.type === UP_NEXT_PRIORITY_SYNC_JOB) && result?.rerun && !cancelled) {
         await requestUpNextAutoSync("Up Next changed while the previous automatic sync was running", {
           priority: job.type === UP_NEXT_PRIORITY_SYNC_JOB,

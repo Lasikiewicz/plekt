@@ -246,6 +246,9 @@ explicit retry.
 its baseline/import mode, completion marker, counts, cursor, and last error. Missing
 remote ratings are only treated as clears after a previous complete generation, so
 an incomplete provider response cannot bulk-clear local ratings.
+Held mass-removal scans retain the previous baseline and store provider counts, missing
+keys and display titles in `cursor_json.ratingHold`. Their stored status is `partial`;
+the repository/API exposes `held` until approval or dismissal. No migration is needed.
 
 ## Personal watchlist tables
 

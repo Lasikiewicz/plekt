@@ -19,6 +19,13 @@ export function sendOptions(res) {
   res.status(204).send("");
 }
 
+export function sendApiError(res, error, body = { error: "Request failed" }, status = 500) {
+  if (error?.code === "RESTORE_ACTIVE") {
+    return sendJson(res, { ...body, error: error.message, code: "RESTORE_ACTIVE" }, 409);
+  }
+  return sendJson(res, body, status);
+}
+
 export function methodNotAllowed(res) {
   sendJson(res, { error: "Method not allowed" }, 405);
 }

@@ -20,7 +20,7 @@
     "@devvit/web": "0.14.1",
     "@hono/node-server": "^2.0.3",
     "devvit": "0.14.1",
-    "hono": "4.13.4"
+    "hono": "4.13.7"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -28,6 +28,13 @@
     "vite": "8.2.2"
   },
   "overrides": {
-    "tmp": "0.2.7"
+    "tmp": "0.2.7",
+    "@devvit/protos": {
+      "protobufjs": "7.6.5"
+    },
+    "@devvit/cli": {
+      "image-size": "2.0.3",
+      "js-yaml@4.3.1": "4.3.2"
+    }
   }
 }

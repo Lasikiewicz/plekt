@@ -14,6 +14,19 @@ The first complete snapshot imports provider ratings; later snapshots reconcile
 additions, changes, and removals. A partial or failed snapshot cannot clear local
 ratings through missing rows.
 
+Later complete scans hold removals for review when **at least two** previously rated
+items and **more than 20%** of that provider's rated baseline disappear. Exactly 20%
+or one missing rating follows normal reconciliation. Malformed or truncated scans
+fail; per-item processing errors prevent the missing-rating clear pass.
+
+A persistent **Rating scan held for review** warning in this panel lists the provider,
+counts and missing titles. No observations or ratings from that held snapshot are
+applied, and scheduled scans cannot bypass it. **Approve these removals** fetches a
+fresh snapshot and applies the reviewed removal set only if it still matches; changed
+removals require another review. Local edits retain the normal conflict protection.
+**Dismiss and keep ratings** removes the warning without clearing ratings or advancing
+the baseline. A later scan may hold the same removals again. Holds survive restarts.
+
 Plekt remains the source of truth. A newer canonical Plekt value wins a
 conflict and is queued back to the provider. A provider value with no newer local
 change is imported and fanned out to the other connected providers. Outbound intent
@@ -59,6 +72,11 @@ The authenticated endpoints are:
 - `POST /api/rating-sync/run`
 - `POST /api/rating-sync/push`
 - `POST /api/rating-sync/retry`
+
+To review a hold, POST to `/api/rating-sync/run` with `action` equal to `approve-held`
+or `dismiss-held`, one `provider`, and the current `runId` from the status response.
+Stale review tokens return HTTP 409. Status exposes held runs as `held`; their SQLite
+status remains `partial`, with review data in `cursor_json.ratingHold`.
 
 Trakt is a selectable target for both watched-state Push and personal-rating Push.
 Watched-state Pull remains media-server-only because the existing pull operation

@@ -1,5 +1,5 @@
 import { fetchWithTimeout } from "./outbound.js";
-
+import { ratingSnapshotArray } from "./ratingSnapshotSafety.js";
 const API_BASE = "https://api.trakt.tv";
 const API_VERSION = "2";
 const USER_AGENT = "Plekt (https://github.com/Lasikiewicz/plekt)";
@@ -225,7 +225,7 @@ async function fetchAllRatingPages(type, connection) {
       ...connection,
       includePagination: true,
     });
-    const values = Array.isArray(result.data) ? result.data : [];
+    const values = ratingSnapshotArray(result.data, "Trakt");
     rows.push(...values);
     if (result.pageCount > 0 ? page >= result.pageCount : values.length < (result.pageLimit || limit)) return rows;
   }

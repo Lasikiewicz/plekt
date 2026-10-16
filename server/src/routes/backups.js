@@ -106,7 +106,7 @@ export async function handleImport(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; watch-history imports are paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; watch-history imports are paused until it completes." }, 409);
   }
   const body = await readJson(req);
   const records = Array.isArray(body) ? body : body.records;
@@ -139,7 +139,7 @@ export async function handleBackupImport(req, res) {
   if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
-    return sendJson(res, { ok: false, error: "An authoritative watch-history restore is active; backup imports are paused until it completes." }, 409);
+    return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; backup imports are paused until it completes." }, 409);
   }
 
   const body = await readJson(req);
@@ -965,7 +965,7 @@ async function runRestoreReconcileJob(clearMode, ownerId) {
         },
       }).catch(() => null);
     } else {
-      log("Restore remains paused after the failure. Retry the restore or clear its status before resuming normal sync.");
+      log("Restore failed. Automated sync resumes after a three-minute stale heartbeat; the failure notice remains until dismissed.");
       await stop();
       const failedRuntime = await loadRuntimeState().catch(() => ({}));
       try {
@@ -1076,7 +1076,7 @@ export async function handleWatchBackups(req, res) {
       let log = active && Array.isArray(runtime.restoreSyncLog)
         ? runtime.restoreSyncLog.slice(since)
         : [];
-      let result = active ? null : (runtime.restoreSyncSummary || runtime.restoreSyncResult || null);
+      let result = runtime.restoreSyncFailureNotice || runtime.restoreSyncSummary || (active ? null : runtime.restoreSyncResult || null);
       if (includeReport && reportId) {
         const report = loadRestoreReport(reportId);
         if (report) {

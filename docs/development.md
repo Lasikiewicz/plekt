@@ -485,13 +485,16 @@ channel silent.
 
 ### Reddit release announcements
 
-r/plembfin gets release announcements too, but not via this repo's CI - Reddit's Data
+r/plekt release announcements use a separate bot, not this repo's CI - Reddit's Data
 API now requires manual review to grant script-app access, and that path was declined
 for this use case with a recommendation to build on Reddit's own Devvit platform
 instead, which has no mechanism for an external system to push a trigger in. Instead,
-[`reddit-app/`](../reddit-app) is a separate Devvit app, installed only in r/plembfin,
-that polls this repo's public `changelog.json` on a schedule and posts + pins an
-announcement when a new release appears (un-pinning whichever post it pinned before).
+[`reddit-app/`](../reddit-app) configures the `plekt-app` Devvit app for r/plekt.
+It polls `https://plekt.net/release.json` every 15 minutes and posts and pins a new
+release after its initial baseline (un-pinning its previous announcement). The first
+successful check with no stored version records the current release without posting.
+HTTP domain approval and an explicit installation approval are required to activate
+an uploaded revision; uploading alone does not replace the installed bot.
 It has its own build/deploy tooling independent of this repo's CI - see
 [`reddit-app/README.md`](../reddit-app/README.md).
 
@@ -519,11 +522,15 @@ It has its own build/deploy tooling independent of this repo's CI - see
   Skipping install scripts leaves the prebuilt binary that already ships in the package
   for this platform, which is the binary its loader prefers. better-sqlite3 is the only
   production dependency with an install script.
-- **`docker-compose.yml`** - base setup: port 5056, `./data:/data`, admin env vars,
-  `no-new-privileges`, cpu/memory limits. It sets `PLEKT_PUBLISHED_PORT=5056`, which the startup
-  webhook port advisory uses (see [webhooks.md](webhooks.md#port-advisory)).
+- **`docker-compose.yml`** - default quick-start: pulls `ghcr.io/lasikiewicz/plekt:latest`,
+  port 5056, `./data:/data`, and requires `ADMIN_PASSWORD` from `.env`.
+  It sets `PLEKT_PUBLISHED_PORT=5056` for the startup webhook port advisory
+  (see [webhooks.md](webhooks.md#port-advisory)). `docker-compose.quickstart.yml` is identical.
+- **`docker-compose.dev.yml`** - local source-build overlay, with `build: .`, local
+  image `plekt:dev`, optional Trakt OAuth credentials, `no-new-privileges` and CPU/memory
+  limits: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build`.
 - **`docker-compose.split.yml`** - optional same-host overlay that runs one
-  `ROLE=web` service and one HTTP-less `ROLE=worker` service on the same local data
+  `ROLE=web` service and one HTTP-less `ROLE=worker` service using the published image on the same local data
   volume: `docker compose -f docker-compose.yml -f docker-compose.split.yml up -d`.
 - **`docker-compose.secure.yml`** - hardened overlay (read-only rootfs, tmpfs `/tmp`,
   required secrets, forced `COOKIE_SECURE`); usage in

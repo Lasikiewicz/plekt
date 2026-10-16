@@ -1,5 +1,67 @@
 # Plekt release bot (Devvit app)
 
+## Current configuration (16 October 2026)
+
+App `plekt-app` v0.0.1 is already installed on r/plekt. This local revision replaces
+the denied GitHub raw fetch with `https://plekt.net/release.json`, requesting only
+`plekt.net` in the manifest. Neither `api.github.com` nor `plekt.net` is on Reddit's
+documented global fetch allowlist. Approval is still required. See
+[HTTP Fetch](https://developers.reddit.com/docs/capabilities/server/http-fetch).
+
+The public feed currently returns **404**. The website's generated release JSON is
+not yet exposed at that URL; publishing it needs separate website work and approval.
+Expected format: top-level `version`, and `entries[0]` with matching `version`,
+`summary` and string `bullets`. HTTP errors, redirects and invalid feeds do not
+change state. No GitHub fallback is used.
+
+With no stored Redis version, the first successful check records the current release
+without posting. Existing state is preserved: an older stored version can cause a post
+after activation. Production Redis state remains unverified. The old `plembfin` app
+is still installed separately on r/plembfin and is untouched by this revision.
+
+### Domain request text
+
+> Please allow `plekt.net` for Devvit app `plekt-app`, installed in r/plekt. The app
+> makes an HTTPS GET to `https://plekt.net/release.json` every 15 minutes to read
+> public Plekt release notes (version, summary and change bullets) from the project's
+> own website. It sends no Reddit content, usernames, identifiers, credentials or
+> user data to this endpoint. It stores the release version in installation-scoped
+> Redis to suppress duplicates. With no stored version, the first successful check
+> records the current version without posting; subsequent new releases produce an
+> announcement in r/plekt as the app. This replaces the denied GitHub raw fetch with
+> a single-purpose project-owned feed; no GitHub HTTP access is requested.
+
+### Commands after approval only
+
+Use Node.js 24+. First publish/verify the feed separately and set accurate, publicly
+accessible Terms and Privacy URLs in the app details (required for HTTP fetch).
+Then, with upload approval:
+
+```powershell
+Set-Location C:\Github\plembfin\reddit-app
+npm run test:types
+node --test test/release.test.mjs
+npm run build
+npx --no-install devvit upload
+```
+
+Upload submits the domain request and can affect the configured development
+installation. Review https://developers.reddit.com/apps/plekt-app/developer-settings.
+Wait for approval and a working feed before upgrading production. With installation
+approval, use the exact version printed by upload:
+
+```powershell
+$uploadedVersion = Read-Host 'Exact version printed by devvit upload'
+npx --no-install devvit install plekt "plekt-app@$uploadedVersion"
+npx --no-install devvit logs plekt plekt-app --since=1h
+```
+
+Installing enables automatic checks and can post if an older baseline exists. Do not
+reset Redis or manually invoke the posting-capable scheduler. Local tests mock all
+Reddit/Redis calls; their posting log messages are simulated.
+
+## Historical setup notes (superseded by current configuration above)
+
 A small [Devvit](https://developers.reddit.com) app installed only in r/plembfin. On a
 schedule, it checks the public `changelog.json` in this repository; when a new release
 has been published, it posts a release announcement to r/plembfin and pins it,

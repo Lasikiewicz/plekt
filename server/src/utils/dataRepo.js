@@ -77,7 +77,7 @@ function assertRestoreWriteAllowed(source = "", { allowDuringRestore = false } =
   if (!isAuthoritativeRestoreActive()) return;
   const error = new Error("An authoritative watch-history restore is active; watch-state writes are paused until it completes.");
   error.code = "RESTORE_ACTIVE";
-  throw error;
+  throw Object.assign(error, { status: 409 });
 }
 
 // The browser's change contract, deliberately broader than the derived-cache

@@ -73,7 +73,7 @@ export function enqueueBackgroundJob(type, payload = {}, now = Date.now()) {
   if (RESTORE_PAUSED_JOB_TYPES.has(type) && isAuthoritativeRestoreActive()) {
     const error = new Error("An authoritative watch-history restore is active; sync jobs are paused until it completes.");
     error.code = "RESTORE_ACTIVE";
-    throw error;
+    throw Object.assign(error, { status: 409 });
   }
   const job = { id: crypto.randomUUID(), type, requestedAt: now, payload: toJson(payload || {}) };
   return db.transaction(() => {

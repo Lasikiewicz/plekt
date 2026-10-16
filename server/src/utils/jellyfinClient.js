@@ -5,7 +5,7 @@ import { nativeProviderItemIds } from "./providerItemIds.js";
 import { jellyfinAuthHeaders, jellyfinCredential } from "./jellyfinAuth.js";
 import { canonicalPlayedDateIso } from "./watchSyncPolicy.js";
 import { traceLog } from "./logVerbose.js";
-
+import { ratingSnapshotPage } from "./ratingSnapshotSafety.js";
 function trimTrailingSlash(value = "") {
   return String(value).replace(/\/+$/, "");
 }
@@ -957,7 +957,7 @@ export async function fetchJellyfinPersonalRatingSnapshot(config) {
       throw error;
     }
     const data = await response.json();
-    const page = data?.Items || [];
+    const page = ratingSnapshotPage(data, start, pageSize, "Jellyfin");
     for (const item of page) {
       const rating = Number(item.UserData?.Rating);
       if (!Number.isFinite(rating) || rating < 1 || rating > 10) continue;
@@ -966,9 +966,9 @@ export async function fetchJellyfinPersonalRatingSnapshot(config) {
       if (Number.isInteger(record.rating) && record.rating >= 1 && record.rating <= 10) records.push(record);
     }
     const total = Number(data?.TotalRecordCount || 0);
-    if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) break;
+    if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) return records;
   }
-  return records;
+  throw new Error("Jellyfin rating snapshot exceeded the pagination safety limit");
 }
 
 async function writeJellyfinPersonalRating(config, media, rating, { lane = "sync" } = {}) {

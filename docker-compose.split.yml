@@ -13,8 +13,7 @@ services:
       - TRAKT_CLIENT_SECRET=${TRAKT_CLIENT_SECRET:-}
 
   worker:
-    build: .
-    image: plembfin/plekt:latest
+    image: ghcr.io/lasikiewicz/plekt:latest
     environment:
       - ROLE=worker
       - ADMIN_USERNAME=admin

@@ -1,4 +1,5 @@
 import { traceLog } from "./logVerbose.js";
+import { plexRatingSnapshotPage, ratingSnapshotArray } from "./ratingSnapshotSafety.js";
 import { fetchPlexWithRefresh, plexRequestHeaders } from "./plexFetch.js";
 import { compoundEpisodeForMedia, compoundEpisodeItemsForMedia } from "./compoundEpisode.js";
 import { restoreLookupKey } from "./restoreLookupCache.js";
@@ -10,7 +11,6 @@ import {
   plexHistoricalWatchedAllowed,
   resolveWatchSyncIntent,
 } from "./watchSyncPolicy.js";
-
 // Plex accepts the token as a header everywhere the query parameter works; the
 // header keeps it out of Plex/reverse-proxy access logs and our own error logs.
 export function plexAuthHeaders(tokenOrConfig, accept = "application/json") {
@@ -1023,7 +1023,7 @@ export async function fetchPlexContainerEpisodes(config, ratingKey, containerTyp
   return (body?.MediaContainer?.Metadata || []).filter((item) => item?.type === "episode");
 }
 
-async function fetchPlexLibraryDirectories(config) {
+async function fetchPlexLibraryDirectories(config, ratingScan = false) {
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const sectionsUrl = new URL(`${baseUrl}/library/sections`);
   const sectionsRes = await fetchPlexWithRefresh(config, sectionsUrl);
@@ -1031,7 +1031,7 @@ async function fetchPlexLibraryDirectories(config) {
     throw new Error(`Plex failed to fetch library sections: ${sectionsRes.status}`);
   }
   const sectionsData = await sectionsRes.json();
-  return sectionsData?.MediaContainer?.Directory || [];
+  return ratingScan ? ratingSnapshotArray(sectionsData?.MediaContainer?.Directory, "Plex libraries", { empty: sectionsData?.MediaContainer?.size === 0 }) : sectionsData?.MediaContainer?.Directory || [];
 }
 
 // Movie/show library sections with their stable section keys, for sync scope
@@ -1346,12 +1346,12 @@ async function fetchPlexRatingSectionItems(config, directory, type, accountId) {
       throw error;
     }
     const body = await response.json();
-    const page = body?.MediaContainer?.Metadata || [];
+    const page = plexRatingSnapshotPage(body?.MediaContainer, start, pageSize);
     items.push(...page);
     const total = Number(body?.MediaContainer?.totalSize || 0);
-    if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) break;
+    if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) return items;
   }
-  return items;
+  throw new Error("Plex rating snapshot exceeded the pagination safety limit");
 }
 
 function plexRatingMedia(item, mediaType, parent = null) {
@@ -1381,7 +1381,7 @@ function plexRatingMedia(item, mediaType, parent = null) {
 export async function fetchPlexPersonalRatingSnapshot(config) {
   requirePlexConfig(config);
   const accountId = await resolvePlexAccountId(config);
-  const directories = await fetchPlexLibraryDirectories(config);
+  const directories = await fetchPlexLibraryDirectories(config, true);
   const records = [];
   for (const directory of selectPlexSections(directories)) {
     const types = directory.type === "movie" ? [{ type: 1, mediaType: "movie" }] : [

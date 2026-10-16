@@ -80,6 +80,10 @@ Both summaries report success. The mocked provider's final resume position is 60
 
 ### F4 (P1): malformed or shrunken rating scans can clear existing ratings
 
+**16 October 2026:** implemented with regression coverage: response/page validation,
+processing-error gate, and persistent review for at least two removals over 20%.
+Full verification is recorded in the functional-audit-fixes plan; live UI review remains open.
+
 **Locations:** `server/src/utils/embyClient.js:1015`; equivalent fallback in `jellyfinClient.js:960`; missing-row reconciliation in `personalRatingSync.js:486`–`:524`.
 
 The Emby rating adapter treats a successful JSON response without `Items` as an empty item list. The coordinator accepts that list as a complete snapshot and interprets previously rated items missing from it as remote clears.
@@ -115,6 +119,10 @@ Unwatch attempts to clear progress and then mark the item unplayed. A progress-c
 **Regression cases:** clear fails/mark succeeds; clear succeeds/mark fails; providers that clear position implicitly.
 
 ### F6 (P2): Force Sync counts a missing item as a completed action
+
+**16 October 2026:** implemented with regression coverage: distinct missing count/title
+list, partial/failed plan outcomes, unsuccessful background jobs and accurate UI wording.
+Live UI review remains open; full verification is recorded in the owning plan.
 
 **Locations:** `server/src/utils/forceSyncExecutor.js:93`–`:94`, `:124`, `:143`.
 

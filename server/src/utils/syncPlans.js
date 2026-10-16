@@ -2,7 +2,7 @@
 //
 // Status lifecycle:
 //   draft → confirmed → executing → completed
-// with terminal/side states: superseded, expired, blocked_over_limit,
+// with terminal/side states: partial, failed, cancelled, superseded, expired, blocked_over_limit,
 // blocked_scan_error, blocked_snapshot_failed. Plans are pruned after PLAN_RETENTION_MS; snapshot
 // files referenced by unpruned plans are protected from backup retention
 // (see watchHistoryBackups.js).

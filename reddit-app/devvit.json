@@ -22,7 +22,7 @@
     "redis": true,
     "http": {
       "domains": [
-        "raw.githubusercontent.com"
+        "plekt.net"
       ]
     }
   },

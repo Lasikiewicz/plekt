@@ -1,0 +1,16 @@
+services:
+  plekt:
+    image: ghcr.io/lasikiewicz/plekt:latest
+    container_name: plekt
+    ports:
+      - "5056:5055"
+    volumes:
+      # Database, cached artwork and generated config live here. Keep this folder.
+      - ./data:/data
+    environment:
+      # Host port Plekt is published on.
+      PLEKT_PUBLISHED_PORT: "5056"
+      # Dashboard login. Set ADMIN_PASSWORD in the .env file beside this file.
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env before starting}"
+    restart: unless-stopped

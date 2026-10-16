@@ -1,8 +1,7 @@
 import { reddit, redis } from "@devvit/web/server";
 
 const SUBREDDIT = "plekt";
-const CHANGELOG_URL =
-  "https://raw.githubusercontent.com/Lasikiewicz/plekt/main/changelog.json";
+const RELEASE_URL = "https://plekt.net/release.json";
 const LAST_ANNOUNCED_KEY = "lastAnnouncedVersion";
 
 type ChangelogSections = {
@@ -84,13 +83,32 @@ function buildPost(entry: ChangelogEntry): { title: string; text: string } {
 }
 
 async function fetchLatestEntry(): Promise<ChangelogEntry | undefined> {
-  const response = await fetch(CHANGELOG_URL);
+  const response = await fetch(RELEASE_URL, { redirect: "error" });
   if (!response.ok) {
-    console.error(`Failed to fetch changelog: ${response.status}`);
+    console.error(`Failed to fetch release feed: ${response.status}`);
     return undefined;
   }
-  const changelog = (await response.json()) as { entries?: ChangelogEntry[] };
-  return changelog.entries?.[0];
+  // The website feed uses summary/bullets, rather than changelog.json's message/details.
+  const feed = (await response.json()) as {
+    version?: unknown;
+    entries?: { version?: unknown; summary?: unknown; bullets?: unknown }[];
+  };
+  const latest = Array.isArray(feed.entries) ? feed.entries[0] : undefined;
+  if (
+    !latest || typeof latest.version !== "string" ||
+    !/^\d+\.\d+\.\d+$/.test(latest.version) || feed.version !== latest.version ||
+    typeof latest.summary !== "string" || !latest.summary.trim() ||
+    !Array.isArray(latest.bullets) || !latest.bullets.every((item) => typeof item === "string")
+  ) {
+    console.error("Invalid release feed; announcement state unchanged.");
+    return undefined;
+  }
+  return {
+    version: latest.version,
+    message: latest.summary,
+    websiteUrl: "https://plekt.net",
+    details: latest.bullets,
+  };
 }
 
 async function unstickPreviousPosts(appUsername: string | undefined): Promise<void> {

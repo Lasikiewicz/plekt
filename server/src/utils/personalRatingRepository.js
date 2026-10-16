@@ -50,6 +50,7 @@ function mapRunRow(row) {
   return {
     ...row,
     baseline_complete: Boolean(row.baseline_complete),
+    status: row.status !== "running" && parseJson(row.cursor_json, null)?.ratingHold ? "held" : row.status,
     generation: Number(row.generation || 0),
     scanned_count: Number(row.scanned_count || 0),
     changed_count: Number(row.changed_count || 0),
@@ -493,9 +494,9 @@ export function finishPersonalRatingSyncRun(provider, { status = "succeeded", co
   const safeStatus = ["succeeded", "partial", "failed"].includes(status) ? status : "failed";
   const values = { provider: target, status: safeStatus, completed_at: Number(completedAt) || Date.now(), updated_at: Number(completedAt) || Date.now() };
   const setters = ["status=@status", "completed_at=@completed_at", "updated_at=@updated_at"];
-  for (const key of ["scanned_count", "changed_count", "imported_count", "cleared_count", "queued_count", "baseline_complete", "last_error"]) {
+  for (const key of ["scanned_count", "changed_count", "imported_count", "cleared_count", "queued_count", "baseline_complete", "last_error", "cursor_json"]) {
     if (!(key in fields)) continue;
-    values[key] = key === "last_error" ? cleanError(fields[key]) : fields[key];
+    values[key] = key === "cursor_json" ? (fields[key] == null ? null : toJson(fields[key])) : key === "last_error" ? cleanError(fields[key]) : fields[key];
     setters.push(`${key}=@${key}`);
   }
   db.prepare(`UPDATE personal_rating_sync_runs SET ${setters.join(", ")} WHERE provider=@provider`).run(values);

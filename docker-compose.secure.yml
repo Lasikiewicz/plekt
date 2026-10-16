@@ -3,7 +3,7 @@
 #
 # This overlay adds:
 #   - read-only root filesystem with /tmp on tmpfs
-#   - no-new-privileges security option (also in base compose)
+#   - no-new-privileges security option
 #   - tighter resource caps
 #   - required env-var enforcement (ADMIN_PASSWORD, COOKIE_SECURE)
 #
