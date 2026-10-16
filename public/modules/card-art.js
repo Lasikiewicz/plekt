@@ -1,7 +1,7 @@
-import { escapeAttribute, showName } from "./utils.js?v=2.0.0.3.4";
-import { tmdbImage } from "./images.js?v=2.0.0.3.4";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.3.4";
-import { THEME_STYLE_EVENT, isModernStyle } from "./appearance.js?v=2.0.0.3.4";
+import { escapeAttribute, showName } from "./utils.js?v=2.0.0.3.5";
+import { tmdbImage } from "./images.js?v=2.0.0.3.5";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.0.0.3.5";
+import { THEME_STYLE_EVENT, isModernStyle } from "./appearance.js?v=2.0.0.3.5";
 
 // --- Modern backdrop artwork behind cards -----------------------------------
 // Cards on every page (Dashboard, History, the library, Discover, Watchlist,

@@ -1,4 +1,4 @@
-import { escapeHtml, toDateInputValue } from "./utils.js?v=2.0.0.3.4";
+import { escapeHtml, toDateInputValue } from "./utils.js?v=2.0.0.3.5";
 
 // Shared calendar + time picker used everywhere the app lets you pick a watch
 // date (the edit-date dialogs, and the "mark watched" date prompts). Every
