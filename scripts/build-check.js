@@ -116,7 +116,7 @@ run(process.execPath, ["scripts/docs-check.js"]);
 run(process.execPath, ["scripts/asset-versions.js"]);
 run(process.execPath, ["scripts/rebrand-name-check.js"]);
 
-run(process.execPath, ["--import", "./scripts/test-data-setup.js", "--test"]);
+run(process.execPath, ["scripts/run-tests.js"]);
 
 for (const file of ["package.json", "package-lock.json", "changelog.json"]) {
   JSON.parse(fs.readFileSync(path.join(root, file), "utf8"));

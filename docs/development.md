@@ -62,7 +62,7 @@ this local preparation.
 npm install       # prebuilt binaries for better-sqlite3 + sharp; also installs git hooks (prepare)
 npm start         # serve the local checkout as a develop build
 npm run dev       # same, with --watch auto-reload
-npm test          # focused node:test suite for parser/sync/key behavior
+npm test          # node:test suite in test/**/*.test.js (reddit-app tests run from reddit-app)
 npm run test:multiprocess # real isolated web/worker replica test
 npm run docs:check # verify README setup guidance matches package/runtime requirements
 npm run build     # syntax check + npm test + server boot gate
@@ -491,7 +491,7 @@ release after its initial baseline (un-pinning its previous announcement). The f
 successful check with no stored version records the current release without posting.
 HTTP domain approval and an explicit installation approval are required to activate
 an uploaded revision; uploading alone does not replace the installed bot.
-It has its own build/deploy tooling independent of this repo's CI - see
+It has its own build/deploy/test tooling independent of this repo's CI (root `npm test` does not run its tests) - see
 [`reddit-app/README.md`](../reddit-app/README.md).
 
 ## Other CI

@@ -7,9 +7,10 @@
   "scripts": {
     "build": "vite build",
     "dev": "devvit playtest",
-    "deploy": "npm run test:types && devvit upload",
+    "deploy": "npm run test:types && npm test && devvit upload",
     "launch": "npm run deploy && devvit publish",
     "login": "devvit login",
+    "test": "node --test test/*.test.mjs",
     "test:types": "tsc --build"
   },
   "engines": {

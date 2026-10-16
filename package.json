@@ -10,7 +10,7 @@
   "scripts": {
     "start": "node scripts/start-local.js",
     "dev": "node --watch-path=server scripts/start-local.js",
-    "test": "node --import ./scripts/test-data-setup.js --test",
+    "test": "node scripts/run-tests.js",
     "test:multiprocess": "node --test test/multiprocess.test.js",
     "build": "node scripts/build-check.js",
     "docs:check": "node scripts/docs-check.js",

@@ -848,6 +848,10 @@
       "reason": "history",
       "lines": [
         [
+          "- New installs keep the backups/plembfin folder name for compatibility.",
+          1
+        ],
+        [
           "This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/",
           1
         ],
@@ -1531,6 +1535,14 @@
     "changelog.json": {
       "reason": "history",
       "lines": [
+        [
+          "\"Tweak: New installs keep the backups/plembfin folder name for compatibility.\",",
+          1
+        ],
+        [
+          "\"New installs keep the backups/plembfin folder name for compatibility.\",",
+          2
+        ],
         [
           "\"message\": \"This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/\",",
           1
@@ -10936,6 +10948,10 @@
     "website/src/generated/release.json": {
       "reason": "website",
       "lines": [
+        [
+          "\"Tweak: Explain that new installs retain the backups/plembfin folder for compatibility.\",",
+          1
+        ],
         [
           "\"summary\": \"This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/\",",
           2

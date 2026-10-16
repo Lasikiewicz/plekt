@@ -40,7 +40,7 @@ Then, with upload approval:
 ```powershell
 Set-Location C:\Github\plembfin\reddit-app
 npm run test:types
-node --test test/release.test.mjs
+npm test
 npm run build
 npx --no-install devvit upload
 ```
@@ -119,7 +119,7 @@ manually and confirm it posts and pins correctly before touching r/plembfin.
 ### Deploy for real
 
 ```bash
-npm run deploy           # type-checks, then `devvit upload`
+npm run deploy           # type-checks, runs npm test, then `devvit upload`
 ```
 
 The first upload will prompt for:
