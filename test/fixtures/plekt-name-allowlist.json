@@ -1437,7 +1437,7 @@
           1
         ],
         [
-          "- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`); restore checks SQLite integrity before import and explains recovery options if the database is corrupt",
+          "- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`, including new installs; the folder name is retained for compatibility); restore checks SQLite integrity before import and explains recovery options if the database is corrupt",
           1
         ],
         [
@@ -4510,6 +4510,10 @@
     "changelog.develop.json": {
       "reason": "compatibility",
       "lines": [
+        [
+          "\"Explain that new installs retain the backups/plembfin folder for compatibility.\"",
+          1
+        ],
         [
           "\"Settings given as PLEMBFIN_ environment variables keep working, and the same settings can use PLEKT_ names\",",
           1
