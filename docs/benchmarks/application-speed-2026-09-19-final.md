@@ -1,7 +1,7 @@
 # Application speed final verification - 19 September 2026
 
 The closing verification for
-[`plan/active/application-speed-remediation/plan.md`](../../plan/active/application-speed-remediation/plan.md), taken on
+[`plan/archive/application-speed-remediation/plan.md`](../../plan/archive/application-speed-remediation/plan.md), taken on
 the `develop` working tree after step 62. It re-measures the server, the unauthenticated shell,
 and the signed-in dashboard startup on the current code.
 

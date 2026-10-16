@@ -165,23 +165,24 @@ The gate has three phases, all checked against the same approved release build:
 
 1. **A — review and prepare:** Resolve the current `origin/main` documentation baseline,
    read the release's website-impact targets, review affected guides in the local website
-   preview, make any edits on local `develop`, and write a standalone `captures.md` list.
+   preview, make any edits on local `develop`, and write the run's `capture-run.json` and
+   a short `captures.md` from the skill's template. The capture ids must pass
+   `recapture.mjs --check`, and a trial run's WARN lines (cut-off or misshapen posters,
+   empty rails) are fixed in the catalogue framing or reported as app defects before handoff.
    `npm run captures:stale` in `website/` lists the images whose catalogued source files
    changed since `origin/main` as review candidates. Compare their existing images first;
    use the suggested command only after narrowing it to confirmed retakes and variants.
    The application being documented is the pinned alpha candidate running on port 5056,
    not the `develop` app. Stop after writing the capture list and hand it to phase B.
 2. **B — capture only:** Give a cheaper agent the one-line handoff naming `captures.md`.
-   It reads that file alone, uses the still-running approved app, and saves only into its
-   staging folder. It runs the capture tool first (`node scripts/recapture.mjs` with
-   `--ids-file`, `--base-url`, `--expect-version`, `--expect-channel` and `--out`; sign-in
-   comes from `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which it sets for the tool call from
-   `.claude/local-environment.md`) and takes by hand only the images the tool could not.
-   Images that need a live state (muted playback for Now Playing, a pending Manual Watch
-   review item, a dismissed Up Next item) are produced in the local test environment that
-   file describes and then taken with the tool's `--live=<state>` option. An image with a
-   non-standard frame size has its own `viewport` in `website/capture-catalogue.json`.
-   It does not edit `website/` or commit. Failed images remain failed.
+   It reads that file alone and runs one command, `npm run captures:release -- --run=<run
+folder>`, which checks the served build, signs itself in (from `PLEKT_USER` and
+`PLEKT_PASSWORD`, or `.claude/local-environment.md`), takes every listed image, and
+   writes `captures/results.md` and `captures/contact-sheet.html`. There is no browser and
+   no hand capture. Images that need a live state are included only when phase A created
+   that state before handoff (named in `live`). An image with a non-standard frame size has
+   its own `viewport` in `website/capture-catalogue.json`. It does not edit `website/` or
+   commit. Failed images remain failed.
 3. **C — place and check:** Review every staged image and its composition/privacy, place
    accepted images and captions, update the privacy manifest, run the website checks, and
    commit the completed website work on local `develop`. Only after phase C does the release

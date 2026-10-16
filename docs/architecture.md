@@ -349,6 +349,11 @@ before reversing something that looks unnecessarily cautious.
 
 ### `scripts/`
 
+`workflow-check.js` provides read-only push/alpha/main prechecks, narrow-scope baseline,
+candidate identity, staged-path and safe local develop-reconciliation gates.
+`verify-release-website.js` checks the released website's changelog, guide URLs and
+homepage screenshot content hashes/bytes. Neither script acquires a lock or publishes.
+
 | File | What it is |
 | --- | --- |
 | `build-check.js` | The `npm run build` gate: syntax-checks every JS file, runs `docs-check.js`, validates the JSON manifests, rejects bare `fetch(` in `server/` (must be `fetchWithTimeout`), then boots the server once against a temp DATA_DIR (`PLEKT_BUILD_CHECK=1`). |

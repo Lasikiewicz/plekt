@@ -1,28 +1,17 @@
 ---
 name: force-to-main
-description: "Promote Plekt alpha's current tip onto main as a single release when the user says \"Force to main\" exactly, or resume a named phase B/C handoff. Get changelog and running-build approval first, complete website phases A/B/C against that build, then promote, obtain final approval, force-push main, verify the OCI demo, and publish the website. Never push develop."
+description: "Promote Plekt alpha to main when the user says Force to main exactly, or resume a named phase B/C handoff. Preserve candidate, changelog, website and final-review approvals; never push develop."
 ---
 
 # Force to main
 
-When the user says **"Force to main"** exactly, follow this order. The release candidate
-comes from the fetched alpha tip; website edits live on local `develop`. Approval of the
-changelog and running candidate closes the release phase before website work begins.
-The final committed release has its own review and go-ahead before pushing.
+Route handoffs first: **phase B (capture only)** runs only the named captures.md assignment
+(no release prechecks/lock/worktree); **phase C** reads the run summary and resumes at 4.
+Only the exact initial trigger starts at 0. Never reconstruct this flow from memory.
 
-**Route handoffs before any pre-checks.** A request naming `phase B (capture only)`
-executes only its named capture file and stops after the result table and return line.
-A request naming `phase C` reads `plan/force-to-main-<version>.md` and resumes phase C
-in step 4, including lock/source reconciliation. Neither request starts a new release,
-creates another worktree, or repeats completed approvals. Only the exact initial
-`Force to main` request starts at step 0.
+At every stop and phase end, show this fixed checklist with completed boxes ticked,
+the current stop marked "here", and a one-line next action:
 
-**Show the flow at every stop.** Every time the run pauses for the user (and at the end of
-each phase), finish the message with this checklist, ticking what is done, marking the
-current stop with "here", and saying in one line what happens next. Keep the wording fixed
-so the user can follow the stage at a glance:
-
-```text
 - [ ] 1 Main build candidate running and changelog preview shown
 - [ ] 2 Suggested changelog updates made
 - [ ] 3 User accepts changelog and build
@@ -33,561 +22,137 @@ so the user can follow the stage at a glance:
 - [ ] 8 Final review: release build presented for the user
 - [ ] 9 Force-push main and publish workflow
 - [ ] 10 OCI demo verified, website published, local develop reconciled
+
+## 0. Precheck, lock and run record
+
+Read [candidate operations](../../../docs/agent-release-candidate.md) for steps 0–2,
+including the run templates and process ownership rules. From the main checkout:
 ```
-
-### 0 - Pre-checks, release lock, and run plan
-
-Check GHCR Cleanup first: it deletes tags from the same package this release publishes.
-
-```bash
-gh run list --workflow ghcr-cleanup.yml --limit 1
+npm run release:precheck
 node scripts/release-lock.js acquire "force to main"
 git fetch origin
 ```
+Check cleanup again after fetching and before push. Do not work around a refused lock.
+Record baseline, pins, paths/PIDs and approvals using the run templates; preserve existing
+changes and consistent pending/version filenames.
+Lock expires after 30 minutes: inspect/reconcile on resume, reacquire if needed.
+Keep it across handoffs; release on completion/abandonment, only in the main checkout.
 
-If cleanup is `in_progress` or queued, wait for it to finish before proceeding and check
-again before pushing. If the lock refuses, do not work around it: wait for the other
-session, or clear it only when it is known to be gone. Keep the lock across the capture
-handoff; record ownership and resumption details in the run summary. The current lock
-expires after 30 minutes: on resume, check `node scripts/release-lock.js status` in the
-main checkout and reconcile any intervening work before reacquiring. Do not assume a
-handoff reserves the checkout indefinitely, or run the lock script in the linked worktree
-(its `.git` is a file). Release it when the workflow finishes or is abandoned:
+## 1–2. Pinned candidate, changelog and build approval
 
-```bash
-node scripts/release-lock.js release
+On develop, follow candidate operations for an unused external detached worktree at the
+pin, npm ci, releaseMessage and BUILD_CHANNEL=main startup. Never patch candidate code,
+copy credentials or run develop/candidate concurrently against shared data.
+
 ```
-
-Record the starting branch, `git status --short`, and local `develop` tip. Preserve existing
-changes; do not checkout/reset over them or include unrelated work in a release commit.
-Fetch origin, record its main and alpha hashes, and pin that alpha hash for this run.
-
-Create the run plan before release work. Use `plan/force-to-main-<version>.md` and
-`plan/active/force-to-main-<version>/`, with step files for release candidate, website A,
-website B captures, website C, promotion/final review, and push/demo. If the version is
-not known yet, use `pending` consistently in the filenames and contents. After the preview,
-rename the summary and step folder and replace `pending` with the release version everywhere.
-Copy `assets/run-plan-summary.template.md` to the summary, then copy these step templates:
-
-| Destination | Template |
-| --- | --- |
-| `step1-release-candidate.md` | `run-plan-step1-release-candidate.template.md` |
-| `step2-website-a.md` | `run-plan-step2-website-a.template.md` |
-| `step3-website-b.md` | `run-plan-step3-website-b.template.md` |
-| `step4-website-c.md` | `run-plan-step4-website-c.template.md` |
-| `step5-promote-review.md` | `run-plan-step5-promote-review.template.md` |
-| `step6-push-demo.md` | `run-plan-step6-push-demo.template.md` |
-
-Replace every `<version>` and remaining placeholder. The summary records purpose, waiting
-on the user, phase checkboxes, current state, and next handoff. The release-candidate file
-records the pinned alpha hash, previous develop tip, worktree path, data directory, server
-PID/logs, preview version and entry, approved `releaseMessage`, and approval evidence.
-Update the open step's Results and the summary at every phase end so an interruption
-resumes from this record. Create the separate `captures.md` from
-`assets/captures.template.md` at the end of phase A; do not use a run-plan template for the
-phase B assignment.
-
-### 1 - Check out alpha's tip separately and approve the changelog
-
-Keep the main checkout on `develop` for website work. Use an external detached worktree
-for the pinned alpha source, rather than switching the main checkout or using a stale
-local alpha branch. PowerShell example, run from the main checkout:
-
-```powershell
-$releaseRepo = (Get-Location).Path
-$releaseAlpha = git rev-parse origin/alpha
-$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) "plembfin-release-candidate"
-# Confirm this path is unused before adding; never remove an existing directory to reuse it.
-git worktree add --detach "$releaseWorktree" "$releaseAlpha"
-Set-Location -LiteralPath $releaseWorktree
-```
-
-Verify this alpha tip includes the preview change from reorder step 1: `--preview` must
-report outstanding website guides without stopping. If it still blocks on those guides,
-stop and report that alpha needs the release tooling update through the normal develop /
-Force to alpha workflow. Do not silently patch the candidate's application source.
-
-Review the accumulated alpha sections and write one concise, single-line `releaseMessage`
-in this worktree's `changelog.alpha.json` (maximum 240 characters). For example:
-
-```json
-"releaseMessage": "This update makes media and library pages faster, adds manual watch controls, and redesigns season and episode details."
-```
-
-```bash
 node scripts/promote-alpha-to-main.js --preview
-```
-
-This reads without promoting or resetting any manifests. Show the exact new version,
-headline, and every section bullet. Outstanding website guides are information at this
-point; `--confirm` remains fail-closed later. Save the preview and approved message in
-the run plan. Do not ask for changelog approval here: the user approves the changelog and
-the running main build together in step 2, after seeing the app. Incorporate requested
-wording changes by editing `changelog.alpha.json` and repeating the preview and step 2.
-Do not begin website work yet.
-
-### 2 - Build and start the main release candidate, then obtain one approval
-
-**The user tests the MAIN build, not the alpha source.** "Force to main" means the candidate
-they see reports the new stable version (`v<version>`, channel `release`) and carries the new
-Stable changelog entry. Never show the pinned alpha source with alpha metadata as the
-candidate, and never ask for changelog approval before the app is running.
-
-Install this worktree's own dependencies with `npm ci`. Run `node scripts/promote-alpha-to-main.js --confirm`
-inside the detached release worktree (never the main checkout). This is safe: the worktree is
-disposable, `--confirm` only rewrites manifests and restamps assets, and nothing is committed
-or pushed. It yields exactly the release the final promotion will produce, except the
-reviewed website and README, which are carried in later (step 5). The worktree's
-`changelog.alpha.json` `releaseMessage` edit from step 1 must be in place first.
-
-Stop the develop server on 5056 before starting the candidate: both use the main checkout's
-data, and must never run against it concurrently. Verify the listening process belongs to
-this app before stopping it; record how to restore it if the release is abandoned. Do not
-copy `.env` or credentials into the worktree. Read `.claude/local-environment.md` in the
-main checkout if present; carry any required local environment settings explicitly, without
-printing secrets.
-
-PowerShell example (the variables are from step 1):
-
-```powershell
-Set-Location -LiteralPath $releaseWorktree
-npm ci
+# In the disposable candidate only, following the documented setup:
 node scripts/promote-alpha-to-main.js --confirm
-$releaseListeners = Get-NetTCPConnection -LocalPort 5056 -State Listen -ErrorAction SilentlyContinue
-# Inspect ownership first, then stop only the verified Plekt listener(s).
-$releaseListeners | Select-Object OwningProcess -Unique |
-  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }
-$env:DATA_DIR = Join-Path $releaseRepo "data"
-$env:PORT = "5056"
-$env:BUILD_CHANNEL = "main"
-$releaseServer = Start-Process -FilePath (Get-Command node).Source -ArgumentList "scripts/start-local.js" -WorkingDirectory $releaseWorktree -WindowStyle Hidden -PassThru -RedirectStandardOutput (Join-Path $releaseWorktree "server.stdout.log") -RedirectStandardError (Join-Path $releaseWorktree "server.stderr.log")
-Invoke-WebRequest http://localhost:5056/health
 ```
+If confirm refuses outstanding website guides, STOP: the existing flow has a recorded
+contradiction; no waiver or behavior change is authorized by this skill.
 
-Wait for readiness before the health request. Record the PID and paths; inspect errors
-if startup fails. Verify the served source is the pinned alpha hash plus the `--confirm`
-changes (`git rev-parse HEAD` equals the pin), and that `/version.json` and `/api/changelog`
-report the new version with channel `release` and `current` equal to `<version>`. The
-sidebar should read `v<version>` with no channel label. Give the user `http://localhost:5056/`
-to check, with a short checklist (sidebar version, Settings → Changelog Stable tab showing
-the new entry, the pages the release changed, mobile width). Show the changelog entry text
-alongside it.
+Record a JSON mechanical-check record alongside the run notes:
+`{ "alpha": "<full pin>", "main": "<full pin>", "worktree": "<absolute path>",
+"pid": 1234, "baseUrl": "http://localhost:5056", "version": "<version>" }`.
+Run `npm run release:candidate -- <absolute-record.json>` before presentation and C resume.
+Pass PLEKT_CHECK_COOKIE privately if needed; verify process ownership against recorded paths.
+Checks establish identity, never approval.
 
-Only once the build is serving, review the entry as a stable-release reader would and
-recommend specific changelog changes if any are warranted: bullets to drop (alpha or
-develop only mechanics, internal fixes stable users never saw), reword, or merge; bullets
-that are too long or visual-detail heavy; anything missing that the build shows; and the
-`releaseMessage`. Give each recommendation with its reason, or say the entry needs no
-changes. Do not make edits until the user agrees; do not ask the user to decide wording
-before the build is running.
+Show full entry and running build together; recommend wording changes with reasons (or none).
+Edit only after agreement.
+**STOP for explicit approval of both changelog and running main build before phase A.**
+Build changes require develop/Force to alpha and new approval; wording repeats candidate setup.
 
-**Wait for one explicit approval of both the changelog and this running main build before
-phase A.** The user decides when they have checked both; do not treat silence, or approval
-of the preview text alone, as approval. A build change invalidates this approval: fix it
-through develop / Force to alpha and restart with the new pinned tip. A changelog wording
-change alone is made in `changelog.alpha.json`; discard the worktree's `--confirm` changes
-(`git checkout -- . ` then re-edit and re-run `--confirm`) and restart. Leave the approved
-candidate running through website phases A, B, and C, including across the cheaper-agent
-handoff.
+## 3. Website A
 
-### 3 - Website phase A: review against the approved running build
-
-Return to the main checkout on `develop`. Follow `docs/websiteupdate.md` for baseline
-discovery, change review, content quality, and visual/privacy checks. Its Force-to-main
-section defines phases A/B/C; the app target is the running main-build candidate on 5056. Never
-restart the develop app to review or take captures. Only describe behaviour present in
-the approved release source, including in website pages already edited on develop.
-
-```bash
+Read [website operations](../../../docs/agent-release-website.md) and
+[website update contract](../../../docs/websiteupdate.md).
+Use the approved candidate throughout A/B/C. On develop:
+```
 npm run updates:refresh
 npm run check:website-impact
 ```
+Reconcile targets with pinned commits/website notes and actual diffs/images. Source paths
+alone never mandate retakes. Record each capture's reason/commit; user-narrowed scope wins.
+Review copy, prepare capture-run.json, required live states and captures.md from the
+template. Run recapture --check and the scratch framing trial required by website
+operations. Fix catalogue framing/app defects rather than blindly retaking WARNs.
+If no captures are needed, record that explicitly and skip B.
 
-Read `plan/updates.md` (Website check targets, Website images to retake, Changelog-ready changes, and commit inventory).
-The develop inventory can include later application work: reconcile targets against the
-pinned alpha changes and preview's outstanding list. The definitive impact check is run
-in the alpha checkout after carrying in the reviewed website in step 5.
+## 4. Website B handoff and C
 
-Before choosing captures, read the actual product commits between the published main
-baseline and the pinned candidate, including their `site-impact:` and `Website review:`
-notes. For older commits without explicit notes, inspect the meaningful diff, ignoring
-asset version stamps and release bookkeeping. A changed source path or shared stylesheet
-is only a review candidate, never proof that every image needs replacing.
-
-
-Poster acceptance is mandatory for every retained or replacement image: inspect the final
-file at its original size and check the visible posters against the live candidate.
-No missing/broken/unloaded poster, clipped poster/card at a frame edge, stretched,
-squashed, skewed, or incorrect-aspect artwork is accepted. Intentional spoiler masks are
-allowed only in the explicitly named spoilers-on view. Inspect natural and rendered image
-dimensions/object-fit when proportions are suspect; never resize a frame non-uniformly,
-hide an error, or alter DOM content/styles to make it pass. Fix the actual capture framing
-or report the app/artwork blocker, then recheck. Tool `ok` and correct output size alone
-are not acceptance. Record poster findings per variant in capture results.
-
-Compare the existing website's affected text, captions, and images with the approved
-running main candidate in the same route, state, viewport, style, and mode. For each
-candidate image record the introducing commit, existing asset, comparison evidence, and
-one decision: **retake - visible difference and reason**, **keep - still accurate and why**,
-or **blocked - comparison not completed**. Keep accurate images. Retake only variants
-whose depicted UI changed; never feed the whole stale-tool output into the capture tool.
-Include a new image only when changed/new guidance needs one and no existing accurate
-image explains it. Update stale or missing website information, instructions, captions,
-and links as well as images; a fresh screenshot alone does not finish a guide review.
-Do not hand off phase B with an unperformed comparison labelled as a required retake.
-Put this decision record in the phase A results and only confirmed retakes/new images in
-`captures.md` and its IDs file. Each capture entry must state why the existing image is
-insufficient and which commit changed it. If none differ, explicitly hand off no captures.
-On a resumed handoff, the user's narrowed scope takes precedence over the inherited list;
-reconcile it before creating live state or taking further images.
-
-Review affected guides and shared site surfaces against the running candidate. Make
-website copy edits on `develop`, identify required captures, and start the website preview
-from `website/` with `npm run dev`. Find image review candidates with `npm run captures:stale`
-in `website/` (source paths changed since `origin/main`; this is not a mandatory retake list), reconciled
-against the pinned alpha changes like the inventory; `npm run captures:retake -- <ids>`
-retakes them as `website/capture-catalogue.json` describes. A placed image whose size
-differs from the catalogue fails `npm run check:catalogue`, so update its catalogue sizes. A guide that remains accurate may instead be recorded
-in `website/src/data/release-review.json` with a reason; `publishedVersion` must match the
-version live on `origin/main`, so old reviews never excuse this release.
-
-End phase A by copying [assets/captures.template.md](assets/captures.template.md) into
-`plan/active/force-to-main-<version>/captures.md`, with the staging folder `captures/`
-beside it. Fill every placeholder and repeat the image entry for each required capture;
-if no captures are needed, state that explicitly. Include the approved source hash,
-worktree, served alpha version, app URL, usable signed-in browser tab, exact routes and
-states, style/mode, viewport width and height, framing, scroll container and composition
-instructions, key risk, and intended website section/caption. The file must stand alone:
-copy in all capture and privacy instructions rather than asking phase B to read this skill,
-the run summary, local credentials, or website docs. Keep credentials out of the file.
-Phase B takes the list with the capture tool first and uses a browser only for images the
-tool could not take. When phase B reaches those by-hand captures (including the live states
-they need), it proceeds directly and does not ask the user first; the user has said this
-question should not be asked. Write the image ids, one per line, to `capture-ids.txt` beside
-`captures.md`, fill the tool command in the template (`--ids-file`, `--base-url` for the
-candidate's port, `--expect-version`, `--expect-channel=release`, `--out` to
-`captures/auto`), and name each entry that needs a live state. The capture tool
-(`website/scripts/recapture.mjs`) is the capture method on every Force to main run; a
-browser by hand is only the fallback for a frame the tool fails twice. The tool signs in
-with `PLEMBFIN_USER` and `PLEMBFIN_PASSWORD`, which phase B sets for its own tool call from
-`.claude/local-environment.md` (the template carries the command), so the user is not
-asked to set anything. Live states (`playback`, `manual-review-item`, `dismissed-up-next`)
-are created by phase B in that file's local test environment, as the template describes:
-muted playback in the connected test media apps, an episode marked played in a test app
-for a review item. They are not a reason to skip or fail an image. Phase B starts the
-four test media containers itself with the local-stack lifecycle skill when a live state
-needs them, and may do anything the test servers need for the capture (start muted playback,
-mark items played or unplayed, remove watched status); it does not ask first. This does not
-extend to the live/remote environment. Temporary settings changes that a catalogue entry
-requires (the `dashboard-up-next` Allow part watched items option) are restored after capture. An image whose
-published frame is not the standard 1440 x 683 gets its own `viewport` in
-`website/capture-catalogue.json` (for example `manual-watch-review`, 2560 x 1290), so the
-tool takes it at true size; fix the catalogue entry rather than capturing by hand.
-Verify the browser session and capture-tool/dependency availability before handing off;
-if sign-in cannot be shared, record that phase B must report the login blocker.
-Verify the served channel/build through `/api/changelog` as described in the capture
-template (the main candidate reports channel `release` and `current` = the new version).
-Record the sidebar label separately; it should read `v<version>`.
-Record the phase result and exact capture-list path in the run summary, then stop.
-
-### 4 - Website phase B handoff, then phase C completion
-
-**Stop after phase A and print this one line for the user to paste into a cheaper agent:**
-
+STOP after A; hand off, do not take over captures in the phase A session:
 ```text
 Force to main v<version>, phase B (capture only): read plan/active/force-to-main-<version>/captures.md and follow it.
 ```
+Phase B: follow [website-capture](../website-capture/SKILL.md) and the named assignment only.
 
-When invoked with **phase B (capture only)**, read only the named `captures.md` for
-instructions and execute its list; do not restart the full release procedure or acquire,
-release, or renew its lock. Run its capture tool command first, create the live states it
-names in the local test environment and take those with the tool too, and take by hand
-only what the tool could not. Use the approved running app, save project outputs only in
-the staging folder, do not edit `website/` or commit, and write `captures/results.md`
-with a pass/fail table, source/version checks, actual dimensions/scroll positions, and
-privacy findings. A failed item stays failed; do not substitute a different view or build.
-Return the table and the phase C handoff line from the file, then stop.
-
-Do not take over phase B's captures in the phase A session. Record the waiting state and
-leave the worktree, server, and lock available. The handoff back is:
-
-```text
-Force to main v<version>, phase C: read the run summary.
+Phase C reads the run summary, reconciles lock/source and reruns release:candidate.
+Read website operations for image acceptance, privacy manifest, captions/themes/links,
+affected-page checks and full gate:
 ```
-
-When invoked with **phase C**, resume here from `plan/force-to-main-<version>.md` and
-the recorded capture results; do not rerun promotion or earlier approvals. Reconcile the
-lock as described in step 0. Verify the same alpha hash and server are still in use,
-then inspect every staged image and its result before bringing accepted images into
-`website/`. Reject stale states, wrong views, errors, or visible secrets; apply the privacy
-rules in `docs/websiteupdate.md` and record all published images in the privacy manifest.
-Complete captions, links, themes, affected-page visual checks, and the full website gate.
-Run from `website/`:
-
-```bash
+# From website/
 npm run captures:inventory
 npm run check
 npm run build
 ```
+Inspect EVERY staged image and WARN. A framing/app defect needs correction or reporting.
+Complete website items or record explicit user acceptance of leftovers. Commit on develop;
+never push it.
 
-Review inventory changes and resolve gate failures. Automated checks cannot establish
-that captions and captures are current. Every unticked release website item must be done
-or explicitly accepted by the user in chat as shipping without it; record accepted
-leftovers for the final review. Commit website changes on local `develop` before step 5.
-Do not push develop, and do not run Force to alpha again for website-only work.
+## 5. Carry, preview, promote
 
-`website/` is taken from local `develop` so reviewed edits remain available permanently.
-The release commit is never merged back; website work confined to alpha would be lost.
-Cloudflare Pages publishes only `main`, so these local develop edits are not public yet.
-
-### 5 - Carry the website, check README, preview again, and promote
-
-Keep the candidate server running while preparing the final alpha checkout. Once the
-main checkout's worktree is clean and its website changes are committed on `develop`,
-switch it to the pinned alpha source (not a newly fetched or changed alpha tip):
-
-```powershell
-Set-Location -LiteralPath $releaseRepo
-git checkout -B alpha $releaseAlpha
-git checkout develop -- website/
-git status --short website/
+Read [promotion/publication operations](../../../docs/agent-release-publish.md) now;
+it supplies exact carry/stage/cleanup commands and final-review requirements.
+Require a clean main checkout, switch to the pinned alpha, carry website from develop,
+restore approved wording, review README and run:
 ```
-
-Show what was brought in and confirm all pages describe the approved build. Restore the
-approved `releaseMessage` (and any approved alpha-entry wording edits) from the run record
-into this checkout's `changelog.alpha.json`; the detached worktree changes were not commits.
-
-Review README's feature list, setup, channel table, screenshots/links, and released-version
-marker. Before promotion the marker must match the stable package/changelog version,
-not the pending preview version. Include any README correction in the single release commit.
-
-```bash
 npm run docs:check
 node scripts/promote-alpha-to-main.js --preview
 ```
+Compare version/headline/ALL bullets with approval. Website outstanding must be empty.
+Changed preview requires renewed approval; changed remote main/alpha requires reconciliation.
+Then --confirm, docs:check, stage manifests/README/package files/public/website,
+run `node scripts/workflow-check.js staged`, inspect staged scope and commit one release.
+Safely stop/remove only this run's verified candidate per publication operations;
+unexpected work blocks cleanup. Preserve the approval/preview records.
 
-Compare this preview's version, headline, and bullets to the approved record. Its website
-list must now be empty. If it differs, obtain renewed changelog approval before continuing;
-if website items remain, return to develop, fix/review and commit them, then repeat the carry.
-If origin/main or origin/alpha changed during the run, stop and reconcile before promotion;
-do not substitute a different source or release history under the existing approval.
+## 6. Exact final review — STOP
 
-Only now run the mutating promotion:
+Start app (BUILD_CHANNEL=main) and website from the exact committed release after verifying
+ownership and stopping old listeners. Show full changelog entry, changed/stamped guides and
+accepted leftovers, app URL/version and website URL including /changelog.
+**Wait for explicit final go-ahead.** Requested changes require checks and renewed review;
+app/changelog changes return to affected release approval/website review. Do not blindly
+promote again after alpha entries reset.
 
-```bash
-node scripts/promote-alpha-to-main.js --confirm
-npm run docs:check
-git add README.md changelog.json changelog.alpha.json changelog.develop.json CHANGELOG.md package.json package-lock.json public website
-git commit -m "chore: promote alpha to main v<version>"
+## 7–8. Push, demo, website
+
+After approval, run `node scripts/workflow-check.js before-push main --record=<record.json>`,
+show `git log origin/main..HEAD --oneline`, then:
 ```
-
-`--confirm` consolidates alpha sections, uses the approved headline, preserves released
-history from origin/main, bumps semver (honouring a manually-set higher version), writes
-manifests and CHANGELOG, resets alpha/develop counters, and restamps public assets and
-website baselines. It refuses outstanding website guides or release-process text. Fix
-process-text failures in the source on develop, repeat Force to alpha, and restart approval.
-Both `public` and `website` must be staged: missing public restamps fail asset-version checks;
-missing website changes/baselines would publish stale documentation. Inspect the staged diff
-so no unrelated change enters the release commit.
-
-Before final review, stop the recorded candidate process and remove its worktree. Preserve
-the approved message/preview in the plan, verify the resolved path equals this run's external
-worktree, and inspect `git -C "$releaseWorktree" status --short`. Only its recorded candidate
-wording edits, the step 2 `--confirm` output (manifests, restamped assets, version bump), and
-server logs may be discarded; stop if there is unexpected work.
-
-```powershell
-Stop-Process -Id $releaseServer.Id -Force -Confirm:$false
-Set-Location -LiteralPath $releaseRepo
-git worktree remove --force "$releaseWorktree"
-```
-
-Use the saved PID/path on resume, verifying process ownership before stopping. Record the
-cleanup and release commit in the run summary; the final review starts fresh servers below.
-
-### 6 - Final review: show the user the exact state about to be published
-
-Everything is committed locally now and nothing has left the machine. This is the last
-point at which the release can be changed, so show the user what is actually going to be
-published rather than describing it.
-
-Stop every local server first, so nothing is left serving the pre-release state and
-mistaken for the release:
-
-```powershell
-# Windows: verify ownership, then find and stop anything on the app and website ports
-Get-NetTCPConnection -LocalPort 5056,4321 -State Listen -ErrorAction SilentlyContinue |
-  ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -Confirm:$false }
-```
-
-Then start both against this commit, with network access permitted. Set
-`BUILD_CHANNEL=main` explicitly: `npm start` otherwise defaults to develop metadata:
-
-```powershell
-$env:BUILD_CHANNEL = "main"
-npm start                 # application, http://localhost:5056
-# In a separate terminal at the main checkout:
-Set-Location website
-npm run dev               # website, http://localhost:4321
-```
-
-Report all four of these together:
-
-1. **The changelog that will go live.** Print the new release entry in full - version,
-   headline, and every bullet under each section - from `changelog.json`. Not a summary:
-   this is the text that reaches the GitHub Release, the app, and the website.
-2. **What the documentation now says.** State which `website/` pages changed in this
-   release and that their `sourceVersion` markers are stamped to the new version, so the
-   user knows the published documentation describes this release and not the previous one.
-   List any website items the user agreed in phase C to ship without (or say there are none).
-3. **The application, running this exact commit**, at `http://localhost:5056`. Name the
-   version it reports so the user can confirm it matches the release.
-4. **The website, running this exact commit**, at `http://localhost:4321`, and point at
-   `http://localhost:4321/changelog` specifically, since that is where the release entry
-   and the Stable/Alpha tabs appear.
-
-Wait for the user here. Do not continue to the force-push until they have looked and said
-to go ahead. If they ask for a change, make it, amend the local release commit, repeat
-the relevant checks, and show this again.
-If application code or changelog content changes, return to the release approval phase
-and repeat the affected website review; do not blindly run promotion again after its
-alpha entries have been reset.
-
-### 7 - Force main to match this commit
-Show the user what is about to land before running this - it is a force push to the
-shared `main` branch:
-```bash
-git log origin/main..HEAD --oneline
-```
-Then:
-```bash
 git push origin HEAD:main --force
 ```
+Never bypass hooks. On a first hook test failure, npm test once, then retry the SAME push
+only if that passes; a second full-gate failure or failed rerun stops for investigation.
+Wait for Publish Main Release AND its OCI deployment/version verification to succeed.
+Missing OCI configuration/failure means incomplete release; never seed demo fixtures here.
 
-The pre-push hook runs the complete build gate before changing `main`. If that gate
-reports a test failure, do not bypass the hook and do not report the promotion as
-blocked after the first failure. Run `npm test` once to check for the known transient
-test-run failure. If that rerun passes, retry the exact same force-push command; its
-pre-push hook must then run and pass the complete `npm run build` gate before the push
-can proceed. If the focused rerun fails, or the retried full gate fails again, stop the
-promotion and investigate the repeatable failure. Never use `--no-verify`.
+Follow publication operations to deploy the clean pushed release website to
+plembfin-website only (check:deploy, build, Wrangler). Final approval already covers this.
+Login failure stops for user login. Verify live plekt.net changelog/guide links and homepage
+image bytes: `npm run release:verify-live -- <version>`. Failure means release incomplete.
 
-`update-changelog.yml` (workflow name "Publish Main Release") reads the version already
-in this commit, checks README consistency, runs the build gate again in CI, and publishes
-`:latest` + `:<version>` - it does not write anything back. Wait for this workflow to
-finish successfully before checking the OCI demo deployment. Optionally confirm it succeeded:
-```bash
-gh run list --branch main --limit 1
+## 9. Local reconciliation
+
+Only after workflow/demo/website success:
 ```
-
-### 8 - Rebuild and verify the OCI public demo
-
-Publishing GHCR does not pull or restart the public demo. The live demo at
-`https://demo.plembfin.com/` is served by the dedicated Oracle Cloud Compute instance
-in `uk-london-1`, behind the Cloudflare reverse proxy. Portainer is local-only and is
-not part of this release gate.
-
-The `Publish Main Release` workflow now builds an AMD64/ARM64 image and its dependent
-`Deploy public demo to OCI` job copies `scripts/deploy-oracle-demo.sh` to the instance
-over pinned SSH, pulls the exact `ghcr.io/lasikiewicz/plekt:<version>` tag, and
-recreates only the configured demo container while preserving its `/data` mount. It
-then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.
-
-Before the first release using this gate, configure the repository's GitHub Actions
-variables `OCI_DEMO_HOST`, `OCI_DEMO_KNOWN_HOSTS`, `OCI_DEMO_CONTAINER`,
-`OCI_DEMO_DATA_DIR`, and `OCI_DEMO_RUNTIME` (`podman` or `docker`). The optional
-variables `OCI_DEMO_USER` and `OCI_DEMO_PORT` default to `opc` and `80`. Configure
-`OCI_DEMO_SSH_KEY` as a repository or environment secret for the `opc` account. The
-instance must have the selected runtime installed and passwordless `sudo` for `opc`.
-If any setting is missing, the deploy, or the released-version verification fails, stop
-and report the release as incomplete rather than claiming that the demo is current.
-
-Do not call `npm run demo:assets` or `npm run demo:seed` as part of this refresh; those
-commands prepare fixture content and are separate from pulling the released image.
-
-### 8b - Publish the reviewed website
-
-The user's final approval in step 6 covers this publish; do not ask again (user decision,
-12 October 2026). Run it once the release workflow and the demo check have passed, from
-the main checkout while it still holds the pushed release commit, so the live website is
-exactly the reviewed tree:
-
-```bash
-git status --short            # must be empty: publish the release commit, nothing else
-cd website
-npm run check:deploy
-npm run build
-npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Publish Plekt website for v<version>" --commit-dirty=true
+npm run release:reconcile
 ```
-
-Do not deploy when a check or the build fails, and never deploy the `plembfin`
-application Pages project. If Wrangler needs a Cloudflare login, stop and ask the user to
-complete it; do not treat the Git-connected Pages build as a substitute.
-
-Then verify the live site, not only the returned `pages.dev` URL:
-
-- `https://plekt.net/changelog/` shows the new version, and every guide link in the new
-  changelog entry returns 200.
-- On the homepage, fetch each screenshot URL the live page references and compare it with
-  the local file of the same path in `website/public/`. Each URL must carry its `?v=`
-  content hash and return the same bytes. Assets are cached as immutable for a year, so a
-  retaken image that keeps an unversioned URL stays stale on the live site (v2.0.0 showed
-  the old logo in the large light images for this reason).
-
-If the publish or a check fails, report the release as incomplete: the application is
-released but the website is not current.
-
-### 9 - Point local develop at the release (local only, never pushed)
-
-Once the workflow, the demo check, and the website publish have passed, move local `develop` onto the release
-commit so all further work starts from the released build. Do not merge, and do not push
-`develop`: it reaches `origin/develop` only with the user's next "Push to git", together
-with their new work.
-
-First confirm that local `develop` holds nothing the release lacks. `develop` can be ahead
-of the alpha tip that was released, and moving the branch would drop that work:
-
-```bash
-git status --short
-git log --oneline origin/main..develop
-base=$(git merge-base develop HEAD)
-git diff develop HEAD -- $(git diff --name-only "$base"...develop)
-```
-
-The working tree must be clean. Every commit listed must already be in the release: in
-practice the website commits phase C made, which step 5 carried in, and anything taken
-from `develop` like them. Every hunk in the diff must be release restamping only
-(`sourceVersion` markers, `?v=` asset versions, version fields). If any `develop` commit
-carries application or documentation work that is not in the release, stop and report it
-to the user instead of moving the branch.
-
-Then:
-
-```bash
-git checkout -B develop origin/main
-git branch -u origin/develop
-git status -sb
-```
-
-`develop` now equals the release commit and shows as ahead of `origin/develop` by a
-fast-forward. Tell the user the previous `develop` tip hash (recoverable from the reflog).
-
-Do not merge `origin/main` into `develop`, and do not push `develop`. The old step merged
-the release commit into `develop` and pushed it straight away. That push carried the
-`public/` asset restamp, `package.json`, and `package-lock.json`, so
-`docker-publish-develop.yml`'s `paths-ignore` never matched and every release published a
-second, meaningless develop image on top of the release one.
-
-Nothing needs carrying. `promote-alpha-to-main.js` reads the released history from
-`origin/main` rather than the working tree, and every changelog generation point writes the
-release version from the manifests, so `develop` reconciles itself on its next "Push to
-git" with no merge.
-
-This supersedes `docs/decisions.md` entry 16; see entry 18 for the reasoning and for why
-entry 16's conflict concern no longer applies. Entry 8 still stands: do not fold the
-release into `alpha` either, because the next "Force to alpha" force-pushes `develop`'s tip
-onto `alpha` regardless.
-
-## Plekt rebrand release gate
-
-Before the first Plekt release, verify that old raw changelog URLs still resolve after the repository rename, the new documentation domain serves the rebranded website, both legacy image targets remain published for at least six months after this release, and the release preview contains the image migration guidance. Keep GHCR cleanup in dry-run mode until the new-package results are reviewed. Do not rename the local checkout or deployment data/container identities as part of promotion.
+Review all develop-only commits/hunks as documented, including recognized version stamps.
+Missing work means STOP. Otherwise record old tip, locally
+`git checkout -B develop origin/main`, set upstream origin/develop and report status.
+Never push develop or merge/fold the release back. Release lock; update step/summary/todo
+each phase and run todo:check. Apply publication operations' rebrand checks unchanged.
+After completion, offer Announce release (drafts only); never run it without acceptance.

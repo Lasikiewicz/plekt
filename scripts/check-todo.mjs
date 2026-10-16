@@ -10,7 +10,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const planDir = path.join(root, "plan");
 const todoPath = path.join(root, "todo.md");
-const MAX_LAST_WORKED = 3;
+const MAX_NOW = 3;
 const NOT_PLANS = new Set(["README.md", "updates.md"]);
 
 function readStdin() {
@@ -51,13 +51,14 @@ function check() {
     ? walk(path.join(planDir, "active")).map((f) => path.relative(root, f).split(path.sep).join("/"))
     : [];
 
-  // 1. Header date must not be older than the newest plan change.
+  // 1. The newest Change log line must not be older than the newest plan change.
   const newest = Math.max(0, ...[...summaries, ...activeFiles].map((f) => fs.statSync(path.join(root, f)).mtimeMs));
-  const updated = todo.match(/\*\*Updated:\*\*\s*(\d{1,2} \w+ \d{4})/);
-  if (!updated) {
-    errors.push("todo.md has no \"**Updated:**\" date in its header");
-  } else if (new Date(updated[1]).getTime() && localDay(new Date(updated[1]).getTime()) < localDay(newest)) {
-    errors.push(`the header says Updated ${updated[1]}, but a plan file changed on ${localDay(newest)}`);
+  const changeLog = todo.match(/## Change log\n([\s\S]*?)(?=\n## |$)/);
+  const latest = changeLog && changeLog[1].match(/^- (\d{1,2} \w+ \d{4})/m);
+  if (!latest) {
+    errors.push("todo.md has no dated \"## Change log\" entry");
+  } else if (new Date(latest[1]).getTime() && localDay(new Date(latest[1]).getTime()) < localDay(newest)) {
+    errors.push(`the newest Change log line is dated ${latest[1]}, but a plan file changed on ${localDay(newest)}`);
   }
 
   // 2. A plan file changed after todo.md was last saved means the TODO was not updated with it.
@@ -77,12 +78,23 @@ function check() {
     if (!links.includes(summary)) errors.push(`${summary} is not listed in todo.md`);
   }
 
-  // 5. "Last worked on" holds at most the last three plans.
-  const lastWorked = todo.match(/## Last worked on\n([\s\S]*?)(?=\n## )/);
-  const lastWorkedItems = lastWorked ? lastWorked[1].split("\n").filter((l) => /^\d+\. /.test(l)) : [];
-  if (!lastWorked) errors.push("todo.md has no \"## Last worked on\" section");
-  else if (lastWorkedItems.length > MAX_LAST_WORKED) {
-    errors.push(`"Last worked on" lists ${lastWorkedItems.length} plans; keep the newest ${MAX_LAST_WORKED}`);
+  // 5. Each plan has exactly one numbered entry (Waiting on Jason may link a plan again).
+  const entries = todo.split("\n").filter((l) => /^\d+\. /.test(l));
+  const counts = new Map();
+  for (const line of entries) {
+    const link = [...line.matchAll(/\]\((plan\/[^)\s]+)\)/g)].pop();
+    if (link) counts.set(link[1], (counts.get(link[1]) || 0) + 1);
+  }
+  for (const [link, count] of counts) {
+    if (count > 1) errors.push(`${link} has ${count} numbered entries in todo.md; list it once`);
+  }
+
+  // 6. "Now" holds at most three plans.
+  const now = todo.match(/## Now\n([\s\S]*?)(?=\n## )/);
+  const nowItems = now ? now[1].split("\n").filter((l) => /^\d+\. /.test(l)) : [];
+  if (!now) errors.push("todo.md has no \"## Now\" section");
+  else if (nowItems.length > MAX_NOW) {
+    errors.push(`"Now" lists ${nowItems.length} plans; keep at most ${MAX_NOW}`);
   }
 
   return errors;
@@ -98,7 +110,7 @@ const input = process.argv.includes("--stop-hook") ? readStdin() : {};
 const message =
   "todo.md is stale, so this turn cannot end yet:\n" +
   errors.map((e) => `- ${e}`).join("\n") +
-  "\nUpdate todo.md (header date, Last worked on with the plan moved to the top, Open entries) and the owning plan summary, then finish the turn.";
+  "\nUpdate todo.md (the plan's Now line, a dated Change log line, its entry listed once) and the owning plan summary, then finish the turn.";
 console.error(message);
 // The Stop hook is re-run after a block. If it is still stale on that retry, let the turn end
 // so it cannot loop; the message above is the record of what is outstanding.

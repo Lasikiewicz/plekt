@@ -1,7 +1,7 @@
 # Application speed Phase G matrix - 18 September 2026
 
 The release-verification matrix for
-[`plan/active/application-speed-remediation/plan.md`](../../plan/active/application-speed-remediation/plan.md),
+[`plan/archive/application-speed-remediation/plan.md`](../../plan/archive/application-speed-remediation/plan.md),
 taken after step 49 on the `develop` working tree. It covers the 12 main routes plus Ludwig,
 Reacher, Bad Grandpa, and A Quiet Place, six samples per route per population, two
 back-to-back populations, the first round of each population discarded.

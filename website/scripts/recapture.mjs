@@ -11,8 +11,15 @@
 //            --local-storage-file=<json>   browser-local keys ({"key": "value"}) set before each page loads
 //            --storage-state-file=<json>   reuse a private authenticated Playwright state
 //            --live=<state>[,<state>]      the named live states (catalogue `live`) exist in the app now
+//            --catalogue=<file>            use another catalogue file (default capture-catalogue.json)
+//            --check                       dry run: sign in, check the build, open every entry and
+//                                          resolve its framing targets; no screenshots
+//            --artwork-threshold=<n>       largest accepted artwork shape difference (default in lib/capture-quality.mjs)
+//            --artwork-report=<file>       write every artwork measurement as JSON, for tuning
 //
-// Credentials come from PLEMBFIN_USER and PLEMBFIN_PASSWORD at run time, never from a file.
+// The sign-in comes from PLEKT_USER and PLEKT_PASSWORD, or else from the Username and
+// Password lines of the gitignored .claude/local-environment.md; it is never printed.
+// Exit codes: 0 all ok, 1 some FAIL, 2 setup or sign-in error, 3 build mismatch.
 // Output goes to .tmp-website-build/captures by default; --install copies the PNGs into
 // public/assets/app-captures. Sizes are compared with the catalogue and reported, never forced.
 import fs from "node:fs/promises";
@@ -20,9 +27,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
 import { chromium } from "playwright-core";
+import { loadSignIn } from "./lib/capture-signin.mjs";
+import { measureArtwork, findEmptyRails, artworkWarnings, PLACEHOLDER_PATTERN, MIN_ARTWORK, DEFAULT_ARTWORK_THRESHOLD } from "./lib/capture-quality.mjs";
 
 const websiteRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const catalogue = JSON.parse(await fs.readFile(path.join(websiteRoot, "capture-catalogue.json"), "utf8"));
 const capturesRoot = path.join(websiteRoot, "public", "assets", "app-captures");
 
 const args = process.argv.slice(2);
@@ -31,6 +39,8 @@ const option = (name, fallback = null) => {
   const hit = args.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : fallback;
 };
+// --catalogue=<file>: a copy of the catalogue, for testing framing changes before they land.
+const catalogue = JSON.parse(await fs.readFile(path.resolve(option("catalogue", path.join(websiteRoot, "capture-catalogue.json"))), "utf8"));
 const ids = args.filter((a) => !a.startsWith("--"));
 
 if (flag("list")) {
@@ -55,12 +65,18 @@ const extraLocalStorage = option("local-storage-file") ? JSON.parse(await fs.rea
 const outDir = path.resolve(option("out", path.join(websiteRoot, "..", ".tmp-website-build", "captures")));
 await fs.mkdir(outDir, { recursive: true });
 
-const user = process.env.PLEMBFIN_USER;
-const password = process.env.PLEMBFIN_PASSWORD;
-if (!user || !password) {
-  console.error("Set PLEMBFIN_USER and PLEMBFIN_PASSWORD for the local app before running.");
+const checkOnly = flag("check");
+const artworkThreshold = Number(option("artwork-threshold", DEFAULT_ARTWORK_THRESHOLD));
+const artworkReport = option("artwork-report") ? path.resolve(option("artwork-report")) : null;
+const artworkRows = {};
+let signIn;
+try {
+  signIn = await loadSignIn({ localEnvironmentFile: path.join(websiteRoot, "..", ".claude", "local-environment.md") });
+} catch (error) {
+  console.error(error.message);
   process.exit(2);
 }
+const { user, password } = signIn;
 
 const { browser: browserConfig, storage } = catalogue;
 const baseUrl = (option("base-url") || catalogue.baseUrl).replace(/\/+$/, "");
@@ -112,7 +128,14 @@ async function newVariantContext(variant) {
     await page.fill("#adminEmail", user);
     await page.fill("#adminToken", password);
     await page.click("#authForm button[type=submit]");
-    await page.locator("#adminEmail").waitFor({ state: "hidden", timeout: 15000 });
+    // One attempt only: the login is rate limited, and retrying a wrong sign-in just locks it out.
+    const signedIn = await page.locator("#adminEmail").waitFor({ state: "hidden", timeout: 15000 }).then(() => true, () => false);
+    if (!signedIn) {
+      const shown = (await page.locator("#message").textContent().catch(() => "")).trim();
+      console.error(`Sign-in failed at ${baseUrl}${shown ? `: "${shown}"` : ""}. Username from ${signIn.source} (${user.length} characters). Nothing captured.`);
+      await browser.close();
+      process.exit(2);
+    }
     sessionState = await context.storageState();
   }
   return { context, page };
@@ -192,9 +215,10 @@ async function shoot(page, file, clip = null) {
       const r = img.getBoundingClientRect();
       const x0 = Math.max(r.left, a.x, 0), y0 = Math.max(r.top, a.y, 0);
       const x1 = Math.min(r.right, a.x + a.width, innerWidth), y1 = Math.min(r.bottom, a.y + a.height, innerHeight);
-      const visible = img.complete && img.naturalWidth > 0 && getComputedStyle(img).visibility !== "hidden" && getComputedStyle(img).opacity !== "0";
+      // A spoiler mask is flat on purpose, so it is never reported as unpainted.
+      const visible = img.complete && img.naturalWidth > 0 && getComputedStyle(img).visibility !== "hidden" && getComputedStyle(img).opacity !== "0" && !new RegExp(a.placeholder).test(`${img.className} ${img.src}`);
       return visible && x1 - x0 >= 40 && y1 - y0 >= 40 ? { left: Math.round(x0 - a.x), top: Math.round(y0 - a.y), width: Math.floor(x1 - x0) - 1, height: Math.floor(y1 - y0) - 1, name: img.src.split("/").pop() } : null;
-    }).filter(Boolean), area).catch(() => []);
+    }).filter(Boolean), { ...area, placeholder: PLACEHOLDER_PATTERN }).catch(() => []);
     flat = [];
     for (const r of rects) {
       const { channels } = await sharp(buf).extract({ left: r.left, top: r.top, width: r.width, height: r.height }).stats();
@@ -205,6 +229,32 @@ async function shoot(page, file, clip = null) {
     await page.waitForTimeout(1500);
   }
   missingImages.push(...flat.map((n) => `${n} (unpainted)`));
+  await checkArtwork(page, file, area, Boolean(clip));
+}
+
+// Measures the artwork in the finished shot and records cut-off or misshapen posters, and rails
+// left empty, as WARNs.
+async function checkArtwork(page, file, area, vertical) {
+  const rows = [
+    ...await page.evaluate(measureArtwork, { area, vertical, placeholder: PLACEHOLDER_PATTERN, minSize: MIN_ARTWORK }).catch(() => []),
+    ...await page.evaluate(findEmptyRails, { area, minSize: MIN_ARTWORK }).catch(() => []),
+  ];
+  artworkRows[path.basename(file)] = rows;
+  artworkIssues.push(...artworkWarnings(rows, { threshold: artworkThreshold }));
+}
+
+// A rail fills after the panel around it renders (the dashboard history rows are deferred
+// startup work), and until then it has no "Loading" text or images for settle() and
+// loadAllImages() to wait on. Give empty rails in the shot area up to 20 s to fill; one still
+// empty is reported by checkArtwork. `areaOf` returns the area, or null for the viewport.
+async function waitForRails(page, areaOf = async () => null) {
+  for (let i = 0; i < 40; i++) {
+    const vp = page.viewportSize();
+    const area = (await areaOf().catch(() => null)) || { x: 0, y: 0, width: vp.width, height: vp.height };
+    const empty = await page.evaluate(findEmptyRails, { area, minSize: MIN_ARTWORK }).catch(() => []);
+    if (!empty.length) return;
+    await page.waitForTimeout(500);
+  }
 }
 
 async function box(locator, what, noScroll = false) {
@@ -258,6 +308,7 @@ async function composeScroll(page, f, file) {
   const container = page.locator(f.container).first();
   await container.waitFor({ state: "visible", timeout: 10000 });
   await settle(page);
+  await waitForRails(page, async () => ({ x: 0, y: -1e7, width: page.viewportSize().width, height: 2e7 }));
   // Wait for the detail content to render (a loading page is only a header and a blank body).
   for (let i = 0; i < 20; i++) {
     const ready = await container.evaluate((el) => el.scrollHeight * (el.getBoundingClientRect().height / el.clientHeight || 1) > el.getBoundingClientRect().height + 100);
@@ -295,6 +346,8 @@ async function composeScroll(page, f, file) {
   await container.evaluate((el) => { el.scrollTop = 0; });
   await page.waitForTimeout(500);
   geo = await measure();
+  // The composed shot spans the whole page height, so only sideways cut-offs count.
+  await checkArtwork(page, file, { x: 0, y: -1e7, width: vp.width, height: 2e7 }, false);
   const maxScroll = Math.max(0, geo.total - geo.h);
   const step = geo.h - geo.fixed;
   const count = Math.max(1, Math.ceil(maxScroll / step) + 1);
@@ -324,17 +377,27 @@ async function composeScroll(page, f, file) {
 
 // Images still unloaded when the last capture was taken; reported on the result line.
 let missingImages = [];
+// Artwork cut off or misshapen in the last capture; reported on the result line.
+let artworkIssues = [];
 
 async function capture(page, entry, file) {
   const f = entry.framing;
   missingImages = [];
+  artworkIssues = [];
   if (f.type === "scroll-compose") return composeScroll(page, f, file);
-  if (f.type === "viewport") { missingImages = await loadAllImages(page); return shoot(page, file); }
+  if (f.type === "viewport") { await waitForRails(page); missingImages = await loadAllImages(page); return shoot(page, file); }
   if (f.type === "full-page") return page.screenshot({ path: file, fullPage: true });
   if (f.type === "element" || f.type === "crop") {
     const target = f.target;
     // Sections render after their data arrives, so let the target appear before loading images.
     await locatorFor(page, target).waitFor({ state: "attached", timeout: 30000 }).catch(() => {});
+    await waitForRails(page, async () => {
+      const a = await locatorFor(page, target).boundingBox();
+      const e = f.through ? await locatorFor(page, f.through).boundingBox() : null;
+      if (!a || !e) return a;
+      const x = Math.min(a.x, e.x), y = Math.min(a.y, e.y);
+      return { x, y, width: Math.max(a.x + a.width, e.x + e.width) - x, height: Math.max(a.y + a.height, e.y + e.height) - y };
+    });
     missingImages = await loadAllImages(page);
     let b = await box(locatorFor(page, target), JSON.stringify(target), f.noScroll);
     if (f.through && f.noScroll) {
@@ -371,6 +434,23 @@ async function capture(page, entry, file) {
   throw new Error(`Framing "${f.type}" is not automated by this script yet`);
 }
 
+// --check: the entry opens and its framing targets are on the page, without a screenshot.
+async function checkEntry(page, entry) {
+  const f = entry.framing;
+  if (f.type === "scroll-compose") {
+    await page.locator(f.container).first().waitFor({ state: "visible", timeout: 10000 }).catch(() => { throw new Error(`Container not found or hidden: ${f.container}`); });
+    return "container found";
+  }
+  if (f.type === "element" || f.type === "crop") {
+    await locatorFor(page, f.target).waitFor({ state: "attached", timeout: 30000 }).catch(() => {});
+    const b = await box(locatorFor(page, f.target), JSON.stringify(f.target), f.noScroll);
+    if (f.through) await box(locatorFor(page, f.through), JSON.stringify(f.through), true);
+    return `target ${Math.round(b.width)}x${Math.round(b.height)}`;
+  }
+  if (f.type === "viewport" || f.type === "full-page") return "route opened";
+  throw new Error(`Framing "${f.type}" is not automated by this script yet`);
+}
+
 const results = [];
 for (const variant of Object.keys(catalogue.variants)) {
   if (wantVariants && !wantVariants.includes(variant)) continue;
@@ -385,6 +465,13 @@ for (const variant of Object.keys(catalogue.variants)) {
     const row = { name, status: "ok", note: "" };
     try {
       // --live=playback,sync-issue: the operator has put the app in those states first.
+      if (checkOnly && entry.live && !(option("live") || "").split(",").includes(entry.live)) {
+        row.status = "skip";
+        row.note = `needs live state "${entry.live}"`;
+        results.push(row);
+        console.log(`${row.status}\t${row.name}\t${row.note}`);
+        continue;
+      }
       if (entry.live && !(option("live") || "").split(",").includes(entry.live)) throw new Error(`needs live state "${entry.live}" (${catalogue.live[entry.live]}); the local app does not have it, and the script does not fabricate one`);
       if (!entry.steps && /click|open|expanded|toggle|menu|dialog|tab|press/i.test(entry.state)) {
         row.note = "state has interactions but the entry has no `steps`; captured at the route only. ";
@@ -395,12 +482,19 @@ for (const variant of Object.keys(catalogue.variants)) {
       await settle(page);
       await runSteps(page, entry.steps);
       if (entry.steps) await settle(page);
+      if (checkOnly) {
+        row.note += await checkEntry(page, entry);
+        results.push(row);
+        console.log(`${row.status}\t${row.name}\t${row.note}`);
+        continue;
+      }
       await capture(page, entry, file);
       const { width, height } = await sharp(file).metadata();
       const want = entry.sizes[variant];
       row.note += `${width}x${height}`;
       if (want && (want.width !== width || want.height !== height)) row.note += ` (catalogue ${want.width}x${want.height})`;
-      if (missingImages.length) row.note += ` WARN ${missingImages.length} image(s) never loaded: ${missingImages.slice(0, 5).join(", ")}`;
+      const warnings = [...(missingImages.length ? [`${missingImages.length} image(s) never loaded: ${missingImages.slice(0, 5).join(", ")}`] : []), ...artworkIssues];
+      if (warnings.length) row.note += ` WARN ${warnings.join("; ")}`;
       if (flag("install")) await fs.copyFile(file, path.join(capturesRoot, name));
     } catch (error) {
       row.status = "FAIL";
@@ -412,6 +506,9 @@ for (const variant of Object.keys(catalogue.variants)) {
   await context.close();
 }
 await browser.close();
-const failed = results.filter((r) => r.status !== "ok").length;
-console.log(`\n${results.length - failed} captured, ${failed} failed. Output: ${outDir}`);
+if (artworkReport) await fs.writeFile(artworkReport, JSON.stringify(artworkRows, null, 2));
+const failed = results.filter((r) => r.status === "FAIL").length;
+const skipped = results.filter((r) => r.status === "skip").length;
+if (checkOnly) console.log(`\n${results.length - failed - skipped} ready, ${failed} failed, ${skipped} need a live state. Check only, nothing captured.`);
+else console.log(`\n${results.length - failed} captured, ${failed} failed. Output: ${outDir}`);
 process.exit(failed ? 1 : 0);

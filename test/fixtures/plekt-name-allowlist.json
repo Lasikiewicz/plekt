@@ -6,9 +6,27 @@
     "website": "Exact website/deployment references deferred to the separately authorized website release; this guard still rejects new old-name lines here."
   },
   "files": {
+    "docs/agent-release-candidate.md": {
+      "reason": "compatibility",
+      "lines": [["$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) \"plembfin-release-candidate\"", 1]]
+    },
+    "docs/agent-release-publish.md": {
+      "reason": "compatibility",
+      "lines": [
+        ["`https://demo.plembfin.com/` is served by the dedicated Oracle Cloud Compute instance", 1],
+        ["then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.", 1],
+        ["npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message \"Publish Plekt website for v<version>\" --commit-dirty=true", 1],
+        ["Do not deploy when a check or the build fails, and never deploy the `plembfin`", 1]
+      ]
+    },
+    "scripts/workflow-check.js": {
+      "reason": "compatibility",
+      "lines": [["const p = path.join(root, '.git', 'plembfin-release.lock');", 1]]
+    },
     ".claude/skills/force-to-main/SKILL.md": {
       "reason": "compatibility",
       "lines": [
+        ["plembfin-website only (check:deploy, build, Wrangler). Final approval already covers this.", 1],
         [
           "$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) \"plembfin-release-candidate\"",
           1
@@ -4676,6 +4694,9 @@
     "reddit-app/README.md": {
       "reason": "compatibility",
       "lines": [
+        ["after activation. Production Redis state remains unverified. The old `plembfin` app", 1],
+        ["is still installed separately on r/plembfin and is untouched by this revision.", 1],
+        ["Set-Location C:\\Github\\plembfin\\reddit-app", 1],
         [
           "A small [Devvit](https://developers.reddit.com) app installed only in r/plembfin. On a",
           1
@@ -9308,14 +9329,6 @@
       "reason": "website",
       "lines": [
         [
-          "<a class:list={{ active: isWhyPlembfin }} href=\"/why-plembfin/\">Why Plekt</a>",
-          1
-        ],
-        [
-          "const isWhyPlembfin = pathname.startsWith(\"/why-plembfin\");",
-          1
-        ],
-        [
           "<a class=\"site-brand\" href=\"/\" aria-label=\"Plembfin home\">",
           1
         ],
@@ -11592,7 +11605,20 @@
         ]
       ]
     },
-    "website/src/pages/why-plembfin.astro": {
+    "website/public/_redirects": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "/why-plembfin /why-plekt/ 301",
+          1
+        ],
+        [
+          "/why-plembfin/ /why-plekt/ 301",
+          1
+        ]
+      ]
+    },
+    "website/src/pages/why-plekt.astro": {
       "reason": "website",
       "lines": [
         [
@@ -11624,15 +11650,7 @@
           1
         ],
         [
-          "<header class=\"simple-why-hero\" aria-labelledby=\"why-plembfin-title\">",
-          1
-        ],
-        [
           "<p class=\"simple-eyebrow\">PLEMBFIN / WHY</p>",
-          1
-        ],
-        [
-          "<h1 id=\"why-plembfin-title\">One watch history. Every server in sync.</h1>",
           1
         ],
         [

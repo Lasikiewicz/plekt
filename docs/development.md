@@ -3,6 +3,33 @@
 How to run, check, ship, and release the app: npm scripts, the build check, git hooks,
 GitHub Actions, Docker, and the changelog/versioning machinery.
 
+## Workflow checks
+
+Repository-local skills give the ordered release procedures and explicit approval stops.
+Detailed candidate, website and publication operations are linked by phase, rather than
+loaded for every step. Non-Claude agents start with AGENTS.md and CLAUDE.md.
+
+Read-only entry points: `npm run push:precheck`, `npm run alpha:precheck`, and
+`npm run release:precheck` (each accepts `-- --dry-run`; prechecks never mutate anything).
+They query GitHub cleanup/security state and local Git/lock facts; they do not fetch,
+acquire locks, promote, push or treat successful checks as approval. API/auth failures
+fail loudly; existing user-decision exceptions remain in the skills.
+
+`npm run release:candidate -- <record.json>` checks pinned refs, detached HEAD, port 5056
+ownership and release metadata. `node scripts/workflow-check.js staged` checks sensitive
+paths, README consistency and asset stamps against an index-matching worktree.
+`before-push push|alpha|main` reruns the
+publication checks without bypassing the pre-push build hook. `release:reconcile` refuses
+missing develop content; only source/asset and known root-manifest version fields are
+normalized. Every listed commit still needs human review.
+`release:verify-live -- <version>` verifies the published website.
+
+These checks cannot establish wording quality, capture privacy/accuracy or user approval.
+Candidate startup uses an absolute launcher path so the checker can tie its PID to the
+recorded checkout; manual process ownership review remains required.
+The candidate `--confirm`/outstanding-website ordering contradiction
+is recorded for a separately approved fix; no bypass was introduced.
+
 ## Formerly Plembfin
 
 Use the new image and repository names in new examples. Existing Docker installs
@@ -19,8 +46,8 @@ names. Old backups remain supported, but new ones cannot restore on older builds
 The Windows installer prepares an in-place service/data-folder migration; real
 upgrade verification remains required. See [decision 44](decisions.md#44-plekt-keeps-legacy-identifiers-to-preserve-existing-installs).
 
-The local checkout path, lifecycle skill directory, server log and release lock
-retain their current names. Renaming the checkout also requires migrating local
+The local lifecycle skill is `plekt-local-stack`; checkout path, server log and release lock
+retain their existing identifiers. Renaming the checkout also requires migrating local
 agent memory and path settings. The demo hostname and Cloudflare project retain
 their configured names until the separate website release work.
 

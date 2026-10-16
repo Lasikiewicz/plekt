@@ -5,11 +5,10 @@
 //   node scripts/stale-captures.mjs --since=<ref>        files changed since another ref
 //   node scripts/stale-captures.mjs <file> [<file> ...]  these files (paths from the repository root)
 //
-// An image is stale when one of its catalogue `sources` changed. Every view the image has
-// (Classic and Modern, dark and light) is retaken. Shared files in `commonSources` drive every
-// image, and the Modern ones every image with a Modern view. Changed files under public/ or
-// server/ that no image lists are printed for review. The last line is the retake command.
-// findStaleCaptures() is also used by scripts/update-local-updates.js for plan/updates.md.
+// Source-path matches are review candidates only. Compare each existing image with the
+// approved release candidate before choosing which variants actually need retaking.
+// Shared paths and asset restamps can flag unchanged images.
+// findStaleCaptures() also supplies scripts/update-local-updates.js.
 import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -96,12 +95,12 @@ function main() {
 
   const result = findStaleCaptures(changed);
   console.log(`Checked ${label}: ${changed.length} file(s).`);
-  if (result.shared.length) console.log(`Shared files changed (drive every image): ${result.shared.join(", ")}`);
+  if (result.shared.length) console.log(`Shared source paths changed (all images need review, not automatic retakes): ${result.shared.join(", ")}`);
   if (!result.images.length) {
     console.log("No website images to retake.");
   } else {
     const views = result.images.reduce((n, i) => n + i.variants.length, 0);
-    console.log(`\n${result.images.length} image(s), ${views} view(s) to retake:`);
+    console.log(`\n${result.images.length} image(s), ${views} view(s) to review against existing website images:`);
     for (const image of result.images) {
       const live = image.live ? `  [needs live state: ${image.live}]` : "";
       const shownFiles = image.files.filter((f) => !result.shared.includes(f));
@@ -113,7 +112,7 @@ function main() {
     for (const file of result.unmapped) console.log(`  ${file}`);
   }
   if (result.commands.length) console.log("");
-  for (const command of result.commands) console.log(`Retake: ${command}`);
+  for (const command of result.commands) console.log(`Candidate command (narrow to confirmed retakes before running): ${command}`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) main();

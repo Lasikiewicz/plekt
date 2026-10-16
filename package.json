@@ -25,7 +25,13 @@
     "server:restart": "node scripts/restart-server.js",
     "check:website-impact": "node scripts/site-impact.js",
     "prepare": "node scripts/install-git-hooks.js",
-    "push:prepare": "node scripts/prepare-push.js"
+    "push:prepare": "node scripts/prepare-push.js",
+    "push:precheck": "node scripts/workflow-check.js precheck push",
+    "alpha:precheck": "node scripts/workflow-check.js precheck alpha",
+    "release:precheck": "node scripts/workflow-check.js precheck main",
+    "release:candidate": "node scripts/workflow-check.js candidate",
+    "release:reconcile": "node scripts/workflow-check.js reconcile",
+    "release:verify-live": "node scripts/verify-release-website.js"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.1",
