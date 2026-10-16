@@ -1,15 +1,15 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.2";
-import { state, elements } from "./state.js?v=2.0.0.3.2";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.3.2";
-import { hydratePosters } from "./images.js?v=2.0.0.3.2";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.0.0.3.2";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.0.0.3.2";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.3";
+import { state, elements } from "./state.js?v=2.0.0.3.3";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.0.0.3.3";
+import { hydratePosters } from "./images.js?v=2.0.0.3.3";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.0.0.3.3";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.0.0.3.3";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
-} from "./up-next-shared.js?v=2.0.0.3.2";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.0.0.3.2";
-import { renderMediaCard } from "./media-card.js?v=2.0.0.3.2";
+} from "./up-next-shared.js?v=2.0.0.3.3";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.0.0.3.3";
+import { renderMediaCard } from "./media-card.js?v=2.0.0.3.3";
 
 const UP_NEXT_TTL_MS = 2 * 60 * 1000;
 const UP_NEXT_TIMEOUT_MS = 20000;

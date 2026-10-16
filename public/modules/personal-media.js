@@ -1,10 +1,10 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.2";
-import { state, elements } from "./state.js?v=2.0.0.3.2";
-import { escapeAttribute, escapeHtml, formatTmdbDate, episodeCode } from "./utils.js?v=2.0.0.3.2";
-import { hydratePosters } from "./images.js?v=2.0.0.3.2";
-import { normalizeMediaCardRecord, renderMediaCard } from "./media-card.js?v=2.0.0.3.2";
-import { hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata } from "./personal-media-metadata.js?v=2.0.0.3.2";
-import { bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog, openImportPlaylistsDialog, openShowEpisodePicker, recentlyDeletedButtonHtml, renderPlaylists, watchUncheckedPlaylistRules } from "./playlists.js?v=2.0.0.3.2";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.3";
+import { state, elements } from "./state.js?v=2.0.0.3.3";
+import { escapeAttribute, escapeHtml, formatTmdbDate, episodeCode } from "./utils.js?v=2.0.0.3.3";
+import { hydratePosters } from "./images.js?v=2.0.0.3.3";
+import { normalizeMediaCardRecord, renderMediaCard } from "./media-card.js?v=2.0.0.3.3";
+import { hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata } from "./personal-media-metadata.js?v=2.0.0.3.3";
+import { bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog, openImportPlaylistsDialog, openShowEpisodePicker, recentlyDeletedButtonHtml, renderPlaylists, watchUncheckedPlaylistRules } from "./playlists.js?v=2.0.0.3.3";
 
 export { openAddToListDialog, openCreateListDialog };
 

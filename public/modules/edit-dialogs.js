@@ -1,11 +1,11 @@
-import { state } from "./state.js?v=2.0.0.3.2";
-import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.3.2";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.2";
-import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.3.2";
-import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.3.2";
-import { createSeasonPostersPanel } from "./season-posters-panel.js?v=2.0.0.3.2";
-import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.3.2";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.3.2";
+import { state } from "./state.js?v=2.0.0.3.3";
+import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.0.0.3.3";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.3.3";
+import { isWatchedHistoryAction } from "./sync.js?v=2.0.0.3.3";
+import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.0.0.3.3";
+import { createSeasonPostersPanel } from "./season-posters-panel.js?v=2.0.0.3.3";
+import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.0.0.3.3";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.0.0.3.3";
 
 // Callbacks injected by app.js at startup.
 let _setMessage = () => {};

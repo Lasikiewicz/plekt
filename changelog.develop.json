@@ -1,14 +1,14 @@
 {
-  "version": "2.0.0.3.2",
-  "build": 2,
+  "version": "2.0.0.3.3",
+  "build": 3,
   "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
-  "updatedAt": "2026-10-16T12:32:26.730Z",
+  "updatedAt": "2026-10-16T12:32:56.690Z",
   "entries": [
     {
-      "build": 2,
-      "date": "2026-10-16T12:32:26.730Z",
-      "commit": "45efb901e17f6e84830d633b7857e05453d18374",
-      "message": "This update includes restore playback tracking and improve season navigation, make Docker quick-start use published images, safeguard ratings and clarify incomplete sync and restore results, expose the website stable release feed, read Reddit release announcements from the project website, and patch Reddit bot runtime and build dependencies.",
+      "build": 3,
+      "date": "2026-10-16T12:32:56.690Z",
+      "commit": "2e88d7e327837d6d209858310b73309889bdbc57",
+      "message": "This update includes restore playback tracking and improve season navigation and protect media state and simplify deployment.",
       "author": "Lasikiewicz",
       "details": [
         "Recover interrupted restore locks automatically so live playback and watch history resume.",
@@ -21,18 +21,14 @@
         "Retain interrupted restore errors until dismissed while stale guards recover after three minutes.",
         "Return explanatory restore-conflict responses for paused automated writes while keeping manual watch edits available.",
         "Serve stable release metadata as JSON with matching current and latest-entry versions, excluding alpha release data.",
-        "Fetch the project release feed and reject invalid or redirected responses before changing announcement state.",
-        "Record the current release without posting when the bot has no stored baseline.",
+        "Fetch Reddit announcement data from the project release feed and reject invalid or redirected responses before changing announcement state.",
+        "Record the current release without posting when the Reddit bot has no stored baseline.",
         "Point community links and bot policies at r/plekt while requiring separate domain and installation approvals.",
         "Patch vulnerable Hono, protobuf, image parsing, YAML, brace expansion and source-map dependencies without upgrading Devvit or crossing dependency major versions."
       ],
       "messageFragments": [
         "Fix - Restore playback tracking and improve season navigation",
-        "Fix - Make Docker quick-start use published images",
-        "Fix - Safeguard ratings and clarify incomplete sync and restore results",
-        "Fix - Expose the website stable release feed",
-        "Fix - Read Reddit release announcements from the project website",
-        "Security - Patch Reddit bot runtime and build dependencies"
+        "Fix - Protect media state and simplify deployment"
       ]
     }
   ]
