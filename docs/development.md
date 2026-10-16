@@ -435,17 +435,13 @@ guardrail, and `/changelog.json` against the release version. If an OCI setting 
 missing or the deployment/verification fails, the main release workflow remains
 failed instead of reporting the demo as current.
 
-Optional Traks analytics for `demo.plekt.net` are configured with repository
-Variables `PLEKT_TRAKS_COLLECTOR_ORIGIN` and `PLEKT_TRAKS_SITE_KEY`; workflows also accept their existing `PLEMBFIN_TRAKS_*` counterparts. The existing
-`PLEKT_TRAKS_SCRIPT_URL` variable remains accepted as a legacy collector-origin
-fallback. If the Traks origin or site key is empty, the demo loads no tracking. These
-values are public configuration; never place a Cloudflare API token or R2 credential in
-the demo container or Actions variables. The demo proxies the browser's first-party
-`/t` tracker and `/api/event` collector request, and honors browser Do Not Track and
-Global Privacy Control signals. Traks is cookieless. Traks reports are opened from the
-dashboard URL created by the Traks deployment; they are not exposed through the public
-demo URL. Use a separate Traks site key for the demo if you want its traffic reported
-separately from `plembfin.com`.
+Traks analytics for `demo.plekt.net` load only when `PLEKT_DEMO_MODE=1` (or its legacy
+alias). The demo uses site key `pb_live_z70rk17kytof4pd9ejy1ovl6` and loads
+`https://plembfin-traks-collect.lasikie.workers.dev/t.js`; its CSP permits that origin
+for scripts and connections. It honors browser Do Not Track and Global Privacy Control.
+Self-hosted installs have analytics disabled and retain their local-only script and
+connection CSP. The public website uses a separate site key. No analytics credentials
+or environment changes are needed for the next demo deployment.
 
 Pushes to `main` and `alpha` trigger `.github/workflows/windows-installer.yml`. That job
 runs on a Windows runner, installs and probes the Windows builds of `better-sqlite3` and

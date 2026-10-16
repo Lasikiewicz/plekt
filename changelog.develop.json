@@ -1,14 +1,14 @@
 {
-  "version": "2.0.0.3.5",
-  "build": 5,
+  "version": "2.0.0.3.6",
+  "build": 6,
   "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
-  "updatedAt": "2026-10-16T13:18:47.249Z",
+  "updatedAt": "2026-10-16T13:30:08.159Z",
   "entries": [
     {
-      "build": 5,
-      "date": "2026-10-16T13:18:47.249Z",
-      "commit": "9e5e4ad72ed974d33420a2b1035b05a36a41a3be",
-      "message": "This update includes restore playback tracking and improve season navigation, protect media state and simplify deployment, clarify Jellyfin webhook labels and backup storage, and point public demo links to the Plekt domain.",
+      "build": 6,
+      "date": "2026-10-16T13:30:08.159Z",
+      "commit": "d208e6b6ba76765bfdc3ffea39291255f9a48426",
+      "message": "This update includes restore playback tracking and improve season navigation, protect media state and simplify deployment, clarify Jellyfin webhook labels and backup storage, point public demo links to the Plekt domain, and correct website and demo Traks analytics keys.",
       "author": "Lasikiewicz",
       "details": [
         "Recover interrupted restore locks automatically so live playback and watch history resume.",
@@ -27,13 +27,16 @@
         "Patch vulnerable Hono, protobuf, image parsing, YAML, brace expansion and source-map dependencies without upgrading Devvit or crossing dependency major versions.",
         "Use plekt as the suggested Jellyfin webhook display label while preserving existing labels.",
         "Explain that new installs retain the backups/plembfin folder for compatibility.",
-        "Open the live Plekt demo from the README, public guides and website homepage using https://demo.plekt.net/."
+        "Open the live Plekt demo from the README, public guides and website homepage using https://demo.plekt.net/.",
+        "Attribute plekt.net traffic to the Plekt website site key using the Traks collector script.",
+        "Attribute demo traffic to its separate site key only in demo mode, with collector access allowed by the demo security policy and tracking disabled for self-hosted installs."
       ],
       "messageFragments": [
         "Fix - Restore playback tracking and improve season navigation",
         "Fix - Protect media state and simplify deployment",
         "Docs - Clarify Jellyfin webhook labels and backup storage",
-        "Docs - Point public demo links to the Plekt domain"
+        "Docs - Point public demo links to the Plekt domain",
+        "Fix - Correct website and demo Traks analytics keys"
       ]
     }
   ]

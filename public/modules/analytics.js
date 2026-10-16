@@ -10,6 +10,7 @@ function loadTraks(config) {
   if (!config?.enabled || window.__plembfinTraksLoaded || window.__plembfinTraksLoading || privacySignalIsSet()) return;
 
   window.__plembfinTraksLoading = true;
+  window.traks = window.traks || function () { (window.traks.q = window.traks.q || []).push(arguments); };
   const script = document.createElement("script");
   script.defer = true;
   script.src = config.scriptUrl;
@@ -62,7 +63,7 @@ async function boot() {
     && (() => {
       try {
         const scriptUrl = new URL(traksConfig.scriptUrl, window.location.href);
-        return scriptUrl.origin === window.location.origin && scriptUrl.pathname === "/t";
+        return scriptUrl.href === "https://plembfin-traks-collect.lasikie.workers.dev/t.js";
       } catch {
         return false;
       }

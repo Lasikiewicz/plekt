@@ -156,11 +156,10 @@ In Cloudflare:
    | Node version | `22.19.0` via `NODE_VERSION` in Pages environment variables |
 
 Set `NODE_VERSION` for both Production and Preview environments so Pages matches the
-Node version used by the local setup guide. Set `PUBLIC_TRAKS_SITE_KEY` as a public build
-variable and `TRAKS_COLLECTOR_ORIGIN` as a production Pages runtime variable. Use the
-current Traks site key from the Installation panel; do not reuse a previous key. Do not
-add application secrets: the website only needs its package dependencies, repository
-files, and the collector origin/site key.
+Node version used by the local setup guide. The shared website layout embeds the Plekt
+Traks key `pb_live_fnve8des76y7lxf58ivx7a5s` and the direct collector script at
+`https://plembfin-traks-collect.lasikie.workers.dev/t.js`. Website analytics do not need
+build or runtime variables. Do not add application secrets.
 
 Leave automatic production branch deployments enabled, set the production branch to
 `main`, and set the preview branch to **None (Disable automatic branch deployments)**.

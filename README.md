@@ -556,9 +556,8 @@ is in [`.env.example`](.env.example).
 | `TMDB_API_KEY` | _none_ | Default TMDB key (Settings takes precedence). |
 | `YOUTUBE_API_KEY` | _none_ | Optional key for trailer metadata (Settings takes precedence). |
 | `OMDB_API_KEY` | _none_ | Optional key for IMDb rating badges. Free tier: 1,000 req/day. |
-| `PUBLIC_TRAKS_SITE_KEY` | _none_ | Optional public website build setting for Traks; the browser uses first-party `/t` and `/api/event` routes. Use the current key from the Traks Installation panel. |
-| `TRAKS_COLLECTOR_ORIGIN` | _none_ | Cloudflare Pages runtime origin for the Traks collector; it is kept out of browser configuration. `PUBLIC_TRAKS_SCRIPT_URL` remains a legacy fallback. |
-| `PLEKT_TRAKS_COLLECTOR_ORIGIN` / `PLEKT_TRAKS_SITE_KEY` | _none_ | Optional public-demo Traks settings; the demo proxies `/t` and `/api/event` first-party. `PLEKT_TRAKS_SCRIPT_URL` remains a legacy origin fallback. |
+| Public website Traks | Fixed in website source | `plekt.net` loads the Traks collector script with its own site key. |
+| Public demo Traks | Demo mode only | `PLEKT_DEMO_MODE=1` enables the separate demo site key and collector CSP allowance. Self-hosted installs load no tracker. |
 | `PLEX_SERVER_URL` / `PLEX_TOKEN` / `PLEX_USERNAME` / `PLEX_ENABLED` | _none_ | Default Plex values (Settings takes precedence). |
 | `EMBY_SERVER_URL` / `EMBY_API_KEY` / `EMBY_USER_ID` / `EMBY_ENABLED` | _none_ | Default Emby values (Settings takes precedence). |
 | `JELLYFIN_SERVER_URL` / `JELLYFIN_API_KEY` / `JELLYFIN_USER_ID` / `JELLYFIN_ENABLED` | _none_ | Default Jellyfin values (Settings takes precedence). |

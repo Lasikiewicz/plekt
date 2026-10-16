@@ -6,6 +6,15 @@
     "website": "Exact website/deployment references deferred to the separately authorized website release; this guard still rejects new old-name lines here."
   },
   "files": {
+    "test/analyticsConfig.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        ["assert.equal(config.collectorOrigin, demoMode ? \"https://plembfin-traks-collect.lasikie.workers.dev\" : \"\");", 1],
+        ["[false, false, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 0],", 1],
+        ["[true, true, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 0],", 1],
+        ["[true, false, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 1],", 1]
+      ]
+    },
     "docs/agent-release-candidate.md": {
       "reason": "compatibility",
       "lines": [["$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) \"plembfin-release-candidate\"", 1]]
@@ -2889,6 +2898,7 @@
     "docs/development.md": {
       "reason": "compatibility",
       "lines": [
+        ["`https://plembfin-traks-collect.lasikie.workers.dev/t.js`; its CSP permits that origin", 1],
         [
           "## Formerly Plembfin",
           1
@@ -3834,6 +3844,7 @@
     "docs/website-deployment.md": {
       "reason": "compatibility",
       "lines": [
+        ["`https://plembfin-traks-collect.lasikie.workers.dev/t.js`. Website analytics do not need", 1],
         [
           "separate `plembfin-website` Cloudflare Pages project. It does not push GitHub, run",
           1
@@ -4068,6 +4079,7 @@
     "public/modules/analytics.js": {
       "reason": "internal",
       "lines": [
+        ["return scriptUrl.href === \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\";", 1],
         [
           "if (!config?.enabled || window.__plembfinTraksLoaded || window.__plembfinTraksLoading || privacySignalIsSet()) return;",
           1
@@ -5133,6 +5145,8 @@
     "server/server.js": {
       "reason": "internal",
       "lines": [
+        ["scriptUrl: \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\",", 1],
+        ["collectorOrigin: \"https://plembfin-traks-collect.lasikie.workers.dev\",", 1],
         [
           "if (path.basename(DB_PATH) === \"plembfin.db\" && fs.existsSync(path.join(DATA_DIR, \"plekt.db\"))) {",
           1
@@ -11431,6 +11445,7 @@
     "website/src/layouts/SiteLayout.astro": {
       "reason": "website",
       "lines": [
+        ["const traksScriptUrl = \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\";", 1],
         [
           "<meta property=\"og:site_name\" content=\"Plembfin\" />",
           1

@@ -15,8 +15,8 @@ const pageTitle = title ? `${site.name} - ${title}` : site.title;
 const canonical = new URL(Astro.url.pathname, site.url).href;
 const previewBranch = import.meta.env.MODE !== "development" && process.env.CF_PAGES_BRANCH && process.env.CF_PAGES_BRANCH !== "main";
 const robots = noindex || previewBranch ? "noindex,nofollow" : "index,follow";
-const traksScriptUrl = "/t";
-const traksSiteKey = import.meta.env.PUBLIC_TRAKS_SITE_KEY ?? "";
+const traksScriptUrl = "https://plembfin-traks-collect.lasikie.workers.dev/t.js";
+const traksSiteKey = "pb_live_fnve8des76y7lxf58ivx7a5s";
 const traksEnabled = Boolean(traksSiteKey);
 ---
 
@@ -314,6 +314,7 @@ const traksEnabled = Boolean(traksSiteKey);
               || hasPrivacySignal
             ) return;
 
+            window.traks=window.traks||function(){(window.traks.q=window.traks.q||[]).push(arguments)};
             const script = document.createElement("script");
             script.defer = true;
             script.src = traksScriptUrl;

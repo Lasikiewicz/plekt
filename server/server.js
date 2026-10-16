@@ -20,28 +20,17 @@ process.env.PLEKT_INSTANCE_ID = INSTANCE_ID;
 process.env.ROLE = ROLE;
 const { isDemoMode } = await import("./src/utils/demoMode.js");
 const DEMO_MODE = isDemoMode();
-const { createTraksProxyHandler, resolveTraksCollectorOrigin } = await import("./src/utils/traksProxy.js");
+const { createTraksProxyHandler } = await import("./src/utils/traksProxy.js");
 
-// Website analytics are deliberately demo-only. The browser always loads the
-// tracker through the demo's own /t route; only the server knows the collector
-// origin. The legacy full tracker URL remains a supported fallback so existing
-// demo environment configuration can be migrated without a forced rebuild.
-const TRAKS_CONFIG = (() => {
-  const collectorOrigin = String(brandEnv("TRAKS_COLLECTOR_ORIGIN") || "").trim();
-  const legacyScriptUrl = String(brandEnv("TRAKS_SCRIPT_URL") || "").trim();
-  const siteKey = String(brandEnv("TRAKS_SITE_KEY") || "").trim();
-  if (!DEMO_MODE || !siteKey || (!collectorOrigin && !legacyScriptUrl)) {
-    return { enabled: false, scriptUrl: "/t", siteKey: "", collectorOrigin: "" };
+// Public-demo analytics must never be enabled on self-hosted installs.
+const TRAKS_CONFIG = DEMO_MODE
+  ? {
+    enabled: true,
+    scriptUrl: "https://plembfin-traks-collect.lasikie.workers.dev/t.js",
+    siteKey: "pb_live_z70rk17kytof4pd9ejy1ovl6",
+    collectorOrigin: "https://plembfin-traks-collect.lasikie.workers.dev",
   }
-
-  try {
-    const resolvedOrigin = resolveTraksCollectorOrigin({ collectorOrigin, legacyScriptUrl });
-    return { enabled: true, scriptUrl: "/t", siteKey, collectorOrigin: resolvedOrigin };
-  } catch (error) {
-    console.warn(`[security] Traks analytics disabled: ${error.message}`);
-    return { enabled: false, scriptUrl: "/t", siteKey: "", collectorOrigin: "" };
-  }
-})();
+  : { enabled: false, scriptUrl: "/t", siteKey: "", collectorOrigin: "" };
 
 const ANALYTICS_CONFIG = {
   enabled: TRAKS_CONFIG.enabled,
@@ -201,10 +190,9 @@ app.use(async (_req, res, next) => {
 
   let contentSecurityPolicy;
   if (DEMO_MODE) {
-    // A public demo must be able to render only its bundled/local resources.
-    // Keeping the policy local also prevents a future UI regression from
-    // quietly reintroducing a provider, image, font, or iframe request.
-    contentSecurityPolicy = "default-src 'self'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; frame-src 'none';";
+    // Only the demo analytics collector may load scripts and receive events.
+    const analyticsOrigin = TRAKS_CONFIG.enabled ? ` ${TRAKS_CONFIG.collectorOrigin}` : "";
+    contentSecurityPolicy = `default-src 'self'; img-src 'self' data: blob:; script-src 'self'${analyticsOrigin}; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self'${analyticsOrigin}; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; frame-src 'none';`;
   } else {
     let extraImgSrc = "";
     try {
