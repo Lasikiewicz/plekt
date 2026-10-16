@@ -477,7 +477,7 @@ playing, backing off to every 45 seconds while idle.
 Unplayed`. Leave everything else unticked, and enable **Send All Properties**.
 
 **Jellyfin** - Install the **Webhooks** plugin → add a **Generic Webhook** named
-`plembfin` → paste the URL → enable `Playback Start/Progress/Stop` and `User Data
+`plekt` (a display label; existing webhook names can stay unchanged) → paste the URL → enable `Playback Start/Progress/Stop` and `User Data
 Saved` under Notification Type, `Movies`/`Episodes` under Item Type → check **Send All
 Properties**.
 
@@ -489,7 +489,7 @@ Plekt runs automated daily backups; each type has its own schedule, retention, a
 manual Back Up Now button.
 
 - **Watch history backups** - snapshots of history, playstates, and resume markers (`data/backups/watch-history`)
-- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
+- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`, including new installs; the folder name is retained for compatibility); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
 - **Personal watchlist recovery** - full backups include the local canonical watchlist and sync ledger; restore pauses provider delivery until an explicit publish, while watch-history-only backups exclude it
 - **Remote backups** - optional Backblaze B2 copies of either type, with per-type schedules and retention settings (Settings → Backup → Remote)
 
