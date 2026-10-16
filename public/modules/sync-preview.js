@@ -1,4 +1,4 @@
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.4.0";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.4.1";
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const esc = (value) => String(value ?? "").replace(/[&<>\"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));

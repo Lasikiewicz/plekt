@@ -4,17 +4,17 @@
 // echoes credentials, only a `configured` flag per section, and a blank secret
 // on save means "keep the stored credential" (except Seerr, whose key is only
 // sent when non-empty).
-import { state } from "./state.js?v=2.0.0.4.0";
-import { buildAuthHeaders } from "./auth.js?v=2.0.0.4.0";
-import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=2.0.0.4.0";
-import { prepareHelpReadMore } from "./settings-shell.js?v=2.0.0.4.0";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.0.0.4.0";
+import { state } from "./state.js?v=2.0.0.4.1";
+import { buildAuthHeaders } from "./auth.js?v=2.0.0.4.1";
+import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=2.0.0.4.1";
+import { prepareHelpReadMore } from "./settings-shell.js?v=2.0.0.4.1";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.0.0.4.1";
 import {
   plexCredentialGuide,
   embyCredentialGuide,
   jellyfinCredentialGuide,
   savedCredentialNote,
-} from "./help-content.js?v=2.0.0.4.0";
+} from "./help-content.js?v=2.0.0.4.1";
 import {
   PLEX_HISTORICAL_SYNC_HELP_HTML,
   PLEX_HISTORICAL_SYNC_CHOICES,
@@ -22,7 +22,7 @@ import {
   PROVIDER_DATE_NOTE_HTML,
   plexHistoricalSyncEnabled,
   plexHistoricalSyncOffWarningHtml,
-} from "./plex-history-policy.js?v=2.0.0.4.0";
+} from "./plex-history-policy.js?v=2.0.0.4.1";
 
 let _cb = {};
 let _tautulliImport = {
