@@ -1,5 +1,5 @@
-import { escapeHtml, escapeAttribute, platformName, formatDate, formatSeasonTitle } from "./utils.js?v=2.0.0.3.3";
-import { normalizeTargetStatus, syncStatus, telemetryTargetStates } from "./sync.js?v=2.0.0.3.3";
+import { escapeHtml, escapeAttribute, platformName, formatDate, formatSeasonTitle } from "./utils.js?v=2.0.0.3.4";
+import { normalizeTargetStatus, syncStatus, telemetryTargetStates } from "./sync.js?v=2.0.0.3.4";
 
 function infoValue(value, fallback = "Not recorded") {
   if (value == null || value === "") return fallback;

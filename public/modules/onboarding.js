@@ -3,17 +3,17 @@
 // wherever possible - openServiceEditModal() for every provider connect/test
 // flow, and the webhook-guide functions - so setup and Settings never diverge
 // in behavior, only in presentation.
-import { state, elements } from "./state.js?v=2.0.0.3.3";
-import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=2.0.0.3.3";
-import { openServiceEditModal } from "./settings-services.js?v=2.0.0.3.3";
-import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=2.0.0.3.3";
-import { claimAdminAccount } from "./auth.js?v=2.0.0.3.3";
-import { lazyExport } from "./route-modules.js?v=2.0.0.3.3";
+import { state, elements } from "./state.js?v=2.0.0.3.4";
+import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=2.0.0.3.4";
+import { openServiceEditModal } from "./settings-services.js?v=2.0.0.3.4";
+import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=2.0.0.3.4";
+import { claimAdminAccount } from "./auth.js?v=2.0.0.3.4";
+import { lazyExport } from "./route-modules.js?v=2.0.0.3.4";
 import {
   PLEX_HISTORICAL_SYNC_CHOICES,
   PLEX_HISTORICAL_SYNC_LABEL,
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=2.0.0.3.3";
+} from "./plex-history-policy.js?v=2.0.0.3.4";
 
 let _cb = {};
 const loadWatchBackups = lazyExport("tools-backups", "loadWatchBackups");
@@ -508,7 +508,7 @@ export function renderSetupPage() {
     root.innerHTML = `<div class="settings-content"><p class="muted-copy">Loading setup...</p></div>`;
     return;
   }
-  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.0.0.3.3" : "/plekt_header_logo_dark.png?v=2.0.0.3.3";
+  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.0.0.3.4" : "/plekt_header_logo_dark.png?v=2.0.0.3.4";
   if (restoreView) {
     renderRestoreView(root, logoSrc);
     return;

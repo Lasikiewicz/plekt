@@ -1,14 +1,14 @@
 {
-  "version": "2.0.0.3.3",
-  "build": 3,
+  "version": "2.0.0.3.4",
+  "build": 4,
   "resetCommit": "23a15494b296f1c3b1ccdfa8b0efd778167b3e7c",
-  "updatedAt": "2026-10-16T12:32:56.690Z",
+  "updatedAt": "2026-10-16T13:07:39.306Z",
   "entries": [
     {
-      "build": 3,
-      "date": "2026-10-16T12:32:56.690Z",
-      "commit": "2e88d7e327837d6d209858310b73309889bdbc57",
-      "message": "This update includes restore playback tracking and improve season navigation and protect media state and simplify deployment.",
+      "build": 4,
+      "date": "2026-10-16T13:07:39.306Z",
+      "commit": "0750814acd58c719284c2549477e9cc6e39269f3",
+      "message": "This update includes restore playback tracking and improve season navigation, protect media state and simplify deployment, and clarify Jellyfin webhook labels and backup storage.",
       "author": "Lasikiewicz",
       "details": [
         "Recover interrupted restore locks automatically so live playback and watch history resume.",
@@ -24,11 +24,14 @@
         "Fetch Reddit announcement data from the project release feed and reject invalid or redirected responses before changing announcement state.",
         "Record the current release without posting when the Reddit bot has no stored baseline.",
         "Point community links and bot policies at r/plekt while requiring separate domain and installation approvals.",
-        "Patch vulnerable Hono, protobuf, image parsing, YAML, brace expansion and source-map dependencies without upgrading Devvit or crossing dependency major versions."
+        "Patch vulnerable Hono, protobuf, image parsing, YAML, brace expansion and source-map dependencies without upgrading Devvit or crossing dependency major versions.",
+        "Use plekt as the suggested Jellyfin webhook display label while preserving existing labels.",
+        "Explain that new installs retain the backups/plembfin folder for compatibility."
       ],
       "messageFragments": [
         "Fix - Restore playback tracking and improve season navigation",
-        "Fix - Protect media state and simplify deployment"
+        "Fix - Protect media state and simplify deployment",
+        "Docs - Clarify Jellyfin webhook labels and backup storage"
       ]
     }
   ]
