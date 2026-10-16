@@ -39,8 +39,8 @@ screenshots:
   - /assets/app-captures/media-appearance-light.png
   - /assets/app-captures/media-collections-focus-dark.png
   - /assets/app-captures/media-collections-focus-light.png
-  - /assets/app-captures/media-sections-overview-dark.png
-  - /assets/app-captures/media-sections-overview-light.png
+  - /assets/app-captures/media-appearance-dark.png
+  - /assets/app-captures/media-appearance-light.png
   - /assets/app-captures/media-cast-focus-dark.png
   - /assets/app-captures/media-cast-focus-light.png
   - /assets/app-captures/media-images-focus-dark.png
@@ -97,8 +97,8 @@ card-level quick actions live in the [poster three-dot menu](/docs/libraries/#th
 ## What the page can contain
 
 <ScreenshotFigure
-  darkSrc="/assets/app-captures/media-sections-overview-dark.png"
-  lightSrc="/assets/app-captures/media-sections-overview-light.png"
+  darkSrc="/assets/app-captures/media-appearance-dark.png"
+  lightSrc="/assets/app-captures/media-appearance-light.png"
   alt="Plekt movie detail page showing the header, Cast, and Images sections"
   caption="The movie detail page places provider content below the title header; Appearance controls which sections are shown."
 />
@@ -146,6 +146,11 @@ TV show details add season and episode controls below the identity and progress 
 - Each season row reports its episode total, watched count, and known availability. A season
   with no availability is still a valid metadata record; it simply has no matching copy on
   the connected media servers currently reporting to Plekt.
+- Each season row shows a poster: the season's own poster, or the series poster when the
+  season has none. On desktop, an open season's episodes sit beside its card with five to a
+  row. Opening a show selects its latest regular season and keeps the page at the top.
+  Season 1 links also open at the top; links to other seasons scroll their card below the
+  top bar after loading.
 - Episode rows expose the watch, unwatch, date, and title-scoped sync actions appropriate to
   that episode.
 - Episode rows and history cards prefer the real stored episode name. If an episode name is
@@ -285,7 +290,7 @@ If no reliable identity exists, use the
 <ScreenshotFigure
   darkSrc="/assets/app-captures/media-edit-images-focus-dark.png"
   lightSrc="/assets/app-captures/media-edit-images-focus-light.png"
-  alt="Plekt artwork picker showing Poster, Logo, Background, and YouTube Show tabs with provider artwork choices"
+  alt="Plekt artwork picker showing Poster, Season Posters, Logo, Background, and YouTube Show tabs with provider artwork choices"
   caption="Edit Images separates artwork types and lets you choose a provider result or upload a custom image."
 />
 
@@ -302,6 +307,11 @@ when those providers are configured.
 6. Reopen the detail page if the old artwork is still cached.
 
 Selecting a title inside the artwork picker changes the title used to browse images.
+
+Choose **Season Posters** in a TV show's Edit Images picker, then select a season and
+browse TMDB, TheTVDB, or Fanart.tv artwork, or upload a local file. Season artwork stays
+separate from the show and episode images and can appear on episode, dashboard, and
+upcoming cards. [Portable and encrypted backups](/docs/settings/backup/) preserve these choices.
 
 It does not relink the watch record.
 

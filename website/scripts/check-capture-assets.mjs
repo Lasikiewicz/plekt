@@ -24,6 +24,8 @@ const requiredCaptures = [
   "sync-activity-focused-dark.png",
   "sync-activity-focused-light.png",
 ];
+// Full dashboard frames are taken at the approved 1396x950 viewport (v2.1.0 Force to main).
+const maxHeights = { "dashboard-dark.png": 950, "dashboard-light.png": 950 };
 const failures = [];
 
 function readPngDimensions(filePath) {
@@ -43,7 +45,7 @@ for (const fileName of requiredCaptures) {
   const dimensions = readPngDimensions(filePath);
   if (!dimensions) {
     failures.push(`${fileName} is not a PNG capture`);
-  } else if (dimensions.width > 1440 || dimensions.height > 780) {
+  } else if (dimensions.width > 1440 || dimensions.height > (maxHeights[fileName] ?? 780)) {
     failures.push(`${fileName} is ${dimensions.width}x${dimensions.height}; rebuild it without the app footer/build label`);
   }
 }

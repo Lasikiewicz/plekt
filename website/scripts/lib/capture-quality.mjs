@@ -35,11 +35,15 @@ export function measureArtwork({ area, vertical, placeholder, minSize }) {
     // The part of the image left after every clipping ancestor and the shot itself.
     let x0 = Math.max(r.left, area.x), x1 = Math.min(r.right, area.x + area.width);
     const y0 = Math.max(r.top, area.y), y1 = Math.min(r.bottom, area.y + area.height);
+    // A card cut only by the edge of a scrolling rail is the rail's scroll hint, not a framing
+    // fault (user's choice, 16 October 2026, TV detail Images/Trailers/Related Shows rails).
+    let railW = r.width;
     for (let p = img.parentElement; p && p !== document.body; p = p.parentElement) {
       const ps = getComputedStyle(p);
       if (ps.overflowX !== "visible") {
         const pr = p.getBoundingClientRect();
         x0 = Math.max(x0, pr.left); x1 = Math.min(x1, pr.right);
+        if (railW === r.width && /auto|scroll/.test(ps.overflowX)) railW = Math.max(0, Math.min(r.right, pr.right) - Math.max(r.left, pr.left));
       }
     }
     const visibleW = Math.max(0, x1 - x0), visibleH = Math.max(0, y1 - y0);
@@ -47,7 +51,9 @@ export function measureArtwork({ area, vertical, placeholder, minSize }) {
     if (visibleW < 1 || visibleH < 1) continue;
     const name = label(img);
     const cutBelow = vertical && visibleH < r.height - 2;
-    if (visibleW < r.width - 2 || cutBelow) {
+    // Only clipping beyond the scrolling rail's own edge (the shot or a narrower panel) counts.
+    const cutBySide = visibleW < railW - 2;
+    if (cutBySide || cutBelow) {
       rows.push({ kind: "clipped", name, shown: Math.round(100 * (visibleW * (vertical ? visibleH : r.height)) / (r.width * r.height)) });
     }
     if (img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {

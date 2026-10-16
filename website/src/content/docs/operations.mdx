@@ -81,6 +81,13 @@ state. Restoring it invalidates remote observations and requires another safe-un
 before delivery resumes. Watch-history-only backups do not include Watchlist or personal
 rating data.
 
+
+The Watch History backup status reports running or failed restores. Automated sync waits
+while a restore is active; Plekt automatically recovers stale operation locks after an
+interruption so playback tracking and history updates can resume. Review the reported error
+before retrying, and use **Clear Status** only when no restore is still running.
+Manual watched-status edits remain available. See [Restore](/docs/settings/restore/).
+
 ## Restore safely
 
 <ScreenshotFigure

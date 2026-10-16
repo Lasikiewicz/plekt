@@ -88,6 +88,13 @@ reconcile additions, edits, and removals; a partial or failed read cannot clear 
 scorebook. Local changes commit to Plekt first and are delivered through a durable queue,
 so a provider outage does not roll back a rating or affect watched state.
 
+If a later scan finds at least two previously rated items and more than 20% of that
+provider's ratings missing, Plekt holds the removals for review instead of clearing them.
+The panel shows **Rating scan held for review** with the provider, counts and missing titles.
+**Approve these removals** rechecks the provider and applies the same removals only if they
+still match; **Dismiss and keep ratings** keeps every rating. Scheduled scans cannot bypass a
+hold, and holds survive restarts.
+
 Use **Sync now** for an immediate full pass. The panel reports provider status, queued work,
 unmatched items, reauthentication requirements, and retryable failures. Episode ratings keep
 their parent-show identity plus season and episode coordinates, so the same episode does not

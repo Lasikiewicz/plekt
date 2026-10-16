@@ -1,6 +1,6 @@
 ---
 title: Appearance
-description: Choose the Classic or Modern style, the colour mode, and optional sections on movie and TV detail pages.
+description: Choose the text size, the Classic or Modern style, the colour mode, and optional sections on movie and TV detail pages.
 category: Media and discovery
 order: 7
 sourceVersion: "2.0.0"
@@ -24,15 +24,25 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-The **Appearance** menu is available in the app sidebar footer when a movie or TV detail
-page is open. It controls presentation only; it does not remove watch records, metadata,
+The **Appearance** button sits in the left menu, between Settings and About. Its panel holds
+the text size control on every page, and the section switches for the movie or TV detail
+page that is open. It controls presentation only; it does not remove watch records, metadata,
 or artwork.
+
+
+## Text size
+
+Drag the **Text size** slider in the Appearance panel to scale the text from 100% to 130%.
+The chosen size applies across Plekt and is saved on the Plekt server, so it follows you to
+other browsers and devices that use the same instance. It changes text size only; layout,
+data, and sync behavior are unchanged.
 
 
 ## Style
 
 Choose **Classic** or **Modern** with the style switch in the sidebar footer, directly above
-the Light/Dark switch. On phones, open the navigation drawer to reach it.
+the Light/Dark switch. The app version label sits above both switches. On phones, open the
+navigation drawer to reach them.
 
 - **Classic** is the default and keeps the original look.
 - **Modern** keeps every page, control, and action in the same place, and changes how they
@@ -71,7 +81,7 @@ The available switches depend on the detail page that is open:
   caption="On a media page, Appearance exposes independent switches for optional detail sections."
 />
 
-Movie and TV detail pages can provide these switches:
+Movie and TV detail pages can provide these switches, listed in the Appearance panel:
 
 - **Logo Art**: show the provider logo when one is available.
 - **Cast Members**: show the cast section and links to person pages.
@@ -91,7 +101,7 @@ in each context.
 ## Change a setting
 
 1. Open **Movies** or **TV Shows** and select a title.
-2. Open **Appearance** in the sidebar footer.
+2. Open **Appearance** in the left menu.
 3. Turn the relevant section switch on or off.
 4. Navigate away and back if you want to verify that the preference was stored.
 

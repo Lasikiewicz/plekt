@@ -299,7 +299,8 @@ responsibility.
 - **OMDb** is optional and can provide IMDb rating badges.
 - **YouTube** is optional and can supply trailer metadata.
 
-Plekt caches metadata and artwork locally.
+Plekt caches metadata and artwork locally. A cached poster whose file has gone missing is
+downloaded again the next time it is needed, so the artwork is restored without a manual reset.
 
 A provider outage can affect new enrichment without erasing the local watch archive.
 

@@ -58,6 +58,10 @@ hidden immediately and stays dismissed while provider data catches up; if the cl
 the item is restored.
 
 
+If an interrupted restore stopped playback or history updates, Plekt automatically
+recovers its stale operation lock. Check the restore result in
+[Settings > Backups](/docs/settings/backup/) before retrying.
+
 ## Page structure
 
 <ScreenshotFigure
@@ -155,7 +159,9 @@ once and applies to the whole server:
   Part watched items fill the free slots first, then the other Up Next items.
 - The item count (1 to 3) sets how many cards the panel holds, live sessions included.
 
-An item shown in the panel is hidden from the **Up Next** rail, so nothing appears twice.
+The **Up Next** rail keeps one card per episode. When a resume record and a next-up
+record refer to the same episode, the resume card with its progress takes precedence.
+The currently playing episode or movie moves to the start of the rail while it plays.
 
 If a session never appears, follow
 [Now Playing is empty or stale](/docs/troubleshooting/#now-playing-is-empty-or-stale).
@@ -176,8 +182,8 @@ season, and episode ordering.
 
 Each show appears once. A part-watched episode with a known position replaces that show's
 next-up card, and when several episodes of a show are part-watched, the most recently updated
-one is kept. The episode or movie that is playing right now is hidden from Up Next while it
-shows in Now Playing, and returns when playback stops.
+one is kept. The episode or movie that is playing right now moves to the top of Up Next while
+it plays, and returns to its normal place when playback stops.
 
 The one exception is a rewatch from an older season: when your latest play is behind the
 furthest episode you have watched and the episode after it is released and unwatched, that
@@ -290,8 +296,9 @@ a previous watch.
 Dashboard TV and movie history rows always use Card View. Each card combines the poster,
 title, watch information, and state in a compact layout. Episode cards use the episode's own
 still as their backdrop, falling back to the show's backdrop, and show the season and episode
-code directly under the episode name and **Last Played** directly above the app used. A
-history card no longer repeats a **Watched Twice** or **Watched N Times** line; the
+code directly under the episode name and **Last Played** directly above the app used. Across
+desktop widths the details sit beside the episode artwork, with the poster filling the card
+height in a wider fixed column. A history card no longer repeats a **Watched Twice** or **Watched N Times** line; the
 [Library pages](/docs/libraries/) keep it.
 
 The **Posters only** button beside each "Recently watched" title folds every card in that row

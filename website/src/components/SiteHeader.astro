@@ -3,7 +3,7 @@ import { site } from "../data/site.js";
 
 const pathname = Astro.url.pathname;
 const isDocs = pathname.startsWith("/docs");
-const isWhyPlembfin = pathname.startsWith("/why-plembfin");
+const isWhyPlekt = pathname.startsWith("/why-plekt");
 const isFeatures = pathname.startsWith("/features");
 const isChangelog = pathname.startsWith("/changelog");
 const isSupport = pathname.startsWith("/support");
@@ -28,7 +28,7 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
     <nav id="site-nav" class="site-nav" aria-label="Main navigation">
       <div class="site-nav-primary">
         <a class:list={{ active: pathname === "/" }} href="/">Home</a>
-        <a class:list={{ active: isWhyPlembfin }} href="/why-plembfin/">Why Plekt</a>
+        <a class:list={{ active: isWhyPlekt }} href="/why-plekt/">Why Plekt</a>
         <a class:list={{ active: isFeatures }} href="/features/">Features</a>
         <a class:list={{ active: isDocs }} href="/docs/">Documentation</a>
         <a class:list={{ active: isChangelog }} href="/changelog/">Changelog</a>

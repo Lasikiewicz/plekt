@@ -203,5 +203,7 @@
     "label": "Watch history rebuild guide",
     "docSlug": "watch-history-before-library-rebuild",
     "sourcePaths": ["website/src/content/docs/settings/backup.mdx", "website/src/content/docs/settings/restore.mdx", "website/src/content/docs/operations.mdx", "docs/watch-history-backups.md", "docs/backups.md"]
-  }
+  },
+  {"id": "settings-restore", "label": "Restore", "docSlug": "settings/restore", "sourcePaths": ["server/src/utils/configStore.js", "server/src/scheduled.js", "docs/watch-history-backups.md"]},
+  {"id": "settings-sync", "label": "Sync", "docSlug": "settings/sync", "sourcePaths": ["server/src/scheduler.js", "server/src/scheduled.js", "docs/scheduled-sync.md"]}
 ]

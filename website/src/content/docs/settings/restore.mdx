@@ -63,5 +63,6 @@ Safe restore sequence:
 6. Reconnect or replay destinations only after the local archive is correct.
 
 Do not start Force Sync or a full watch-state replay while a restore is active. If a restore is
-interrupted, preserve the logs and reset the restore lock only after confirming no restore
-process is still running.
+interrupted, Plekt automatically recovers its stale operation lock so live playback tracking
+and watch-history updates can resume. Preserve the logs and inspect the restore result before
+retrying. Use **Settings > Backups > Clear Status** only after confirming no restore is still running.

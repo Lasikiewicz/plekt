@@ -193,6 +193,10 @@ all-destination title push, local media-server writes complete before the Trakt 
 Trakt history writes are paced, retried after bounded `429` responses, and cancelled between
 items; the current canonical remove/add pair is allowed to finish before queued items stop.
 
+Only applied actions count as completed. When some items are not found on a destination,
+the result reads, for example, **Partially applied: 12 of 14 actions applied; 2 not found on
+Emby**, followed by the missing titles. A run where nothing applied finishes as failed.
+
 ## Sync Issues and Match Report
 
 <ScreenshotFigure

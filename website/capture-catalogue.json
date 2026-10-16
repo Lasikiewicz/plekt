@@ -87,7 +87,7 @@
         "modern-light"
       ],
       "route": "/",
-      "state": "Dashboard at scroll top. Now Playing / Up Next panel, the Up Next rail and the first history rows loaded with posters. Dashboard history rows in full-card mode (Posters only off).",
+      "state": "Dashboard at scroll top. Now Playing / Up Next panel, the Up Next rail and the first history rows loaded with posters. Dashboard history rows in full-card mode (Posters only off). Capture at 1396x950: four complete cards per rail and portrait poster areas; do not reuse the short 683px frame.",
       "framing": {
         "type": "viewport"
       },
@@ -100,21 +100,25 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "width": 1396,
+          "height": 950
         },
         "light": {
-          "width": 1440,
-          "height": 683
+          "width": 1396,
+          "height": 950
         },
         "modern-dark": {
-          "width": 1440,
-          "height": 683
+          "width": 1396,
+          "height": 950
         },
         "modern-light": {
-          "width": 1440,
-          "height": 683
+          "width": 1396,
+          "height": 950
         }
+      },
+      "viewport": {
+        "width": 1396,
+        "height": 950
       }
     },
     "now-playing": {
@@ -337,7 +341,7 @@
         "modern-light"
       ],
       "route": "/",
-      "state": "Dashboard; the Recently watched TV Shows row in full-card mode, scrolled into view.",
+      "state": "Dashboard; the Recently watched TV Shows row in full-card mode, scrolled into view. Capture at 1396x950: four complete cards per rail and portrait poster areas; do not reuse the short 683px frame.",
       "framing": {
         "type": "element",
         "target": {
@@ -352,21 +356,25 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         },
         "light": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         },
         "modern-dark": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         },
         "modern-light": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         }
+      },
+      "viewport": {
+        "width": 1396,
+        "height": 950
       }
     },
     "dashboard-history-movies": {
@@ -380,7 +388,7 @@
         "modern-light"
       ],
       "route": "/",
-      "state": "Dashboard; the Recently watched Movies row in full-card mode, scrolled into view.",
+      "state": "Dashboard; the Recently watched Movies row in full-card mode, scrolled into view. Capture at 1396x950: four complete cards per rail and portrait poster areas; do not reuse the short 683px frame.",
       "framing": {
         "type": "element",
         "target": {
@@ -395,21 +403,25 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         },
         "light": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         },
         "modern-dark": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         },
         "modern-light": {
-          "width": 1231,
-          "height": 164
+          "width": 1187,
+          "height": 232
         }
+      },
+      "viewport": {
+        "width": 1396,
+        "height": 950
       }
     },
     "global-search": {
@@ -1853,57 +1865,6 @@
         }
       }
     },
-    "media-sections-overview": {
-      "pages": [
-        "media-details",
-        "movies/media-page"
-      ],
-      "variants": [
-        "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
-      ],
-      "route": "/movie/a-quiet-place",
-      "state": "Movie detail with the Appearance menu open, showing independent section switches. Change nothing.",
-      "framing": {
-        "type": "viewport"
-      },
-      "automation": "auto",
-      "sources": [
-        "public/modules/media-detail.js",
-        "public/modules/media-detail-events.js",
-        "public/modules/media-detail-movie.js",
-        "public/modules/media-detail-shared.js",
-        "public/modules/appearance.js"
-      ],
-      "sizes": {
-        "dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
-        }
-      },
-      "steps": [
-        {
-          "click": "#sidebarAppearanceButton"
-        },
-        {
-          "wait": 600
-        }
-      ]
-    },
     "media-appearance": {
       "pages": [
         "appearance",
@@ -2092,13 +2053,17 @@
         "modern-light"
       ],
       "route": "/movie/a-quiet-place",
-      "state": "Movie detail; Edit Images open with the Poster, Logo, Background and YouTube Show tabs. Choose nothing.",
+      "state": "Edit Images open with Poster, Season Posters, Logo, Background and YouTube Show tabs. Frame the tabs and first complete artwork row, ending before the next row; choose/save nothing.",
       "framing": {
         "type": "element",
         "target": {
           "css": ".edit-image-dialog"
         },
-        "padding": 0
+        "padding": 0,
+        "size": {
+          "width": 1411,
+          "height": 520
+        }
       },
       "automation": "auto",
       "sources": [
@@ -2270,7 +2235,7 @@
         "modern-light"
       ],
       "route": "/tvshow/lioness",
-      "state": "Show detail for Lioness, every section loaded (header, progress, seasons, cast, images, trailers).",
+      "state": "Show detail for Lioness, every section loaded (header, progress, seasons, cast, images, trailers). Use 1373px width so Related Shows ends after eleven complete cards; compose the entire scrollable page without resizing.",
       "framing": {
         "type": "scroll-compose",
         "container": ".page-shell",
@@ -2285,21 +2250,25 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 1646
+          "width": 1373,
+          "height": 2177
         },
         "light": {
-          "width": 1440,
-          "height": 1646
+          "width": 1373,
+          "height": 2177
         },
         "modern-dark": {
-          "width": 1440,
-          "height": 1646
+          "width": 1373,
+          "height": 2177
         },
         "modern-light": {
-          "width": 1440,
-          "height": 1646
+          "width": 1373,
+          "height": 2177
         }
+      },
+      "viewport": {
+        "width": 1373,
+        "height": 950
       }
     },
     "tv-sections-overview": {
@@ -2542,11 +2511,14 @@
         "modern-light"
       ],
       "route": "/tvshow/lioness/season/3",
-      "state": "Show detail with the Season 3 accordion open: episode cards, watched state, release dates and episode actions.",
+      "state": "Show detail with the Season 3 accordion open: episode cards, watched state, release dates and episode actions. Capture the complete season-card column and episode panel; no season poster or episode card may be clipped.",
       "framing": {
         "type": "element",
         "target": {
-          "css": ".season-accordion.is-open"
+          "css": ".season-accordion-list"
+        },
+        "through": {
+          "css": ".season-accordion-list"
         },
         "padding": 0
       },
@@ -2574,7 +2546,16 @@
           "width": 1231,
           "height": 672
         }
-      }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1100
+      },
+      "steps": [
+        {
+          "waitFor": ".season-accordion.is-open [data-season-accordion=\"3\"]"
+        }
+      ]
     },
     "tv-media-info-focus": {
       "pages": [
@@ -2649,11 +2630,14 @@
         "modern-light"
       ],
       "route": "/tvshow/bridgerton/season/3",
-      "state": "Bridgerton detail with Season 3 expanded (5 of 8 episodes watched) and Hide Spoilers unchecked.",
+      "state": "Bridgerton detail with Season 3 expanded (5 of 8 episodes watched) and Hide Spoilers unchecked. Capture the complete season-card column and episode panel; no season poster or episode card may be clipped.",
       "framing": {
         "type": "element",
         "target": {
-          "css": ".season-accordion.is-open"
+          "css": ".season-accordion-list"
+        },
+        "through": {
+          "css": ".season-accordion-list"
         },
         "padding": 0
       },
@@ -2694,6 +2678,10 @@
           "width": 1231,
           "height": 622
         }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1100
       }
     },
     "tv-spoilers-on": {
@@ -2707,11 +2695,14 @@
         "modern-light"
       ],
       "route": "/tvshow/bridgerton/season/3",
-      "state": "Bridgerton detail with Season 3 expanded (5 of 8 episodes watched) and Hide Spoilers checked, hiding unwatched artwork and synopses.",
+      "state": "Bridgerton detail with Season 3 expanded (5 of 8 episodes watched) and Hide Spoilers checked, hiding unwatched artwork and synopses. Capture the complete season-card column and episode panel; no season poster or episode card may be clipped.",
       "framing": {
         "type": "element",
         "target": {
-          "css": ".season-accordion.is-open"
+          "css": ".season-accordion-list"
+        },
+        "through": {
+          "css": ".season-accordion-list"
         },
         "padding": 0
       },
@@ -2752,6 +2743,10 @@
           "width": 1231,
           "height": 622
         }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1100
       }
     },
     "settings-index-focused": {
@@ -4441,6 +4436,7 @@
     }
   },
   "retired": [
+    "media-sections-overview",
     "dashboard-home",
     "media-actions",
     "media-actions-focus",

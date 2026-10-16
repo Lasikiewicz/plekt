@@ -1,14 +1,14 @@
 {
-  "publishedVersion": "1.3.0",
+  "publishedVersion": "2.0.0",
   "unchanged": {
-    "appearance": "Reviewed against v1.3.0: Classic/Modern and theme controls, plus media-detail section switches, still match.",
     "discover": "Reviewed against v1.3.0: feeds, filters, saved actions, and recommendation dismissal behavior are unchanged.",
+    "getting-started": "Reviewed against v2.1.0: the Docker Compose quick-start already pulls the published image and requires ADMIN_PASSWORD from .env; local-build and secure overlays are not documented on the website.",
     "guides": "Reviewed against v1.3.0: index links and canonical guide ownership remain current; Docker Hub setup is covered in Getting started.",
     "manual-watch-review": "Reviewed against v1.3.0: provider-side event review remains current. Episode watch-state aliases are a separate Settings → Tools feature, documented in Tools.",
-    "playlists": "Reviewed against v1.3.0: playlist editing and sync workflows are unchanged.",
-    "ratings": "Reviewed against v1.3.0: personal ratings and their optional sync queue remain separate from watched-state events.",
-    "sync-tools": "Reviewed against v1.3.0: activity groups, repair scopes, and retry actions remain current; Trakt history checks are explained in Integrations and the sync model.",
-    "upcoming": "Reviewed against v1.3.0: the air-date calendar and metadata-only behavior are unchanged.",
+    "movies": "Reviewed against v2.0.0: the Movies library controls, card menu, and media page Appearance reference are unchanged by this release.",
+    "playlists": "Reviewed against v2.0.0: playlist editing and sync workflows are unchanged; the Modern card styling fix does not change them.",
+    "settings": "Reviewed against v2.1.0: the Settings group map and working rules are unchanged; restore status and conflict guidance live in Operations and Restore.",
+    "upcoming": "Reviewed against v2.0.0: the air-date calendar and metadata-only behavior are unchanged; this guide does not describe poster selection.",
     "watchlist": "Reviewed against v1.3.0: local Watchlist and optional Plex sync behavior are unchanged."
   }
 }

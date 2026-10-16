@@ -171,3 +171,9 @@ single incorrect title.
 Sync History lists recent operations with their source, destination, outcome, and reason. Use it
 to confirm that a manual action or webhook reached every intended destination; use
 [Logs](/docs/settings/logs/) for the lower-level request detail.
+
+## Recovery after an interrupted restore
+
+An active watch-history restore pauses automated sync. Plekt automatically clears a stale
+restore operation lock after an interruption so live playback tracking and watch-history
+updates can resume. Check the restore result in **Settings > Backups** before retrying it.
