@@ -104,7 +104,7 @@ at the end of a long session, which is exactly when they get skipped.
 **Date:** 2026-08-19  |  **Status:** Active
 
 **Context:** A feature that imported every individual Trakt play inserted watch rows with no
-`sync_dispatch_telemetry`. `syncPendingManualDispatches` in `server/src/scheduled.js` treats
+`sync_dispatch_telemetry`. `syncPendingManualDispatches` in `server/src/utils/syncDispatchQueue.js` treats
 incomplete telemetry as pending work, so it re-dispatched each row to every active target on
 every scheduler tick. Trakt's `/sync/history` is not idempotent: every POST adds a new play.
 Each push produced a new Trakt history id, which the next poll re-imported as a new play and
@@ -1213,7 +1213,7 @@ what the user can act on. *Dismissing them through the normal dismiss path.* Tha
 Plembfin-wide unwatch and would unmark watched items on every provider.
 
 **Enforced by:** `listPendingManualWatchReviews` (`server/src/utils/manualWatchReview.js`) and
-`libraryHistoryDecision` (`server/src/scheduled.js`). Tests: `test/manualWatchReview.test.js`
+`libraryHistoryDecision` (`server/src/utils/recentWatchImport.js`). Tests: `test/manualWatchReview.test.js`
 ("pending reviews are hidden after the item becomes canonically watched") and
 `test/scheduledLibraryHistoryAuthority.test.js`.
 
@@ -1262,7 +1262,7 @@ attempts per show Trakt does not carry. *Resending without the history check:* a
 Trakt accepted the write would add a duplicate play, the same kind of damage as the
 2026-08-19 rewatch flood.
 
-**Enforced by:** `traktNeedsRetry` in `server/src/scheduled.js`, `findExistingTraktPlay` in
+**Enforced by:** `traktNeedsRetry` in `server/src/utils/syncDispatchQueue.js`, `findExistingTraktPlay` in
 `server/src/utils/trackerDispatcher.js`; `test/pendingManualDispatchTraktRetry.test.js`.
 
 ### 42. Paused in the credits then closed is a finished play; a Plex rating is not a play
@@ -1369,3 +1369,67 @@ restore write guards and HTTP handlers; `staleRestoreScheduler.test.js` and
 credentials or webhooks, orphan backups and register a second Windows service.
 Compatibility is established before display changes; real upgrades run against
 copies of old data. This work is local preparation and does not authorize publishing.
+
+
+### 47. The candidate build defers the website guide gate to the final promotion
+**Date:** 2026-10-16  |  **Status:** Active
+
+**Context:** The website content-impact gate in `promote-alpha-to-main.js --confirm` checks that
+each guide the release needs has changed in the website tree being released. The candidate's
+`--confirm` runs before the reviewed website is carried in from `develop`, so it refused every
+release that needed a guide update (v2.1.0 needed new settings guides in `app-surface.json`).
+
+**Decision:** The disposable candidate's `--confirm` passes `--defer-website-gate`, which reports
+the outstanding guides and continues. The final `--confirm` on the carried release enforces the
+gate with no flag. The website tree is reviewed in phase A, carried in step 5, and checked at the
+final promotion before anything is written.
+
+**Rejected:** *Keep the gate on the candidate build*: it can never pass before the review, so it
+blocks every release that needs a guide. *Review the guides on `develop` before the candidate*:
+that reintroduces the ordering decision 43 rejected. *Remove the gate*: it is the check that stops
+a release shipping a stale guide.
+
+**Enforced by:** `promoteAlphaToMain` `deferWebsiteGate` option; `test/promoteAlphaToMainPreview.test.js`.
+
+---
+
+### 48. Translated-show replacement preserves Trakt-only plays
+**Date:** 2026-10-17 | **Status:** Active
+
+**Context:** Clearing all plays at old and new episode numbers deleted Trakt history absent
+from Plekt. A live test also showed that an append can replace an existing date when the
+Trakt account disables multiple plays; the API settings response does not expose that flag.
+
+**Decision:** Keep Trakt-only plays on their current canonical episodes, including overlapping
+old/new numbers (user choice, 17 October). Add and verify missing target plays before removing
+only exact, uniquely matched old history IDs. Refuse occupied target conflicts before writing.
+Ambiguous imported rows remain for review. Outbound writes never advance the inbound cursor.
+
+**Rejected:** Clearing whole episode coordinates and rebuilding only Plekt's subset loses
+independent history. Translating Trakt-only plays guesses their numbering. Trying an append
+at an occupied target can change a date before preservation can be checked.
+
+**Enforced by:** `showTraktReplace.js`, `showTraktHistorySafety.js`, and their regression tests.
+
+---
+
+### 49. Known main security alerts stay visible as push notes pending rescan
+**Date:** 2026-10-17 | **Status:** Active
+
+**Context:** Three open alerts refer to exact findings already reviewed in the pending
+source: CodeQL #64 is the old `main` instance fixed by the rail image-source allow-list;
+Dependabot #15 and #17 are unpatched advisories in Devvit's tooling dependency tree.
+Blocking these known alerts on every push would delay the reviewed fixes, while dismissing
+them would hide their status.
+
+**Decision (user, 17 October 2026):** Keep these three alerts visible as precheck notes
+while their exact fingerprints match and the corresponding fix remains present. Move
+`devvit` to development dependencies. Do not dismiss the GitHub alerts. Continue blocking
+any other high/critical or changed-file alert, and block if an allow-listed alert's
+fingerprint changes or its fix is missing.
+
+**Rejected:** Blocking these unchanged findings ignores the reviewed fix and user-approved
+handling. Dismissing them loses the visible signal before GitHub's scan updates.
+
+**Enforced by:** `knownSecurityAlertNote()` in `scripts/workflow-check.js`, its fingerprint
+tests, and the push precheck.

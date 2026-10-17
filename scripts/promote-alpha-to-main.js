@@ -16,7 +16,9 @@
 //
 // The website content-impact gate does not block --preview: the release is settled
 // before any website work, so the preview lists the guides still outstanding as
-// information. --confirm still refuses while any remain.
+// information. --confirm still refuses while any remain, except --defer-website-gate:
+// the disposable candidate build uses it, because the reviewed website is carried in
+// only after that build, and the final --confirm on the carried release enforces the gate.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -327,13 +329,15 @@ export function stampDocumentationBaseline(version, { docsDir, readFile, writeFi
   return stamped;
 }
 
-export function promoteAlphaToMain({ targetVersion = "", sourceDate = new Date().toISOString(), sourceAuthor = "system", commit = "", sources = null, impactViolations } = {}) {
+export function promoteAlphaToMain({ targetVersion = "", sourceDate = new Date().toISOString(), sourceAuthor = "system", commit = "", sources = null, impactViolations, deferWebsiteGate = false } = {}) {
   const { changelog, alpha, newMainVersion, new5DigitVersion, mainEntry, historySource, websiteImpactOutstanding } = computeAlphaToMainRelease({ targetVersion, sourceDate, sourceAuthor, commit, sources, impactViolations });
 
   // The website content-impact gate blocks the real promotion (never the
-  // preview). Checked before anything is written.
+  // preview). Checked before anything is written. A candidate build defers it
+  // because its website/ tree is still alpha's; the final promotion enforces it.
   if (websiteImpactOutstanding.length > 0) {
-    throw new Error(`Refusing to promote alpha to main: the website content-impact gate failed:\n${websiteImpactOutstanding.map((v) => `- ${v}`).join("\n")}`);
+    if (!deferWebsiteGate) throw new Error(`Refusing to promote alpha to main: the website content-impact gate failed:\n${websiteImpactOutstanding.map((v) => `- ${v}`).join("\n")}`);
+    console.log(`Website content-impact gate deferred for a candidate build (${websiteImpactOutstanding.length} guide(s) outstanding); the final --confirm enforces it.`);
   }
   // Injected test sources must never reach the real files below.
   if (sources) throw new Error("Refusing to write a promotion computed from test sources.");
@@ -453,6 +457,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       targetVersion,
       commit: gitHeadCommit(root),
       sourceAuthor: gitHeadAuthor(root),
+      deferWebsiteGate: args.includes("--defer-website-gate"),
     });
   }
 }

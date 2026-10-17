@@ -86,7 +86,12 @@ function main() {
     // asset reference to this build's version, and asset-versions.js checks them
     // against the committed manifest during the build gate.
     git(["add", "changelog.develop.json", "public"]);
-    git(["commit", "-m", "chore: rebuild develop changelog"]);
+    git([
+      "commit",
+      "-m", "chore: rebuild develop changelog",
+      "-m", "site-impact: none",
+      "-m", "Website review: not required - generated develop changelog data and app asset cache stamps; no website pages or guides change.",
+    ]);
     console.log(`\nCommitted the rebuilt changelog and ${changed.length - 1} restamped asset file(s).`);
   }
 

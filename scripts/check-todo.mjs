@@ -10,7 +10,13 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const planDir = path.join(root, "plan");
 const todoPath = path.join(root, "todo.md");
-const MAX_NOW = 3;
+const SECTIONS = ["Last edited", "Outstanding", "Future features", "Deferred"];
+// An entry is two lines, the first ending in a `\` line break:
+// `**Title** - [](plan/<name>.md) - <date>`, then a very brief summary. The link has no text;
+// the desktop app shows it as the plan file's chip.
+const ENTRY = /^\*\*[^*]+\*\* - \[[^\]]*\]\(plan\//;
+// The date on the entry line: `16 October 2026` or, when the time is known, `16 October 2026, 18:42`.
+const DATE_LINE = /^\*\*.*\) - (\d{1,2} \w+ \d{4})(?:, (\d{1,2}:\d{2}))?/m;
 const NOT_PLANS = new Set(["README.md", "updates.md"]);
 
 function readStdin() {
@@ -39,7 +45,7 @@ function localDay(ms) {
 function check() {
   if (!fs.existsSync(todoPath) || !fs.existsSync(planDir)) return [];
   const errors = [];
-  const todo = fs.readFileSync(todoPath, "utf8");
+  const todo = fs.readFileSync(todoPath, "utf8").replace(/\r\n/g, "\n");
   const todoMtime = fs.statSync(todoPath).mtimeMs;
 
   // Summaries are the top-level plan/*.md files; step files live under plan/active/.
@@ -51,14 +57,23 @@ function check() {
     ? walk(path.join(planDir, "active")).map((f) => path.relative(root, f).split(path.sep).join("/"))
     : [];
 
-  // 1. The newest Change log line must not be older than the newest plan change.
+  // 1. The "Last edited" entry's date must not be older than the newest plan change.
+  const section = (name) => {
+    const m = todo.match(new RegExp(String.raw`## ${name}\n([\s\S]*?)(?=\n## |$)`));
+    return m ? m[1] : null;
+  };
   const newest = Math.max(0, ...[...summaries, ...activeFiles].map((f) => fs.statSync(path.join(root, f)).mtimeMs));
-  const changeLog = todo.match(/## Change log\n([\s\S]*?)(?=\n## |$)/);
-  const latest = changeLog && changeLog[1].match(/^- (\d{1,2} \w+ \d{4})/m);
+  for (const name of SECTIONS) {
+    if (section(name) === null) errors.push(`todo.md has no "## ${name}" section`);
+  }
+  const lastEdited = section("Last edited") || "";
+  const lastEntries = lastEdited.split("\n").filter((l) => ENTRY.test(l));
+  if (lastEntries.length !== 1) errors.push(`"Last edited" lists ${lastEntries.length} plans; list exactly one`);
+  const latest = lastEdited.match(DATE_LINE);
   if (!latest) {
-    errors.push("todo.md has no dated \"## Change log\" entry");
+    errors.push('the "Last edited" entry has no date');
   } else if (new Date(latest[1]).getTime() && localDay(new Date(latest[1]).getTime()) < localDay(newest)) {
-    errors.push(`the newest Change log line is dated ${latest[1]}, but a plan file changed on ${localDay(newest)}`);
+    errors.push(`the "Last edited" date is ${latest[1]}, but a plan file changed on ${localDay(newest)}`);
   }
 
   // 2. A plan file changed after todo.md was last saved means the TODO was not updated with it.
@@ -78,23 +93,34 @@ function check() {
     if (!links.includes(summary)) errors.push(`${summary} is not listed in todo.md`);
   }
 
-  // 5. Each plan has exactly one numbered entry (Waiting on Jason may link a plan again).
-  const entries = todo.split("\n").filter((l) => /^\d+\. /.test(l));
+  // 5. Each plan has exactly one entry: title, link and date, then a summary line.
+  //    Within each section, entries are ordered by that date, newest first.
+  const lines = todo.split("\n");
   const counts = new Map();
-  for (const line of entries) {
-    const link = [...line.matchAll(/\]\((plan\/[^)\s]+)\)/g)].pop();
+  let sectionName = "";
+  let previous = Infinity;
+  lines.forEach((line, i) => {
+    const heading = line.match(/^## (.+)/);
+    if (heading) {
+      sectionName = heading[1];
+      previous = Infinity;
+    }
+    if (!ENTRY.test(line)) return;
+    const link = line.match(/\]\((plan\/[^)\s]+)\)/);
     if (link) counts.set(link[1], (counts.get(link[1]) || 0) + 1);
-  }
+    const summaryLine = (lines[i + 1] || "").trim();
+    if (!summaryLine || ENTRY.test(summaryLine)) errors.push(`the entry on line ${i + 1} has no summary line under it`);
+    const date = line.match(DATE_LINE);
+    if (!date) {
+      errors.push(`the entry on line ${i + 1} has no date after its plan link`);
+      return;
+    }
+    const time = new Date(`${date[1]} ${date[2] || "00:00"}`).getTime();
+    if (time > previous) errors.push(`"${sectionName}" is not ordered newest first at line ${i + 1}`);
+    previous = time;
+  });
   for (const [link, count] of counts) {
-    if (count > 1) errors.push(`${link} has ${count} numbered entries in todo.md; list it once`);
-  }
-
-  // 6. "Now" holds at most three plans.
-  const now = todo.match(/## Now\n([\s\S]*?)(?=\n## )/);
-  const nowItems = now ? now[1].split("\n").filter((l) => /^\d+\. /.test(l)) : [];
-  if (!now) errors.push("todo.md has no \"## Now\" section");
-  else if (nowItems.length > MAX_NOW) {
-    errors.push(`"Now" lists ${nowItems.length} plans; keep at most ${MAX_NOW}`);
+    if (count > 1) errors.push(`${link} has ${count} entries in todo.md; list it once`);
   }
 
   return errors;
@@ -110,7 +136,7 @@ const input = process.argv.includes("--stop-hook") ? readStdin() : {};
 const message =
   "todo.md is stale, so this turn cannot end yet:\n" +
   errors.map((e) => `- ${e}`).join("\n") +
-  "\nUpdate todo.md (the plan's Now line, a dated Change log line, its entry listed once) and the owning plan summary, then finish the turn.";
+  "\nUpdate todo.md (the plan's entry and date, the plan under Last edited, each plan listed once) and the owning plan summary, then finish the turn.";
 console.error(message);
 // The Stop hook is re-run after a block. If it is still stale on that retry, let the turn end
 // so it cannot loop; the message above is the record of what is outstanding.

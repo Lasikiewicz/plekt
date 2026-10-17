@@ -15,6 +15,16 @@ They query GitHub cleanup/security state and local Git/lock facts; they do not f
 acquire locks, promote, push or treat successful checks as approval. API/auth failures
 fail loudly; existing user-decision exceptions remain in the skills.
 
+The push precheck prints GitHub's open security alerts. As of 2026-10-17, CodeQL #64
+(`website/scripts/recapture.mjs`) is the old `main` instance; its image-source allow-list
+is in `develop`. Dependabot #15 (`braces`) and #17 (`sprintf-js`) are the known Devvit
+tooling advisories in `reddit-app/package-lock.json`; Devvit is a development dependency
+and GitHub lists no patched version for either advisory. These three exact alert
+fingerprints are logged as notes while the fixes await the next main scan and the matching
+fix remains present in the worktree. The check does not dismiss them. Any other alert, or
+any changed fingerprint or missing fix, keeps the normal blocking rule for high/critical
+or changed-file findings. See [decision 49](decisions.md#49-known-main-alerts-stay-visible-as-push-notes-pending-rescan).
+
 `npm run release:candidate -- <record.json>` checks pinned refs, detached HEAD, port 5056
 ownership and release metadata. `node scripts/workflow-check.js staged` checks sensitive
 paths, README consistency and asset stamps against an index-matching worktree.
@@ -74,6 +84,11 @@ npm run server:restart # stop whatever listens on PORT, start detached, wait for
 `plembfin-local-server.log` in the OS temp directory and prints one status line, or the last log
 lines when `/api/ping` does not answer within 90 seconds. It stops any process listening on the
 port, including one started by hand in a terminal.
+
+Any test that needs the running app, the local server, or the connected test services (Plex,
+Emby, Jellyfin, Trakt, Seerr) starts by reading the gitignored `.claude/local-environment.md`,
+which holds the local sign-in, test-instance URLs, and the test rules. Live and remote services
+are in `.claude/live-environment.md` and are used only when the user explicitly asks.
 
 A fresh install's admin username defaults to `admin`; without `ADMIN_PASSWORD` a random password
 is printed once to the logs (override with `ADMIN_USERNAME` / `ADMIN_PASSWORD`). First boot

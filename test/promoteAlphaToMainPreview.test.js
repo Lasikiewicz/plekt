@@ -62,6 +62,18 @@ test("confirm with the same outstanding guide still refuses", () => {
   );
 });
 
+test("a candidate confirm defers the website gate; the test-source guard is reached only after it passes", () => {
+  // Fixture sources always stop at the test-source guard, so reaching it proves the gate was skipped.
+  assert.throws(
+    () => promoteAlphaToMain({
+      sources: fixtureSources(),
+      impactViolations: () => OUTSTANDING,
+      deferWebsiteGate: true,
+    }),
+    /Refusing to write a promotion computed from test sources/,
+  );
+});
+
 
 test("the first Plekt release carries image migration guidance readable by old changelog clients", () => {
   const result = previewAlphaToMainRelease({ sources: fixtureSources(), impactViolations: () => [] });

@@ -8,13 +8,20 @@ TODO. There is no root `TODO.md` (retired 15 September 2026).
 
 - **Links in `todo.md` are written from the project root** (`plan/<name>.md`), because the
   user opens it in the Claude desktop app, which resolves links from the project root.
-- **`todo.md` order** (user-agreed 16 October 2026): title `# Plekt TODO`; **Now** (the 1 to 3
-  plans being worked on, one line each: name, current step, next action, link); **Up next**,
-  **Later** and **Deferred** (one line each, no history, command lines or PIDs); **Waiting on
-  Jason** (actions only the user can take, each linking its plan); then, below a `---`
-  divider, **Change log** (newest first, one short dated line per update, last 10 only).
-  One consistent numbering, each plan exactly once. Whenever a plan's summary is updated, that
-  plan moves into Now (dropping the oldest if there are more than three), in the same change.
+- **`todo.md` layout** (user-agreed 16 October 2026, replacing the Now/Change log layout): title
+  `# Plekt TODO` with no intro text, then four sections in this order: **Last edited** (exactly
+  one plan, the one whose summary changed most recently), **Outstanding** (open work and checks
+  on shipped features), **Future features** (new features not yet built or released) and
+  **Deferred**. Each plan appears exactly once, as two lines, the first ending in a `\`
+  hard line break so they render separately:
+  `**Title** - [](plan/<name>.md) - 16 October 2026, 18:42` (the link has no text, so the desktop
+  app shows only the plan file's chip; the date last worked on, with the
+  time when known, then ` (<branch>)` when the work is on a branch other than `develop`), and a
+  very brief summary (a few words). A blank line separates entries, and each section is ordered by that
+  date, newest first. Plan bookkeeping (moves, merges, link fixes) does not count as work on a plan. Whenever a plan's summary is updated, that plan moves into Last edited and
+  the previous one goes back to its section, in the same change. There is no "Waiting on" section
+  and no change log: what the user must do lives in each plan's "Waiting on you", and history
+  lives in the plans.
 - **`plan/updates.md` is a generated ledger** (see "Release commands"), not a plan summary; it
   is never listed in `todo.md`.
 - **Small work with no plan of its own** (a bug found in passing, a follow-up check) becomes a
@@ -73,10 +80,10 @@ section. Before closing a plan, verify code and docs both describe current behav
 ### MANDATORY: keep the TODO current, and never overstate status
 
 **After every step (not only at the end of a turn or a phase), update the owning plan's
-summary ("Where we are" and the step ticks), the plan's line under Now in [`todo.md`](../todo.md),
-and add one Change log line.** Not optional, not waiting to be asked. "Where we are" and Now
-lines are rewritten to the current state, never appended to; dated detail goes only in the step
-file's Results and the bottom Change log. Work with no plan becomes a step in the loose-ends
+summary ("Where we are" and the step ticks), and in [`todo.md`](../todo.md) move the plan under
+Last edited with a rewritten brief summary and the current date and time.** Not optional, not waiting to be
+asked. "Where we are" and TODO summaries are rewritten to the current state, never appended to;
+dated detail goes only in the step file's Results. Work with no plan becomes a step in the loose-ends
 plan; if it is substantial, write its own plan.
 
 - **Distinguish "implemented", "unit-tested", and "verified".** Compiling is not tested; tests

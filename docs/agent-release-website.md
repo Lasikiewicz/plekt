@@ -55,8 +55,9 @@ insufficient and which commit changed it. If none differ, explicitly hand off no
 On a resumed handoff, the user's narrowed scope takes precedence over the inherited list;
 reconcile it before creating live state or taking further images.
 
-Review affected guides and shared site surfaces against the running candidate. Make
-website copy edits on `develop`, identify required captures, and start the website preview
+Review affected guides and shared site surfaces against the running candidate. New or renamed
+guides get their `website/src/data/app-surface.json` entry in this review (`npm run check:content`
+in `website/` must pass). Make website copy edits on `develop`, identify required captures, and start the website preview
 from `website/` with `npm run dev`. Find image review candidates with `npm run captures:stale`
 in `website/` (source paths changed since `origin/main`; this is not a mandatory retake list), reconciled
 against the pinned alpha changes like the inventory; `npm run captures:retake -- <ids>`

@@ -3,10 +3,10 @@
 Read for Force to main steps 0–2. Commands and approval order are unchanged.
 Skill asset paths below resolve from `.claude/skills/force-to-main/`.
 
-Known contradiction (16 October 2026): step 2's candidate `--confirm` refuses outstanding
-website guides, although website review follows candidate approval. The user explicitly
-requested preserving behavior and recording this for a separate fix. Stop on that failure;
-never bypass the website gate or patch the pinned candidate to get past it.
+The candidate's `--confirm` uses `--defer-website-gate`: website review follows candidate
+approval, so outstanding guides are reported, not refused. The final `--confirm` on the
+carried release enforces the gate and still refuses. Never patch the pinned candidate to
+change that.
 
 ### 0 - Pre-checks, release lock, and run plan
 
@@ -125,7 +125,7 @@ PowerShell example (the variables are from step 1):
 ```powershell
 Set-Location -LiteralPath $releaseWorktree
 npm ci
-node scripts/promote-alpha-to-main.js --confirm
+node scripts/promote-alpha-to-main.js --confirm --defer-website-gate
 $releaseListeners = Get-NetTCPConnection -LocalPort 5056 -State Listen -ErrorAction SilentlyContinue
 # Inspect ownership first, then stop only the verified Plekt listener(s).
 $releaseListeners | Select-Object OwningProcess -Unique |

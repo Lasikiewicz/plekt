@@ -51,6 +51,9 @@ conversation. Keep both small without cutting any verification.
   width, what should appear) and record the check as waiting on the user in the plan step.
   One answer covers only that task's checks. Agent-run app checks are expensive (one browser
   check of six pages cost about 108k tokens).
+- **Test setup comes from `.claude/local-environment.md`.** Read it before any test, including
+  browser checks, and use only the local server and connected test instances it lists. Live
+  services are in `.claude/live-environment.md` and are used only when the user explicitly asks.
 - **Browser checks: text first, screenshots last.** Prefer `curl` against the API, page text
   (`get_page_text`), the accessibility tree (`read_page`), or a JavaScript probe. Take screenshots
   only when the check is genuinely visual, at reduced scale, and never inside large batches. Use

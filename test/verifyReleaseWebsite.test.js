@@ -7,6 +7,18 @@ test('finds src and srcset capture URLs, preserving content queries', () => {
   assert.equal(urls.length, 3);
   assert.ok(urls.includes('https://plekt.net/assets/app-captures/c.webp?v=c'));
 });
+test('finds optimized capture paths and theme data attributes', () => {
+  const html = '<picture><source srcset="/assets/optimized/app-captures/dashboard-modern-dark-1396.webp?v=f3 1396w"><img src="/assets/optimized/app-captures/dashboard-modern-dark-1396.webp?v=f3" data-dark-src="/assets/optimized/app-captures/dashboard-modern-dark-1396.webp?v=f3" data-light-src="/assets/optimized/app-captures/dashboard-modern-light-1396.webp?v=dd"><img src="/assets/icons/logo.png"></picture>';
+  const urls = captureUrls(html, 'https://plekt.net');
+  assert.deepEqual(urls.sort(), ['https://plekt.net/assets/optimized/app-captures/dashboard-modern-dark-1396.webp?v=f3', 'https://plekt.net/assets/optimized/app-captures/dashboard-modern-light-1396.webp?v=dd']);
+});
+test('hashes an optimized variant against its source capture, not the variant bytes', () => {
+  const source = Buffer.from('source capture');
+  const variant = Buffer.from('webp variant');
+  const hash = crypto.createHash('sha256').update(source).digest('hex').slice(0, 10);
+  assertAsset(`https://plekt.net/assets/optimized/app-captures/a-720.webp?v=${hash}`, variant, variant, source);
+  assert.throws(() => assertAsset(`https://plekt.net/assets/optimized/app-captures/a-720.webp?v=${hash}`, variant, variant));
+});
 test('rejects stale immutable URL and mismatched CDN bytes', () => {
   const local = Buffer.from('current image');
   const hash = crypto.createHash('sha256').update(local).digest('hex').slice(0, 10);

@@ -11,13 +11,20 @@ export function captureUrls(html, base) {
   for (const match of html.matchAll(/(?:src|srcset)=["']([^"']+)["']/gi)) {
     for (const entry of match[1].split(',')) {
       const url = new URL(entry.trim().split(/\s+/)[0].replaceAll('&amp;', '&'), base);
-      if (url.pathname.includes('/assets/app-captures/')) found.add(url.href);
+      if (/\/assets\/(?:optimized\/)?app-captures\//.test(url.pathname)) found.add(url.href);
     }
   }
   return [...found];
 }
-export function assertAsset(url, remote, local) {
-  const hash = crypto.createHash('sha256').update(local).digest('hex').slice(0, 10);
+// Optimized variants (/assets/optimized/<name>-<width>.<fmt>) carry the hash of their source capture.
+export function sourceForVariant(publicRoot, pathname) {
+  const match = pathname.match(/^\/assets\/optimized\/(.+)-\d+\.(?:webp|png|jpe?g)$/i);
+  if (!match) return null;
+  const source = ['png', 'jpg', 'jpeg', 'webp'].map(ext => path.join(publicRoot, 'assets', `${match[1]}.${ext}`)).find(file => fs.existsSync(file));
+  return source || null;
+}
+export function assertAsset(url, remote, local, hashed = local) {
+  const hash = crypto.createHash('sha256').update(hashed).digest('hex').slice(0, 10);
   if (new URL(url).searchParams.get('v') !== hash) throw Error(`Missing/stale content hash: ${new URL(url).pathname}`);
   if (!Buffer.from(remote).equals(local)) throw Error(`Live screenshot bytes differ: ${new URL(url).pathname}`);
 }
@@ -47,7 +54,8 @@ async function main() {
   for (const url of captures) {
     const local = path.resolve(publicRoot, '.' + decodeURIComponent(new URL(url).pathname));
     if (!local.startsWith(publicRoot + path.sep)) throw Error('Screenshot path escapes website/public.');
-    assertAsset(url, await (await read(url)).arrayBuffer(), fs.readFileSync(local));
+    const source = sourceForVariant(publicRoot, new URL(url).pathname) || local;
+    assertAsset(url, await (await read(url)).arrayBuffer(), fs.readFileSync(local), fs.readFileSync(source));
   }
   console.log(`Live website v${version}, release guide links and ${captures.length} hashed screenshot URLs pass.`);
 }

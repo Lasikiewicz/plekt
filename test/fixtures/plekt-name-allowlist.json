@@ -9,33 +9,70 @@
     "test/analyticsConfig.test.js": {
       "reason": "compatibility",
       "lines": [
-        ["assert.equal(config.collectorOrigin, demoMode ? \"https://plembfin-traks-collect.lasikie.workers.dev\" : \"\");", 1],
-        ["[false, false, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 0],", 1],
-        ["[true, true, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 0],", 1],
-        ["[true, false, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 1],", 1]
+        [
+          "assert.equal(config.collectorOrigin, demoMode ? \"https://plembfin-traks-collect.lasikie.workers.dev\" : \"\");",
+          1
+        ],
+        [
+          "[false, false, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 0],",
+          1
+        ],
+        [
+          "[true, true, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 0],",
+          1
+        ],
+        [
+          "[true, false, \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\", 1],",
+          1
+        ]
       ]
     },
     "docs/agent-release-candidate.md": {
       "reason": "compatibility",
-      "lines": [["$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) \"plembfin-release-candidate\"", 1]]
+      "lines": [
+        [
+          "$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) \"plembfin-release-candidate\"",
+          1
+        ]
+      ]
     },
     "docs/agent-release-publish.md": {
       "reason": "compatibility",
       "lines": [
-        ["`https://demo.plembfin.com/` is served by the dedicated Oracle Cloud Compute instance", 1],
-        ["then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.", 1],
-        ["npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message \"Publish Plekt website for v<version>\" --commit-dirty=true", 1],
-        ["Do not deploy when a check or the build fails, and never deploy the `plembfin`", 1]
+        [
+          "`https://demo.plembfin.com/` is served by the dedicated Oracle Cloud Compute instance",
+          1
+        ],
+        [
+          "then runs `scripts/verify-oracle-demo.js` against `https://demo.plembfin.com/`.",
+          1
+        ],
+        [
+          "npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message \"Publish Plekt website for v<version>\" --commit-dirty=true",
+          1
+        ],
+        [
+          "Do not deploy when a check or the build fails, and never deploy the `plembfin`",
+          1
+        ]
       ]
     },
     "scripts/workflow-check.js": {
       "reason": "compatibility",
-      "lines": [["const p = path.join(root, '.git', 'plembfin-release.lock');", 1]]
+      "lines": [
+        [
+          "const p = path.join(root, '.git', 'plembfin-release.lock');",
+          1
+        ]
+      ]
     },
     ".claude/skills/force-to-main/SKILL.md": {
       "reason": "compatibility",
       "lines": [
-        ["plembfin-website only (check:deploy, build, Wrangler). Final approval already covers this.", 1],
+        [
+          "plembfin-website only (check:deploy, build, Wrangler). Final approval already covers this.",
+          1
+        ],
         [
           "$releaseWorktree = Join-Path (Split-Path -Parent $releaseRepo) \"plembfin-release-candidate\"",
           1
@@ -2918,7 +2955,10 @@
     "docs/development.md": {
       "reason": "compatibility",
       "lines": [
-        ["`https://plembfin-traks-collect.lasikie.workers.dev/t.js`; its CSP permits that origin", 1],
+        [
+          "`https://plembfin-traks-collect.lasikie.workers.dev/t.js`; its CSP permits that origin",
+          1
+        ],
         [
           "## Formerly Plembfin",
           1
@@ -3864,7 +3904,10 @@
     "docs/website-deployment.md": {
       "reason": "compatibility",
       "lines": [
-        ["`https://plembfin-traks-collect.lasikie.workers.dev/t.js`. Website analytics do not need", 1],
+        [
+          "`https://plembfin-traks-collect.lasikie.workers.dev/t.js`. Website analytics do not need",
+          1
+        ],
         [
           "separate `plembfin-website` Cloudflare Pages project. It does not push GitHub, run",
           1
@@ -4059,6 +4102,14 @@
       "reason": "internal",
       "lines": [
         [
+          "<p>Plembfin is now Plekt</p>",
+          1
+        ],
+        [
+          "<li><b>Docker installs</b><span>Change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt.</span></li>",
+          1
+        ],
+        [
           "<input id=\"globalSearchInput\" type=\"search\" name=\"plembfin-search\" placeholder=\"Search movies, shows, IDs...\" autocomplete=\"off\" autocapitalize=\"off\" autocorrect=\"off\" spellcheck=\"false\" readonly />",
           1
         ],
@@ -4099,7 +4150,10 @@
     "public/modules/analytics.js": {
       "reason": "internal",
       "lines": [
-        ["return scriptUrl.href === \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\";", 1],
+        [
+          "return scriptUrl.href === \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\";",
+          1
+        ],
         [
           "if (!config?.enabled || window.__plembfinTraksLoaded || window.__plembfinTraksLoading || privacySignalIsSet()) return;",
           1
@@ -4145,14 +4199,6 @@
       "lines": [
         [
           "if (!/^https:\\/\\/(?:plekt\\.net|plembfin\\.com)(?:\\/|$)/i.test(websiteUrl)) return \"\";",
-          1
-        ],
-        [
-          "title: \"Plembfin is now Plekt\",",
-          1
-        ],
-        [
-          "body: \"For Docker installs, change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt. Keep your existing tag, volumes and settings. Both old image names will receive updates for at least six months after the rebrand release. The default web port is now 5056 (it was 5055). If your Jellyfin, Emby or Plex webhooks point at port 5055, update them to 5056, or keep your old port mapping.\",",
           1
         ]
       ]
@@ -4734,9 +4780,18 @@
     "reddit-app/README.md": {
       "reason": "compatibility",
       "lines": [
-        ["after activation. Production Redis state remains unverified. The old `plembfin` app", 1],
-        ["is still installed separately on r/plembfin and is untouched by this revision.", 1],
-        ["Set-Location C:\\Github\\plembfin\\reddit-app", 1],
+        [
+          "after activation. Production Redis state remains unverified. The old `plembfin` app",
+          1
+        ],
+        [
+          "is still installed separately on r/plembfin and is untouched by this revision.",
+          1
+        ],
+        [
+          "Set-Location C:\\Github\\plembfin\\reddit-app",
+          1
+        ],
         [
           "A small [Devvit](https://developers.reddit.com) app installed only in r/plembfin. On a",
           1
@@ -5165,8 +5220,14 @@
     "server/server.js": {
       "reason": "internal",
       "lines": [
-        ["scriptUrl: \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\",", 1],
-        ["collectorOrigin: \"https://plembfin-traks-collect.lasikie.workers.dev\",", 1],
+        [
+          "scriptUrl: \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\",",
+          1
+        ],
+        [
+          "collectorOrigin: \"https://plembfin-traks-collect.lasikie.workers.dev\",",
+          1
+        ],
         [
           "if (path.basename(DB_PATH) === \"plembfin.db\" && fs.existsSync(path.join(DATA_DIR, \"plekt.db\"))) {",
           1
@@ -5468,22 +5529,6 @@
       "reason": "internal",
       "lines": [
         [
-          "// does not prove another viewing occurred. A canonical Plembfin playstate can",
-          1
-        ],
-        [
-          "// can repeat the old played flag after Plembfin has cleared it.",
-          1
-        ],
-        [
-          "// What a Plex/Emby/Jellyfin library-history row does, given Plembfin's own",
-          1
-        ],
-        [
-          "// state. A review is never queued for an item Plembfin already has watched:",
-          1
-        ],
-        [
           "// A position Plembfin itself wrote to put this item on the provider's",
           1
         ],
@@ -5496,31 +5541,7 @@
           1
         ],
         [
-          "// flag, not evidence of another viewing. Plembfin may deliberately keep",
-          1
-        ],
-        [
-          "// Marking an item played on Plex bumps its lastViewedAt, so plembfin's own",
-          1
-        ],
-        [
           "// own successful inventory and already watched in Plembfin before we send",
-          1
-        ],
-        [
-          "// 2. Fetch Plembfin watchHistory to resolve conflicts",
-          1
-        ],
-        [
-          "// 5. Plembfin history is the canonical set of items to consider. Remote-only",
-          1
-        ],
-        [
-          "// No local history row at all means Plembfin never recorded a decision for",
-          1
-        ],
-        [
-          "// The unwatched marker is already the canonical Plembfin decision. Do",
           1
         ]
       ]
@@ -5534,6 +5555,10 @@
         ],
         [
           "// is wide enough to absorb clock skew between plembfin and the Plex server",
+          1
+        ],
+        [
+          "// is replaying the old flag after Plembfin sent Mark unwatched. A recent",
           1
         ],
         [
@@ -9370,8 +9395,14 @@
     "website/src/components/SiteHeader.astro": {
       "reason": "website",
       "lines": [
-        ["<a class:list={{ active: isWhyPlembfin }} href=\"/why-plembfin/\">Why Plekt</a>", 1],
-        ["const isWhyPlembfin = pathname.startsWith(\"/why-plembfin\");", 1],
+        [
+          "<a class:list={{ active: isWhyPlembfin }} href=\"/why-plembfin/\">Why Plekt</a>",
+          1
+        ],
+        [
+          "const isWhyPlembfin = pathname.startsWith(\"/why-plembfin\");",
+          1
+        ],
         [
           "<a class=\"site-brand\" href=\"/\" aria-label=\"Plembfin home\">",
           1
@@ -10945,6 +10976,15 @@
         ]
       ]
     },
+    "reddit-app/src/generated/release.json": {
+      "reason": "history",
+      "lines": [
+        [
+          "\"Tweak: New installs keep the backups/plembfin folder name for compatibility.\",",
+          1
+        ]
+      ]
+    },
     "website/src/generated/release.json": {
       "reason": "website",
       "lines": [
@@ -11469,7 +11509,10 @@
     "website/src/layouts/SiteLayout.astro": {
       "reason": "website",
       "lines": [
-        ["const traksScriptUrl = \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\";", 1],
+        [
+          "const traksScriptUrl = \"https://plembfin-traks-collect.lasikie.workers.dev/t.js\";",
+          1
+        ],
         [
           "<meta property=\"og:site_name\" content=\"Plembfin\" />",
           1
@@ -12073,6 +12116,65 @@
         ],
         [
           "\"docSlug\": \"upgrading-from-plembfin\",",
+          1
+        ]
+      ]
+    },
+    "server/src/utils/recentWatchImport.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "// does not prove another viewing occurred. A canonical Plembfin playstate can",
+          1
+        ],
+        [
+          "// can repeat the old played flag after Plembfin has cleared it.",
+          1
+        ],
+        [
+          "// What a Plex/Emby/Jellyfin library-history row does, given Plembfin's own",
+          1
+        ],
+        [
+          "// state. A review is never queued for an item Plembfin already has watched:",
+          1
+        ],
+        [
+          "// flag, not evidence of another viewing. Plembfin may deliberately keep",
+          1
+        ],
+        [
+          "// Marking an item played on Plex bumps its lastViewedAt, so plembfin's own",
+          1
+        ]
+      ]
+    },
+    "test/plexProgressNewerView.test.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "makeTempDataDir(\"plembfin-plex-progress-newer-view-test-\");",
+          1
+        ]
+      ]
+    },
+    "server/src/utils/forceSyncRun.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "// 2. Fetch Plembfin watchHistory to resolve conflicts",
+          1
+        ],
+        [
+          "// 5. Plembfin history is the canonical set of items to consider. Remote-only",
+          1
+        ],
+        [
+          "// No local history row at all means Plembfin never recorded a decision for",
+          1
+        ],
+        [
+          "// The unwatched marker is already the canonical Plembfin decision. Do",
           1
         ]
       ]

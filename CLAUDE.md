@@ -14,6 +14,7 @@ Project instructions for all agents.
 - **Local commits only at the end of a chat** - `git add` and `git commit` run without a prompt, so never commit mid-task. Commit once, as the last step when the chat's work is finished.
 - **No Deployments** - Never deploy or run deployment commands unless explicitly instructed.
 - **No Unsolicited Actions** - Do exactly what the user asks. No unsolicited refactors, extra features, or edits outside the request's scope.
+- **Review Before External Publication** - Before posting, replying, commenting, sending, submitting, releasing, deploying, or otherwise publishing to an external service, show the user the exact final content or action and destination, then wait for their explicit approval of that preview. A general task request or earlier approval does not replace approval of the exact version. Never perform the publishing step before that approval.
 - **No Browser Actions Unless Asked** - Never open browsers/browser tools unless explicitly requested. Test commands are part of the normal project checks: run `npm test` or `npm run build` when a change touches code covered by those checks or when the user asks for verification.
 - **Act immediately on simple requests** - Make clear, specific changes directly without preamble or planning steps. Save analysis for genuinely complex or ambiguous tasks.
 
@@ -41,9 +42,11 @@ When the user says **"enable quick edits"**, keep quick-edit mode active until t
 
 ## Local testing context
 
-When local-server or connected-browser testing is explicitly requested, read
-`.claude/local-environment.md` first if it exists (machine-specific URLs and signed-in browser
-sessions; gitignored, so absent on fresh clones).
+Before any kind of test (unit, build, API, UI, browser, provider, release or website capture),
+read `.claude/local-environment.md` first if it exists (machine-specific local server, sign-in
+and connected test apps; gitignored, so absent on fresh clones). It covers every test type, and
+its rules pre-approve test-instance writes. Live and remote services are in
+`.claude/live-environment.md`; use them only when the user explicitly asks in that request.
 
 ## Agent conduct and efficient work
 
@@ -88,7 +91,7 @@ any provider requiring login.
 
 Read [docs/agent-plans.md](docs/agent-plans.md) before creating/updating plans or todo.md.
 After EVERY step update its Results, summary (current state/steps at top, history below),
-todo Now line and dated change log; run npm run todo:check. Keep plans small and truthful:
+todo entry (moved to Last edited, dated); run npm run todo:check. Keep plans small and truthful:
 implemented, unit-tested and live-verified are different. Untested checks remain unticked;
 archive only when all checks pass. Ask behavior decisions when encountered, before building.
 Do not put website work in feature plans; it belongs to Force to main unless user-authorized.

@@ -9,8 +9,8 @@ Route handoffs first: **phase B (capture only)** runs only the named captures.md
 (no release prechecks/lock/worktree); **phase C** reads the run summary and resumes at 4.
 Only the exact initial trigger starts at 0. Never reconstruct this flow from memory.
 
-At every stop and phase end, show this fixed checklist with completed boxes ticked,
-the current stop marked "here", and a one-line next action:
+At every stop and phase end, show this checklist with done boxes ticked,
+the stop marked "here" and a one-line next action:
 
 - [ ] 1 Main build candidate running and changelog preview shown
 - [ ] 2 Suggested changelog updates made
@@ -32,27 +32,26 @@ npm run release:precheck
 node scripts/release-lock.js acquire "force to main"
 git fetch origin
 ```
-Check cleanup again after fetching and before push. Do not work around a refused lock.
-Record baseline, pins, paths/PIDs and approvals using the run templates; preserve existing
-changes and consistent pending/version filenames.
+Recheck cleanup after fetching and before push; never work around a refused lock.
+Record baseline, pins, paths/PIDs and approvals in the run templates; keep existing changes
+and filenames consistent.
 Lock expires after 30 minutes: inspect/reconcile on resume, reacquire if needed.
 Keep it across handoffs; release on completion/abandonment, only in the main checkout.
 
 ## 1–2. Pinned candidate, changelog and build approval
 
-On develop, follow candidate operations for an unused external detached worktree at the
-pin, npm ci, releaseMessage and BUILD_CHANNEL=main startup. Never patch candidate code,
-copy credentials or run develop/candidate concurrently against shared data.
+On develop, follow candidate operations: an unused external detached worktree at the pin,
+npm ci, releaseMessage, BUILD_CHANNEL=main. Never patch candidate code, copy credentials or
+run develop and candidate concurrently on shared data.
 
 ```
 node scripts/promote-alpha-to-main.js --preview
 # In the disposable candidate only, following the documented setup:
-node scripts/promote-alpha-to-main.js --confirm
+node scripts/promote-alpha-to-main.js --confirm --defer-website-gate
 ```
-If confirm refuses outstanding website guides, STOP: the existing flow has a recorded
-contradiction; no waiver or behavior change is authorized by this skill.
+The website gate waits for step 5, after the reviewed website is carried in; other refusals STOP.
 
-Record a JSON mechanical-check record alongside the run notes:
+Record this JSON with the run notes:
 `{ "alpha": "<full pin>", "main": "<full pin>", "worktree": "<absolute path>",
 "pid": 1234, "baseUrl": "http://localhost:5056", "version": "<version>" }`.
 Run `npm run release:candidate -- <absolute-record.json>` before presentation and C resume.
@@ -62,7 +61,7 @@ Checks establish identity, never approval.
 Show full entry and running build together; recommend wording changes with reasons (or none).
 Edit only after agreement.
 **STOP for explicit approval of both changelog and running main build before phase A.**
-Build changes require develop/Force to alpha and new approval; wording repeats candidate setup.
+Build changes need develop/Force to alpha and new approval.
 
 ## 3. Website A
 
@@ -76,7 +75,8 @@ npm run check:website-impact
 Reconcile targets with pinned commits/website notes and actual diffs/images. Source paths
 alone never mandate retakes. Record each capture's reason/commit; user-narrowed scope wins.
 Review copy, prepare capture-run.json, required live states and captures.md from the
-template. Run recapture --check and the scratch framing trial required by website
+template. New or renamed guides get their `website/src/data/app-surface.json` entry here
+(docSlug, sourcePaths, formerDocSlugs); `npm run check:content` in `website/` must pass. Run recapture --check and the scratch framing trial required by website
 operations. Fix catalogue framing/app defects rather than blindly retaking WARNs.
 If no captures are needed, record that explicitly and skip B.
 
@@ -86,9 +86,8 @@ Phase B: delegate to the `release-capture` subagent (`.claude/agents/release-cap
 the version and captures.md path, then wait for its report. PASS: continue to phase C
 automatically. NEEDS HUMAN or FAIL: STOP and ask the user.
 
-Phase C reads the run summary, reconciles lock/source and reruns release:candidate.
-Read website operations for image acceptance, privacy manifest, captions/themes/links,
-affected-page checks and full gate:
+Phase C reads the run summary, reconciles lock/source, reruns release:candidate.
+Read website operations for image, privacy, caption, link and full-gate checks:
 ```
 # From website/
 npm run captures:inventory
@@ -101,8 +100,8 @@ never push it.
 
 ## 5. Carry, preview, promote
 
-Read [promotion/publication operations](../../../docs/agent-release-publish.md) now;
-it supplies exact carry/stage/cleanup commands and final-review requirements.
+Read [promotion/publication operations](../../../docs/agent-release-publish.md) now for the
+exact carry, stage and cleanup commands.
 Require a clean main checkout, switch to the pinned alpha, carry website from develop,
 restore approved wording, review README and run:
 ```
@@ -121,9 +120,8 @@ unexpected work blocks cleanup. Preserve the approval/preview records.
 Start app (BUILD_CHANNEL=main) and website from the exact committed release after verifying
 ownership and stopping old listeners. Show full changelog entry, changed/stamped guides and
 accepted leftovers, app URL/version and website URL including /changelog.
-**Wait for explicit final go-ahead.** Requested changes require checks and renewed review;
-app/changelog changes return to affected release approval/website review. Do not blindly
-promote again after alpha entries reset.
+**Wait for explicit final go-ahead.** Requested changes need checks and renewed review
+(app/changelog changes return to the release approvals). Do not blindly promote again.
 
 ## 7–8. Push, demo, website
 
@@ -132,15 +130,17 @@ show `git log origin/main..HEAD --oneline`, then:
 ```
 git push origin HEAD:main --force
 ```
-Never bypass hooks. On a first hook test failure, npm test once, then retry the SAME push
-only if that passes; a second full-gate failure or failed rerun stops for investigation.
+Never bypass hooks. After a first hook failure, run npm test once and retry the SAME push
+only if it passes; a second failure stops for investigation.
 Wait for Publish Main Release AND its OCI deployment/version verification to succeed.
 Missing OCI configuration/failure means incomplete release; never seed demo fixtures here.
+A failed Publish Main Release on a small non-user-facing fix (tests, CI, tooling) defaults to a
+hotfix on main, then develop brought up to it (the next Force to alpha rebuilds alpha). No full re-run.
 
 Follow publication operations to deploy the clean pushed release website to
 plembfin-website only (check:deploy, build, Wrangler). Final approval already covers this.
-Login failure stops for user login. Verify live plekt.net changelog/guide links and homepage
-image bytes: `npm run release:verify-live -- <version>`. Failure means release incomplete.
+Login failure stops for user login. Verify live links and image bytes: `npm run release:verify-live -- <version>`. Failure means
+release incomplete.
 
 ## 9. Local reconciliation
 
@@ -153,4 +153,4 @@ Missing work means STOP. Otherwise record old tip, locally
 `git checkout -B develop origin/main`, set upstream origin/develop and report status.
 Never push develop or merge/fold the release back. Release lock; update step/summary/todo
 each phase and run todo:check. Apply publication operations' rebrand checks unchanged.
-After completion, offer Announce release (drafts only); never run it without acceptance.
+Then offer Announce release (drafts only); run it only on acceptance.
