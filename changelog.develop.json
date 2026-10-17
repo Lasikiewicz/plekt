@@ -1,7 +1,22 @@
 {
-  "version": "2.1.0.0.0",
-  "build": 0,
+  "version": "2.1.0.0.2",
+  "build": 2,
   "resetCommit": "5bd1293fce47f95e6d5dcb0c975b89857b0249d9",
-  "updatedAt": "2026-10-16T15:24:45.418Z",
-  "entries": []
+  "updatedAt": "2026-10-17T17:43:21.346Z",
+  "entries": [
+    {
+      "build": 2,
+      "date": "2026-10-17T17:43:21.346Z",
+      "commit": "9f453239cd082e6d120f6c9e96fedbec7adc3fc1",
+      "message": "Feature - Improve watch state, season mapping and presentation",
+      "author": "Lasikiewicz",
+      "details": [
+        "Preserve completed Plex watch state across stale resume data and protect unwatch races.",
+        "Add TV season source selection, episode translation, unmatched episode handling, and translated Up Next warmup.",
+        "Preserve Trakt-only plays during show replacement and fail closed on occupied targets.",
+        "Split sync, history import, polling, and scheduling work into focused modules with retry and lease safeguards.",
+        "Improve appearance controls, changelog navigation, Reddit release bundling, and README screenshots."
+      ]
+    }
+  ]
 }
