@@ -67,6 +67,7 @@ import { mediaIsUpNextRailSeed } from "../utils/upNextSeedLedger.js";
 import { DISMISSED_TRAKT_NOT_FOUND_DETAIL } from "../utils/traktDismissals.js";
 import { traceLog } from "../utils/logVerbose.js";
 import { buildSyncMatchReport, unresolvedSyncMatchReport } from "../utils/syncMatchReport.js";
+import { inRowNumbering } from "../utils/showSeasonTranslation.js";
 import {
   listUpNextDismissals,
   recordUpNextDismissal,
@@ -2094,14 +2095,13 @@ export async function handleManualWatch(req, res) {
         }
       }
 
-      const { data, record } = normalized;
+      const { data, record } = await inRowNumbering(normalized, pending, (next) => normalizeWatchRecordForInsert(next, "manual")); // show page display numbers -> stored numbering
       const existing = await findExistingWatch(data.mediaKey || mediaKeyFor(record), data.watchedAt);
       const media = manualWatchMediaFromRecord({
         ...record,
         provider_items: rawRecord.provider_items || rawRecord.providerItems || {},
         provider_item_id: rawRecord.provider_item_id || rawRecord.providerItemId,
-        // normalizeWatchRecordForInsert keeps only watch-history columns, so
-        // the intent has to be read back off the original request body.
+        // normalizeWatchRecordForInsert keeps only watch-history columns; read the intent off the request body.
         sync_intent: rawRecord.sync_intent || rawRecord.syncIntent,
       });
 

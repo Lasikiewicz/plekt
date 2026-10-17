@@ -2,8 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { DATA_DIR } from "../paths.js";
 import { getCachedShows } from "./dataRepo.js";
-import { getTmdbDetails } from "./tmdbGateway.js";
-import { getTvdbSeasonEpisodes } from "./tvdbGateway.js";
+import { getTmdbDetails, getTmdbSeason } from "./tmdbGateway.js";
 import { getCanonicalSeasonPosterUrls } from "./mediaArtwork.js";
 import { cachedNextAiringFor, readNextAiringCache } from "./nextAiringCache.js";
 
@@ -160,7 +159,7 @@ async function collectMonth(month, { shows: suppliedShows = null, prefilterFutur
         // has an empty Season 4 while Season 3 airs in July/August 2026).
         : [...new Set([maxSeason - 1, maxSeason, maxSeason + 1])].filter((value) => value > 0);
       for (const seasonNumber of seasonNumbers) {
-        const season = await getTvdbSeasonEpisodes({ tvdbId, seasonNumber }).catch(() => null);
+        const season = await getTmdbSeason({ tmdbId: show.tmdb_id || details?.id, tvdbId, seasonNumber }).catch(() => null);
         for (const episode of season?.episodes || []) {
           const airDate = String(episode.air_date || "");
           if (!airDate || airDate < start || airDate > end) continue;

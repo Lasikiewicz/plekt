@@ -785,7 +785,7 @@ export async function markPlexUnplayed(config, media) {
   }
 }
 
-export async function setPlexProgress(config, media) {
+export async function setPlexProgress(config, media, { protectNewerView = false } = {}) {
   try {
     requirePlexConfig(config);
 
@@ -799,6 +799,23 @@ export async function setPlexProgress(config, media) {
     const hasPosition = media.positionMs !== undefined || media.offsetMs !== undefined;
     if (!hasPosition) {
       return { platform: "plex", status: "skipped", detail: "No resume position supplied" };
+    }
+
+    // The unscrobble below un-watches the item. A propagated resume position
+    // must not erase a completed view Plex recorded after that position was
+    // observed: a stale Emby resume echo did exactly that to a just-finished
+    // episode, and the unwatched fallback poll then spread it to every server.
+    if (protectNewerView) {
+      const current = await fetchPlexMetadataItem(config, item.ratingKey, { lane: media?.lane || "sync" }).catch(() => null) || item;
+      const viewedAtMs = Number(current.lastViewedAt || 0) * 1000;
+      if (Number(current.viewCount || 0) > 0 && viewedAtMs > 0 && viewedAtMs >= Number(media.updatedAt || 0)) {
+        console.log("Plex resume progress skipped: Plex has a newer completed view", {
+          ratingKey: item.ratingKey,
+          positionMs,
+          lastViewedAt: new Date(viewedAtMs).toISOString(),
+        });
+        return { platform: "plex", status: "skipped", itemId: item.ratingKey, detail: "Plex has a completed view newer than this resume position" };
+      }
     }
 
     const unscrobbleUrl = new URL(`${trimTrailingSlash(config.baseUrl)}/:/unscrobble`);
@@ -832,7 +849,7 @@ export async function setPlexProgress(config, media) {
   } catch (error) {
     if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
       invalidatePlexSeriesIdentity(config, media);
-      return setPlexProgress(config, { ...media, __identityRetry: true });
+      return setPlexProgress(config, { ...media, __identityRetry: true }, { protectNewerView });
     }
     console.error("Plex progress client failed", error);
     throw error;

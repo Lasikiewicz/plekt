@@ -546,6 +546,9 @@ export function formatBuildVersion(value) {
 // the fifth segment.
 export function versionDisplayLabel(version, channel, alphaBuild, developBuild) {
   if (channel === "develop") {
+    // All five segments stay: trimming the zeros would show build 0 as the release.
+    const developFull = String(developBuild?.version ?? "").trim().replace(/^v/i, "");
+    if (/^\d+(\.\d+){4}$/.test(developFull)) return `${developFull} (Develop)`;
     const developVersion = formatBuildVersion(developBuild?.version);
     if (developVersion) return developVersion;
     return developBuild?.build != null ? `Develop Build ${developBuild.build}` : "Develop";

@@ -8,7 +8,7 @@ const {
   confirmJellyfinUnwatchedObservation,
   jellyfinMatchesContainWatched,
   jellyfinUnwatchedConfirmationKey,
-} = await import("../server/src/scheduled.js");
+} = await import("../server/src/utils/unwatchedStatusPoll.js");
 
 function fakeLoopStore() {
   const values = new Map();

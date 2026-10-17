@@ -66,10 +66,30 @@
                 <span>Appearance</span>
               </button>
               <div id="sidebarAppearancePanel" class="sidebar-appearance-panel hidden">
-                <label class="sidebar-appearance-text-size" for="appearTextScale">
-                  <span>Text size <output id="appearTextScaleValue" for="appearTextScale">100%</output></span>
+                <div class="sidebar-appearance-theme">
+                  <div class="sidebar-appearance-theme-group">
+                  <button id="themeStyleButton" class="theme-toggle-button theme-style-toggle" type="button" title="Switch between the Classic and Modern theme styles" aria-label="Switch between the Classic and Modern theme styles">
+                    <span class="theme-toggle-track">
+                      <span class="theme-toggle-thumb"></span>
+                      <span class="theme-toggle-label theme-toggle-label--classic">Classic</span>
+                      <span class="theme-toggle-label theme-toggle-label--modern">Modern</span>
+                    </span>
+                  </button>
+                  </div>
+                  <div class="sidebar-appearance-theme-group">
+                  <button id="themeToggleButton" class="theme-toggle-button" type="button" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+                    <span class="theme-toggle-track">
+                      <span class="theme-toggle-thumb"></span>
+                      <span class="theme-toggle-label theme-toggle-label--light">Light</span>
+                      <span class="theme-toggle-label theme-toggle-label--dark">Dark</span>
+                    </span>
+                  </button>
+                  </div>
+                </div>
+                <details class="sidebar-appearance-text-size">
+                  <summary class="sidebar-appearance-theme-title">Text size</summary>
                   <input id="appearTextScale" type="range" min="100" max="130" step="5" value="100" aria-label="Text size" />
-                </label>
+                </details>
                 <div id="sidebarAppearanceMediaGroup" class="sidebar-appearance-list hidden">
                   <label class="sidebar-appearance-list-item" title="Show Logo Art">
                     <input id="appearShowLogoArt" type="checkbox" checked />
@@ -159,20 +179,6 @@
               <span id="syncProgressText" class="sync-progress-text" role="status">Sync - Idle</span>
             </button>
             <button id="appVersion" class="app-version" type="button" title="Open Changelog">v0.0.0</button>
-            <button id="themeStyleButton" class="theme-toggle-button theme-style-toggle" type="button" title="Switch between the Classic and Modern theme styles" aria-label="Switch between the Classic and Modern theme styles">
-              <span class="theme-toggle-track">
-                <span class="theme-toggle-thumb"></span>
-                <span class="theme-toggle-label theme-toggle-label--classic">Classic</span>
-                <span class="theme-toggle-label theme-toggle-label--modern">Modern</span>
-              </span>
-            </button>
-            <button id="themeToggleButton" class="theme-toggle-button" type="button" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
-              <span class="theme-toggle-track">
-                <span class="theme-toggle-thumb"></span>
-                <span class="theme-toggle-label theme-toggle-label--light">Light</span>
-                <span class="theme-toggle-label theme-toggle-label--dark">Dark</span>
-              </span>
-            </button>
           </div>
       </nav>
 
@@ -1193,6 +1199,13 @@
                       <div id="metadataProviderContent">
                         <div id="metadataProviderCards" class="metadata-provider-disclosures"></div>
                       </div>
+                      <form id="seasonSourceForm" class="sync-tuning-form">
+                        <div id="seasonSourceFields" class="sync-tuning-fields sync-tools-content"></div>
+                        <p id="seasonSourceStatus" class="message" role="status" aria-live="polite" style="display: none;"></p>
+                        <div class="settings-actions">
+                          <button id="saveSeasonSourceButton" class="button-primary sync-action-btn sync-tool-button" type="submit">Save Season Source</button>
+                        </div>
+                      </form>
                     </article>
                   </div>
                   <div class="settings-row-help">
@@ -2776,10 +2789,11 @@
                 <div class="settings-row">
                   <div class="settings-row-main">
                     <article class="glass-panel p-section settings-card tool-section-card">
-                      <div class="section-heading sync-heading sync-static-heading">
+                      <div class="section-heading sync-heading sync-static-heading changelog-heading">
                         <div class="sync-heading-title">
                           <p style="margin: 0;">Changelog<span id="changelogHeadingStatus" class="changelog-heading-status"></span></p>
                         </div>
+                        <div id="changelogChannelTabs" class="changelog-heading-tabs"></div>
                         <span>Your version and newer releases from GitHub</span>
                       </div>
                       <div id="changelogPanel" class="changelog-panel" aria-live="polite"></div>
@@ -2790,16 +2804,19 @@
                   </div>
 
                   <div class="settings-row-help">
-                    <article class="glass-panel p-section settings-card">
+                    <article class="glass-panel p-section settings-card" data-help-static="true">
                       <div class="section-heading">
-                        <p>Release - Help</p>
-                        <a class="settings-help-link" href="https://plekt.net/docs/settings/changelog/#open-the-in-app-changelog" target="_blank" rel="noopener noreferrer">Website guide</a>
+                        <p>Plembfin is now Plekt</p>
                       </div>
 
                       <div class="settings-help-content">
                         <div>
                           <ul>
-                            <li><b>Changelog</b><span>Checks published releases for feature updates, bug fixes, and performance improvements. The <b>Current</b> badge marks the version installed here, while <b>New</b> marks releases published since it.</span><span><b>Main</b> lists published releases. <b>Alpha</b> lists pre-release builds from the alpha branch; viewing it never changes the installed version.</span><span>For Docker, update with <code>docker compose pull</code>. For Git installs, run <code>git pull</code>, <code>npm install</code>, and restart Plekt.</span></li>
+                            <li><b>Docker installs</b><span>Change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt.</span></li>
+                            <li><b>Keep your settings</b><span>Keep your existing tag, volumes and settings.</span></li>
+                            <li><b>Old image names</b><span>Both receive updates for at least six months after the rebrand release.</span></li>
+                            <li><b>Web port</b><span>The default is now 5056 (it was 5055).</span></li>
+                            <li><b>Webhooks</b><span>If Jellyfin, Emby or Plex webhooks point at port 5055, update them to 5056, or keep your old port mapping.</span></li>
                           </ul>
                         </div>
                       </div>

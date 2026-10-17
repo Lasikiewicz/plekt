@@ -512,6 +512,23 @@ export async function fetchTraktPlayHistory({ clientId, accessToken }, { startAt
   return result.filter((item) => !item.mediaKey.endsWith(":"));
 }
 
+// A complete show-scoped snapshot is required before moving any history ids.
+export async function fetchTraktShowPlayHistory(connection, traktId) {
+  const entries = [];
+  for (let page = 1; page <= 10_000; page += 1) {
+    const result = await request(`${API_BASE}/users/me/history/shows/${encodeURIComponent(traktId)}?page=${page}&limit=250`, { ...connection, includePagination: true });
+    if (!Array.isArray(result.data)) throw new Error("Trakt returned an invalid show history snapshot; nothing was removed.");
+    entries.push(...result.data.map(normalizeHistoryEpisode));
+    if (result.pageCount > 0 ? page >= result.pageCount : result.data.length < (result.pageLimit || 250)) return entries;
+  }
+  throw new Error("Trakt show history exceeded the pagination safety limit");
+}
+
+export function removeTraktHistoryIds(connection, ids) {
+  if (!ids.length || ids.some((id) => !/^\d+$/.test(String(id)))) throw new Error("Valid Trakt history ids are required");
+  return request(`${API_BASE}/sync/history/remove`, { ...connection, method: "POST", body: { ids: ids.map(String) }, lane: "sync" });
+}
+
 // Plays of one media type whose watched_at falls inside [startAt, endAt]. The
 // background retry reads this before re-adding a play, so a write Trakt
 // accepted but whose response was lost (timeout, 5xx) is not added twice.

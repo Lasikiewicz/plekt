@@ -6,6 +6,7 @@ import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.1.0.0.
 import { createSeasonPostersPanel } from "./season-posters-panel.js?v=2.1.0.0.0";
 import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.1.0.0.0";
 import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.0.0.0";
+import { mountShowSeasonSource } from "./show-season-source.js?v=2.1.0.0.0";
 
 // Callbacks injected by app.js at startup.
 let _setMessage = () => {};
@@ -1662,7 +1663,6 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
   const currentTvdbId = String(options.currentTvdbId || "").trim();
   const initialSearchTitle = fixMatchSearchTitle(currentTitle, isTv ? "tv" : "movie");
   const hasTraktSplitContext = isTv && currentTvdbId && Number.isInteger(Number(options.traktSourceSeason));
-
   const overlay = document.createElement("div");
   overlay.className = "edit-dialog-overlay";
   overlay.addEventListener("click", (e) => {
@@ -1685,7 +1685,7 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
       </div>
       <p class="edit-dialog-status fix-match-search-status" role="status" aria-live="polite"></p>
       ${hasTraktSplitContext ? `<p class="muted-copy fix-match-split-hint" style="margin: 0.5rem 0 0;">This failed Trakt episode is Season ${escapeHtml(options.traktSourceSeason)} locally. Keep the TVDB/media-app match and skip Trakt for now if the provider uses a different series or season numbering. Only choose <strong>Unsplit for Trakt/TMDB</strong> after confirming that separate provider series is correct.</p>` : ""}
-      <div class="fix-match-results"></div>
+      <div class="fix-match-results"></div>${isTv ? `<div class="fix-match-season-source"></div>` : ""}
       <hr style="border:0;border-top:1px solid var(--border);margin:1rem 0 0.75rem;" />
       <p class="muted-copy" style="margin-bottom:0.5rem;">YouTube content not on TMDB? Paste the video URL below.</p>
       <div style="display:flex;gap:0.5rem;">
@@ -1699,7 +1699,7 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
       </div>
     </div>
   `;
-
+  if (isTv) mountShowSeasonSource(overlay.querySelector(".fix-match-season-source"), currentTitle);
   const resultsEl = overlay.querySelector(".fix-match-results");
   const status = overlay.querySelector(".edit-dialog-status");
   const input = overlay.querySelector(".fix-match-input");

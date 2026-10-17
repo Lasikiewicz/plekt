@@ -5,6 +5,7 @@ import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js"
 import { fetchPosterFromTmdb } from "./tmdbClient.js";
 import { getCachedTmdbDetails, getCachedTmdbExternalIdKind, getTmdbDetails, getTmdbSeason, queueTmdbMetadataWarmup } from "./tmdbGateway.js";
 import { getCachedTvdbEpisodeKind } from "./tvdbGateway.js";
+import { annotateShowNumbering } from "./showSeasonTranslation.js";
 import { cachedNextAiringFor, readNextAiringCache } from "./nextAiringCache.js";
 import { buildWatchProvenance, normalizeProviderOverrides, normalizeWatchProvenance } from "./watchProvenance.js";
 import { recordWatchAuditEvent, recordWatchAuditEvents } from "./watchAudit.js";
@@ -6505,7 +6506,7 @@ function episodeRowIndex(rows) {
   return index;
 }
 
-export async function queryShowDetail({ id = "", title = "", tmdbId = "", tvdbId = "", imdbId = "", episodeRows = null } = {}) {
+export async function queryShowDetail({ id = "", title = "", tmdbId = "", tvdbId = "", imdbId = "", episodeRows = null, displayNumbering = false } = {}) {
   const requestedId = cleanString(id);
   const requestedTmdbId = cleanString(tmdbId);
   const requestedTvdbId = cleanString(tvdbId);
@@ -6610,6 +6611,10 @@ export async function queryShowDetail({ id = "", title = "", tmdbId = "", tvdbId
       show.show_poster_url = show.show_poster_url || null;
       show.canonical_poster_url = show.canonical_poster_url || null;
     }
+    // Show page only: a Fix Match TVDB/TMDB choice places rows on the episode
+    // they belong to in the chosen structure. Up Next stays cache-only and
+    // keeps the stored numbers.
+    if (displayNumbering) await annotateShowNumbering(show);
   }
   return show || null;
 }

@@ -6,7 +6,7 @@ makeTempDataDir("plembfin-pending-manual-dispatch-trakt-retry-");
 
 const repo = await import("../server/src/utils/dataRepo.js");
 const trackerConnectionRepo = await import("../server/src/utils/trackerConnectionRepo.js");
-const { syncPendingManualDispatches, traktNeedsRetry, SYNC_RETRY_MAX_ATTEMPTS } = await import("../server/src/scheduled.js");
+const { syncPendingManualDispatches, traktNeedsRetry, SYNC_RETRY_MAX_ATTEMPTS } = await import("../server/src/utils/syncDispatchQueue.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 
 function connectTrakt() {

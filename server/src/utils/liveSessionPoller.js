@@ -1,7 +1,7 @@
 import { activeSyncOperation, loadMediaConfig, loadRuntimeState, SYNC_OPERATION_SCHEDULED } from "./configStore.js";
 import { createLoopStore } from "./loopStore.js";
 import { isVerboseLogging } from "./logVerbose.js";
-import { refreshLiveSessions } from "../scheduled.js";
+import { refreshLiveSessions } from "./liveSessionCompletion.js";
 
 // Now Playing detection used to be gated entirely by the once-a-minute scheduled-sync
 // tick (see docs/now-playing.md): a session starting or ending could take up to 60s to

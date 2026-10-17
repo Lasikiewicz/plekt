@@ -172,8 +172,16 @@ export async function loadChangelogData(force = false) {
 }
 
 let changelogExpanded = false;
+
+// The Main / Alpha tabs live in the card heading, on the title row, not in the
+// panel body. Cleared on every path that has no tabs to show.
+function setChannelTabs(html = "") {
+  if (elements.changelogChannelTabs) elements.changelogChannelTabs.innerHTML = html;
+}
+
 export async function renderChangelog(force = false) {
   if (!elements.changelogPanel) return;
+  setChannelTabs();
   elements.changelogPanel.innerHTML = `<div class="idle-state"><b>Loading changelog...</b></div>`;
   try {
     const data = await loadChangelogData(force);
@@ -212,11 +220,7 @@ export async function renderChangelog(force = false) {
     // A release install is never notified about alpha or develop builds: the
     // server forces alphaBuild.newerBuildAvailable false off the alpha channel
     // for exactly that reason, and developBuild is only read on develop.
-    const notices = [{
-      kind: "muted",
-      title: "Plembfin is now Plekt",
-      body: "For Docker installs, change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt. Keep your existing tag, volumes and settings. Both old image names will receive updates for at least six months after the rebrand release. The default web port is now 5056 (it was 5055). If your Jellyfin, Emby or Plex webhooks point at port 5055, update them to 5056, or keep your old port mapping.",
-    }];
+    const notices = [];
     const pullHint = (tag) => `then pull the latest ghcr.io/lasikiewicz/plekt:${tag} image to update.`;
 
     if (!data.remoteAvailable) {
@@ -283,6 +287,7 @@ export async function renderChangelog(force = false) {
 
     if (!entries.length && !developBuildEntries.length && !alphaBuildEntries.length && !pendingDevelopEntries.length && !pendingAlphaEntries.length) {
       // Nothing on either channel: no point rendering a toggle over two empty panels.
+      setChannelTabs();
       elements.changelogPanel.innerHTML = `${banner}<div class="idle-state"><b>No changelog entries found.</b></div>`;
       return;
     }
@@ -414,8 +419,8 @@ export async function renderChangelog(force = false) {
       : "";
     // origin/alpha keeps the previous cycle's builds after a release, because
     // "Force to main" resets the bundled manifest but never touches the branch.
-    // Those are real history, so they are kept and labelled with the release
-    // they were built on rather than listed as if they were current.
+    // Those are real history, so they are kept after the current cycle without
+    // a heading, rather than listed as if they were current.
     const { currentCycle: currentAlphaEntries, older: olderAlphaCycles } =
       partitionAlphaEntriesByBase(alphaBuildEntries, data.current);
 
@@ -423,8 +428,8 @@ export async function renderChangelog(force = false) {
       ? `<h4 class="changelog-section-heading">${data.channel === "develop" ? "Alpha builds for this release" : "Current alpha build"}</h4>${currentAlphaEntries.map((entry) => renderAlphaBuildEntry(entry)).join("")}`
       : "";
 
-    const olderAlphaSection = olderAlphaCycles.map(([base, cycleEntries]) => `
-      <h4 class="changelog-section-heading">Earlier alpha builds - based on v${escapeHtml(base)}</h4>${cycleEntries.map((entry) => renderAlphaBuildEntry(entry)).join("")}`).join("");
+    const olderAlphaSection = olderAlphaCycles.map(([, cycleEntries]) => `
+      ${cycleEntries.map((entry) => renderAlphaBuildEntry(entry)).join("")}`).join("");
 
     const visibleEntries = changelogExpanded ? entries : entries.slice(0, 20);
     const olderCount = entries.length - visibleEntries.length;
@@ -448,19 +453,19 @@ export async function renderChangelog(force = false) {
       olderAlphaSection ||
       `<div class="idle-state"><b>No alpha builds published for this release yet.</b></div>`;
 
+    setChannelTabs(renderChangelogChannelTabs({
+      selected: channel,
+      // Everything the Alpha panel shows, not just the alpha entries: the
+      // panel also carries develop builds, so counting alpha alone read as a
+      // mismatch against the visible list.
+      alphaCount: pendingDevelopEntries.length + developBuildEntries.length
+        + pendingAlphaEntries.length + alphaBuildEntries.length,
+    }));
     elements.changelogPanel.innerHTML = banner +
-      renderChangelogChannelTabs({
-        selected: channel,
-        // Everything the Alpha panel shows, not just the alpha entries: the
-        // panel also carries develop builds, so counting alpha alone read as a
-        // mismatch against the visible list.
-        alphaCount: pendingDevelopEntries.length + developBuildEntries.length
-          + pendingAlphaEntries.length + alphaBuildEntries.length,
-      }) +
       `<div class="changelog-channel-panel" data-changelog-panel="main"${channel === "main" ? "" : " hidden"}>${mainPanel}</div>` +
       `<div class="changelog-channel-panel" data-changelog-panel="alpha"${channel === "alpha" ? "" : " hidden"}>${alphaPanel}</div>`;
 
-    bindChangelogChannelTabs(elements.changelogPanel, () => {
+    bindChangelogChannelTabs(elements.changelogChannelTabs, () => {
       renderChangelog(false).catch(() => { });
     });
     elements.changelogPanel.querySelector("#changelogShowAll")?.addEventListener("click", () => {
@@ -468,6 +473,7 @@ export async function renderChangelog(force = false) {
       renderChangelog(false).catch(() => { });
     });
   } catch (error) {
+    setChannelTabs();
     elements.changelogPanel.innerHTML = `<div class="idle-state"><b>${escapeHtml(error.message || "Unable to load changelog.")}</b></div>`;
   }
 }

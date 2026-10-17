@@ -2,7 +2,7 @@ import { fetchPlexWithRefresh } from "./plexFetch.js";
 import { resolvePlexAccountId } from "./plexClient.js";
 import { watchedAtForPlexItem } from "./watchDates.js";
 import { isAuthoritativeRestoreActive } from "./configStore.js";
-import { plexHistoryItemMatchesConfiguredUser } from "../scheduled.js";
+import { plexHistoryItemMatchesConfiguredUser } from "./recentWatchImport.js";
 
 const DEFAULT_ACTIVE_INTERVAL_MS = 5000;
 const DEFAULT_IDLE_INTERVAL_MS = 30000;

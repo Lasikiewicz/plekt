@@ -503,6 +503,15 @@ CREATE TABLE IF NOT EXISTS tmdb_season_cache (
   updated_at_ms INTEGER
 );
 
+-- Season structure source saved per show on its first read (see seasonSource.js).
+CREATE TABLE IF NOT EXISTS show_season_source (
+  show_key TEXT PRIMARY KEY,  -- TVDB series id
+  season_source TEXT NOT NULL CHECK (season_source IN ('tvdb', 'tmdb')),
+  recorded_at INTEGER NOT NULL,
+  row_numbering TEXT,  -- numbering of stored watch rows, set by a Fix Match choice; NULL = same as season_source
+  overridden_at INTEGER  -- when Fix Match last set this show's source
+);
+
 CREATE TABLE IF NOT EXISTS tmdb_person_cache (
   id TEXT PRIMARY KEY,
   person_id TEXT,

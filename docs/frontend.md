@@ -669,6 +669,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Movie detail rendering | `modules/media-detail-movie.js` |
 | Person profiles and filmography | `modules/media-person.js` |
 | Edit dialogs and watched-date/image/match tools | `modules/edit-dialogs.js` |
+| Fix Match per-show TVDB/TMDB season and episode numbers, its preview confirmation and the Trakt second confirmation | `modules/show-season-source.js` |
 | Season Posters tab in Edit Images (season list, per-season options) | `modules/season-posters-panel.js` |
 | Manual watched/unwatched actions | `modules/watch-action.js` |
 | Shared calendar/time picker (used by edit dialogs and mark-watched prompts) | `modules/calendar-picker.js` |

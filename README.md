@@ -35,8 +35,8 @@ to each other - Plekt remembers what you've watched and keeps everyone in sync.
 
 ## Formerly Plembfin
 
-This alpha cycle is the Plekt rebrand. The new image and repository names and the
-`plekt.net` documentation links are checked before each stable release.
+The new image and repository names and the `plekt.net` documentation links are checked
+before each stable release.
 
 Plekt is the same app with a new name. Existing Docker installs only need to change
 `ghcr.io/lasikiewicz/plembfin` to `ghcr.io/lasikiewicz/plekt`, or
@@ -92,7 +92,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Plex Watchlist Sync** - One-toggle, two-way sync between Plekt and the Plex account watchlist, with safe first-run union, durable retries, a Sync now action, and a plain-language explanation of anything Plex refuses
 - **Upcoming episodes calendar** - Air date schedule for upcoming and past releases, pre-cached for instant loading
 - **Discover hub** - Personalized recommendations from your watch history plus cached trending, now-playing, airing-today, and genre feeds paint immediately from saved data, exclude titles you have already watched, and refresh live through the update stream with direct TMDB detail navigation
-- **Live Trakt sync** - Two-way Trakt integration with seamless device authorization, per-play history import, and resilient sync protection
+- **Live Trakt sync** - Two-way Trakt integration with seamless device authorization, per-play history import, and resilient sync protection; translated episode mapping applies to batch marks and restore replay, and show replacement preserves Trakt-only plays or refuses conflicting targets before writing
 - **Seerr integration** - Discover and request movies and TV shows directly from detail pages via Overseerr or Jellyseerr
 - **Movie collections** - Explore related franchise entries, sequels, prequels, and spin-offs from movie detail pages and collection search results
 - **Direct server deep links** - Quick one-click links to jump directly to any title in Plex, Emby, or Jellyfin
@@ -101,7 +101,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
 - **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, and HMAC session signing
 - **High-performance artwork cache** - Fast local caching for high-resolution posters, backdrops, and logos from TMDB, TheTVDB, and Fanart.tv; metadata is warmed in the background as media is discovered or a TV show is rematched so the dashboard stays cache-first
-- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB; choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB
+- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings, and per show in Fix Match, where your stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB
 - **Unified multi-source search** - Blazingly fast search across your local libraries, TMDB movies/shows/collections, and TheTVDB with local media prioritized
 - **Progressive Web App (PWA)** - Installable directly on iOS, Android, macOS, and Windows with a native app experience
 
@@ -129,52 +129,92 @@ saved on the Plekt server, so it applies wherever you open Plekt.
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/now-playing.png" alt="Now Playing dashboard" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dashboard-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.png">
+    <img alt="Now Playing dashboard" src="docs/screenshots/dashboard-dark.png" width="100%" />
+  </picture>
   <em>Dashboard showing live playback status and recent watch history</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/sync-activity.png" alt="Sync Activity view" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/sync-activity-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/sync-activity-light.png">
+    <img alt="Sync Activity view" src="docs/screenshots/sync-activity-dark.png" width="100%" />
+  </picture>
   <em>Live sync status and activity stream detailing sync origins, destinations, and delivery results</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/movies.png" alt="Movies library view" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/movies-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/movies-light.png">
+    <img alt="Movies library view" src="docs/screenshots/movies-dark.png" width="100%" />
+  </picture>
   <em>Full poster grid with search, filters, and sort options</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/part-watched.png" alt="Up Next and Watch History" width="100%" />
-  <em>Mixed Up Next queue with resume progress alongside completed watch history</em>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/up-next-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/up-next-light.png">
+    <img alt="Up Next queue" src="docs/screenshots/up-next-dark.png" width="100%" />
+  </picture>
+  <em>Mixed Up Next queue with resume progress and the episode playing now at the top</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/tvshows.png" alt="TV Shows library view" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/history-tv-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/history-tv-light.png">
+    <img alt="Dashboard TV history cards" src="docs/screenshots/history-tv-dark.png" width="100%" />
+  </picture>
+  <em>Dashboard history cards with episode details beside larger artwork</em>
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tvshows-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/tvshows-light.png">
+    <img alt="TV Shows library view" src="docs/screenshots/tvshows-dark.png" width="100%" />
+  </picture>
   <em>TV Shows library with rich show details</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/media.png" alt="Media detail view" width="100%" />
-  <em>Movie and show detail pages with cast, trailers, reviews, images, and recommendations</em>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/tv-detail-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/tv-detail-light.png">
+    <img alt="TV show detail with seasons and episodes" src="docs/screenshots/tv-detail-dark.png" width="100%" />
+  </picture>
+  <em>Show detail pages with season cards, episode progress per platform, cast, trailers, and reviews</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/history.png" alt="Watch history view" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/history-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/history-light.png">
+    <img alt="Watch history view" src="docs/screenshots/history-dark.png" width="100%" />
+  </picture>
   <em>Complete watch log across all connected platforms</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/stats.png" alt="Stats view" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stats-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/stats-light.png">
+    <img alt="Stats view" src="docs/screenshots/stats-dark.png" width="100%" />
+  </picture>
   <em>All-time play counts, top shows, platform breakdowns, and monthly watch activity</em>
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/bio.png" alt="Person bio view" width="100%" />
-  <em>Biography, photos, and full filmography pulled from TMDB</em>
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/search.png" alt="Global search" width="100%" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/search-dark.png">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/search-light.png">
+    <img alt="Global search" src="docs/screenshots/search-dark.png" width="100%" />
+  </picture>
   <em>Instant search results across movies, TV shows, and people</em>
 </p>
 

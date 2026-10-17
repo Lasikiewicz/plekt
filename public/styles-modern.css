@@ -54,7 +54,7 @@ html[data-style="modern"]:not(.light-mode) #history-view .history-list .history-
 html[data-style="modern"]:not(.light-mode) #timeline-view .dashboard-history-page-card .meta-label,
 html[data-style="modern"]:not(.light-mode) #history-view .history-list .history-page-card .meta-label {
   color: rgba(148, 163, 184, 0.72);
-  font-size: 0.64rem;
+  font-size: var(--fs-card-label);
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -80,7 +80,7 @@ html[data-style="modern"]:not(.light-mode) #timeline-view .history-card-meta-row
   background: rgba(56, 189, 248, 0.12);
   padding: 0.08rem 0.5rem;
   color: #7dd3fc;
-  font-size: 0.7rem;
+  font-size: var(--fs-card-watch-count);
   font-weight: 700;
 }
 
@@ -146,7 +146,7 @@ html[data-style="modern"]:not(.light-mode) #timeline-view .part-watched-app-badg
   background: color-mix(in srgb, var(--accent), transparent 86%);
   padding: 0.05rem 0.5rem;
   color: var(--accent);
-  font-size: 0.68rem;
+  font-size: var(--fs-badge);
   font-weight: 700;
 }
 
@@ -299,7 +299,7 @@ html #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] .h
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  font-size: 0.9rem;
+  font-size: var(--fs-option);
   cursor: pointer;
 }
 
@@ -314,7 +314,7 @@ html #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] .h
 .now-playing-option-error {
   margin: 0;
   color: var(--danger, #f87171);
-  font-size: 0.85rem;
+  font-size: var(--fs-option-error);
 }
 
 .now-playing-option-error.hidden {
@@ -400,7 +400,7 @@ html[data-style="modern"] #nowPlayingGrid .live-now-card .now-card-details {
 
 html[data-style="modern"] #nowPlayingGrid .live-now-card .stream-indicator {
   color: var(--accent);
-  font-size: 0.68rem;
+  font-size: var(--fs-badge);
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -413,7 +413,7 @@ html[data-style="modern"] #nowPlayingGrid .live-now-card .stream-indicator.is-pa
 html[data-style="modern"] #nowPlayingGrid .live-now-card .now-card-title {
   overflow: hidden;
   color: var(--text);
-  font-size: clamp(1.1rem, 1.5vw, 1.4rem);
+  font-size: var(--fs-now-title);
   font-weight: 600;
   line-height: 1.2;
   text-decoration: none;
@@ -424,7 +424,7 @@ html[data-style="modern"] #nowPlayingGrid .live-now-card .now-card-title {
 html[data-style="modern"] #nowPlayingGrid .live-now-card .now-card-episode {
   overflow: hidden;
   color: var(--text);
-  font-size: 0.9rem;
+  font-size: var(--fs-now-episode);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -436,7 +436,7 @@ html[data-style="modern"] #nowPlayingGrid .live-now-card .now-card-meta {
   margin-top: auto;
   gap: 0.15rem;
   color: var(--muted);
-  font-size: 0.8rem;
+  font-size: var(--fs-now-meta);
 }
 
 html[data-style="modern"] #nowPlayingGrid .live-now-card .now-card-progress-container {
@@ -534,21 +534,6 @@ html[data-style="modern"]:not(.light-mode) .topnav .nav-tab.active {
   color: #f5c451;
 }
 
-html[data-style="modern"]:not(.light-mode) .global-search input {
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: linear-gradient(180deg, #262c35 0%, #1c2128 100%);
-}
-
-html[data-style="modern"]:not(.light-mode) .sidebar-footer .theme-toggle-track {
-  border-color: rgba(255, 255, 255, 0.08);
-  background: #10151b;
-}
-
-html[data-style="modern"]:not(.light-mode) .sidebar-footer .theme-toggle-thumb {
-  background: linear-gradient(180deg, rgba(229, 160, 13, 0.32) 0%, rgba(229, 160, 13, 0.16) 100%);
-  box-shadow: inset 0 0 0 1px rgba(229, 160, 13, 0.45);
-}
-
 /* Light ------------------------------------------------------------------- */
 /* The dark rules above, redrawn on white. The accent is the light mode's own
    (blue), as Modern dark uses the dark accent: amber text on white would not
@@ -616,7 +601,7 @@ html[data-style="modern"].light-mode #history-view .history-list .history-page-c
 html[data-style="modern"].light-mode #timeline-view .dashboard-history-page-card .meta-label,
 html[data-style="modern"].light-mode #history-view .history-list .history-page-card .meta-label {
   color: rgba(71, 85, 105, 0.8);
-  font-size: 0.64rem;
+  font-size: var(--fs-card-label);
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -641,7 +626,7 @@ html[data-style="modern"].light-mode #timeline-view .history-card-meta-row .meta
   background: rgba(14, 165, 233, 0.1);
   padding: 0.08rem 0.5rem;
   color: #0369a1;
-  font-size: 0.7rem;
+  font-size: var(--fs-card-watch-count);
   font-weight: 700;
 }
 
@@ -679,21 +664,6 @@ html[data-style="modern"].light-mode .topnav .nav-tab.active {
   color: #1d4ed8;
 }
 
-html[data-style="modern"].light-mode .global-search input {
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
-}
-
-html[data-style="modern"].light-mode .sidebar-footer .theme-toggle-track {
-  border-color: rgba(15, 23, 42, 0.08);
-  background: #e8edf3;
-}
-
-html[data-style="modern"].light-mode .sidebar-footer .theme-toggle-thumb {
-  background: linear-gradient(180deg, rgba(37, 99, 235, 0.2) 0%, rgba(37, 99, 235, 0.08) 100%);
-  box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.4);
-}
-
 /* Collapsed runs carry an episode counter on the poster (.dashboard-run-badge,
    modules/dashboard-modern.js), so a posters-only card still shows the size of
    the run. A corner tab flush with the poster's top left, following its rounded corner,
@@ -714,7 +684,7 @@ html[data-style="modern"].light-mode .sidebar-footer .theme-toggle-thumb {
   background: #0b0f14;
   padding: 0.2rem 0.6rem 0.22rem 0.55rem;
   color: #fff;
-  font-size: 0.68rem;
+  font-size: var(--fs-badge);
   font-weight: 800;
   line-height: 1.3;
   letter-spacing: 0.02em;
@@ -877,7 +847,7 @@ html[data-style="modern"].light-mode .page-shell .shared-media-card :is(.shared-
 }
 
 html[data-style="modern"] .page-shell .shared-media-card :is(.shared-media-card-type, .shared-media-card-release-label) {
-  font-size: 0.64rem;
+  font-size: var(--fs-card-label);
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -929,7 +899,7 @@ html[data-style="modern"] .page-shell .shared-media-card .shared-media-card-rati
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent), transparent 86%);
   padding: 0.05rem 0.45rem;
-  font-size: 0.68rem;
+  font-size: var(--fs-badge);
   line-height: 1.4;
 }
 
@@ -983,7 +953,7 @@ html[data-style="modern"] .page-shell[data-active-view="explorer"] #explorerPane
 
 html[data-style="modern"] .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .meta-label {
   color: rgba(148, 163, 184, 0.72);
-  font-size: 0.64rem;
+  font-size: var(--fs-card-label);
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -1006,7 +976,7 @@ html[data-style="modern"] .page-shell[data-active-view="explorer"] #explorerPane
   background: rgba(56, 189, 248, 0.12);
   padding: 0.08rem 0.5rem;
   color: #7dd3fc;
-  font-size: 0.7rem;
+  font-size: var(--fs-card-watch-count);
   font-weight: 700;
 }
 
@@ -1150,7 +1120,7 @@ html[data-style="modern"] .media-detail-page .season-poster-card:hover .season-p
 /* Fact labels recede like the card labels; their colours stay as Classic's,
    since they sit over the backdrop. */
 html[data-style="modern"] .media-detail-page :is(.media-fact > span, .media-fact-table-label, .media-facts-group-label) {
-  font-size: 0.68rem;
+  font-size: var(--fs-fact-label);
   font-weight: 700;
   letter-spacing: 0.12em;
 }
@@ -1314,7 +1284,7 @@ html[data-style="modern"] .settings-pane .settings-row-main details:is(.sync-too
    case and spacing (the browser resets both on form controls). The passphrase
    labels carry a sentence-case hint, so they are left as they are. */
 html[data-style="modern"] .settings-pane .field-label:not(.checkbox-label):not(.backup-enable-row):not(.backup-passphrase-label) {
-  font-size: 0.7rem;
+  font-size: var(--fs-field-label);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;

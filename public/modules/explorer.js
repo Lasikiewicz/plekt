@@ -2086,7 +2086,7 @@ export function seasonsFromShowRecord(show = {}) {
   const seasons = new Map();
   for (const episode of show.episodes || []) {
     if (!isWatchedHistoryAction(episode)) continue;
-    const season = Number(episode.season) || 0;
+    const season = Number(episode.display_season ?? episode.season) || 0;
     if (!seasons.has(season)) seasons.set(season, []);
     seasons.get(season).push(episode);
   }

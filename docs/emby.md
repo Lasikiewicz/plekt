@@ -9,7 +9,8 @@ polling. Read [architecture.md](architecture.md) first for the big picture.
 | --- | --- |
 | `server/src/utils/embyClient.js` | Outbound HTTP client - all Emby API calls |
 | `server/src/utils/parsers.js` | `parseEmbyWebhook` - webhook normalization |
-| `server/src/scheduled.js` | `syncRecentlyWatchedFromEmby`, `syncRecentlyResumableFromEmby`, `syncRecentlyNextUpFromEmby` - catch-up polling |
+| `server/src/utils/recentWatchImport.js` | `syncRecentlyWatchedFromEmby` - catch-up watched import |
+| `server/src/scheduled.js` | `syncRecentlyResumableFromEmby`, `syncRecentlyNextUpFromEmby` - catch-up polling |
 | `server/src/utils/liveSessions.js` | Polls `/Sessions` for Now Playing |
 | `public/modules/help-content.js` | `embyCredentialGuide()`, `embyWebhookSetup()` - in-app setup guides |
 

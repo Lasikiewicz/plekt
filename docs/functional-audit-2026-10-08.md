@@ -116,6 +116,8 @@ Unwatch attempts to clear progress and then mark the item unplayed. A progress-c
 
 **Fix:** first check on a live Emby, Jellyfin, and Plex item that mark-unplayed alone clears the resume position. If it does on all three, only add the clear failure to the target's detail text and leave the outcome as success. If a provider keeps the position, treat that provider as the original report proposed: report a partial outcome and retry the clear.
 
+**Live result (16 October 2026, step 6):** run against the connected Emby, Jellyfin, and Plex test instances with `scratch/functional-audit-f5-live.mjs`. On each, a test movie was given a 600000 ms resume position, then only mark-unplayed was sent. The position read back as 0 on all three and the item stayed unplayed, so the first branch applies: the remaining fix is to add the progress-clear failure to the target's detail text and keep the outcome as success. The test movies were left unplayed at position 0, their starting state. The fix is applied (commit `0f083fc6`): the target detail reports a failed progress clear and the outcome stays success.
+
 **Regression cases:** clear fails/mark succeeds; clear succeeds/mark fails; providers that clear position implicitly.
 
 ### F6 (P2): Force Sync counts a missing item as a completed action

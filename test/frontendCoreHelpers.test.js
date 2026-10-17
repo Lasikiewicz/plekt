@@ -53,7 +53,8 @@ test("build versions format in core utils, so the sidebar badge never waits for 
   assert.equal(utils.formatBuildVersion("1.1.1.0.3"), "1.1.1.0.3");
   assert.equal(utils.versionDisplayLabel("1.1.1", "release"), "1.1.1");
   assert.equal(utils.versionDisplayLabel("1.1.1", "alpha", { version: "1.1.1.2.0" }), "1.1.1.2 (Alpha)");
-  assert.equal(utils.versionDisplayLabel("1.1.1", "develop", null, { version: "1.1.1.0.4" }), "1.1.1.0.4");
+  assert.equal(utils.versionDisplayLabel("1.1.1", "develop", null, { version: "1.1.1.0.4" }), "1.1.1.0.4 (Develop)");
+  assert.equal(utils.versionDisplayLabel("2.1.0", "develop", null, { version: "2.1.0.0.0" }), "2.1.0.0.0 (Develop)");
   // Regression: app.js once read formatBuildVersion from the Settings-only
   // changelog module, so every other page rendered a bare "v" badge.
   assert.doesNotMatch(appSource, /formatBuildVersion = lazyNoop/);

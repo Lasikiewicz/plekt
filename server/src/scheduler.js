@@ -1,4 +1,5 @@
 import { createLoopStore, pruneExpiredLoopKeys } from "./utils/loopStore.js";
+import { readShowNumbering } from "./utils/seasonSource.js";
 import { activeSyncOperation, appendSyncHistory, isAuthoritativeRestoreActive, loadBackgroundSyncProgress, loadMediaConfig, loadRuntimeState, setRuntimeState, SYNC_OPERATION_SCHEDULED } from "./utils/configStore.js";
 import { createPlexNotificationListener } from "./utils/plexNotificationListener.js";
 import { createPlexAdaptivePoller } from "./utils/plexAdaptivePoller.js";
@@ -7,7 +8,8 @@ import { fetchPlexContainerEpisodes, fetchPlexMetadataItem, findPlexItem, hydrat
 import { buildPlexMediaFromMetadata } from "./utils/parsers.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "./utils/watchProvenance.js";
 import { listActiveSessions } from "./utils/activeSessions.js";
-import { providerWatchFingerprint, recoverStaleSyncOperation, runScheduledSync } from "./scheduled.js";
+import { providerWatchFingerprint } from "./utils/recentWatchImport.js";
+import { recoverStaleSyncOperation, runScheduledSync } from "./scheduled.js";
 import { watchedPlayedSyncEnabled } from "./utils/syncFlags.js";
 import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
@@ -376,9 +378,13 @@ export async function runWithTimeBudget(label, task, timeoutMs) {
 }
 
 async function reconcileTraktProviderMappings() {
+  // A show with a Fix Match season choice keeps its Trakt mapping:
+  // Trakt can expose the stored (media server) numbering too, which would
+  // otherwise clear the mapping and send its plays to the wrong episodes.
   const rows = (await getCachedHistory()).filter((row) => (
     row.media_type === "episode"
     && row.provider_overrides?.trakt?.tmdb_id
+    && !readShowNumbering(row.tvdb_id).overriddenAt
   ));
   if (!rows.length) return { checked: 0, changed: 0 };
 
@@ -715,11 +721,18 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
       return;
     }
 
-    // A Plex library notification only reports the resulting played flag; it
-    // does not identify whether the user clicked Mark played or Plex is
-    // replaying the old flag after Plembfin sent Mark unwatched. Either way it
-    // must stay out of canonical history until the user decides in review.
-    if (playstate?.state === "unwatched") {
+    // A Plex library notification only reports the resulting played flag; by
+    // itself it does not identify whether the user clicked Mark played or Plex
+    // is replaying the old flag after Plembfin sent Mark unwatched. A recent
+    // threshold-reaching playback whose Plex view time is newer than the
+    // unwatched state is a real later watch, so it continues. A manual Plekt
+    // unwatch stays held: only the exact live-session completion may revive it
+    // (docs/decisions.md entry 31), and that path records it separately.
+    const playbackOutranksUnwatch = playstate?.state === "unwatched"
+      && !watchDate.manualMark
+      && String(playstate.source || "").toLowerCase() !== "manual"
+      && Date.parse(watchDate.sourceTimestamp || "") > Number(playstate.updated_at || 0);
+    if (playstate?.state === "unwatched" && !playbackOutranksUnwatch) {
       if (dateChoice.requiresReview) {
         const queued = enqueueManualWatchReview(media, {
           releaseDate: media.releaseDate,

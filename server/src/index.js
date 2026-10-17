@@ -10,6 +10,7 @@ import { handleActiveSessions, handleCronSync, handleCronSyncStatus, handleForce
   handleUpNextDismissed,
   handleUpNextRestore, handleWebhook } from "./routes/sync.js";
 import { handleSeasonPosterOptions, handleSeasonPosters } from "./routes/seasonArtwork.js";
+import { handleShowSeasonSource, handleShowSeasonSourcePreview, handleShowSeasonSourceTraktPreview, handleShowSeasonSourceTraktReplace } from "./routes/showSeasonSource.js";
 import { handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch, handleOmdbRating, handlePoster, handlePosterBatch, handleRemoteArtwork, handleTmdbCollection, handleTmdbDetails, handleTmdbDetailsBatch, handleTmdbImages, handleTmdbPerson, handleTmdbPoster, handleTmdbProfile, handleTmdbSearch, handleTmdbSeason, handleTvdbImages, handleTvdbSearch, handleUpcoming, handleUpNext, handleUpNextShow, handleYoutubeMeta } from "./routes/metadata.js";
 import { handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats, handleChangelog, handleClearCache, handleDebugPlexMatch, handleDiagnosticLogs, handleMaintenanceStub, handlePing, handleRefreshTmdbMetadata, handleRefreshTvdbMetadata, handleRematchTvShows, handleSyncHealth, handleSyncMatchReport, handleEpisodeTitleAudit, handleEpisodeTitleBackfill, handlePhantomWatchAudit, handlePhantomWatchRepair, handleStaleTraktImportAudit, handleStaleTraktImportRepair, handleStalePendingWatchAudit, handleStalePendingWatchRepair, handleSplitIdentityUnwatchAudit, handleSplitIdentityUnwatchRepair, handleLikelyFalseUnwatchAudit, handleLikelyFalseUnwatchRepair } from "./routes/maintenance.js";
 import { handleWipeDataPreview, handleWipeData } from "./routes/wipeData.js";
@@ -56,7 +57,7 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^(?:tmdb-search|tvdb-search|fix-match-search|media-search|refresh-tmdb-metadata|refresh-tvdb-metadata)(?:\/|$)/i,
   /^(?:remote-artwork|tmdb-poster|tmdb-profile|fanart-images|tvdb-images|tmdb-images|season-poster-options|youtube-meta|omdb-rating)(?:\/|$)/i,
   /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|likely-false-)/i,
-  /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases)/i,
+  /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases|show-season-source)/i,
   /^(?:diagnostic-logs|debug-plex-match|webhook)$/i,
   /^webhook-port(?:\/|$)/i,
 ]);
@@ -215,6 +216,10 @@ async function dispatch(req, res) {
     if (path === "update-watch-dates") return handleUpdateWatchDates(req, res);
     if (path === "rematch-show") return handleRematchShow(req, res);
     if (path === "merge-shows") return handleMergeShows(req, res);
+    if (path === "show-season-source/preview") return handleShowSeasonSourcePreview(req, res);
+    if (path === "show-season-source") return handleShowSeasonSource(req, res);
+    if (path === "show-season-source/trakt-preview") return handleShowSeasonSourceTraktPreview(req, res);
+    if (path === "show-season-source/trakt-replace") return handleShowSeasonSourceTraktReplace(req, res);
     if (path === "now-playing") return handleNowPlaying(req, res);
     if (path === "active-sessions") return handleActiveSessions(req, res);
     if (path === "cron-sync") return handleCronSync(req, res);

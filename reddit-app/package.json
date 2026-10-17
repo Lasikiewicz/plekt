@@ -1,13 +1,14 @@
 {
   "private": true,
   "name": "plekt-app",
-  "version": "0.0.0",
+  "version": "0.0.3",
   "license": "BSD-3-Clause",
   "type": "module",
   "scripts": {
-    "build": "vite build",
+    "build:release": "node scripts/bundle-release.mjs",
+    "build": "npm run build:release && vite build",
     "dev": "devvit playtest",
-    "deploy": "npm run test:types && npm test && devvit upload",
+    "deploy": "npm run build:release && npm run test:types && npm test && devvit upload",
     "launch": "npm run deploy && devvit publish",
     "login": "devvit login",
     "test": "node --test test/*.test.mjs",
@@ -20,11 +21,11 @@
     "@devvit/start": "0.14.1",
     "@devvit/web": "0.14.1",
     "@hono/node-server": "^2.0.3",
-    "devvit": "0.14.1",
     "hono": "4.13.7"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
+    "devvit": "0.14.1",
     "typescript": "6.0.3",
     "vite": "8.2.2"
   },

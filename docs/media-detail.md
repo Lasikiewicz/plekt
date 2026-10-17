@@ -497,7 +497,7 @@ of a premature "no episodes" message.
   `sync_dispatch_telemetry` (`formatDispatchTelemetry`, shared with
   `routes/sync.js`'s manual-watch handler) - a promoted row's telemetry would
   otherwise stay "Dispatch status: pending" forever, which is exactly what the
-  scheduler's backlog sweep (`syncPendingManualDispatches` in `scheduled.js`,
+  scheduler's backlog sweep (`syncPendingManualDispatches` in `utils/syncDispatchQueue.js`,
   see `scheduled-sync.md`) watches for; left unpersisted, that sweep would
   re-dispatch the row later using its own media object, which does not carry
   this row's `watched_at`, sending Trakt today's date instead of the real one

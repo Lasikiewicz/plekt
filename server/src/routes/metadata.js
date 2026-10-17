@@ -10,7 +10,8 @@ import { db, parseJson, toJson, writeAuditLog } from "../db.js";
 import { createLoopStore } from "../utils/loopStore.js";
 import { listActiveSessions, deleteActiveSession, upsertActiveSession } from "../utils/activeSessions.js";
 import { hydrateCachedSession, loadLiveTrackingCache } from "../utils/liveSessions.js";
-import { runForceSync, runScheduledSync } from "../scheduled.js";
+import { runForceSync } from "../utils/forceSyncRun.js";
+import { runScheduledSync } from "../scheduled.js";
 import { appendSyncHistory, loadMediaConfig, mergeIncomingConfig, publicMediaConfig, saveMediaConfig, validateConfig, getSyncHistory, loadRuntimeState, setRuntimeState, appendRuntimeLog } from "../utils/configStore.js";
 import { findPlexItem, markPlexPlayed, setPlexProgress, markPlexUnplayedByRatingKey, fetchPlexWatchedItems, fetchPlexMetadataItem, fetchPlexSeriesEpisodes } from "../utils/plexClient.js";
 import { probePlexNotificationSocket } from "../utils/plexNotificationListener.js";
@@ -25,6 +26,7 @@ import { cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, cacheProfil
 import { getTmdbDetails, getTmdbImages, getTmdbPerson, getTmdbSeason, searchTmdb, searchTmdbCollections, getTmdbCollection, getTmdbDiscovery, getTmdbRecommendations, getCachedTvdbId } from "../utils/tmdbGateway.js";
 import { searchTvdbSeriesList, resolveTvdbSeriesId, getTvdbSeriesArtwork } from "../utils/tvdbGateway.js";
 import { getUpcomingCalendarMonth } from "../utils/upcomingCalendarCache.js";
+import { withDisplaySeasons } from "../utils/showSeasonTranslation.js";
 import { getCanonicalPosterUrl } from "../utils/mediaArtwork.js";
 import { getUpNextCacheSnapshot } from "../utils/upNextCache.js";
 import { buildUpNextProjection } from "../utils/upNextService.js";
@@ -759,7 +761,7 @@ export async function handleTmdbDetails(req, res) {
   }
 
   try {
-    const details = await getTmdbDetails({ mediaType, tmdbId, title, ids, lane: "interactive" });
+    const details = await withDisplaySeasons(await getTmdbDetails({ mediaType, tmdbId, title, ids, lane: "interactive" }));
     return sendJson(res, details, 200, { "Cache-Control": "private, max-age=300, stale-while-revalidate=86400", Vary: "Authorization" });
   } catch (error) {
     console.error("Failed handling TMDB details API", error);
@@ -806,11 +808,10 @@ export async function handleTmdbDetailsBatch(req, res) {
           ids,
           light: item?.light === true,
           relatedTvLookup: item?.relatedTvLookup === true,
-          // Explorer prefetch is intentionally lower priority; a full detail
-          // request is user-visible and must jump ahead of it.
+          // Explorer prefetch is lower priority; a full detail request jumps ahead.
           lane: item?.light === true ? "enrichment" : "interactive",
         });
-        results[index] = { details };
+        results[index] = { details: await withDisplaySeasons(details, { cachedOnly: item?.light === true }) };
       } catch (error) {
         results[index] = { error: error.message || "failed", status: error.status || 500 };
       }

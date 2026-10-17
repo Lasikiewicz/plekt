@@ -9,7 +9,8 @@ import { db, parseJson, toJson, writeAuditLog } from "../db.js";
 import { createLoopStore } from "../utils/loopStore.js";
 import { listActiveSessions, deleteActiveSession, upsertActiveSession } from "../utils/activeSessions.js";
 import { hydrateCachedSession, loadLiveTrackingCache } from "../utils/liveSessions.js";
-import { runForceSync, runScheduledSync } from "../scheduled.js";
+import { runForceSync } from "../utils/forceSyncRun.js";
+import { runScheduledSync } from "../scheduled.js";
 import { appendSyncHistory, loadMediaConfig, mergeIncomingConfig, publicMediaConfig, saveMediaConfig, validateConfig, getSyncHistory, loadRuntimeState, setRuntimeState, appendRuntimeLog } from "../utils/configStore.js";
 import { findPlexItem, markPlexPlayed, setPlexProgress, markPlexUnplayedByRatingKey, fetchPlexWatchedItems, fetchPlexMetadataItem, fetchPlexSeriesEpisodes } from "../utils/plexClient.js";
 import { probePlexNotificationSocket } from "../utils/plexNotificationListener.js";
@@ -22,6 +23,7 @@ import { watchedPlayedSyncEnabled } from "../utils/syncFlags.js";
 import { fetchPosterFromTmdb } from "../utils/tmdbClient.js";
 import { cacheBackdropFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache, markPosterMissing, usableCachedPoster } from "../utils/posterCache.js";
 import { getTmdbDetails, getTmdbImages, getTmdbPerson, getTmdbSeason, searchTmdb, getCachedTvdbId } from "../utils/tmdbGateway.js";
+import { pinUnrecordedSeasonSources, readGlobalSeasonSource } from "../utils/seasonSource.js";
 import { searchTvdbSeriesList, resolveTvdbSeriesId, getTvdbSeriesArtwork } from "../utils/tvdbGateway.js";
 import { getFanartMovieArt, getFanartTvArt, getAllFanartMovieImages, getAllFanartTvImages } from "../utils/fanartGateway.js";
 import { getOmdbRating } from "../utils/omdbGateway.js";
@@ -220,10 +222,15 @@ export async function handleConfig(req, res) {
     }
     const errors = validateConfig(toValidate);
     if (errors.length) return sendJson(res, { error: "Invalid configuration", details: errors }, 400);
+    const previousSeasonSource = readGlobalSeasonSource();
     await saveMediaConfig(config);
     // Connecting or re-pointing a media server changes what can be found, so a
     // remembered "not in any library" answer must not outlive the change.
     clearEmptyAppLinksCache();
+    if (readGlobalSeasonSource() !== previousSeasonSource) {
+      // Shows already on screen keep their season structure. Only shows read after this change follow the new default.
+      pinUnrecordedSeasonSources((await getCachedShows()).map((show) => show.tvdb_id));
+    }
     writeAuditLog("settings.saved", { ip: req.ip || req.socket?.remoteAddress });
     const storedConfig = await loadMediaConfig({ resolveConnections: false });
     return sendJson(res, { ok: true, config: publicMediaConfig(storedConfig) });

@@ -132,6 +132,22 @@ available for a later retry. `POST /api/rematch-show` reports this server-side w
 
 ## API endpoints (all admin-authenticated, all in `server/src/index.js`)
 
+Trakt replacement reads a complete show history snapshot and keeps Trakt-only plays at their
+current canonical episode numbers, including numbers that overlap Plekt's old structure.
+Missing target plays are added and verified before only uniquely identified old history IDs
+are removed. Already-correct plays are not re-added. If a new date would share an occupied
+target, replacement refuses before writing: Trakt can disable multiple plays and replace the
+existing date even for an append request. Ambiguous imported rows stay for review; an imported
+row proven by its Trakt date and coordinates can be repaired into the stored numbering while
+retaining its canonical Trakt override. Only inbound polling advances the history import cursor.
+
+Single and batch marks, Force Sync, restore replay and retry all apply the same outbound
+numbering rules. An unmatched translated episode fails closed instead of sending stored
+coordinates to Trakt. Cached inbound maps also cover the first Trakt import before Fix Match.
+Background metadata warming fills the recent stored TVDB seasons needed by translated Up Next
+cards (two active seasons and their successors, at most four serial reads); dashboard reads
+remain cache-only.
+
 | Endpoint | Backing |
 | --- | --- |
 | `GET /api/tmdb-details` (alias `media-details`) | `getTmdbDetails` - merged movie/TV details |
@@ -144,6 +160,8 @@ available for a later retry. `POST /api/rematch-show` reports this server-side w
 | `POST /api/discover/dismiss` | Persist a movie or TV TMDB id as excluded from the personalized Discover recommendation rail. |
 | `GET /api/tmdb-images`, `GET /api/tvdb-images`, `GET /api/fanart-images` | Artwork galleries for the edit-image dialog |
 | `GET /api/season-posters`, `GET /api/season-poster-options` | Saved/current season posters for the Season Posters tab, and TMDB/TVDB/fanart.tv options for one season (`routes/seasonArtwork.js`; provider options are demo-disabled) |
+| `GET /api/show-season-source/preview?tvdbId=&tmdbId=&source=`, `POST /api/show-season-source` | Fix Match per-show TVDB/TMDB choice (`routes/showSeasonSource.js`). The preview returns the rows' detected numbering, episode and watch-row counts and the episodes with no partner, without writing. The save needs `confirm: true`, recomputes that preview, stores the choice, and refreshes show progress. Watch rows keep their stored numbers; the show page places them by translation. Demo-disabled |
+| `GET /api/show-season-source/trakt-preview?tvdbId=&tmdbId=`, `POST /api/show-season-source/trakt-replace` | Second Fix Match confirmation (`routes/showSeasonSource.js`, `utils/showTraktReplace.js`). The preview returns episode and play counts and the review list without calling Trakt; replacement needs `confirm: true`, verifies target numbers and history, preserves Trakt-only plays, and writes per-row Trakt overrides. Conflicting occupied targets refuse before writing. A show with a translated choice is skipped by scheduled override reconciliation. |
 | `GET /api/tmdb-poster`, `GET /api/tmdb-profile` | Image proxies (rate-limited 300/min) |
 | `GET /api/remote-artwork` | Downloads and caches fanart.tv / TVDB / TMDB artwork by URL, then redirects to `/media/...` (see [posters-artwork.md](posters-artwork.md)) |
 | `GET /api/omdb-rating` | IMDb rating pill |

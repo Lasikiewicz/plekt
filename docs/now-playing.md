@@ -14,7 +14,7 @@ then resumes on the live-session poller's next tick.
 
 1. **`live_tracking_cache`** - written by an independent live-session poller
    (`server/src/utils/liveSessionPoller.js`, using `refreshLiveSessions()` in
-   `server/src/scheduled.js`), which polls Plex/Emby/Jellyfin directly and
+   `server/src/utils/liveSessionCompletion.js`), which polls Plex/Emby/Jellyfin directly and
    snapshots whatever is currently playing. Only rows with `completed_at IS NULL`
    are returned.
 2. **`active_sessions`** - written by the **webhook** `active` phase
@@ -67,7 +67,7 @@ current interval:
 
 ### Not mistaking a poll blip for a real stop
 
-`refreshLiveSessions()` (`server/src/scheduled.js`) reconciles the previous
+`refreshLiveSessions()` (`server/src/utils/liveSessionCompletion.js`) reconciles the previous
 `live_tracking_cache` rows against whatever the latest poll returned; anything
 previously tracked that isn't in the new result is treated as stopped, and
 either recorded as a completed watch (progress past the watched threshold) or

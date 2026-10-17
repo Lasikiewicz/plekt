@@ -195,7 +195,7 @@ When a watch looks unexpected, start with the show's **Info** export (the data b
 
 Trace sync issues in this order:
 
-1. `server/src/scheduled.js` (`syncRecentlyWatchedFromPlex`, `syncRecentlyWatchedFromEmby`,
+1. `server/src/utils/recentWatchImport.js` (`syncRecentlyWatchedFromPlex`, `syncRecentlyWatchedFromEmby`,
    `syncRecentlyWatchedFromJellyfin`) and `server/src/utils/watchDates.js` for catch-up
    polling, source played dates, and API-marked items.
 2. `server/src/routes/sync.js` and `server/src/utils/parsers.js` for webhook normalization,

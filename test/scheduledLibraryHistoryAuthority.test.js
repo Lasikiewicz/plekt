@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { libraryHistoryDecision, shouldSkipLibraryHistoryImport } from "../server/src/scheduled.js";
+import { libraryHistoryDecision, shouldSkipLibraryHistoryImport } from "../server/src/utils/recentWatchImport.js";
 
 test("a provider library snapshot cannot recreate a date removed from an already-watched item", () => {
   assert.equal(shouldSkipLibraryHistoryImport(null, { state: "watched" }), true);

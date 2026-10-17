@@ -10,6 +10,7 @@ import {
   recordTrackerPlay, replaceTrackerSnapshot, updateTrackerConnectionStatus,
 } from "./trackerConnectionRepo.js";
 import { withFreshTraktConnection } from "./trackerDispatcher.js";
+import { buildTraktInboundTranslator } from "./traktInboundNumbering.js";
 import { applyUnwatchedTransition, applyWatchedTransition } from "./watchStateTransitions.js";
 import { completeDispatchTracking, dispatchProgressKey, finishDispatchTracking, markReservedDispatchStarted, reserveDispatchBatch } from "./syncOrchestrator.js";
 
@@ -178,6 +179,9 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
   let latestWatchedAt = entries.reduce((max, entry) => Math.max(max, entry.watchedAt), watermarkMs);
   const touchedKeys = new Map();
   const recentOutbound = buildRecentOutboundIndex(previousStates, Date.now() - OUTBOUND_ECHO_WINDOW_MS);
+  // A Fix Match translated show's Trakt plays use the display numbering; local
+  // lookups and inserts use the stored numbering.
+  const toStoredNumbering = await buildTraktInboundTranslator();
 
   for (const entry of entries.filter((entry) => pendingIds.has(entry.historyId)).sort((a, b) => a.watchedAt - b.watchedAt)) {
     if (isAuthoritativeRestoreActive()) return;
@@ -213,7 +217,8 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
     // Trakt's own mediaKey shape (used for tracker_item_state) differs from
     // dataRepo's canonical media_key column format - recompute the canonical
     // one here or findExistingWatch's lookup against watch_history never matches.
-    const canonicalMediaKey = mediaKeyFor(entry.media);
+    const localMedia = toStoredNumbering(entry.media);
+    const canonicalMediaKey = mediaKeyFor(localMedia);
     let existing = await findExistingWatch(canonicalMediaKey, watchedAtIso).catch(() => null);
     if (!existing) {
       // findExistingWatch only matches an exact (media_key, watched_at) pair.
@@ -227,7 +232,7 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
       // ingest path in the app relies on for exactly this mismatch; treat
       // its "watched" answer as authoritative so a Trakt history entry never
       // creates a second row for an episode Plembfin already has recorded.
-      const canonicalState = await getCanonicalWatchState(entry.media).catch(() => null);
+      const canonicalState = await getCanonicalWatchState(localMedia).catch(() => null);
       if (canonicalState === "watched") {
         recordTrackerPlay("trakt", { historyId: entry.historyId, mediaKey: trackerMediaKey(entry.media), watchedAt: watchedAtIso, watchRecordId: "" });
         continue;
@@ -235,7 +240,7 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
     }
     let watchRecordId = existing?.id || "";
     if (!existing) {
-      const record = mediaToWatchRecord({ ...entry.media, watched_at: watchedAtIso, syncAction: "watched" }, "trakt_import");
+      const record = mediaToWatchRecord({ ...localMedia, watched_at: watchedAtIso, syncAction: "watched" }, "trakt_import");
       record.sync_action = "watched";
       // Without telemetry that looks "done", the scheduler's manual-dispatch
       // retry sweep (server/src/scheduled.js syncPendingManualDispatches)
@@ -259,7 +264,7 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
     recordTrackerPlay("trakt", { historyId: entry.historyId, mediaKey: canonicalMediaKey, watchedAt: watchedAtIso, watchRecordId });
     const previous = touchedKeys.get(canonicalMediaKey);
     if (!previous || entry.watchedAt > previous.watchedAtMs) {
-      touchedKeys.set(canonicalMediaKey, { media: entry.media, watchedAtMs: entry.watchedAt, watchedAtIso });
+      touchedKeys.set(canonicalMediaKey, { media: localMedia, watchedAtMs: entry.watchedAt, watchedAtIso });
     }
   }
 
@@ -301,9 +306,12 @@ async function pollTrakt({ reconcile = false } = {}) {
   const currentIdentityKeys = new Set(snapshot.flatMap((item) => [item.mediaKey, ...trackerMediaIdentityKeys(item.media)]));
   const baseline = publicConnection.baselineComplete;
   const reconcileKeys = new Set();
+  // Snapshot and ledger keys stay in Trakt's numbering; local reads and
+  // transitions use the stored numbering of a Fix Match translated show.
+  const toStoredNumbering = await buildTraktInboundTranslator();
   if (baseline && reconcile) {
     await runTransitionBatch(snapshot, async (item) => {
-      const state = await getCanonicalWatchState(item.media).catch(() => null);
+      const state = await getCanonicalWatchState(toStoredNumbering(item.media)).catch(() => null);
       if (state !== "watched") reconcileKeys.add(item.mediaKey);
     });
   }
@@ -383,7 +391,7 @@ async function pollTrakt({ reconcile = false } = {}) {
       try {
         markReservedDispatchStarted(trackingReservation, item.media);
         const media = {
-          ...item.media,
+          ...toStoredNumbering(item.media),
           source: "trakt",
           watched_at: new Date(item.watchedAt || Date.now()).toISOString(),
           // Every later poll reports genuine new activity, but the very first
@@ -400,7 +408,7 @@ async function pollTrakt({ reconcile = false } = {}) {
             Date.now() - OUTBOUND_ECHO_WINDOW_MS,
           );
           if (latestOutbound?.lastOutboundState === "unwatched") return true;
-          const latestPlaystate = getPlaystateForMediaSync(item.media);
+          const latestPlaystate = getPlaystateForMediaSync(toStoredNumbering(item.media));
           return latestPlaystate?.state === "unwatched" && Number(latestPlaystate.updated_at || 0) >= pollStartedAt;
         };
         const transition = await applyWatchedTransition(media, config, loopStore, { trackDispatch: false, shouldDefer });
@@ -428,10 +436,10 @@ async function pollTrakt({ reconcile = false } = {}) {
             Date.now() - OUTBOUND_ECHO_WINDOW_MS,
           );
           if (latestOutbound?.lastOutboundState === "watched") return true;
-          const latestPlaystate = getPlaystateForMediaSync(item.media);
+          const latestPlaystate = getPlaystateForMediaSync(toStoredNumbering(item.media));
           return latestPlaystate?.state === "watched" && Number(latestPlaystate.updated_at || 0) >= pollStartedAt;
         };
-        const media = { ...item.media, source: "trakt", isValid: true };
+        const media = { ...toStoredNumbering(item.media), source: "trakt", isValid: true };
         const transition = await applyUnwatchedTransition(media, config, loopStore, { trackDispatch: false, shouldDefer });
         if (transition.deferred || transition.heldBackSuspiciousBurst) {
           protectedMissing.set(item.mediaKey, item);

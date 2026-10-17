@@ -854,6 +854,57 @@ export function renderMediaServerCards() {
   if (options) renderInlineServicePanel(seerrContainer, options);
 }
 
+// Global TVDB or TMDB choice for season and episode structure. The warning is
+// the field help text, shown beside the control.
+export const SEASON_SOURCE_FIELD = {
+  key: "seasonSource",
+  id: "metadata-season-source",
+  label: "Season and episode structure",
+  type: "choice",
+  options: [
+    { value: "tvdb", label: "TVDB", inlineDescription: "Default.", description: "Season and episode lists come from TheTVDB." },
+    { value: "tmdb", label: "TMDB", description: "Season and episode lists come from The Movie Database." },
+  ],
+  help: "This affects future items only. Shows already in your library keep their current season and episode data.",
+};
+
+// Renders the season source choice under the metadata cards and saves it
+// through the same /api/config route as the other settings.
+export function renderSeasonSourceCard() {
+  const fieldsContainer = document.querySelector("#seasonSourceFields");
+  const form = document.querySelector("#seasonSourceForm");
+  if (!fieldsContainer || !form) return;
+  const current = state.savedConfig?.metadata?.seasonSource || "tvdb";
+  fieldsContainer.innerHTML = renderFieldRow({ ...SEASON_SOURCE_FIELD, value: current });
+
+  if (form.dataset.bound) return;
+  form.dataset.bound = "true";
+  const statusEl = document.querySelector("#seasonSourceStatus");
+  const setStatus = (text, tone = "muted") => {
+    if (!statusEl) return;
+    statusEl.textContent = text || "";
+    statusEl.style.display = text ? "block" : "none";
+    statusEl.className = `message ${tone}`;
+  };
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const saveButton = document.querySelector("#saveSeasonSourceButton");
+    form.dataset.saving = "true";
+    if (saveButton) saveButton.disabled = true;
+    setStatus("Saving...", "muted");
+    try {
+      const values = collectFieldValues(fieldsContainer);
+      await saveServiceConfig("metadata", { seasonSource: values[SEASON_SOURCE_FIELD.key] === "tmdb" ? "tmdb" : "tvdb" });
+      setStatus("Saved.", "success");
+    } catch (error) {
+      setStatus(error?.message || "Save failed.", "error");
+    } finally {
+      delete form.dataset.saving;
+      if (saveButton) saveButton.disabled = false;
+    }
+  });
+}
+
 export function renderMetadataCards() {
   const container = document.querySelector("#metadataProviderCards");
   if (!container) return;
@@ -894,6 +945,7 @@ export function applyConfigToSettingsUi(config = {}) {
   state.seerrConfigured = Boolean(config.seerr?.configured);
   renderMediaServerCards();
   renderMetadataCards();
+  renderSeasonSourceCard();
   renderSyncTuningCard();
   prepareHelpReadMore();
 }

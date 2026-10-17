@@ -1,33 +1,35 @@
 # Terms & Conditions — Plekt Release Bot
 
-This Devvit app ("the bot") is a small, single-purpose automation installed only in
-r/plekt by that subreddit's moderators. It is not offered as a general-purpose
-service and is not intended for installation in other subreddits.
+This Devvit app is a single-purpose automation installed in r/plekt by that
+subreddit's moderators. It is not a general-purpose service and is not intended for
+installation in other subreddits.
 
 ## What it does
 
-The bot periodically checks [plekt.net/release.json](https://plekt.net/release.json).
-Its first successful check with no stored version records the current release without
-posting. When a subsequent new release is published there, it posts to r/plekt
-and pins it, replacing whichever earlier release post it had previously pinned.
+Each uploaded build includes the current Plekt release entry. The scheduled check
+posts and pins that bundled release once per version, using the app's stored
+last-announced version to suppress duplicates. It unpins its previous release post.
+On first run without a stored version, it records the current version without posting.
+Moderators can also use the subreddit menu action to
+open and submit an editable release announcement form.
 
 ## Acceptable use
 
-The bot only posts release-announcement content it generates from the public
-changelog file described above. It does not accept input from Reddit users and takes
-no action based on comments, votes, or other user activity.
+The bot posts release-announcement content from the bundled changelog entry or content
+submitted by a r/plekt moderator through the form. It does not accept input from other
+Reddit users and takes no action based on comments, votes or other user activity.
 
 ## No warranty
 
-The bot is provided as-is, with no guarantee of uptime, accuracy, or availability. It
+The bot is provided as-is, with no guarantee of uptime, accuracy or availability. It
 is a hobby-project convenience, not a service Reddit users rely on for anything
 consequential.
 
 ## Changes
 
-These terms may be updated at any time by the r/plembfin moderators; the current
-version always lives at this file's path in the plekt GitHub repository.
+These terms may be updated at any time by the r/plekt moderators; the current version
+always lives at this file's path in the Plekt GitHub repository.
 
 ## Contact
 
-Questions can be sent via modmail to r/plembfin.
+Questions can be sent via modmail to r/plekt.

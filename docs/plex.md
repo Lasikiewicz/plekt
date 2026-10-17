@@ -10,7 +10,9 @@ one outbound client. Read [architecture.md](architecture.md) first for the big p
 | `server/src/utils/plexClient.js` | Outbound HTTP client - all Plex API calls |
 | `server/src/utils/plexNotificationListener.js` | Real-time WebSocket listener for library watch-state changes |
 | `server/src/utils/parsers.js` | `parsePlexWebhook` / `parsePlexGuids` / `buildPlexMediaFromMetadata` - webhook + metadata normalization |
-| `server/src/scheduled.js` | `syncRecentlyWatchedFromPlex`, `syncRecentlyResumableFromPlex`, `checkPlexUnwatchedStatus` - catch-up polling and Up Next source-ledger refresh |
+| `server/src/utils/recentWatchImport.js` | `syncRecentlyWatchedFromPlex` - catch-up watched import |
+| `server/src/scheduled.js` | `syncRecentlyResumableFromPlex` - catch-up polling and Up Next source-ledger refresh |
+| `server/src/utils/unwatchedStatusPoll.js` | `checkPlexUnwatchedStatus` - fallback unwatched poll |
 | `server/src/utils/liveSessions.js` | Polls `/status/sessions` for Now Playing |
 | `public/modules/help-content.js` | `plexCredentialGuide()`, `plexWebhookSetup()` - in-app setup guides |
 

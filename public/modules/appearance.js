@@ -113,6 +113,7 @@ function observeDynamicStyles() {
 export function applyTextScale(value) {
   const percent = Math.min(130, Math.max(100, Number(value) || 100));
   activeTextScale = percent / 100;
+  document.documentElement.style.setProperty("--text-scale", String(activeTextScale));
   scaleAllStylesheets(activeTextScale);
   scaleInlineStyles(document.body, activeTextScale);
   observeDynamicStyles();

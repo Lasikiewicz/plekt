@@ -5,7 +5,7 @@ import { makeTempDataDir } from "./helpers.js";
 makeTempDataDir("plembfin-live-poller-completion-");
 
 const repo = await import("../server/src/utils/dataRepo.js");
-const { refreshLiveSessions } = await import("../server/src/scheduled.js");
+const { refreshLiveSessions } = await import("../server/src/utils/liveSessionCompletion.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 
 // End-to-end coverage of the poller's vanished-session promotion

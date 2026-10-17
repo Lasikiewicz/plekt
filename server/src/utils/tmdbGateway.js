@@ -6,7 +6,8 @@ import { cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, getPosterCa
 import { getFanartMovieArt, getFanartTvArt } from "./fanartGateway.js";
 import { RELATED_TV_SEARCH_MISS_TTL_MS, resolveTvdbSeriesId,resolveTvdbSeriesIdFromEpisodeId, getTvdbSeriesExtended, getTvdbSeasonEpisodes, getCachedTvdbSeasonEpisodes, shapeTvdbSeriesAsTmdb, tvdbSeriesTitleMatches } from "./tvdbGateway.js";
 import { isDemoMode } from "./demoMode.js";
-
+import { readShowNumbering, resolveAndRecordSeasonSource } from "./seasonSource.js";
+import { needsTranslatedSeasonWarmup, warmTranslatedRowSeasons } from "./translatedSeasonWarmup.js";
 const API_ROOT = "https://api.themoviedb.org/3";
 const IMAGE_ROOT = "https://image.tmdb.org/t/p";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -626,7 +627,7 @@ async function deriveNextAiring(details, tvdbId, lane = "enrichment") {
   const candidates = new Set([maxSeason, maxSeason + 1].filter((value) => value > 0));
   let earliest = null;
   for (const seasonNumber of [...candidates].sort((a, b) => a - b)) {
-    const season = await getTvdbSeasonEpisodes({ tvdbId, seasonNumber, lane }).catch(() => null);
+    const season = await getTmdbSeason({ tmdbId: details.id, tvdbId, seasonNumber, lane }).catch(() => null);
     const dates = (season?.episodes || []).map((episode) => episode.air_date).filter((date) => date && date >= today).sort();
     if (dates[0] && (!earliest || dates[0] < earliest)) earliest = dates[0];
   }
@@ -681,7 +682,7 @@ async function drainMetadataWarmupQueue() {
     if (attemptedAt && Date.now() - attemptedAt < METADATA_WARMUP_RETRY_MS) continue;
     metadataWarmupAttemptedAt.set(item.key, Date.now());
     try {
-      await getTmdbDetails(item);
+      await warmTranslatedRowSeasons(await getTmdbDetails(item));
       warmed += 1;
     } catch (error) {
       failed += 1;
@@ -732,7 +733,7 @@ export function queueTmdbMetadataWarmup(items = [], { reason = "discovery" } = {
       || cached.details.poster_path
       || cached.details.tvdb_poster_url
     );
-    if (cacheSatisfies(cached, { light: false }) && cachedArtwork) continue;
+    if (cacheSatisfies(cached, { light: false }) && cachedArtwork && !needsTranslatedSeasonWarmup(cached.details)) continue;
     metadataWarmupQueued.add(key);
     accepted.push({ ...normalized, force: normalized.force || Boolean(cached), key });
   }
@@ -1395,6 +1396,82 @@ export async function trendingTmdbPage({ mediaType = "movie", page = 1, lane = "
   return upstream(`trending/${type}/week`, { include_adult: false, page }, 0, { lane });
 }
 
+// TMDB season episode lists, used only when a show's season source is TMDB.
+// Stored in tmdb_season_cache and shaped like getTvdbSeasonEpisodes' output so
+// callers do not care which provider supplied the episodes.
+const TMDB_SEASON_TTL_MS = 2 * DAY_MS;
+const tmdbSeasonGetStmt = db.prepare("SELECT details, updated_at_ms FROM tmdb_season_cache WHERE id = ?");
+const tmdbSeasonSetStmt = db.prepare(
+  `INSERT INTO tmdb_season_cache (id, tmdb_id, season_number, show_status, details, updated_at_ms)
+   VALUES (@id, @tmdb_id, @season_number, @show_status, @details, @updated_at_ms)
+   ON CONFLICT(id) DO UPDATE SET tmdb_id=excluded.tmdb_id, season_number=excluded.season_number,
+     show_status=excluded.show_status, details=excluded.details, updated_at_ms=excluded.updated_at_ms`,
+);
+
+function shapeTmdbSeason(details) {
+  const episodes = Array.isArray(details?.episodes) ? details.episodes : [];
+  return {
+    episodes: episodes.map((episode) => ({
+      episode_number: episode.episode_number,
+      name: episode.name || "",
+      overview: episode.overview || "",
+      air_date: episode.air_date || "",
+      still_path: episode.still_path ? `${IMAGE_ROOT}/w300${episode.still_path}` : "",
+      runtime: episode.runtime ?? null,
+    })),
+  };
+}
+
+export async function getTmdbSeasonEpisodes({ tmdbId, seasonNumber, lane = "enrichment" }) {
+  const id = String(tmdbId || "");
+  const number = Number(seasonNumber);
+  const cacheId = `${id}_${number}`;
+  const row = tmdbSeasonGetStmt.get(cacheId);
+  if (row && Date.now() - Number(row.updated_at_ms || 0) < TMDB_SEASON_TTL_MS) return shapeTmdbSeason(parseJson(row.details));
+  let season;
+  try {
+    season = await upstream(`tv/${id}/season/${number}`, {}, 0, { lane });
+  } catch (error) {
+    // A season TMDB does not have is cached as empty, so every page load does not repeat the request.
+    if (Number(error?.status) !== 404) throw error;
+    season = { episodes: [] };
+  }
+  tmdbSeasonSetStmt.run({ id: cacheId, tmdb_id: id, season_number: number, show_status: null, details: toJson(season), updated_at_ms: Date.now() });
+  return shapeTmdbSeason(season);
+}
+
+// Cache-only companion for Up Next and the dashboard: it returns stale rows and never calls TMDB.
+export function getCachedTmdbSeasonEpisodes({ tmdbId, seasonNumber }) {
+  const row = tmdbSeasonGetStmt.get(`${String(tmdbId || "")}_${Number(seasonNumber)}`);
+  const details = row ? parseJson(row.details) : null;
+  return details && typeof details === "object" ? shapeTmdbSeason(details) : null;
+}
+
+// Every TMDB season's episode list for one show, in the shape the season
+// readers return. Season numbers come from TMDB's own show record, not the
+// TVDB-shaped details. cachedOnly reads only seasons already in the cache.
+const tmdbSeasonNumbersStmt = db.prepare("SELECT season_number FROM tmdb_season_cache WHERE tmdb_id = ? ORDER BY season_number");
+
+export async function getTmdbShowSeasonLists({ tmdbId, cachedOnly = false, lane = "enrichment" }) {
+  const id = String(tmdbId || "");
+  if (!id) return [];
+  if (cachedOnly) {
+    return tmdbSeasonNumbersStmt.all(id)
+      .map(({ season_number: season }) => ({ season, episodes: getCachedTmdbSeasonEpisodes({ tmdbId: id, seasonNumber: season })?.episodes || [] }));
+  }
+  // Offline or rate-limited: the seasons already cached are still a usable map.
+  const show = await upstream(`tv/${id}`, {}, 0, { lane }).catch(() => null);
+  if (!show) return getTmdbShowSeasonLists({ tmdbId: id, cachedOnly: true });
+  const numbers = (Array.isArray(show?.seasons) ? show.seasons : [])
+    .map((season) => Number(season.season_number))
+    .filter((number) => Number.isInteger(number) && number >= 0);
+  const lists = [];
+  for (const season of numbers) {
+    lists.push({ season, episodes: (await getTmdbSeasonEpisodes({ tmdbId: id, seasonNumber: season, lane })).episodes });
+  }
+  return lists;
+}
+
 export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seasonNumber, lane = "enrichment" }) {
   const id = String(tmdbId || "");
   const directTvdbId = String(requestedTvdbId || "");
@@ -1426,6 +1503,15 @@ export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seas
     error.status = 404;
     throw error;
   }
+  // The show's season source is saved on its first read (write-once). A TMDB
+  // source with no episodes falls back to TVDB rather than showing nothing.
+  if (resolveAndRecordSeasonSource(tvdbId) === "tmdb") {
+    const tmdbSeasonId = id || String(cached?.details?.id || metaGet(`tv_tvdb_${tvdbId}`)?.details?.id || "");
+    const tmdbSeason = tmdbSeasonId
+      ? await getTmdbSeasonEpisodes({ tmdbId: tmdbSeasonId, seasonNumber: number, lane }).catch(() => null)
+      : null;
+    if (tmdbSeason?.episodes?.length) return tmdbSeason;
+  }
   return getTvdbSeasonEpisodes({ tvdbId, seasonNumber: number, lane });
 }
 
@@ -1440,6 +1526,13 @@ export function getCachedTmdbSeason({ tmdbId = "", tvdbId: requestedTvdbId = "",
   const metadata = getCachedTmdbDetails({ mediaType: "tv", tmdbId: id, ids: { tvdbId: directTvdbId } });
   const tvdbId = directTvdbId || String(metadata?.external_ids?.tvdb_id || "");
   if (!tvdbId) return null;
+  // Up Next is the only caller and resolves its result to media server items,
+  // so it follows the numbering the show's stored rows use. That is the
+  // season source unless Fix Match set a translated per-show choice.
+  if (readShowNumbering(tvdbId).rowNumbering === "tmdb") {
+    const tmdbSeason = getCachedTmdbSeasonEpisodes({ tmdbId: id || String(metadata?.id || ""), seasonNumber: number });
+    if (tmdbSeason?.episodes?.length) return tmdbSeason;
+  }
   return getCachedTvdbSeasonEpisodes({ tvdbId, seasonNumber: number });
 }
 

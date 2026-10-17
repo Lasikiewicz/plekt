@@ -11,7 +11,8 @@ fork and keeps most of the API surface) with a few differences noted below. Read
 | --- | --- |
 | `server/src/utils/jellyfinClient.js` | Outbound HTTP client - all Jellyfin API calls |
 | `server/src/utils/parsers.js` | `parseJellyfinWebhook` - webhook normalization |
-| `server/src/scheduled.js` | `syncRecentlyWatchedFromJellyfin`, `syncRecentlyResumableFromJellyfin`, `syncRecentlyNextUpFromJellyfin` - catch-up polling |
+| `server/src/utils/recentWatchImport.js` | `syncRecentlyWatchedFromJellyfin` - catch-up watched import |
+| `server/src/scheduled.js` | `syncRecentlyResumableFromJellyfin`, `syncRecentlyNextUpFromJellyfin` - catch-up polling |
 | `server/src/utils/liveSessions.js` | Polls `/Sessions` for Now Playing |
 | `public/modules/help-content.js` | `jellyfinCredentialGuide()`, `jellyfinWebhookSetup()` - in-app setup guides |
 

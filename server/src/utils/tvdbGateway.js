@@ -639,6 +639,19 @@ export function getCachedTvdbSeasonEpisodes({ tvdbId, seasonNumber }) {
   return details && typeof details === "object" ? shapeEpisodes(details) : null;
 }
 
+// Every season's episode list from one series payload (meta=episodes), in the
+// shape the season readers return. Used to pair TVDB and TMDB numbering.
+export function tvdbSeasonListsFromExtended(extended) {
+  const bySeason = new Map();
+  for (const episode of Array.isArray(extended?.episodes) ? extended.episodes : []) {
+    const season = Number(episode.seasonNumber);
+    if (!Number.isInteger(season) || season < 0) continue;
+    if (!bySeason.has(season)) bySeason.set(season, []);
+    bySeason.get(season).push({ episode_number: episode.number, air_date: episode.aired || "" });
+  }
+  return [...bySeason.entries()].sort((a, b) => a[0] - b[0]).map(([season, episodes]) => ({ season, episodes }));
+}
+
 function shapeEpisodes(seasonDetails) {
   const episodes = Array.isArray(seasonDetails?.episodes) ? seasonDetails.episodes : [];
   return {

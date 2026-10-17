@@ -4,6 +4,7 @@ import { hydrateTraktAppCredentials } from "./traktAppConfig.js";
 import { getTmdbDetails } from "./tmdbGateway.js";
 import { canonicalCompoundEpisodeMedia, canonicalizeCompoundEpisodeRows } from "./compoundEpisode.js";
 import { DISMISSED_TRAKT_NOT_FOUND_DETAIL, isTraktNotFoundDismissed } from "./traktDismissals.js";
+import { withSeasonSourceTraktOverride } from "./traktOutboundNumbering.js";
 
 let traktRefreshInFlight = null;
 
@@ -51,7 +52,7 @@ function enqueueTraktWrite(operation) {
 // a large manual show mark is left partially propagated until the next
 // scheduled retry. Keep this wrapper specific to Trakt writes so metadata and
 // media-server traffic retain their existing retry semantics.
-async function withTraktRateLimitRetry(operation) {
+export async function withTraktRateLimitRetry(operation) {
   for (let attempt = 0; ; attempt += 1) {
     try {
       return await enqueueTraktWrite(operation);
@@ -531,6 +532,7 @@ function restoreMediaFromWatchRow(row = {}) {
     year: row.year == null ? undefined : Number(row.year),
     ids: restoreIdsFromRow(row),
     watched_at: row.watched_at || "",
+    watch_provenance: row.watch_provenance,
     ...(row.compound_episode ? { compound_episode: row.compound_episode } : {}),
     ...(row.compound_source_episode != null ? { compound_source_episode: row.compound_source_episode } : {}),
     ...(row.episode_title || row.episodeTitle ? { episodeTitle: row.episode_title || row.episodeTitle } : {}),
@@ -650,7 +652,7 @@ async function prepareRestoreMediaForTrakt(row, {
       };
     }
   }
-  return media;
+  return mediaWithTraktOverride(await withSeasonSourceTraktOverride(media));
 }
 
 function historyBatches(items = [], batchSize = 100) {
@@ -843,8 +845,8 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
   const titleFallbackCache = new Map();
   const resolved = [];
   for (const { index, sourceMedia } of eligible) {
-    const canonicalMedia = canonicalCompoundEpisodeMedia(sourceMedia);
     try {
+      const canonicalMedia = mediaWithTraktOverride(await withSeasonSourceTraktOverride(canonicalCompoundEpisodeMedia(sourceMedia)));
       const [candidate] = await trackerDispatchMediaCandidates(canonicalMedia, {
         includeTitleFallback: true,
         primaryHydrationCache,
@@ -972,7 +974,6 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
   const hasFailure = results.some((result) => result?.status === "failed" || result?.status === "not_found");
   if (successfulWatchedAt.length && !hasFailure) {
     updateTrackerConnectionStatus("trakt", {
-      historySyncedAt: Math.max(...successfulWatchedAt),
       lastError: "",
     });
   }
@@ -1241,8 +1242,7 @@ export async function replayTraktWatchHistory(rows = [], {
   }));
   replaceTrackerSnapshot("trakt", snapshot);
   recordTrackerOutboundBatch("trakt", snapshot.map(({ mediaKey, media }) => ({ mediaKey, media, state: "watched" })));
-  const latestWatchedAt = desired.reduce((latest, media) => Math.max(latest, Date.parse(String(media.watched_at || "")) || 0), 0);
-  updateTrackerConnectionStatus("trakt", { historySyncedAt: latestWatchedAt || Date.now(), lastError: "" });
+  updateTrackerConnectionStatus("trakt", { lastError: "" });
   existing = null;
   return {
     skipped: false,
@@ -1341,7 +1341,6 @@ export async function retryTraktRestoreItem(row = {}, {
       }
       recordTrackerOutbound("trakt", mediaKey, candidate, "watched");
       updateTrackerConnectionStatus("trakt", {
-        historySyncedAt: Date.parse(String(candidate.watched_at || "")) || Date.now(),
         lastError: "",
       });
       return { success: true, media: candidate, mediaKey };
@@ -1372,10 +1371,9 @@ async function findExistingTraktPlay(connection, trackerMedia, watchedAt) {
 async function dispatchTrakt(media, state, lane = "sync", isCancelled = () => false) {
   const checkHistoryFirst = state === "watched" && Boolean(media?.traktRetryHistoryCheck);
   const retryWatchedAt = media?.watched_at || media?.watchedAt || "";
-  // Trakt has one canonical coordinate for some two-part episodes. Local
-  // source media may arrive as the second split part, so normalize the
-  // outbound tracker payload while keeping the local history row untouched.
-  media = mediaWithTraktOverride(canonicalCompoundEpisodeMedia(media));
+  // Trakt has one canonical coordinate for some two-part episodes (a split part is normalized
+  // here; the local row is untouched). A Fix Match replaced show maps new watches too.
+  media = mediaWithTraktOverride(await withSeasonSourceTraktOverride(canonicalCompoundEpisodeMedia(media)));
   let connection = await withFreshTraktConnection();
   if (!connection) return { target: "trakt", status: "skipped", detail: "Trakt is not connected" };
   // Anything sourced from Trakt itself - the live poller ("trakt") or a bulk

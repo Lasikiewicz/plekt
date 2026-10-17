@@ -483,6 +483,7 @@ function bindElements() {
     syncActivityPageNumbers: document.querySelector("#syncActivityPageNumbers"),
     syncActivityPageRange: document.querySelector("#syncActivityPageRange"),
     changelogPanel: document.querySelector("#changelogPanel"),
+    changelogChannelTabs: document.querySelector("#changelogChannelTabs"),
     changelogHeadingStatus: document.querySelector("#changelogHeadingStatus"),
     changelogRefreshButton: document.querySelector("#changelogRefreshButton"),
     aboutCurrentVersion: document.querySelector("#aboutCurrentVersion"),
@@ -2355,12 +2356,13 @@ function applyActiveViewNow() {
       elements.appVersion.disabled = true;
     } else if (!isSetupView) {
       const sidebarFooter = document.querySelector(".sidebar-footer");
-      if (sidebarFooter) {
-        // The version sits above both theme switchers (Classic/Modern, then light/dark).
-        sidebarFooter.appendChild(elements.appVersion);
-        sidebarFooter.appendChild(document.querySelector("#themeStyleButton"));
-        sidebarFooter.appendChild(elements.themeToggleButton);
-      }
+      if (sidebarFooter) sidebarFooter.appendChild(elements.appVersion);
+      // The theme switchers live in their Appearance groups (Style, Theme); setup and sign-in move
+      // them out, so put each back in its own group.
+      const [styleGroup, themeGroup] = document.querySelectorAll(".sidebar-appearance-theme-group");
+      const styleButton = document.querySelector("#themeStyleButton");
+      if (styleGroup && styleButton) styleGroup.appendChild(styleButton);
+      if (themeGroup && elements.themeToggleButton) themeGroup.appendChild(elements.themeToggleButton);
       elements.appVersion.disabled = false;
     }
   }

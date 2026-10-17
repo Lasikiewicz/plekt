@@ -96,7 +96,20 @@
   --control-inline-padding: 0.7rem;
   --right-topbar-height: calc((var(--top-control-padding) * 2) + var(--sidebar-logo-height));
   --right-topbar-content-offset: 0.7rem;
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /* Text sizes shared by Classic and Modern. --text-scale is set from the
+     Appearance Text size slider (appearance.js applyTextScale). */
+  --text-scale: 1;
+  --fs-card-label: calc(0.64rem * var(--text-scale));
+  --fs-card-watch-count: calc(0.7rem * var(--text-scale));
+  --fs-badge: calc(0.68rem * var(--text-scale));
+  --fs-option: calc(0.9rem * var(--text-scale));
+  --fs-option-error: calc(0.85rem * var(--text-scale));
+  --fs-now-title: calc(clamp(1.1rem, 1.5vw, 1.4rem) * var(--text-scale));
+  --fs-now-episode: calc(0.9rem * var(--text-scale));
+  --fs-now-meta: calc(0.8rem * var(--text-scale));
+  --fs-fact-label: calc(0.68rem * var(--text-scale));
+  --fs-field-label: calc(0.7rem * var(--text-scale));
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 .media-detail-sync-notice {
@@ -504,9 +517,9 @@ details.issue-category,
   justify-content: stretch !important;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  /* Matches .topnav's actual dark-mode background (#1a1a1a, set later in this
+  /* Matches .topnav's actual dark-mode background (#202428, set later in this
      file) rather than var(--panel-3), which the sidebar no longer renders. */
-  background: #1a1a1a;
+  background: #202428;
   box-shadow: none;
 }
 
@@ -571,8 +584,14 @@ html.light-mode .settings-disclosure {
 .settings-disclosure {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #1a1a1a;
+  background: #202428;
   scroll-margin-top: calc(var(--right-topbar-height) + var(--space-3));
+}
+
+/* Dark Classic settings boxes use the same colour as the left menu. */
+html:not(.light-mode):not([data-style="modern"]) .settings-card,
+html:not(.light-mode):not([data-style="modern"]) .settings-group-section {
+  background: #202428;
 }
 
 .settings-disclosure > summary {
@@ -956,7 +975,7 @@ h2 {
   align-items: center;
   gap: 0.35rem;
   color: var(--accent);
-  font-size: 0.76rem;
+  font-size: var(--fs-fact-label);
   font-weight: 800;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -1114,7 +1133,7 @@ a.media-fact-chip:hover {
   padding: 0.65rem 0.9rem 0.65rem 0;
   border-right: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--muted, #94a3b8);
-  font-size: 0.78rem;
+  font-size: var(--fs-fact-label);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1170,7 +1189,7 @@ a.media-fact-chip:hover {
 
 .media-facts-group-label {
   color: var(--muted, #94a3b8);
-  font-size: 0.78rem;
+  font-size: var(--fs-fact-label);
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -2596,7 +2615,7 @@ body.auth-locked .topnav {
   margin: 0;
   color: var(--text);
   font-size: 0.94rem;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .timeline-toolbar {
@@ -2690,7 +2709,7 @@ body.auth-locked .topnav {
   display: grid;
   gap: 0.35rem;
   color: #dbe3ea;
-  font-size: 0.78rem;
+  font-size: var(--fs-field-label);
   font-weight: 800;
 }
 
@@ -3508,7 +3527,7 @@ html.light-mode .theme-aware-icon-set .theme-aware-icon--dark {
 }
 
 .now-card-title {
-  font-size: 1.1rem;
+  font-size: var(--fs-now-title);
   font-weight: 850;
   color: #fff;
   white-space: nowrap;
@@ -3517,7 +3536,7 @@ html.light-mode .theme-aware-icon-set .theme-aware-icon--dark {
 }
 
 .now-card-episode {
-  font-size: 0.9rem;
+  font-size: var(--fs-now-episode);
   font-weight: 700;
   color: var(--accent);
   white-space: nowrap;
@@ -3529,7 +3548,7 @@ html.light-mode .theme-aware-icon-set .theme-aware-icon--dark {
   display: flex;
   flex-direction: column;
   gap: 0.3rem;
-  font-size: 0.78rem;
+  font-size: var(--fs-now-meta);
   color: #9b9b9b;
 }
 
@@ -3776,7 +3795,7 @@ img.poster-img:not(.is-loaded) {
   align-items: center;
   gap: 0.35rem;
   color: #9ff1cf;
-  font-size: 0.7rem;
+  font-size: var(--fs-badge);
   font-weight: 850;
 }
 
@@ -8923,6 +8942,10 @@ details.sync-tool-details[open] > summary {
   border-color: var(--line-strong);
 }
 
+.changelog-entry + .changelog-entry {
+  margin-top: var(--space-3);
+}
+
 .changelog-entry-new {
   border-color: color-mix(in srgb, var(--blue), transparent 60%);
 }
@@ -9010,6 +9033,53 @@ details.sync-tool-details[open] > summary {
     flex: 1 1 auto;
     justify-content: center;
     padding: 0.45rem 0.6rem;
+  }
+}
+
+/* Card heading: title left, Main / Alpha tabs centred on the same row, the
+   description right. The equal side columns keep the tabs at the card's
+   centre. Overrides the generic sync-static-heading flex row, hence !important.
+   On phones the row stacks: title, tabs, description. */
+.settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3) !important;
+}
+
+.settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading > .sync-heading-title {
+  justify-self: start;
+}
+
+.settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading > .changelog-heading-tabs {
+  display: flex !important;
+  justify-content: center !important;
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.changelog-heading-tabs .changelog-channel-tabs {
+  margin: 0;
+}
+
+.settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading > span {
+  justify-self: end;
+  white-space: normal !important;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading > span {
+    justify-self: start;
+    text-align: left;
+  }
+
+  .settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading > .changelog-heading-tabs {
+    width: 100% !important;
   }
 }
 
@@ -9985,6 +10055,45 @@ html.light-mode .poster-overflow-btn {
   max-height: min(62vh, 680px);
   margin-top: 0.15rem;
   padding: 0.25rem 0.15rem 0.5rem;
+}
+
+/* Fix Match: per-show TVDB/TMDB season and episode numbers (show-season-source.js). */
+.fix-match-dialog .season-source-rule {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1rem 0 0.75rem;
+}
+
+.fix-match-dialog .season-source-intro {
+  margin-bottom: 0.5rem;
+}
+
+.fix-match-dialog .season-source-options,
+.fix-match-dialog .season-source-confirm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.fix-match-dialog .season-source-option {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  cursor: pointer;
+}
+
+.fix-match-dialog .season-source-confirm {
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.fix-match-dialog .season-source-confirm-list {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.1rem;
+  overflow-wrap: anywhere;
 }
 
 .fix-match-dialog .fix-match-result {
@@ -12713,12 +12822,18 @@ h1 {
 
 .global-search input {
   width: 100%;
-  min-height: 2.05rem;
+  min-height: 2.25rem;
   border: 0;
-  border-radius: 999px;
-  background: #2b2b2b;
+  border-bottom: 1px solid #3a3a3a;
+  border-radius: 0;
+  background: transparent;
   color: var(--text);
-  padding: 0.38rem 1rem;
+  padding: 0.48rem 0.65rem;
+  font-size: 0.94rem;
+}
+
+html.light-mode .global-search input {
+  border-bottom-color: #cbd5e1;
 }
 
 .global-search input::placeholder {
@@ -12726,8 +12841,8 @@ h1 {
 }
 
 .global-search input:focus {
-  outline: 2px solid rgba(229, 160, 13, 0.5);
-  outline-offset: 2px;
+  outline: none;
+  border-bottom-color: #e5a00d;
 }
 
 #globalSearchDropdown {
@@ -13205,7 +13320,7 @@ h1 {
   border: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
-  background: #1a1a1a;
+  background: #202428;
   padding: 0 0.55rem 0.9rem;
 }
 
@@ -13507,8 +13622,9 @@ h1 {
 
 .sidebar-appearance-panel {
   margin: 0.15rem 0 0.35rem;
+  padding-left: var(--space-3);
   display: grid;
-  gap: 0.5rem;
+  gap: 0.08rem;
 }
 
 .sidebar-appearance-list {
@@ -13516,28 +13632,70 @@ h1 {
   gap: 0;
 }
 
+/* Text size: a heading like Style and Theme. The slider shows only while open. */
 .sidebar-appearance-text-size {
-  display: grid;
-  gap: 0.4rem;
-  padding: 0.65rem 0.75rem;
-  color: var(--text);
-  font-size: 0.82rem;
+  padding-top: 0.35rem;
 }
 
-.sidebar-appearance-text-size > span {
+.sidebar-appearance-text-size > summary {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 0.75rem;
+  min-height: 1.15rem;
+  padding: 0.15rem 0.6rem;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: #c8c8c8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-appearance-text-size > summary:hover {
+  border-left-color: rgba(229, 160, 13, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.sidebar-appearance-text-size[open] > summary {
+  border-left-color: #e5a00d;
+  background: rgba(229, 160, 13, 0.12);
+  color: #e5a00d;
+}
+
+html.light-mode .sidebar-appearance-text-size > summary {
+  color: var(--text);
+}
+
+html.light-mode .sidebar-appearance-text-size > summary:hover {
+  border-left-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--blue);
+}
+
+html.light-mode .sidebar-appearance-text-size[open] > summary {
+  border-left-color: var(--blue);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--blue);
+}
+
+.sidebar-appearance-text-size > summary::-webkit-details-marker {
+  display: none;
 }
 
 .sidebar-appearance-text-size output {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
+  font-weight: 400;
 }
 
 .sidebar-appearance-text-size input {
-  width: 100%;
+  display: block;
+  width: calc(100% - 1.5rem);
+  margin: 0.4rem 0.6rem 0.6rem 0.9rem;
   accent-color: var(--accent, #6b8afd);
 }
 
@@ -13677,7 +13835,7 @@ h1 {
   padding: 0.48rem 0.65rem;
   color: #c8c8c8;
   font-size: 0.94rem;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .nav-tab:hover {
@@ -13855,11 +14013,11 @@ h1 {
 }
 
 .page-shell[data-active-view="dashboard"] .now-card-title {
-  font-size: 0.95rem;
+  font-size: var(--fs-now-title);
 }
 
 .page-shell[data-active-view="dashboard"] .now-card-episode {
-  font-size: 0.8rem;
+  font-size: var(--fs-now-episode);
 }
 
 .page-shell[data-active-view="dashboard"] .now-card-details {
@@ -13871,7 +14029,7 @@ h1 {
 .page-shell[data-active-view="dashboard"] .now-card-meta {
   margin-top: auto;
   gap: 0.12rem;
-  font-size: 0.78rem;
+  font-size: var(--fs-now-meta);
 }
 
 .page-shell[data-active-view="dashboard"] .now-card-progress-container {
@@ -14053,7 +14211,7 @@ h1 {
 }
 
 .page-shell[data-active-view="dashboard"] .dashboard-history-card-row .meta-label {
-  font-size: 0.72rem;
+  font-size: var(--fs-card-label);
 }
 
 /* Up Next and inline Part Watched deliberately use the same page-card geometry
@@ -14542,7 +14700,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
   }
 
   .page-shell[data-active-view="dashboard"] .dashboard-history-card-row .meta-label {
-    font-size: 0.58rem;
+    font-size: var(--fs-card-label);
   }
 
   /* The narrow cards cannot fit all three Watch Now links on one line. */
@@ -16305,6 +16463,77 @@ html.light-mode #timeline-view .part-watched-app-badge {
 .sidebar-scrollable .sidebar-sub-menu .settings-group-child,
 .sidebar-scrollable .sidebar-sub-menu .settings-group-grandchild {
   width: auto;
+}
+
+/* Child sections use the same hover and selected styling as the top-level nav rows. */
+.sidebar-scrollable .sidebar-sub-menu .settings-group-child {
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+  color: #c8c8c8;
+}
+
+.sidebar-scrollable .sidebar-sub-menu .settings-group-child:hover {
+  border-color: transparent;
+  border-left-color: rgba(229, 160, 13, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.sidebar-scrollable .sidebar-sub-menu .settings-group-child.active {
+  border-color: transparent;
+  border-left-color: #e5a00d;
+  background: rgba(229, 160, 13, 0.12);
+  color: #e5a00d;
+}
+
+html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-child {
+  color: var(--text);
+}
+
+html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-child:hover {
+  border-left-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--blue);
+}
+
+html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-child.active {
+  border-left-color: var(--blue);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--blue);
+}
+
+/* The visible Settings rows (General, Media servers, ...) are group headers, not children. */
+.sidebar-scrollable .sidebar-sub-menu .settings-group-parent {
+  border: 0;
+  border-left: 3px solid transparent;
+  border-radius: 0;
+}
+
+.sidebar-scrollable .sidebar-sub-menu .settings-group-parent:hover {
+  border-color: transparent;
+  border-left-color: rgba(229, 160, 13, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.sidebar-scrollable .sidebar-sub-menu .settings-group-parent.active {
+  border-color: transparent;
+  border-left-color: #e5a00d;
+  background: rgba(229, 160, 13, 0.12);
+  color: #e5a00d;
+}
+
+html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-parent:hover {
+  border-left-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--blue);
+}
+
+html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-parent.active {
+  border-left-color: var(--blue);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--blue);
 }
 
 .sidebar-sub-menu .help-menu-group {
@@ -19629,7 +19858,7 @@ details[open] > .tool-section-summary::before {
 
 .history-card-title {
   font-size: 1.05rem;
-  font-weight: 850;
+  font-weight: 600;
   color: #fff;
   white-space: normal;
   word-break: break-word;
@@ -19719,7 +19948,7 @@ details[open] > .tool-section-summary::before {
 
 .history-card-meta-row .meta-value.history-card-watch-count {
   color: var(--muted, #666);
-  font-size: 0.78rem;
+  font-size: var(--fs-card-watch-count);
   font-weight: 700;
 }
 
@@ -19743,8 +19972,22 @@ details[open] > .tool-section-summary::before {
   font-weight: 800;
   color: var(--muted, #666);
   text-transform: uppercase;
-  font-size: 0.74rem;
+  font-size: var(--fs-card-label);
   letter-spacing: 0.05em;
+}
+
+/* Card text weights match Modern's (styles-modern.css) on the same cards. */
+:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .meta-label {
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .history-card-meta-row .meta-value {
+  font-weight: 600;
+}
+
+:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .history-card-episode {
+  font-weight: 600;
 }
 
 /* Animations */
@@ -20353,7 +20596,7 @@ html.light-mode .season-trigger:hover .explorer-folder-poster {
   display: flex;
   width: 100%;
   height: 34px;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--panel-3);
   border: 1px solid var(--line);
   overflow: hidden;
@@ -20365,7 +20608,7 @@ html.light-mode .season-trigger:hover .explorer-folder-poster {
   left: 2px;
   width: calc(50% - 2px);
   height: calc(100% - 4px);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--surface-hover);
   transform: translateX(100%);
   transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1), background 220ms ease, box-shadow 220ms ease;
@@ -20386,7 +20629,7 @@ html.light-mode .theme-toggle-thumb {
   align-items: center;
   justify-content: center;
   font-size: 0.78rem;
-  font-weight: 800;
+  font-weight: 500;
   letter-spacing: 0.04em;
   transition: color 180ms ease;
   user-select: none;
@@ -20430,6 +20673,110 @@ html[data-style="modern"] .theme-toggle-label--classic {
   color: var(--muted);
 }
 
+/* Appearance panel theme switchers: each option is a row styled like the
+   .sidebar-appearance-list-item rows above; the current option is highlighted. */
+.sidebar-appearance-theme {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.sidebar-appearance-theme-group {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.sidebar-appearance-theme .theme-toggle-button {
+  width: 100%;
+  margin-left: 0;
+  margin-bottom: 0;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+}
+
+.sidebar-appearance-theme .theme-toggle-button:focus-visible {
+  outline: 2px solid #e5a00d;
+  outline-offset: -2px;
+  border-radius: 0;
+}
+
+.sidebar-appearance-theme .theme-toggle-track {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: auto;
+  gap: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.sidebar-appearance-theme .theme-toggle-thumb {
+  display: none;
+}
+
+.sidebar-appearance-theme-title {
+  padding: 0.5rem 0.75rem 0.1rem 1.35rem;
+  color: #b8b8b8;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+html.light-mode .sidebar-appearance-theme-title {
+  color: var(--muted);
+}
+
+.sidebar-appearance-theme .theme-toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 1.15rem;
+  padding: 0.15rem 0.6rem;
+  border-left: 3px solid transparent;
+  background: transparent;
+  color: #c8c8c8;
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-appearance-theme .theme-toggle-button:hover .theme-toggle-label {
+  border-left-color: rgba(229, 160, 13, 0.55);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+html:not(.light-mode) .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--dark,
+html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light,
+html[data-style="modern"] .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--modern,
+html:not([data-style="modern"]) .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--classic {
+  border-left-color: #e5a00d;
+  background: rgba(229, 160, 13, 0.12);
+  color: #e5a00d;
+}
+
+html.light-mode .sidebar-appearance-theme .theme-toggle-label {
+  color: var(--text);
+}
+
+html.light-mode .sidebar-appearance-theme .theme-toggle-button:hover .theme-toggle-label {
+  border-left-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.04);
+  color: var(--blue);
+}
+
+html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light,
+html.light-mode:not([data-style="modern"]) .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--classic,
+html.light-mode[data-style="modern"] .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--modern {
+  border-left-color: var(--blue);
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--blue);
+}
+
 /* Ensure sidebar footer has proper styling */
 .sidebar-footer {
   display: flex;
@@ -20450,10 +20797,10 @@ html[data-style="modern"] .theme-toggle-label--classic {
     position: sticky;
     bottom: 0;
     z-index: 2;
-    /* Matches .topnav's dark-mode background (#1a1a1a) so scrolling nav items
+    /* Matches .topnav's dark-mode background (#202428) so scrolling nav items
        don't show through behind the pinned footer. Light mode overrides this
        via `html.light-mode .sidebar-footer`. */
-    background: #1a1a1a;
+    background: #202428;
   }
 }
 
@@ -21014,7 +21361,7 @@ html.light-mode .watch-date-sub {
 .shared-media-card-type {
   overflow: hidden;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: var(--fs-card-label);
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -21026,7 +21373,7 @@ html.light-mode .watch-date-sub {
   right: 0.65rem;
   z-index: 1;
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: var(--fs-badge);
   font-weight: 800;
   text-decoration: none;
 }
@@ -21062,7 +21409,7 @@ html.light-mode button.shared-media-card-rating--action {
 
 .shared-media-card-release-label {
   color: var(--muted);
-  font-size: 0.66rem;
+  font-size: var(--fs-card-label);
   font-weight: 700;
 }
 
@@ -24827,7 +25174,7 @@ details.sync-match-report > summary {
   padding: var(--space-4) var(--space-4);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #1a1a1a;
+  background: #202428;
   color: var(--text);
   font: inherit;
   text-align: left;
@@ -26332,7 +26679,7 @@ html.light-mode .settings-pane .settings-row-main :is(details.sync-tool-details,
   overflow: hidden;
   border: 1px solid var(--line-strong) !important;
   border-radius: var(--radius) !important;
-  background: #1a1a1a !important;
+  background: #202428 !important;
   box-shadow: none !important;
 }
 
@@ -26423,7 +26770,7 @@ html.light-mode .settings-pane .settings-row-main > :is(.settings-card, .sync-pa
   overflow: hidden;
   border: 1px solid var(--line-strong) !important;
   border-radius: var(--radius) !important;
-  background: #1a1a1a !important;
+  background: #202428 !important;
   box-shadow: none !important;
 }
 
@@ -26493,7 +26840,7 @@ html.light-mode #restore-remote {
   justify-content: flex-start !important;
   border: 1px solid var(--line-strong) !important;
   border-radius: var(--radius) !important;
-  background: #1a1a1a !important;
+  background: #202428 !important;
   box-shadow: none !important;
 }
 
@@ -29248,7 +29595,7 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
   .page-shell[data-active-view="history"] .history-list .history-card-episode,
   .page-shell[data-active-view="history"] .history-list .history-card-meta,
   .page-shell[data-active-view="history"] .history-list .meta-label {
-    font-size: 0.72rem;
+    font-size: var(--fs-card-label);
   }
 }
 
@@ -30017,7 +30364,7 @@ html.light-mode .manual-watch-review-season {
 .settings-pane .about-page-card {
   padding: 0 !important;
   overflow: hidden;
-  background: #1a1a1a !important;
+  background: #202428 !important;
 }
 
 .settings-pane .about-page-card > .about-page-inner {

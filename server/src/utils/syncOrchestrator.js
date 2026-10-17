@@ -15,11 +15,13 @@ import {
 import {
   canonicalShowTitleKey,
   canonicalTitleKey,
+  getPlaystateForMedia,
   showTitleFrom,
 } from "./dataRepo.js";
 import { listActiveUpNextProviderItems } from "./upNextRepository.js";
 import { normalizeUpNextCandidate, upNextIdentityAliases } from "./upNextIdentity.js";
 import { runWithOutboundStateLease } from "./outboundStateLease.js";
+import { resumeProgressBlockedByPlaystate } from "./resumeAuthority.js";
 import {
   PLEX_ALREADY_MATCHING_DETAIL,
   TARGET_DECISIONS,
@@ -511,9 +513,9 @@ function clientUnplayedFor(target, config, media, lane = "sync") {
   throw new Error(`Unknown sync target: ${target}`);
 }
 
-function clientProgressFor(target, config, media, lane = "sync") {
+function clientProgressFor(target, config, media, lane = "sync", { protectNewerView = false } = {}) {
   const outboundMedia = mediaWithLane(media, lane);
-  if (target === "plex") return () => setPlexProgress(config.plex, outboundMedia);
+  if (target === "plex") return () => setPlexProgress(config.plex, outboundMedia, { protectNewerView });
   if (target === "emby") return () => setEmbyProgress(config.emby, outboundMedia);
   if (target === "jellyfin") return () => setJellyfinProgress(config.jellyfin, outboundMedia);
   throw new Error(`Unknown sync target: ${target}`);
@@ -936,7 +938,7 @@ function summarizeResults(targets, results, policyStates = []) {
       target,
       status: "success",
       decision: TARGET_DECISIONS.SENT,
-      detail: result.value?.httpStatus ? `${result.value.httpStatus} OK` : "Marked played",
+      detail: [result.value?.httpStatus ? `${result.value.httpStatus} OK` : "Marked played", result.value?.progressClearError && `resume progress not cleared (${result.value.progressClearError})`].filter(Boolean).join("; "),
       itemId: result.value?.itemId || "",
       itemIds: Array.isArray(result.value?.itemIds) ? result.value.itemIds : undefined,
       httpStatus: result.value?.httpStatus || null,
@@ -1412,11 +1414,10 @@ export async function syncMediaUnplayedPlaystate(media, config, kv, {
         if (restoreBlocksSync(media) || await leaseShouldDefer()) {
           return { status: "deferred", deferred: true, detail: "A newer watched state took precedence" };
         }
-        try {
-          await clientProgressFor(target, config, { ...media, positionMs: 0 }, lane)();
-        } catch (error) {
+        const progressClearError = await clientProgressFor(target, config, { ...media, positionMs: 0 }, lane)().then(() => "", (error) => {
           console.log(`Resume progress clear on ${target} during unwatch failed (non-fatal)`, error.message);
-        }
+          return error.message;
+        });
         if (restoreBlocksSync(media) || await leaseShouldDefer()) {
           return { status: "deferred", deferred: true, detail: "A newer watched state took precedence" };
         }
@@ -1426,7 +1427,7 @@ export async function syncMediaUnplayedPlaystate(media, config, kv, {
           return { status: "deferred", deferred: true, detail: "A newer watched state took precedence" };
         }
         if (result?.status !== "not_found") await recordOutboundUnplayedMarks(media, [target], kv);
-        return result;
+        return progressClearError ? { ...result, progressClearError } : result;
       }, { shouldDefer });
     });
 
@@ -1494,18 +1495,29 @@ export async function syncMediaProgress(media, config, kv, { lane = "sync" } = {
     ids: media.ids,
   });
 
-  // Prime a readable marker as well as the atomic loop claim above. Some
-  // Emby/Jellyfin progress acknowledgements are parsed as unplayed events, so
-  // the webhook handler needs to recognize the write before it clears local
-  // playback_progress.
-  await recordOutboundProgressMarks(media, targets, kv);
-
   if (restoreBlocksSync(media)) return deferredDispatchSummary("Paused while an authoritative watch-history restore is running");
-  const jobs = targets.map(async (target) => {
-    if (restoreBlocksSync(media)) return { status: "deferred", deferred: true, detail: "Paused while an authoritative watch-history restore is running" };
-    const result = await clientProgressFor(target, config, media, lane)();
-    if (restoreBlocksSync(media)) return { status: "deferred", deferred: true, detail: "Paused while an authoritative watch-history restore is running" };
-    return result;
+  const jobs = targets.map((target) => {
+    const leaseKey = outboundStateLeaseKey(media, target);
+    return runWithOutboundStateLease(leaseKey, "progress", async ({ shouldDefer: leaseShouldDefer }) => {
+      if (restoreBlocksSync(media)) return { status: "deferred", deferred: true, detail: "Paused while an authoritative watch-history restore is running" };
+      // Canonical state is read here, under the target lease, so a watched or
+      // unwatched write that completed while this job waited cannot be undone
+      // by an older resume position.
+      const playstate = await getPlaystateForMedia(media).catch(() => null);
+      const blockReason = resumeProgressBlockedByPlaystate(playstate, Number(media.updatedAt || 0));
+      if (blockReason) return { status: "skipped", detail: `Resume progress skipped: ${blockReason}` };
+
+      // Prime a readable marker as well as the atomic loop claim above. Some
+      // Emby/Jellyfin progress acknowledgements are parsed as unplayed events, so
+      // the webhook handler needs to recognize the write before it clears local
+      // playback_progress. Priming happens inside the lease, right before the write.
+      await recordOutboundProgressMarks(media, [target], kv);
+      if (restoreBlocksSync(media) || await leaseShouldDefer()) return { status: "skipped", detail: "A newer played-state write took precedence" };
+
+      const result = await clientProgressFor(target, config, media, lane, { protectNewerView: true })();
+      if (restoreBlocksSync(media)) return { status: "deferred", deferred: true, detail: "Paused while an authoritative watch-history restore is running" };
+      return result;
+    });
   });
 
   const results = await Promise.allSettled(jobs);

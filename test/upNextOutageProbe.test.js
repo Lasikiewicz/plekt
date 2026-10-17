@@ -7,7 +7,7 @@ import path from "node:path";
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-up-next-outage-probe-test-"));
 process.env.DATA_DIR = dataDir;
 
-const { upNextProvidersToProbeForOutage } = await import("../server/src/scheduled.js");
+const { upNextProvidersToProbeForOutage } = await import("../server/src/utils/liveSessionCompletion.js");
 
 const config = {
   plex: { baseUrl: "http://plex", token: "t" },

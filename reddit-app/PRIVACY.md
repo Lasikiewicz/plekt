@@ -1,38 +1,36 @@
 # Privacy Policy — Plekt Release Bot
 
-This Devvit app ("the bot") posts release announcements to r/plekt. It is operated
-by the moderators of r/plekt for that single subreddit.
+This Devvit app posts release announcements to r/plekt. It is operated by the
+moderators of r/plekt for that subreddit.
 
 ## What the bot does
 
-On a fixed schedule, the bot fetches a public JSON file
-(`release.json`) from [plekt.net](https://plekt.net/release.json). If it contains a
-release the bot hasn't announced yet, the bot submits a text post to r/plekt
-describing that release, and pins it (un-pinning whichever earlier release post the
-bot itself previously pinned).
+The app includes the current Plekt release notes in its uploaded build. On its
+scheduled check, it compares that release version with its Reddit-hosted app storage.
+If the version has not been announced, it submits and pins a text post to r/plekt,
+unpins its previous release post and records the version. A moderator can also submit
+an edited release announcement from the
+subreddit menu.
 
 ## Data the bot accesses
 
-- The public `release.json` file on plekt.net. This file
-  contains only release notes - version numbers, dates, and a description of
-  code changes. It contains no personal or user data of any kind.
-- Public Reddit content in r/plekt (post listings), to determine which post, if
-  any, it previously pinned.
+- Bundled release notes: version, date, summary and change bullets from the Plekt
+  changelog at build time.
+- The app's stored last-announced version, used to suppress duplicate scheduled posts.
+- Subreddit context needed to display the moderator-only menu action and submit posts.
 
 ## Data the bot stores
 
-The bot stores one value in its own Reddit-hosted app storage: the version number of
-the release it last announced or recorded as its initial baseline, so it doesn't post
-the same release twice. The first successful check records a baseline without posting. It stores no
-other data, and does not access, log, or retain any Reddit user's personal information,
-messages, or account details.
+The app stores the version number it last announced or recorded as its initial
+baseline. On first run with no stored version, it records the bundled version without
+posting. It does not access, log or retain Reddit users' personal information,
+messages or account details.
 
-## Data the bot does not do
+## Data the bot does not use
 
-- It does not read, collect, or store any Reddit user's personal data.
-- It does not make requests to any domain other than the one required to read the
-  public changelog file.
-- It does not share data with any third party.
+- It makes no external HTTP requests.
+- It does not read or collect Reddit users' personal data.
+- It does not share data with third parties.
 
 ## Contact
 

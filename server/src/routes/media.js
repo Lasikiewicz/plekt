@@ -9,7 +9,8 @@ import { db, parseJson, toJson, writeAuditLog } from "../db.js";
 import { createLoopStore } from "../utils/loopStore.js";
 import { listActiveSessions, deleteActiveSession, upsertActiveSession } from "../utils/activeSessions.js";
 import { hydrateCachedSession, loadLiveTrackingCache } from "../utils/liveSessions.js";
-import { runForceSync, runScheduledSync } from "../scheduled.js";
+import { runForceSync } from "../utils/forceSyncRun.js";
+import { runScheduledSync } from "../scheduled.js";
 import { activeSyncOperation, appendSyncHistory, claimSyncOperation, clearRestoreSyncState, isAuthoritativeRestoreKind, loadMediaConfig, mergeIncomingConfig, publicMediaConfig, releaseSyncOperation, saveMediaConfig, validateConfig, getSyncHistory, loadRuntimeState, RESTORE_KIND_FULL_SYNC, setRuntimeState, appendRuntimeLog, touchSyncOperation } from "../utils/configStore.js";
 import { cancelSyncJobsForAuthoritativeRestore } from "../utils/backgroundJobs.js";
 import { findPlexItem, markPlexPlayed, setPlexProgress, markPlexUnplayedByRatingKey, fetchPlexWatchedItems, fetchPlexMetadataItem, fetchPlexSeriesEpisodes } from "../utils/plexClient.js";
@@ -383,7 +384,7 @@ export async function handleShow(req, res) {
   const tvdbId = String(req.query.tvdbId || "").trim();
   const imdbId = String(req.query.imdbId || "").trim();
   if (!id && !title && !tmdbId && !tvdbId && !imdbId) return sendJson(res, { error: "id, title, or provider id is required" }, 400);
-  const show = await queryShowDetail({ id, title, tmdbId, tvdbId, imdbId });
+  const show = await queryShowDetail({ id, title, tmdbId, tvdbId, imdbId, displayNumbering: true });
   if (!show) return sendJson(res, { error: "not found" }, 404);
   // Unlike the show explorer summary, detail includes mutable per-episode
   // watched state. A cached response can overwrite a just-completed manual

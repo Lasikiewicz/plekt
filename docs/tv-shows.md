@@ -193,6 +193,11 @@ The batch TV re-match tool is under **Settings → Tools → Library Rebuilds**
   dialog in `edit-dialogs.js`) - folds one show title's episode rows into another.
 - **Re-match TV shows** (`POST /api/rematch-tv-shows`) - re-resolves shows against
   TMDB/TVDB when the automatic match picked the wrong series.
+- **Season and episode numbers in Fix Match** (`public/modules/show-season-source.js`) - a
+  TVDB/TMDB choice for one show. A preview states the watched episodes, watch rows and the
+  episodes with no match before saving; stored rows keep the media server's numbers and the
+  show page, progress and Trakt are translated (see [metadata.md](metadata.md)). A second,
+  optional confirmation replaces the show's plays on Trakt.
 - **Fix Match on a show page** (`POST /api/rematch-show`) - stamps the selected TVDB
   identity across every episode in one transaction and refreshes remote-derived
   metadata in the background. The picked series name is sent as `new_show_title`

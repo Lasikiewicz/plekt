@@ -245,7 +245,8 @@ episode fan-out from a container, so a library burst cannot overwhelm provider l
 the web process. Polling remains conservative when a server scan is unavailable or
 incomplete: absence from a failed/partial scan is never interpreted as an unwatch.
 
-Implementation lives in `server/src/scheduled.js`.
+Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback polls, run by
+`runDueUnwatchedPolls` from `scheduled.js`) and `server/src/scheduled.js`.
 
 ## What it does each run
 
@@ -387,7 +388,7 @@ already in flight is not cancelled; the guard only prevents new competing outbou
      here is logged and does not fail the poll - the snapshot-driven playstate sync above
      still completes normally.
 4. **Catch-up library sync** - **runs every 15 minutes** (configurable via `CATCHUP_SYNC_INTERVAL_MS` env variable) to avoid heavy redundant API queries:
-   - Pulls recently-watched and continue-watching (resumable) items from each active server: `syncRecentlyWatchedFromPlex`/`syncRecentlyResumableFromPlex` (and Emby/Jellyfin equivalents) in `scheduled.js`.
+   - Pulls recently-watched and continue-watching (resumable) items from each active server: `syncRecentlyWatchedFromPlex` (and the Emby/Jellyfin equivalents) in `server/src/utils/recentWatchImport.js`, and `syncRecentlyResumableFromPlex` (and the Emby/Jellyfin equivalents) in `scheduled.js`.
    - Runs a full paginated availability reconciliation after watched imports. For every active provider, an item must be present in that provider's successful library inventory, explicitly unplayed there, and canonically watched in Plekt before the scheduler marks it played. This catches bulk-added 4K/alternate-library copies, uses the exact native item id, and is positive-only: missing items, failed/partial scans, and canonical unwatches never trigger an unwatch.
    - Refreshes the provider Up Next feeds in the same catch-up window. Plekt uses Plex's
      account-scoped **Continue Watching** hub, Emby's user-scoped **Continue Watching/Resume**

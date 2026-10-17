@@ -904,7 +904,7 @@ function watchRecordFromEpisode(episode, watchedAt, syncIntent = "manual") {
     episode: episode.episodeNumber,
     poster_url: episode.posterUrl || episode.stillUrl || null,
     provider_items: episode.providerItems || episode.provider_items || {},
-    provider_item_id: episode.providerItemId || episode.provider_item_id || undefined,
+    provider_item_id: episode.providerItemId || episode.provider_item_id || undefined, numbering_source: episode.numberingSource || undefined,
   };
 }
 

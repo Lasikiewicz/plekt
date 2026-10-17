@@ -5,7 +5,8 @@
 // in behavior, only in presentation.
 import { state, elements } from "./state.js?v=2.1.0.0.0";
 import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.0.0";
-import { openServiceEditModal } from "./settings-services.js?v=2.1.0.0.0";
+import { openServiceEditModal, SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.1.0.0.0";
+import { renderFieldRow } from "./settings-ui.js?v=2.1.0.0.0";
 import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=2.1.0.0.0";
 import { claimAdminAccount } from "./auth.js?v=2.1.0.0.0";
 import { lazyExport } from "./route-modules.js?v=2.1.0.0.0";
@@ -344,6 +345,9 @@ let pendingWatchImportMode = null;
 let pendingFastLocalPacing = null;
 let pendingUpNextSync = null;
 let pendingPlexHistoricalSync = null;
+// Season source (TVDB or TMDB) is picked on the metadata step and saved when
+// the step is left, the same as the options above.
+let pendingSeasonSource = null;
 
 const WATCH_IMPORT_MODES = Object.freeze([
   { value: "review", label: "Require review", description: "Hold the item for a decision in Manual Watch review." },
@@ -402,6 +406,21 @@ async function savePendingWatchlistChoice() {
   await api("/api/config", { method: "POST", body: JSON.stringify({ watchlistSync: { enabled } }) })
     .then((body) => { if (body?.config) state.savedConfig = body.config; })
     .catch(() => {});
+}
+
+function seasonSourcePending() {
+  const value = pendingSeasonSource || state.savedConfig?.metadata?.seasonSource;
+  return value === "tmdb" ? "tmdb" : "tvdb";
+}
+
+async function saveSeasonSourceChoice() {
+  if (pendingSeasonSource === null) return;
+  const seasonSource = seasonSourcePending();
+  if (state.savedConfig?.metadata?.seasonSource !== seasonSource) {
+    const body = await api("/api/config", { method: "POST", body: JSON.stringify({ metadata: { seasonSource } }) });
+    if (body?.config) state.savedConfig = body.config;
+  }
+  pendingSeasonSource = null;
 }
 
 async function saveSetupOptions() {
@@ -881,6 +900,7 @@ function renderMetadata() {
         <a class="button-ghost" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">Get a free TMDB key</a>
       </div>
     </div>
+    <div class="setup-season-source" data-setup-season-source>${renderFieldRow({ ...SEASON_SOURCE_FIELD, id: "setup-season-source", value: seasonSourcePending() })}</div>
     <details class="setup-metadata-optional" open>
       <summary>Optional metadata providers</summary>
       <p class="muted-copy setup-metadata-optional-intro">TheTVDB and Fanart.tv already work out of the box with a shared key - add a personal key for higher rate limits. OMDb and YouTube are off until you add a free key.</p>
@@ -1540,6 +1560,10 @@ function handleSetupChange(event) {
     pendingWatchlistChoice = event.target.checked;
     return;
   }
+  if (event.target.matches("[data-setup-season-source] input")) {
+    pendingSeasonSource = event.target.value;
+    return;
+  }
   if (event.target.matches("[data-setup-watch-import-mode]")) {
     pendingWatchImportMode = event.target.value;
     return;
@@ -1664,6 +1688,14 @@ async function handleSetupClick(event) {
     if (currentStep() === "options") {
       try {
         await saveSetupOptions();
+      } catch (error) {
+        setMessage(error.message, "error");
+        return;
+      }
+    }
+    if (currentStep() === "metadata") {
+      try {
+        await saveSeasonSourceChoice();
       } catch (error) {
         setMessage(error.message, "error");
         return;

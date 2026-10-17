@@ -19,12 +19,7 @@
   },
   "permissions": {
     "reddit": true,
-    "redis": true,
-    "http": {
-      "domains": [
-        "plekt.net"
-      ]
-    }
+    "redis": true
   },
   "dev": {
     "subreddit": "plembfin_dev2"

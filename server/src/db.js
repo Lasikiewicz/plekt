@@ -1690,6 +1690,17 @@ const migrations = [
       database.exec("CREATE INDEX IF NOT EXISTS idx_sync_history_activity_item ON sync_history(activity_item_key, timestamp DESC, id DESC)");
     },
   },
+  {
+    id: 55,
+    up(database) {
+      // A Fix Match season source choice records the numbering the show's
+      // stored watch rows use, so the show page can translate between them.
+      const columns = new Set(database.pragma("table_info(show_season_source)").map((column) => column.name));
+      if (!columns.size) return;
+      if (!columns.has("row_numbering")) database.exec("ALTER TABLE show_season_source ADD COLUMN row_numbering TEXT");
+      if (!columns.has("overridden_at")) database.exec("ALTER TABLE show_season_source ADD COLUMN overridden_at INTEGER");
+    },
+  },
 ];
 
 function parseJsonValue(value, fallback) {

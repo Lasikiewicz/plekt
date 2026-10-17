@@ -801,8 +801,8 @@ export async function openShowImmersiveModalByTvdbId(tvdbId) {
 function watchedEpisodesByKey(show = {}) {
   const map = new Map();
   for (const episode of show.episodes || []) {
-    if (!isWatchedHistoryAction(episode)) continue;
-    map.set(showEpisodeKey(episode.season, episode.episode), episode);
+    if (!isWatchedHistoryAction(episode) || episode.numbering_review) continue;
+    map.set(showEpisodeKey(episode.display_season ?? episode.season, episode.display_episode ?? episode.episode), episode);
   }
   return map;
 }
@@ -839,9 +839,9 @@ function playbackProgressByEpisode(show = {}, resolvedTmdbId = "") {
   const showTitle = show.title || "";
   for (const row of [...(state.partWatchedRaw || []), ..._playbackProgressRows]) {
     if (!playbackProgressMatchesShow(row, showTitle, resolvedTmdbId || show.tmdb_id || "")) continue;
-    const progress = Number(row.progress || 0);
-    if (!Number.isFinite(progress) || progress <= 0) continue;
-    const key = showEpisodeKey(row.season, row.episode);
+    const progress = Number(row.progress || 0); const shown = show.season_numbering?.translate ? show.season_numbering.pairs?.[`${Number(row.season)}:${Number(row.episode)}`] : row;
+    if (!Number.isFinite(progress) || progress <= 0 || !shown) continue; // translated: stored -> display numbers
+    const key = showEpisodeKey(shown.season, shown.episode);
     const existing = map.get(key);
     if (!existing || Number(row.updated_at || 0) >= Number(existing.updated_at || 0)) {
       map.set(key, { ...row, progress: Math.max(0, Math.min(100, progress)) });
@@ -1134,7 +1134,7 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
           showTitle: show.title,
           showTmdbId: resolvedTmdbId || show.tmdb_id || "",
           showTvdbId,
-          showImdbId,
+          showImdbId, numberingSource: show.season_numbering?.translate ? show.season_numbering.source : "",
           tmdbId: episode.id || "",
           seasonNumber,
           episodeNumber,
@@ -1151,7 +1151,7 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
       }
 
       const totalEpCount = Number(season.episode_count || 0);
-      for (let epNum = 1; epNum <= totalEpCount; epNum++) {
+      for (let epNum = Math.min(...knownEpNums); knownEpNums.size < totalEpCount; epNum++) { // absolute-numbered seasons start past 1
         if (knownEpNums.has(epNum)) continue;
         knownEpNums.add(epNum);
         const key = showEpisodeKey(seasonNumber, epNum);
@@ -1162,7 +1162,7 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
           showTitle: show.title,
           showTmdbId: resolvedTmdbId || show.tmdb_id || "",
           showTvdbId,
-          showImdbId,
+          showImdbId, numberingSource: show.season_numbering?.translate ? show.season_numbering.source : "",
           tmdbId: hint?.id || "",
           seasonNumber,
           episodeNumber: epNum,
@@ -1180,20 +1180,20 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
     }
 
     for (const watched of localSeasons.get(seasonNumber) || []) {
-      const episodeNumber = Number(watched.episode);
-      if (knownEpNums.has(episodeNumber)) continue;
+      const episodeNumber = Number(watched.display_episode ?? watched.episode);
+      if (knownEpNums.has(episodeNumber) && !watched.numbering_review) continue;
       knownEpNums.add(episodeNumber);
       rows.push({
-        key: showEpisodeKey(seasonNumber, episodeNumber),
+        key: `${showEpisodeKey(seasonNumber, episodeNumber)}${watched.numbering_review ? "-review" : ""}`,
         showTitle: show.title,
         showTmdbId: resolvedTmdbId || show.tmdb_id || "",
         showTvdbId,
-        showImdbId,
+        showImdbId, numberingSource: show.season_numbering?.translate ? show.season_numbering.source : "",
         tmdbId: watched.tmdb_id || "",
         seasonNumber,
         episodeNumber,
-        title: episodeTitle(watched.title, episodeNumber),
-        overview: tmdbEpisodes.length ? "Episode synopsis unavailable." : "TMDB metadata is still loading.",
+        title: `${watched.numbering_review ? "Unmatched: " : ""}${episodeTitle(watched.title, episodeNumber)}`,
+        overview: watched.numbering_review ? "This watch has no matching episode in the chosen season structure." : tmdbEpisodes.length ? "Episode synopsis unavailable." : "TMDB metadata is still loading.",
         airDate: "",
         airTime: "",
         runtime: watched.runtime ?? null,
@@ -2064,7 +2064,7 @@ function liveEpisodeMatches(episode, { change = {}, row = null, progress = null 
   if (mediaType && mediaType !== "episode") return false;
   const season = liveChangeField(change, "season") ?? row?.season ?? progress?.season;
   const episodeNumber = liveChangeField(change, "episode") ?? row?.episode ?? progress?.episode;
-  if (season == null || episodeNumber == null) return false;
+  if (season == null || episodeNumber == null || state.activeShowRenderContext?.show?.season_numbering?.translate) return false; // translated: stored numbers, refetched
   if (Number(episode.seasonNumber) !== Number(season) || Number(episode.episodeNumber) !== Number(episodeNumber)) return false;
 
   const incomingShowTitle = row?.show_title
@@ -2586,7 +2586,7 @@ export function mergeShowWithLoadedHistory(show = {}) {
       if (rowShowIds.length && showIds.length && !rowShowIds.some((id) => showIds.includes(id))) continue;
     }
     const key = showEpisodeKey(row.season, row.episode);
-    if (unwatchedEpisodeKeys.has(key)) continue;
+    if (unwatchedEpisodeKeys.has(key) || (show.season_numbering?.translate && !byEpisode.has(key))) continue; // translated: wait for /api/show
     const existing = byEpisode.get(key);
     const incomingIsManual = normalizePlatformSource(row.source) === "plembfin";
     const existingIsManual = normalizePlatformSource(existing?.source) === "plembfin";
@@ -2599,11 +2599,11 @@ export function mergeShowWithLoadedHistory(show = {}) {
     if (shouldUseIncoming) {
       // The dashboard/history preview is intentionally compact and does not
       // carry playHistory. Do not let that lightweight row replace the full
-      // detail row and hide genuine repeated watches in the show modal.
+      // detail row and hide genuine repeated watches, or the Fix Match display numbers, in the show modal.
       const existingHistory = Array.isArray(existing?.playHistory) ? existing.playHistory : [];
       const incomingHistory = Array.isArray(row.playHistory) ? row.playHistory : [];
       byEpisode.set(key, {
-        ...row,
+        ...row, display_season: existing?.display_season, display_episode: existing?.display_episode, numbering_review: existing?.numbering_review,
         show_title: rowShowTitle,
         ...(existingHistory.length > incomingHistory.length ? { playHistory: existingHistory } : {}),
       });

@@ -16,6 +16,12 @@ Saved show and season poster choices are included as database records. Artwork b
 poster cache rows, and TMDB metadata cache rows are not included; copy `data/media/`
 separately when preserving the locally cached images themselves.
 
+Full and portable exports also retain each show's metadata source, stored-row numbering and
+Fix Match timestamp (`showSeasonSource`). Watch provenance retains its per-row Trakt override.
+Restore replay applies those overrides or the restored show mapping before clearing Trakt
+history; an unmatched translated episode fails the preflight rather than being replayed under
+its stored number. Older exports cannot recover a per-show choice they did not contain.
+
 The focused watch-history subsystem reference is
 [watch-history-backups.md](watch-history-backups.md); this doc covers all backup
 subsystems and their shared destination adapters.

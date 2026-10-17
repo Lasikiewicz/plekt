@@ -6,6 +6,7 @@ import { getMediaConnection, resolveConnectedProviderConfig } from "./mediaConne
 import { getValidPlexServerToken, getValidPlexToken } from "./plexTokenManager.js";
 import { activityGroupKeyFor, activityGroupMediaType, activityGroupTitleFromRecord, activityItemKeyFor } from "./syncActivityIdentity.js";
 import { brandEnv } from "./brandEnv.js";
+import { normalizeSeasonSource } from "./seasonSource.js";
 import { retainedRestoreFailure } from "./restoreFailureNotice.js";
 const SETTINGS_ID = "mediaConfig";
 const RUNTIME_ID = "main";
@@ -258,6 +259,9 @@ export function mergeEnvDefaults(stored = {}) {
   merged.syncScope = normalized.syncScope;
   merged.authority = normalized.authority;
   merged.pacing = normalized.pacing;
+  // The season source has no env default either. Without this line a saved
+  // value would reset to tvdb on the next config read.
+  merged.metadata = normalized.metadata;
   merged.ratingSync = normalized.ratingSync;
   merged.watchlistSync = normalized.watchlistSync;
   merged.upNextSync = normalized.upNextSync;
@@ -345,6 +349,7 @@ export function normalizeStoredConfig(stored = {}) {
     watchlistSync: normalizeWatchlistSyncSection(stored.watchlistSync || {}),
     upNextSync: normalizeUpNextSyncSection(stored.upNextSync || {}),
     nowPlaying: normalizeNowPlayingSection(stored.nowPlaying || {}),
+    metadata: { seasonSource: normalizeSeasonSource(stored.metadata?.seasonSource) },
   };
 }
 
@@ -443,6 +448,7 @@ export function publicMediaConfig(config = {}) {
     watchlistSync: normalized.watchlistSync,
     upNextSync: normalized.upNextSync,
     nowPlaying: normalized.nowPlaying,
+    metadata: normalized.metadata,
   };
 }
 
@@ -558,6 +564,7 @@ export async function mergeIncomingConfig(config = {}) {
     watchlistSync: mergeWatchlistSyncSection(existing.watchlistSync, config.watchlistSync),
     upNextSync: mergeSection(existing.upNextSync, config.upNextSync, []),
     nowPlaying: mergeSection(existing.nowPlaying, config.nowPlaying, []),
+    metadata: mergeSection(existing.metadata, config.metadata, []),
   });
 }
 

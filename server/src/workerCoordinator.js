@@ -1,4 +1,5 @@
-import { runForceSync, runScheduledSync } from "./scheduled.js";
+import { runForceSync } from "./utils/forceSyncRun.js";
+import { runScheduledSync } from "./scheduled.js";
 import { runTmdbMetadataRefreshJob, runTvdbMetadataRefreshJob } from "./routes/maintenance.js";
 import { PLAYSTATE_ALIAS_REPAIR_JOB, runPlaystateAliasRepairJob } from "./utils/playstateAliasRepair.js";
 import { runRetryAllSyncActivityJob } from "./routes/sync.js";

@@ -10,14 +10,16 @@ import path from "node:path";
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-sync-retry-test-"));
 process.env.DATA_DIR = dataDir;
 
+const { mediaFromEmbyLikeResumableItem } = await import("../server/src/scheduled.js");
 const {
-  mediaFromEmbyLikeResumableItem,
   plexHistoryItemMatchesConfiguredUser,
   recentUnwatchBlocksLibraryImport,
+} = await import("../server/src/utils/recentWatchImport.js");
+const {
   syncRetryDelayMs,
   syncRetryEligible,
   SYNC_RETRY_MAX_ATTEMPTS,
-} = await import("../server/src/scheduled.js");
+} = await import("../server/src/utils/syncDispatchQueue.js");
 const { appendSyncHistory, pruneSyncHistory, getSyncHistory, getSyncHistoryPage } = await import("../server/src/utils/configStore.js");
 const {
   findWatchedByAnyMediaKey,

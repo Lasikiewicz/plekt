@@ -2,7 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR } from "../paths.js";
 import { db, bumpDataVersion } from "../db.js";
-import { getTmdbDetails } from "./tmdbGateway.js";
+import { getTmdbDetails, getTmdbShowSeasonLists } from "./tmdbGateway.js";
+import { readSeasonSource } from "./seasonSource.js";
+import { translatedWatchedCount } from "./showSeasonTranslation.js";
 
 const CACHE_FILE_PATH = path.join(DATA_DIR, "tv_progress_cache.json");
 
@@ -15,6 +17,23 @@ const PROGRESS_CACHE_SCHEMA_VERSION = 3; // trusted user-scoped library-history 
 // How long to wait before retrying a show whose episode total could not be resolved.
 const MISSING_TOTAL_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
 const BURST_TOTAL_REUSE_MS = 60 * 1000;
+
+// The episode total follows the show's season source, so the progress count
+// matches the episodes the rest of the app shows. TVDB keeps the merged
+// details count. A TMDB show sums the regular seasons of TMDB's own season
+// list (the details list is TVDB-shaped), and falls back to the details count
+// when TMDB has none.
+async function progressTotalFor(tmdbShow, { tmdbId = "", tvdbId = "" } = {}) {
+  const detailsCount = tmdbShow?.number_of_episodes || 0;
+  const seasonKey = String(tvdbId || tmdbShow?.external_ids?.tvdb_id || "");
+  const showId = String(tmdbId || tmdbShow?.id || "");
+  if (!showId || readSeasonSource(seasonKey) !== "tmdb") return detailsCount;
+  const lists = await getTmdbShowSeasonLists({ tmdbId: showId }).catch(() => []);
+  const total = lists
+    .filter((season) => Number(season.season) > 0)
+    .reduce((sum, season) => sum + (season.episodes?.length || 0), 0);
+  return total || detailsCount;
+}
 
 // True for values like "plex://season/602e6a1b66dfdb002c0a6aa8" or "tvdb://12345"
 // that ended up in a show_title column instead of an actual show name.
@@ -211,7 +230,11 @@ async function calculateAndSetShowProgress(showTitle) {
     }
   }
   
-  const watchedCount = uniqueEpisodes.size;
+  // A Fix Match translated show counts in its display structure instead.
+  const translatedCount = tvdbId
+    ? await translatedWatchedCount({ tvdbId, tmdbId, rows: [...uniqueEpisodes].map((key) => ({ season: Number(key.split("_")[0]), episode: Number(key.split("_")[1]) })) }).catch(() => null)
+    : null;
+  const watchedCount = translatedCount ?? uniqueEpisodes.size;
   
   // Retrieve total episodes count from TMDB (utilizing cached details when possible)
   const previous = progressCache[showKey];
@@ -231,7 +254,7 @@ async function calculateAndSetShowProgress(showTitle) {
         title: titleIsResolvable ? showTitle : "",
         ids: { tvdbId },
       });
-      totalEpisodes = tmdbShow?.number_of_episodes || 0;
+      totalEpisodes = await progressTotalFor(tmdbShow, { tmdbId, tvdbId });
     } catch (e) {
       // An unresolvable ID is an expected data gap, not a failure of this run.
       console.warn(`[ShowProgressCache] No episode total for ${showTitle}: ${e.message}`);
@@ -351,7 +374,7 @@ export async function rebuildShowProgressCache() {
     if (group.tmdbId || group.title) {
       try {
         const tmdbShow = await getTmdbDetails({ mediaType: "tv", tmdbId: group.tmdbId, title: group.title });
-        totalEpisodes = tmdbShow?.number_of_episodes || 0;
+        totalEpisodes = await progressTotalFor(tmdbShow, { tmdbId: group.tmdbId });
       } catch (e) {
         console.error(`[ShowProgressCache] Rebuild failed fetching TMDB total episodes for ${group.title}:`, e.message);
       }
