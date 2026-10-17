@@ -169,6 +169,9 @@ notification episode unwatch finds no matching item on any configured Emby/Jelly
 destination, the orchestrator records that no-match result but withholds the remaining
 Trakt episode unwatch until the identity/library mapping is reliable. This channel
 covers library UI changes that Plex webhooks do not reliably report, including unwatching.
+Before a suspected unwatch is sent to manual watch review, Plekt re-fetches the item's
+live Plex metadata and confirms that it is still unplayed. This avoids treating a stale
+notification or poll result as an unwatch when Plex still reports the episode as watched.
 Plex's "Mark Unwatched" clears `viewCount` but can leave a stale `viewOffset` behind, and a
 lingering offset alone cannot distinguish that from a fresh in-progress first watch. The
 callback only treats a nonzero offset as a real unwatch when Plekt already had the item
@@ -216,8 +219,10 @@ own catch-up sync separately pulls:
 
 Every minute, **unwatched reconciliation** (`checkPlexUnwatchedStatus`) verifies items
 Plekt thinks are watched are still watched on Plex, as a backstop for unwatches
-missed while the WebSocket listener was disconnected. A mismatch records the unwatched
-transition in Plekt and propagates it to the other eligible destinations.
+missed while the WebSocket listener was disconnected. Suspected unwatches are checked
+against live Plex metadata before they are sent to manual watch review. A confirmed
+mismatch records the unwatched transition in Plekt and propagates it to the other
+eligible destinations.
 
 ## Outbound operations (`plexClient.js`)
 

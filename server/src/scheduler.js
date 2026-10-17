@@ -4,7 +4,7 @@ import { activeSyncOperation, appendSyncHistory, isAuthoritativeRestoreActive, l
 import { createPlexNotificationListener } from "./utils/plexNotificationListener.js";
 import { createPlexAdaptivePoller } from "./utils/plexAdaptivePoller.js";
 import { createLiveSessionPoller } from "./utils/liveSessionPoller.js";
-import { fetchPlexContainerEpisodes, fetchPlexMetadataItem, findPlexItem, hydratePlexEpisodeMetadata, mergePlexMetadataItem } from "./utils/plexClient.js";
+import { fetchPlexContainerEpisodes, fetchPlexMetadataItem, findPlexItem, hydratePlexEpisodeMetadata, mergePlexMetadataItem, syncPlexCachedEpisodeState } from "./utils/plexClient.js";
 import { buildPlexMediaFromMetadata } from "./utils/parsers.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "./utils/watchProvenance.js";
 import { listActiveSessions } from "./utils/activeSessions.js";
@@ -537,7 +537,7 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
 // Plex never sends a webhook when an item is marked unwatched, so we listen on its
 // notification WebSocket. When a movie/episode timeline event arrives, we resolve the
 // ratingKey to its current metadata, confirm it actually went to unwatched, and (if we
-// previously tracked it as watched) run the same propagation as a manual unwatch â€” which
+// previously tracked it as watched) run the same propagation as a manual unwatch — which
 // fans out to Emby and Jellyfin via the configured ID/title matching.
 // ---------------------------------------------------------------------------
 
@@ -597,6 +597,8 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     return metadata;
   });
 
+  syncPlexCachedEpisodeState(config.plex, metadata);
+
   const notificationStateKey = plexNotificationStateKey(ratingKey, metadata);
   if (!claimRecentPlexNotificationState(notificationStateKey)) {
     console.log("Plex notifications: coalesced duplicate library state", {
@@ -636,7 +638,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
   const media = buildPlexMediaFromMetadata(metadata, { phase: Number(metadata.viewCount || 0) > 0 ? "completed" : "unplayed" });
   if (!media?.isValid || !["movie", "episode"].includes(media.type)) return;
 
-  // Still watched or only partially watched â†’ this isn't an unwatch event.
+  // Still watched or only partially watched → this isn't an unwatch event.
   const viewCount = Number(metadata.viewCount || 0);
   const viewOffset = Number(metadata.viewOffset || 0);
   if (viewCount > 0) {
@@ -1041,10 +1043,17 @@ async function checkPlexUnwatchedFast(plexConfig) {
         watchProvenance: record.watch_provenance || null,
       };
 
-      const plexItem = media.itemId
+      let plexItem = media.itemId
         ? await fetchPlexMetadataItem(plexConfig, media.itemId).catch(() => null)
         : await findPlexItem(plexConfig, media);
+      if (plexItem && !media.itemId && !(Number(plexItem.viewCount) > 0)) {
+        const itemKey = plexItem.ratingKey || plexItem.key;
+        if (itemKey) {
+          plexItem = await fetchPlexMetadataItem(plexConfig, itemKey).catch(() => null);
+        }
+      }
       if (plexItem) {
+        syncPlexCachedEpisodeState(plexConfig, plexItem);
         // A metadata lookup without account-scoped user data is not evidence
         // of an unwatch. Only an explicit numeric viewCount of zero can
         // trigger the unwatch repair; otherwise a provider response that

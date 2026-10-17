@@ -496,6 +496,68 @@ function invalidatePlexSeriesIdentity(config, media) {
   media?.restoreLookupCache?.delete?.(restoreLookupKey("plex", config, media));
 }
 
+// Keep cached /allLeaves episode user state aligned with live Plex mutations
+// and notifications without discarding the series leaf index that sibling
+// episode operations share.
+export function syncPlexCachedEpisodeState(config = {}, update = {}) {
+  if (!update || typeof update !== "object") return 0;
+  const scopePrefix = config?.baseUrl ? `${plexConnectionScope(config)}|` : "";
+  const type = String(update.type || "").trim().toLowerCase();
+  const seriesKeyToInvalidate = ["show", "series", "season"].includes(type)
+    ? String(update.parentRatingKey || update.grandparentRatingKey || update.ratingKey || "").trim()
+    : "";
+
+  const entries = new Set();
+  for (const [alias, entry] of plexSeriesIdentityCache) {
+    if (scopePrefix && !alias.startsWith(scopePrefix)) continue;
+    if (entry) entries.add(entry);
+  }
+
+  if (seriesKeyToInvalidate) {
+    for (const entry of entries) {
+      if (String(entry.series?.ratingKey || "") === seriesKeyToInvalidate) {
+        deletePlexSeriesEntry(entry);
+      }
+    }
+    return 0;
+  }
+
+  const rawKeys = Array.isArray(update.ratingKeys)
+    ? update.ratingKeys
+    : [update.ratingKey ?? update.itemId ?? update.key];
+  const targetKeys = new Set(
+    rawKeys
+      .map((value) => plexRatingKeyFromReference(value))
+      .filter(Boolean),
+  );
+  if (!targetKeys.size) return 0;
+
+  let updated = 0;
+  for (const entry of entries) {
+    if (!(entry.episodesByCoordinate instanceof Map)) continue;
+    for (const episodes of entry.episodesByCoordinate.values()) {
+      if (!Array.isArray(episodes)) continue;
+      for (const child of episodes) {
+        const childKey = plexRatingKeyFromReference(child?.ratingKey ?? child?.key);
+        if (!childKey || !targetKeys.has(childKey)) continue;
+        if (update.viewCount !== undefined) {
+          const parsedCount = Number(update.viewCount || 0);
+          child.viewCount = Number.isFinite(parsedCount) && parsedCount > 0 ? parsedCount : 0;
+        }
+        if (update.viewOffset !== undefined) {
+          const parsedOffset = Number(update.viewOffset || 0);
+          child.viewOffset = Number.isFinite(parsedOffset) && parsedOffset > 0 ? parsedOffset : 0;
+        }
+        if (update.lastViewedAt !== undefined) {
+          child.lastViewedAt = update.lastViewedAt;
+        }
+        updated += 1;
+      }
+    }
+  }
+  return updated;
+}
+
 async function resolvePlexSeriesIdentity(config, media) {
   const aliases = plexSeriesAliases(config, media);
   // A provider-id lookup can legitimately fall back to a title search. Keep
@@ -528,6 +590,17 @@ async function resolvePlexSeriesIdentity(config, media) {
       const key = `${Number(child.parentIndex)}:${Number(child.index)}`;
       if (!episodesByCoordinate.has(key)) episodesByCoordinate.set(key, []);
       episodesByCoordinate.get(key).push(child);
+    }
+    // Evict any earlier snapshot for the same series ratingKey in this connection
+    // scope so an older allLeaves entry (for example cached under the show's IMDb
+    // ID before an episode-ID fallback search refreshed the show) cannot survive
+    // alongside the newer snapshot with stale leaf viewCount values.
+    const scopePrefix = `${plexConnectionScope(config)}|`;
+    for (const [existingAlias, existingEntry] of plexSeriesIdentityCache) {
+      if (!existingAlias.startsWith(scopePrefix)) continue;
+      if (String(existingEntry?.series?.ratingKey || "") === String(series.ratingKey)) {
+        deletePlexSeriesEntry(existingEntry);
+      }
     }
     const providerIds = plexProviderIdsFromSeries(series, media.ids || {});
     const entry = { series, providerIds, episodesByCoordinate, expiresAt: now + PLEX_IDENTITY_TTL_MS, createdAt: now };
@@ -736,7 +809,14 @@ export async function markPlexPlayed(config, media) {
       lastHttpStatus = response.status;
       console.log("Plex item marked played", { ratingKey: targetItem.ratingKey });
     }));
-    return { platform: "plex", status: "fulfilled", itemId: items[0].ratingKey, itemIds: items.map((targetItem) => targetItem.ratingKey), httpStatus: lastHttpStatus };
+    const itemIds = items.map((targetItem) => targetItem.ratingKey);
+    syncPlexCachedEpisodeState(config, {
+      ratingKeys: itemIds,
+      viewCount: 1,
+      viewOffset: 0,
+      lastViewedAt: Math.floor(Date.now() / 1000),
+    });
+    return { platform: "plex", status: "fulfilled", itemId: items[0].ratingKey, itemIds, httpStatus: lastHttpStatus };
   } catch (error) {
     if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
       invalidatePlexSeriesIdentity(config, media);
@@ -774,7 +854,13 @@ export async function markPlexUnplayed(config, media) {
       lastHttpStatus = response.status;
       console.log("Plex item marked unplayed", { ratingKey: targetItem.ratingKey });
     }));
-    return { platform: "plex", status: "fulfilled", itemId: items[0].ratingKey, itemIds: items.map((targetItem) => targetItem.ratingKey), httpStatus: lastHttpStatus };
+    const itemIds = items.map((targetItem) => targetItem.ratingKey);
+    syncPlexCachedEpisodeState(config, {
+      ratingKeys: itemIds,
+      viewCount: 0,
+      viewOffset: 0,
+    });
+    return { platform: "plex", status: "fulfilled", itemId: items[0].ratingKey, itemIds, httpStatus: lastHttpStatus };
   } catch (error) {
     if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
       invalidatePlexSeriesIdentity(config, media);
@@ -844,6 +930,11 @@ export async function setPlexProgress(config, media, { protectNewerView = false 
       throw error;
     }
 
+    syncPlexCachedEpisodeState(config, {
+      ratingKey: item.ratingKey,
+      viewCount: 0,
+      viewOffset: positionMs,
+    });
     console.log("Plex item resume progress updated", { ratingKey: item.ratingKey, positionMs });
     return { platform: "plex", status: "fulfilled", itemId: item.ratingKey, positionMs, httpStatus: response.status };
   } catch (error) {
@@ -872,6 +963,11 @@ export async function markPlexUnplayedByRatingKey(config, ratingKey, { lane = "s
   if (!response.ok) {
     throw new Error(`Plex unscrobble failed with status ${response.status} for ratingKey ${ratingKey}`);
   }
+  syncPlexCachedEpisodeState(config, {
+    ratingKey,
+    viewCount: 0,
+    viewOffset: 0,
+  });
   return { platform: "plex", status: "fulfilled", itemId: ratingKey, httpStatus: response.status };
 }
 

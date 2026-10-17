@@ -1,7 +1,7 @@
 // Fallback unwatched-status polls for Plex, Emby and Jellyfin, and Jellyfin unwatch confirmation (split from scheduled.js).
 import { lastOutboundPlayedMarkAt } from "./syncOrchestrator.js";
 import { applyUnwatchedTransition } from "./watchStateTransitions.js";
-import { findPlexItem } from "./plexClient.js";
+import { fetchPlexMetadataItem, findPlexItem, syncPlexCachedEpisodeState } from "./plexClient.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { isEmbyLikePlayed } from "./watchDates.js";
 import { invalidateHistoryDerivedCaches, listRecentTrackedWatchRows, listRecentlyUpdatedTrackedWatchRows, mediaKeyFor } from "./dataRepo.js";
@@ -47,7 +47,7 @@ export function jellyfinMatchesContainWatched(items = []) {
 }
 
 // A single false Played flag is not enough to infer that a user deliberately
-// marked an item unwatched. Require the same false observation again within a
+// marked an item unwatched. Require the same false observation twice within a
 // bounded window. Webhook-based unwatches do not use this helper and remain
 // immediate.
 export async function confirmJellyfinUnwatchedObservation(media, loopStore, { now = Date.now(), windowMs = JELLYFIN_UNWATCHED_CONFIRMATION_WINDOW_MS } = {}) {
@@ -97,9 +97,26 @@ export async function checkPlexUnwatchedStatus(config, loopStore) {
 
       const plexItem = await findPlexItem(config.plex, media);
       if (plexItem) {
-        const isWatched = Boolean(plexItem.viewCount && Number(plexItem.viewCount) > 0);
+        let confirmedItem = plexItem;
+        let isWatched = Boolean(confirmedItem.viewCount && Number(confirmedItem.viewCount) > 0);
         if (!isWatched) {
-          const plexMedia = { ...media, itemId: plexItem.ratingKey || plexItem.key || undefined };
+          // findPlexItem can resolve an episode from a cached /allLeaves
+          // snapshot in plexSeriesIdentityCache (for example after
+          // repairEpisodeSeriesIdentity re-keys the watch row from episode IDs
+          // to series IDs) or return a bare { ratingKey } reference. Always
+          // confirm against live /library/metadata/{ratingKey} before treating
+          // the item as unwatched.
+          const itemKey = confirmedItem.ratingKey || confirmedItem.key;
+          if (itemKey) {
+            const liveItem = await fetchPlexMetadataItem(config.plex, itemKey).catch(() => null);
+            if (!liveItem) continue;
+            syncPlexCachedEpisodeState(config.plex, liveItem);
+            confirmedItem = liveItem;
+            isWatched = Boolean(confirmedItem.viewCount && Number(confirmedItem.viewCount) > 0);
+          }
+        }
+        if (!isWatched) {
+          const plexMedia = { ...media, itemId: confirmedItem.ratingKey || confirmedItem.key || undefined };
           const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(plexMedia, "plex", loopStore).catch(() => 0);
           if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) {
             console.log("Cron ignored Plex unplayed state after Plekt's own played mark", { title: record.title });

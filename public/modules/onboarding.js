@@ -3,18 +3,18 @@
 // wherever possible - openServiceEditModal() for every provider connect/test
 // flow, and the webhook-guide functions - so setup and Settings never diverge
 // in behavior, only in presentation.
-import { state, elements } from "./state.js?v=2.1.0.0.2";
-import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.0.2";
-import { openServiceEditModal, SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.1.0.0.2";
-import { renderFieldRow } from "./settings-ui.js?v=2.1.0.0.2";
-import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=2.1.0.0.2";
-import { claimAdminAccount } from "./auth.js?v=2.1.0.0.2";
-import { lazyExport } from "./route-modules.js?v=2.1.0.0.2";
+import { state, elements } from "./state.js?v=2.1.0.0.3";
+import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.0.3";
+import { openServiceEditModal, SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.1.0.0.3";
+import { renderFieldRow } from "./settings-ui.js?v=2.1.0.0.3";
+import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=2.1.0.0.3";
+import { claimAdminAccount } from "./auth.js?v=2.1.0.0.3";
+import { lazyExport } from "./route-modules.js?v=2.1.0.0.3";
 import {
   PLEX_HISTORICAL_SYNC_CHOICES,
   PLEX_HISTORICAL_SYNC_LABEL,
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=2.1.0.0.2";
+} from "./plex-history-policy.js?v=2.1.0.0.3";
 
 let _cb = {};
 const loadWatchBackups = lazyExport("tools-backups", "loadWatchBackups");
@@ -527,7 +527,7 @@ export function renderSetupPage() {
     root.innerHTML = `<div class="settings-content"><p class="muted-copy">Loading setup...</p></div>`;
     return;
   }
-  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.1.0.0.2" : "/plekt_header_logo_dark.png?v=2.1.0.0.2";
+  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.1.0.0.3" : "/plekt_header_logo_dark.png?v=2.1.0.0.3";
   if (restoreView) {
     renderRestoreView(root, logoSrc);
     return;

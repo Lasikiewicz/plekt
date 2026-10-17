@@ -16,6 +16,7 @@ import {
   mediaToWatchRecord,
   seriesIdsForEpisodeMedia,
   showTitleNamesSeveralShows,
+  supersedeUnwatchedTransitionsForRecordSync,
   updateWatchRecord,
   updateWatchTelemetry,
   upsertPlaystateForMedia,
@@ -376,6 +377,7 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
       { auditSource: "manual_watch_review" },
     );
     if (!updatedRecord?.ok) throw new Error(updatedRecord?.error || "Stored watch record could not be updated");
+    supersedeUnwatchedTransitionsForRecordSync({ ...existing, ...(updatedRecord.record || {}), id: existing.id, sync_action: "watched" });
     media.watchRecordId = existing.id;
     await deletePlaybackProgress(media).catch(() => null);
     await upsertPlaystateLikeHistory(media, existing, media.watched_at);
@@ -444,6 +446,7 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
     `Details: Manual watch review approved with the ${mode.replaceAll("_", " ")} policy; queueing sync.`,
   ].join("\n");
   const inserted = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+  supersedeUnwatchedTransitionsForRecordSync({ ...inserted.record, id: inserted.id });
   media.watchRecordId = inserted.id;
   await deletePlaybackProgress(media).catch(() => null);
   await upsertPlaystateLikeHistory(media, inserted.record, inserted.record.watched_at);

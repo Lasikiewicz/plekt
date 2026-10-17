@@ -1,12 +1,12 @@
-import { state } from "./state.js?v=2.1.0.0.2";
-import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.1.0.0.2";
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.0.2";
-import { isWatchedHistoryAction } from "./sync.js?v=2.1.0.0.2";
-import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.1.0.0.2";
-import { createSeasonPostersPanel } from "./season-posters-panel.js?v=2.1.0.0.2";
-import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.1.0.0.2";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.0.0.2";
-import { mountShowSeasonSource } from "./show-season-source.js?v=2.1.0.0.2";
+import { state } from "./state.js?v=2.1.0.0.3";
+import { escapeHtml, escapeAttribute, slug, sanitizeTitle, showTitleFrom, formatDate, actualWatchHistory, sourceBadgeHtml, isDemoMode, tvShowTvdbHref } from "./utils.js?v=2.1.0.0.3";
+import { buildAuthHeaders } from "./auth.js?v=2.1.0.0.3";
+import { isWatchedHistoryAction } from "./sync.js?v=2.1.0.0.3";
+import { tmdbPoster, tmdbImage, proxiedArtworkUrl } from "./images.js?v=2.1.0.0.3";
+import { createSeasonPostersPanel } from "./season-posters-panel.js?v=2.1.0.0.3";
+import { dateAtMiddayIso, refreshShowAfterManualWatch, watchedAtForChoice, watchedReferenceFor } from "./watch-action.js?v=2.1.0.0.3";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.0.0.3";
+import { mountShowSeasonSource } from "./show-season-source.js?v=2.1.0.0.3";
 
 // Callbacks injected by app.js at startup.
 let _setMessage = () => {};
@@ -1674,7 +1674,8 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
   overlay.innerHTML = `
     <div class="edit-dialog edit-dialog--wide fix-match-dialog glass-panel">
       <h3>${escapeHtml(headerTitle)}</h3>
-      <p class="muted-copy" style="margin-bottom: 0.75rem;">Search all available sources to link the correct ${isTv ? "TV show" : "movie"}${isTv ? " - this rematches every episode of the show" : ""}, or match to a YouTube video.</p>
+      <p class="muted-copy fix-match-intro">Search all available sources to link the correct ${isTv ? "TV show" : "movie"}${isTv ? " - this rematches every episode of the show" : ""}, or match to a YouTube video.</p>
+      ${isTv ? `<div class="fix-match-season-source"></div>` : ""}
       <div class="fix-match-search-row">
         <input type="search" class="field fix-match-input" placeholder="${escapeAttribute(initialSearchTitle || "Search title…")}" value="${escapeAttribute(initialSearchTitle)}" />
         <button class="button-primary fix-match-search-btn" type="button">Search all sources</button>
@@ -1685,10 +1686,10 @@ export function openFixMatchDialog(_container, id, currentTitle, mediaType, onSa
       </div>
       <p class="edit-dialog-status fix-match-search-status" role="status" aria-live="polite"></p>
       ${hasTraktSplitContext ? `<p class="muted-copy fix-match-split-hint" style="margin: 0.5rem 0 0;">This failed Trakt episode is Season ${escapeHtml(options.traktSourceSeason)} locally. Keep the TVDB/media-app match and skip Trakt for now if the provider uses a different series or season numbering. Only choose <strong>Unsplit for Trakt/TMDB</strong> after confirming that separate provider series is correct.</p>` : ""}
-      <div class="fix-match-results"></div>${isTv ? `<div class="fix-match-season-source"></div>` : ""}
-      <hr style="border:0;border-top:1px solid var(--border);margin:1rem 0 0.75rem;" />
-      <p class="muted-copy" style="margin-bottom:0.5rem;">YouTube content not on TMDB? Paste the video URL below.</p>
-      <div style="display:flex;gap:0.5rem;">
+      <div class="fix-match-results"></div>
+      <hr class="fix-match-yt-rule" />
+      <p class="muted-copy fix-match-yt-intro">YouTube content not on TMDB? Paste the video URL below.</p>
+      <div class="fix-match-yt-row">
         <input type="url" class="field fix-match-yt-input" placeholder="https://www.youtube.com/watch?v=..." style="flex:1;" />
         <button class="button-ghost fix-match-yt-fetch-btn" type="button">Fetch</button>
       </div>
