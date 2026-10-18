@@ -6,7 +6,7 @@ globalThis.history ??= { state: null, pushState() {}, replaceState() {} };
 globalThis.window ??= { addEventListener() {}, location: { origin: "http://localhost:5055", pathname: "/" } };
 globalThis.document = { addEventListener() {}, querySelector: () => null };
 
-const { bindDashboardRuns, dashboardTvRowUnits, isDashboardRowCompact, setDashboardRowCompact, setDashboardRunExpanded } = await import("../public/modules/dashboard-modern.js");
+const { bindDashboardRuns, dashboardTvRowUnits, isDashboardRowCompact, sessionMatchesCardArt, setDashboardRowCompact, setDashboardRunExpanded } = await import("../public/modules/dashboard-modern.js");
 const { renderDashboardUpNextCard } = await import("../public/modules/dashboard.js");
 
 const episode = (id, show, season, number) => ({ id, media_type: "episode", show_tmdb_id: show, show_title: `Show ${show}`, season, episode: number });
@@ -133,4 +133,22 @@ test("opening a run folds any other open run back into its stack", () => {
   setDashboardRunExpanded("run:id:2:7", false);
   assert.deepEqual(dashboardTvRowUnits(rows).map((unit) => unit.key), ["run:id:1:3", "run:id:2:7"]);
   fullCards();
+});
+
+const cardArt = (html) => /data-art="([^"]*)"/.exec(html)?.[1].replace(/&#39;|&quot;|&amp;/g, (m) => ({ "&#39;": "'", "&quot;": '"', "&amp;": "&" })[m]) || "";
+
+test("a playing movie matches its own resume card even when the two carry different ids", () => {
+  const session = { source: "jellyfin", title: "Tony", mediaType: "movie", season: null, episode: null, ids: { imdb: "tt33095251", tmdb: "1329016" } };
+  const resume = renderDashboardUpNextCard({ id: "movie|id:imdb:tt33095251", media_type: "movie", queue_kind: "resume", title: "Tony", imdb_id: "tt33095251", tmdb_id: "1329016", tvdb_id: "375193" });
+  const other = renderDashboardUpNextCard({ id: "movie|id:imdb:tt1", media_type: "movie", queue_kind: "resume", title: "Other", imdb_id: "tt1", tmdb_id: "1" });
+  assert.equal(sessionMatchesCardArt(session, cardArt(resume)), true);
+  assert.equal(sessionMatchesCardArt(session, cardArt(other)), false);
+});
+
+test("a playing episode matches only the card for the same season and episode", () => {
+  const session = { source: "plex", title: "Carrie - S01E06", showTitle: "Carrie", mediaType: "episode", season: 1, episode: 6, ids: { tmdb: "288673" } };
+  const card = (season, number) => cardArt(renderDashboardUpNextCard({ id: `carrie-${season}-${number}`, media_type: "episode", queue_kind: "resume", title: `Carrie - S0${season}E0${number}`, show_title: "Carrie", show_tmdb_id: "288673", season, episode: number }));
+  assert.equal(sessionMatchesCardArt(session, card(1, 6)), true);
+  assert.equal(sessionMatchesCardArt(session, card(1, 7)), false);
+  assert.equal(sessionMatchesCardArt(session, ""), false);
 });

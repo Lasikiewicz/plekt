@@ -152,7 +152,9 @@ Rules that keep this correct:
   first, and the slots they leave (all of them when nothing is playing) take the Up Next
   rail's part watched (resume) cards, then its other Up Next cards. Those are featured there
   in a backdrop layout and hidden from the rail by CSS (`data-featured-in-panel` on each
-  rail card), and live sessions take the same layout side by side. A cog beside the heading
+  rail card), and live sessions take the same layout side by side. A rail card for media
+  that is playing live (matched to the session by `sessionMatchesCardArt()` on its art key)
+  is hidden the same way and never featured, so a playing title shows once. A cog beside the heading
   opens the options popup (`modules/now-playing-options.js`): allow part watched, allow Up
   Next (both on by default), and the item count (1 to 3), saved server-wide in the
   `nowPlaying` config section. One

@@ -1,7 +1,18 @@
 {
-  "version": "2.1.0.1.0",
-  "build": 0,
+  "version": "2.1.0.1.1",
+  "build": 1,
   "resetCommit": "36e25e64337ea0e88d0741a6743dbe7e46ae2698",
-  "updatedAt": "2026-10-18T14:12:36.151Z",
-  "entries": []
+  "updatedAt": "2026-10-18T18:08:09.077Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-10-18T18:08:09.077Z",
+      "commit": "744d1c158944dbddcfd01f39c4f1403cb614cdc7",
+      "message": "Fix - Show a playing title once on the dashboard",
+      "author": "Lasikiewicz",
+      "details": [
+        "A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail"
+      ]
+    }
+  ]
 }

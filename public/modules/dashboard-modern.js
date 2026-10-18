@@ -1,10 +1,10 @@
-import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.1.0.1.0";
-import { state } from "./state.js?v=2.1.0.1.0";
-import { artKey, requestArtKey } from "./card-art.js?v=2.1.0.1.0";
-import { ART_TOGGLE_EVENT, isArtEnabled } from "./appearance.js?v=2.1.0.1.0";
-import { nowPlayingOptions } from "./now-playing-options.js?v=2.1.0.1.0";
+import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.1.0.1.1";
+import { state } from "./state.js?v=2.1.0.1.1";
+import { artKey, requestArtKey } from "./card-art.js?v=2.1.0.1.1";
+import { ART_TOGGLE_EVENT, isArtEnabled } from "./appearance.js?v=2.1.0.1.1";
+import { nowPlayingOptions } from "./now-playing-options.js?v=2.1.0.1.1";
 // The same folded-poster behaviour on the Library and History pages.
-import "./page-card-open.js?v=2.1.0.1.0";
+import "./page-card-open.js?v=2.1.0.1.1";
 
 // Dashboard behaviour added with the Modern theme style (plan/archive/theme-styles/plan.md),
 // now the only style: compact rows, collapsed TV runs, the featured Up Next cards
@@ -320,6 +320,23 @@ function sessionArtKey(session = {}) {
   return artKey("tv", { ...idParts, title: showTitle });
 }
 
+// A live session and an Up Next card show the same media when their art keys
+// share the type and either an id or the name. The two sides can carry
+// different ids, so the keys are compared part by part, not as strings. An
+// episode's ids are its show's, so the "<season>x<episode>" prefix must match too.
+export function sessionMatchesCardArt(session = {}, cardKey = "") {
+  const [liveType, ...liveRest] = sessionArtKey(session).split("|");
+  const [cardType, ...cardRest] = String(cardKey || "").split("|");
+  if (!liveType || liveType !== cardType) return false;
+  const liveIds = liveRest.slice(0, 3);
+  const cardIds = cardRest.slice(0, 3);
+  const liveName = liveRest.slice(3).join("|").trim().toLowerCase();
+  const cardName = cardRest.slice(3).join("|").trim().toLowerCase();
+  if (liveType === "episode" && liveName.split(" ")[0] !== cardName.split(" ")[0]) return false;
+  const sharedId = liveIds.some((id, index) => id && id === cardIds[index]);
+  return sharedId || Boolean(liveName && liveName === cardName);
+}
+
 // --- Now Playing -----------------------------------------------------------
 // The section heading is hidden. While nothing plays, sync.js
 // renders an .idle-state placeholder in #nowPlayingGrid; features built from the first two Up Next cards are added beside it (CSS
@@ -346,10 +363,10 @@ function markFeaturedSources(sources = []) {
   }
 }
 
-function removeIdleFeature() {
+function removeIdleFeature(playing = []) {
   nowPlayingGrid?.querySelectorAll(".modern-idle-feature").forEach((feature) => feature.remove());
   featuredSourceHtml = "";
-  markFeaturedSources();
+  markFeaturedSources(playing);
 }
 
 // The feature is a copy of the Up Next card itself, in a card-row wrapper so
@@ -383,19 +400,24 @@ function syncIdleFeatureCard() {
   const liveCount = nowPlayingGrid.querySelectorAll(":scope > [data-now-playing-card-id]").length;
   // Live sessions come first; the slots they leave take the rail's part
   // watched (resume) cards, then its Up Next cards, each only when allowed.
-  // The same cards are hidden from the rail.
+  // The same cards are hidden from the rail. A card for media that is playing
+  // live is already shown by its session card, so it is hidden and never copied.
   const slots = Math.max(0, options.itemCount - liveCount);
-  const railCards = [...(upNextPanel?.querySelectorAll(":scope > [data-up-next-card-id]") || [])];
+  const sessions = liveCount ? state.activeSessions || [] : [];
+  const isPlaying = (card) => sessions.some((session) => sessionMatchesCardArt(session, card.getAttribute("data-art")));
+  const allRailCards = [...(upNextPanel?.querySelectorAll(":scope > [data-up-next-card-id]") || [])];
+  const playing = allRailCards.filter(isPlaying);
+  const railCards = allRailCards.filter((card) => !playing.includes(card));
   const isResume = (card) => card.getAttribute("data-up-next-queue-kind") === "resume";
   const sources = [
     ...(options.allowPartWatched ? railCards.filter(isResume) : []),
     ...(options.allowUpNext ? railCards.filter((card) => !isResume(card)) : []),
   ].slice(0, slots);
   if (!sources.length) {
-    removeIdleFeature();
+    removeIdleFeature(playing);
     return;
   }
-  markFeaturedSources(sources);
+  markFeaturedSources([...sources, ...playing]);
   // Compare without the marker so marking a card does not rebuild the copies.
   const sourceHtml = sources.map((source) => source.outerHTML.replace(/ data-featured-in-panel=""/, "")).join("");
   if (nowPlayingGrid.querySelector(".modern-idle-feature") && featuredSourceHtml === sourceHtml) return;
