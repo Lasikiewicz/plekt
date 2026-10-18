@@ -1,10 +1,41 @@
 {
   "baseVersion": "2.1.0",
-  "build": 1,
-  "version": "2.1.0.1.0",
-  "updatedAt": "2026-10-18T14:12:36.151Z",
+  "build": 2,
+  "version": "2.1.0.2.0",
+  "updatedAt": "2026-10-18T18:13:12.513Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 2,
+      "version": "2.1.0.2.0",
+      "shortVersion": "2.1.0.2.0",
+      "date": "2026-10-18T18:13:12.513Z",
+      "commit": "9e2b8a9fde1844be692baef82c381ff0859380eb",
+      "message": "Fix - Show a playing title once on the dashboard",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail"
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail"
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Up Next & watch-state",
+            "details": [
+              "A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail"
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 1,
       "version": "2.1.0.1.0",
@@ -141,5 +172,5 @@
       ]
     }
   ],
-  "shortVersion": "2.1.0.1.0"
+  "shortVersion": "2.1.0.2.0"
 }
