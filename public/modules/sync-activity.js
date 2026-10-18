@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.3.0";
-import { state, elements } from "./state.js?v=2.1.0.3.0";
-import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.1.0.3.0";
-import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.1.0.3.0";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.0";
+import { state, elements } from "./state.js?v=2.1.1.0.0";
+import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.1.1.0.0";
+import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.1.1.0.0";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -273,10 +273,10 @@ function isActive() {
 // dispatch as Plex here. Sync activity names trackers as well as servers, so it
 // resolves platforms itself.
 const PLATFORMS = {
-  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.1.0.3.0" },
-  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.1.0.3.0" },
-  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.1.0.3.0" },
-  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.1.0.3.0" },
+  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.1.1.0.0" },
+  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.1.1.0.0" },
+  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.1.1.0.0" },
+  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.1.1.0.0" },
   plembfin: { name: "Plekt", icon: "" },
 };
 

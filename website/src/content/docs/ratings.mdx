@@ -3,7 +3,7 @@ title: Ratings
 description: Give movies, TV shows, and episodes private scores from 1 to 10.
 category: Media and discovery
 order: 3.32
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/index.html
   - public/modules/personal-media.js
@@ -50,8 +50,8 @@ Shows**, and **Episodes**, so a show-level score is not confused with one of its
 
 ## Rate a title from a card
 
-Choose **Rate** on an unrated card or **Rate again** on a rated card. Select a value from
-1 to 10 and save it. The updated score is written to Plekt's local private data and the
+Choose **Rate** on an unrated card. On a rated card, select its current score (for example
+8/10) to change it. Select a value from 1 to 10 and save it. The updated score is written to Plekt's local private data and the
 card remains in its media-type group.
 
 ## Rate from a detail page
@@ -70,7 +70,8 @@ control is distinct from TMDB, IMDb, or TheTVDB provider ratings.
 
 ## Change or remove a rating
 
-Use **Rate again** to replace a score. Use **Remove rating** to clear the personal score.
+Use the rating control on the card or detail page to replace a score. Use **Remove rating** to
+clear the personal score.
 Neither action removes the title from Watchlist or Playlists, changes watch history, or
 sends a watched-state correction to a connected service.
 

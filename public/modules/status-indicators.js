@@ -1,5 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.3.0";
-import { state, elements } from "./state.js?v=2.1.0.3.0";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.0";
+import { state, elements } from "./state.js?v=2.1.1.0.0";
 
 const REVIEW_POLL_MS = 30000;
 
@@ -161,7 +161,8 @@ export async function loadSyncAttentionSummary() {
   attentionSummaryPromise = fetch("/api/sync-attention", { headers: authHeaders(), cache: "no-store" })
     .then(async (response) => {
       const body = await response.json().catch(() => ({}));
-      if (!response.ok || !body.ok) throw new Error(body.error || `Sync attention failed with ${response.status}`);
+      // GET /api/sync-attention answers { attention, count, status } with no `ok` field.
+      if (!response.ok || body.ok === false) throw new Error(body.error || `Sync attention failed with ${response.status}`);
       if (requestSerial === attentionSummaryRequestSerial) {
         state.syncAttention = Array.isArray(body.attention) ? body.attention : [];
         setSyncAttentionSummary({

@@ -9111,7 +9111,7 @@
       "reason": "website",
       "lines": [
         [
-          "\"public/assets/videos/plembfin-features-poster-57caf32586.webp\",",
+          "\"public/assets/videos/plembfin-features-poster-57caf32586.webp\"",
           1
         ],
         [
@@ -9147,7 +9147,7 @@
           1
         ],
         [
-          "\"public/assets/plembfin-hub.svg\"",
+          "\"public/assets/plembfin-hub.svg\",",
           1
         ]
       ]
@@ -11510,6 +11510,10 @@
         [
           "\"summary\": \"Merge branch 'main' of https://github.com/Lasikiewicz/plembfin\",",
           16
+        ],
+        [
+          "\"New installs keep the backups/plembfin folder name for compatibility.\",",
+          2
         ]
       ]
     },
@@ -12069,7 +12073,7 @@
           1
         ],
         [
-          "For the stable v2.0.0 update, use `plembfin/plekt:2.0.0` or",
+          "For the stable v2.1.1 update, use `plembfin/plekt:2.1.1` or",
           1
         ],
         [

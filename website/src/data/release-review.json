@@ -1,14 +1,26 @@
 {
-  "publishedVersion": "2.0.0",
+  "publishedVersion": "2.1.0",
   "unchanged": {
-    "discover": "Reviewed against v1.3.0: feeds, filters, saved actions, and recommendation dismissal behavior are unchanged.",
-    "getting-started": "Reviewed against v2.1.0: the Docker Compose quick-start already pulls the published image and requires ADMIN_PASSWORD from .env; local-build and secure overlays are not documented on the website.",
-    "guides": "Reviewed against v1.3.0: index links and canonical guide ownership remain current; Docker Hub setup is covered in Getting started.",
-    "manual-watch-review": "Reviewed against v1.3.0: provider-side event review remains current. Episode watch-state aliases are a separate Settings → Tools feature, documented in Tools.",
-    "movies": "Reviewed against v2.0.0: the Movies library controls, card menu, and media page Appearance reference are unchanged by this release.",
-    "playlists": "Reviewed against v2.0.0: playlist editing and sync workflows are unchanged; the Modern card styling fix does not change them.",
-    "settings": "Reviewed against v2.1.0: the Settings group map and working rules are unchanged; restore status and conflict guidance live in Operations and Restore.",
-    "upcoming": "Reviewed against v2.0.0: the air-date calendar and metadata-only behavior are unchanged; this guide does not describe poster selection.",
-    "watchlist": "Reviewed against v1.3.0: local Watchlist and optional Plex sync behavior are unchanged."
+    "concepts": "Phase A read-through against the v2.1.1 candidate: local state, provider observations and sync responsibilities remain accurate; shared navigation styling changes do not change these concepts.",
+    "getting-started": "Phase A read-through: installation, account claim, Guided Setup and first health checks remain accurate; this release changes the appearance of shared controls.",
+    "guides": "Phase A read-through: canonical guide links and ownership remain accurate after the Modern-only navigation update.",
+    "history-search": "Phase A read-through: history controls, global-search groups and detail navigation remain accurate; replacement images cover the new shared presentation.",
+    "integrations": "Phase A read-through: Plex, Emby, Jellyfin, Trakt and Seerr integration responsibilities and links remain current.",
+    "libraries": "Phase A read-through: library navigation and the separate Movies and TV Shows guides remain current.",
+    "manual-watch-review": "Phase A read-through: provider event review and its decision controls remain accurate; shared navigation changes do not alter the workflow.",
+    "media-details": "Phase A read-through: the guide links to the current movie and TV detail owners; the changed appearance and detail controls are documented there.",
+    "movies": "Phase A read-through: Movies library filtering, card menu and detail links remain current; new captures show the shared presentation.",
+    "moving-to-port-5056": "Phase A read-through: Docker, Unraid and Windows port migration guidance remains accurate for the approved candidate.",
+    "playlists": "Phase A read-through: playlist creation, automatic rules, imports and provider sync remain accurate; the approved card-text correction changes layout only.",
+    "safe-daily-workflows": "Phase A read-through: watch-state corrections, review and recovery instructions remain current; removed style choices are not described here.",
+    "settings": "Phase A read-through: Settings groups and working rules remain accurate; the current map is covered by a replacement capture.",
+    "settings/restore": "Phase A read-through: restore modes, status and conflict guidance remain current.",
+    "settings/sync": "Phase A read-through: sync groups, history and tuning controls remain current; replacement captures cover current presentation and issue state.",
+    "stats": "Phase A read-through: statistics filters, metrics and provider attribution remain current; the shared visual changes require no wording change.",
+    "sync-tools": "Phase A read-through: watch-sync tools and issue handling remain accurate; replacement captures illustrate the current controls.",
+    "tv-shows": "Phase A read-through: TV library controls and detail navigation remain accurate; the detail guide owns season and episode layout changes.",
+    "upcoming": "Phase A read-through: month navigation, search and metadata-only calendar behavior remain current; the replacement capture shows a complete current month.",
+    "watch-progress-not-syncing": "Phase A read-through: provider, polling and progress troubleshooting remain accurate for the approved candidate.",
+    "watchlist": "Phase A read-through: local watchlist membership and optional provider projection remain current."
   }
 }

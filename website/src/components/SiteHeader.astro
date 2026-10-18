@@ -36,17 +36,6 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
       </div>
       <button class="nav-search-text" type="button" data-search-toggle aria-expanded="false" aria-controls="site-search-panel">Search</button>
       <a class="nav-github nav-github-mobile" href={site.repository} target="_blank" rel="noreferrer">Find on GitHub</a>
-      <div class="style-toggle-mobile">
-        <span class="style-toggle-mobile-label" aria-hidden="true">Screenshots</span>
-        <button class="theme-toggle style-toggle" type="button" data-style-toggle aria-pressed="false" aria-label="Show Classic screenshots" title="Show Classic screenshots">
-          <span class="theme-toggle-track" aria-hidden="true">
-            <span class="theme-toggle-thumb"></span>
-            <span class="theme-toggle-label style-toggle-label--classic">Classic</span>
-            <span class="theme-toggle-label style-toggle-label--modern">Modern</span>
-          </span>
-          <span class="sr-only" data-style-status>Modern screenshots selected</span>
-        </button>
-      </div>
     </nav>
 
     <div class="site-header-right">
@@ -67,15 +56,6 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
           <span class="theme-toggle-label theme-toggle-label--dark">Dark</span>
         </span>
         <span class="sr-only" data-theme-status>Dark mode selected</span>
-      </button>
-
-      <button class="theme-toggle style-toggle style-toggle-desktop" type="button" data-style-toggle aria-pressed="false" aria-label="Show Classic screenshots" title="Show Classic screenshots">
-        <span class="theme-toggle-track" aria-hidden="true">
-          <span class="theme-toggle-thumb"></span>
-          <span class="theme-toggle-label style-toggle-label--classic">Classic</span>
-          <span class="theme-toggle-label style-toggle-label--modern">Modern</span>
-        </span>
-        <span class="sr-only" data-style-status>Modern screenshots selected</span>
       </button>
 
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
@@ -110,9 +90,7 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
   const themeToggle = document.querySelector("[data-theme-toggle]");
   const globalSearchInput = document.querySelector("#docs-search-input");
   const globalSearchClear = document.querySelector("#docs-search-clear");
-  const styleToggles = document.querySelectorAll("[data-style-toggle]");
   const themeKey = "plembfin:theme";
-  const styleKey = "plembfin:style";
 
   if (globalSearchInput instanceof HTMLInputElement && !globalSearchInput.value) {
     const query = new URL(window.location.href).searchParams.get("q") || "";
@@ -194,16 +172,12 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
   const syncThemeControl = () => {
     const isLightMode = document.documentElement.classList.contains("light-mode");
     const nextMode = isLightMode ? "dark" : "light";
-    const isModernStyle = document.documentElement.dataset.style !== "classic";
     const logo = document.querySelector("[data-theme-logo]");
 
-    // Sources without data-image-style belong to figures that only have Classic captures.
     document.querySelectorAll("[data-theme-source]").forEach((source) => {
       if (source instanceof HTMLSourceElement) {
         const matchesMode = source.dataset.themeSource === (isLightMode ? "light" : "dark");
-        const imageStyle = source.dataset.imageStyle;
-        const matchesStyle = !imageStyle || imageStyle === (isModernStyle ? "modern" : "classic");
-        source.media = matchesMode && matchesStyle ? "all" : "not all";
+        source.media = matchesMode ? "all" : "not all";
       }
     });
 
@@ -217,9 +191,7 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
 
     document.querySelectorAll("[data-theme-image]").forEach((image) => {
       if (image instanceof HTMLImageElement || image instanceof SVGImageElement) {
-        const modernSource = isLightMode ? image.dataset.modernLightSrc : image.dataset.modernDarkSrc;
-        const classicSource = isLightMode ? image.dataset.lightSrc : image.dataset.darkSrc;
-        const nextSource = (isModernStyle && modernSource) || classicSource;
+        const nextSource = isLightMode ? image.dataset.lightSrc : image.dataset.darkSrc;
         const currentSource = image instanceof SVGImageElement ? image.getAttribute("href") : image.getAttribute("src");
         if (nextSource && !image.closest("picture") && currentSource !== nextSource) {
           image.setAttribute(image instanceof SVGImageElement ? "href" : "src", nextSource);
@@ -227,9 +199,7 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
 
         const imageLink = image.closest("[data-theme-image-link]");
         if (imageLink instanceof HTMLAnchorElement) {
-          const modernHref = isLightMode ? imageLink.dataset.modernLightHref : imageLink.dataset.modernDarkHref;
-          const classicHref = isLightMode ? imageLink.dataset.lightHref : imageLink.dataset.darkHref;
-          const nextHref = (isModernStyle && modernHref) || classicHref;
+          const nextHref = isLightMode ? imageLink.dataset.lightHref : imageLink.dataset.darkHref;
           if (nextHref && imageLink.getAttribute("href") !== nextHref) imageLink.setAttribute("href", nextHref);
         }
       }
@@ -239,13 +209,6 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
     themeToggle?.setAttribute("aria-label", `Switch to ${nextMode} mode`);
     themeToggle?.setAttribute("title", `Switch to ${nextMode} mode`);
     themeToggle?.querySelector("[data-theme-status]")?.replaceChildren(`${isLightMode ? "Light" : "Dark"} mode selected`);
-    styleToggles.forEach((styleToggle) => {
-      const nextStyleLabel = `Show ${isModernStyle ? "Classic" : "Modern"} screenshots`;
-      styleToggle.setAttribute("aria-pressed", String(!isModernStyle));
-      styleToggle.setAttribute("aria-label", nextStyleLabel);
-      styleToggle.setAttribute("title", nextStyleLabel);
-      styleToggle.querySelector("[data-style-status]")?.replaceChildren(`${isModernStyle ? "Modern" : "Classic"} screenshots selected`);
-    });
     document.querySelector("[data-theme-color]")?.setAttribute("content", isLightMode ? "#ffffff" : "#05080c");
   };
 
@@ -266,21 +229,6 @@ const globalSearchQuery = Astro.url.searchParams.get("q")?.trim() || "";
 
     syncThemeControl();
     window.setTimeout(() => document.documentElement.classList.remove("theme-transition"), 180);
-  });
-
-  styleToggles.forEach((styleToggle) => {
-    styleToggle.addEventListener("click", () => {
-      const useClassicStyle = document.documentElement.dataset.style !== "classic";
-      document.documentElement.dataset.style = useClassicStyle ? "classic" : "modern";
-
-      try {
-        window.localStorage.setItem(styleKey, useClassicStyle ? "classic" : "modern");
-      } catch {
-        // The current session still shows the selected style without storage.
-      }
-
-      syncThemeControl();
-    });
   });
 
   syncThemeControl();

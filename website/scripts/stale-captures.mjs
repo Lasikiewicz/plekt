@@ -52,12 +52,20 @@ export function findStaleCaptures(changedFiles, catalogue = loadCatalogue()) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([id, hit]) => ({ id, variants: [...hit.variants], files: [...hit.files], live: catalogue.images[id].live || null }));
 
-  // Only a Modern shared file can leave an image needing some views; those get their own command.
+  // Group partial selections by their actual catalogue variant names.
   const whole = images.filter((i) => i.variants.length === catalogue.images[i.id].variants.length).map((i) => i.id);
-  const modernOnly = images.map((i) => i.id).filter((id) => !whole.includes(id));
+  const partial = new Map();
+  for (const image of images.filter((i) => !whole.includes(i.id))) {
+    const variants = image.variants.join(",");
+    const ids = partial.get(variants) || [];
+    ids.push(image.id);
+    partial.set(variants, ids);
+  }
   const commands = [];
   if (whole.length) commands.push(`npm run captures:retake -- ${whole.join(" ")}`);
-  if (modernOnly.length) commands.push(`npm run captures:retake -- --variant=modern-dark,modern-light ${modernOnly.join(" ")}`);
+  for (const [variants, ids] of partial) {
+    commands.push(`npm run captures:retake -- --variant=${variants} ${ids.join(" ")}`);
+  }
 
   return {
     shared: [...sharedAll, ...sharedModern],

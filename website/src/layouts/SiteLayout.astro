@@ -58,14 +58,6 @@ const traksEnabled = Boolean(traksSiteKey);
         document.documentElement.dataset.theme = useLightMode ? "light" : "dark";
         document.querySelector("[data-theme-color]")?.setAttribute("content", useLightMode ? "#ffffff" : "#05080c");
 
-        // Screenshot style: Modern unless the visitor picked Classic.
-        let savedStyle = null;
-        try {
-          savedStyle = window.localStorage.getItem("plembfin:style");
-        } catch {
-          // Continue with Modern when storage is unavailable.
-        }
-        document.documentElement.dataset.style = savedStyle === "classic" ? "classic" : "modern";
       })();
     </script>
   </head>
@@ -81,7 +73,6 @@ const traksEnabled = Boolean(traksSiteKey);
         <div class="image-lightbox-toolbar">
           <p class="image-lightbox-title" id="image-lightbox-title">Image preview</p>
           <div class="image-lightbox-controls" role="group" aria-label="Image controls">
-            <button class="image-lightbox-control" type="button" data-lightbox-style hidden>Classic</button>
             <button class="image-lightbox-control" type="button" data-lightbox-theme hidden>Light</button>
             <button class="image-lightbox-control" type="button" data-lightbox-zoom-out aria-label="Zoom out">−</button>
             <button class="image-lightbox-control image-lightbox-zoom-reset" type="button" data-lightbox-zoom-reset aria-label="Reset zoom">100%</button>
@@ -104,7 +95,6 @@ const traksEnabled = Boolean(traksSiteKey);
     const lightboxCaption = imageLightbox.querySelector("[data-lightbox-caption]") as HTMLElement | null;
     const zoomReset = imageLightbox.querySelector("[data-lightbox-zoom-reset]") as HTMLButtonElement | null;
     const closeButton = imageLightbox.querySelector("[data-lightbox-close]") as HTMLButtonElement | null;
-    const styleButton = imageLightbox.querySelector("[data-lightbox-style]") as HTMLButtonElement | null;
     const themeButton = imageLightbox.querySelector("[data-lightbox-theme]") as HTMLButtonElement | null;
     let lastTrigger: HTMLElement | null = null;
     let scale = 1;
@@ -157,19 +147,12 @@ const traksEnabled = Boolean(traksSiteKey);
       if (imageLightbox.open) imageLightbox.close();
     };
 
-    // The switches drive the header toggles, so the choice is saved and the page's figures
-    // follow it; the header keeps each link's href on the matching capture.
+    // The theme switch drives the header toggle, saving the choice and updating figures
+    // and each preview link to the matching capture.
     const syncSwitches = () => {
       const hasThemePair = Boolean(lastTrigger?.dataset.themeImageLink);
-      const hasModernPair = Boolean(lastTrigger?.dataset.modernDarkHref);
-      const isModern = document.documentElement.dataset.style !== "classic";
       const isLight = document.documentElement.classList.contains("light-mode");
 
-      if (styleButton instanceof HTMLButtonElement) {
-        styleButton.hidden = !hasModernPair;
-        styleButton.textContent = isModern ? "Classic" : "Modern";
-        styleButton.setAttribute("aria-label", `Show ${isModern ? "Classic" : "Modern"} screenshot`);
-      }
       if (themeButton instanceof HTMLButtonElement) {
         themeButton.hidden = !hasThemePair;
         themeButton.textContent = isLight ? "Dark" : "Light";
@@ -187,7 +170,6 @@ const traksEnabled = Boolean(traksSiteKey);
       syncSwitches();
     };
 
-    styleButton?.addEventListener("click", () => switchCapture("[data-style-toggle]"));
     themeButton?.addEventListener("click", () => switchCapture("[data-theme-toggle]"));
 
     document.addEventListener("click", (event: MouseEvent) => {

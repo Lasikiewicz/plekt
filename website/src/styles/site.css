@@ -466,33 +466,6 @@ html.light-mode .theme-toggle-label--dark {
   color: var(--muted);
 }
 
-/* Classic/Modern screenshot switch: same track as the theme toggle, but the thumb
-   follows the chosen style (Modern on the right) instead of the colour mode. */
-.style-toggle {
-  width: 7.2rem;
-}
-
-html .style-toggle .theme-toggle-thumb {
-  transform: translateX(100%);
-}
-
-html[data-style="classic"] .style-toggle .theme-toggle-thumb {
-  transform: translateX(0);
-}
-
-.style-toggle-label--modern,
-html[data-style="classic"] .style-toggle-label--classic {
-  color: var(--text);
-}
-
-html[data-style="classic"] .style-toggle-label--modern {
-  color: var(--muted);
-}
-
-.site-nav .style-toggle-mobile {
-  display: none;
-}
-
 .back-to-top {
   min-height: 2.05rem;
   padding: 0.45rem 0.75rem;
@@ -2756,21 +2729,6 @@ html.light-mode .docs-page-outline-link.active {
     grid-column: auto;
   }
 
-  .style-toggle-desktop {
-    display: none;
-  }
-
-  .site-nav .style-toggle-mobile {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--space-2);
-    padding: 0.55rem 0.75rem;
-    color: var(--muted);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
   .nav-toggle {
     display: block;
   }
@@ -4896,47 +4854,47 @@ html.light-mode .docs-page-outline-link.active {
 }
 
 /* Modern theme system shared by every site page. */
-html[data-style="modern"] {
+html:root {
   --modern-section-gap: clamp(1.5rem, 4.8vw, 4.5rem);
 }
 
-html[data-style="modern"] :is(.simple-features, .simple-why, .support-page) {
+html:root :is(.simple-features, .simple-why, .support-page) {
   display: grid;
   gap: var(--modern-section-gap);
   margin-top: var(--modern-section-gap);
   padding-bottom: 0;
 }
 
-html[data-style="modern"] :is(.simple-features-hero, .simple-features-index, .simple-features-proof, .simple-why-hero, .simple-why-builder, .simple-why-scenarios, .simple-why-reasons, .simple-why-changes, .simple-why-footer, .support-hero, .section) {
+html:root :is(.simple-features-hero, .simple-features-index, .simple-features-proof, .simple-why-hero, .simple-why-builder, .simple-why-scenarios, .simple-why-reasons, .simple-why-changes, .simple-why-footer, .support-hero, .section) {
   padding-block: 0;
   border-block: 0;
 }
 
-html[data-style="modern"] .simple-home,
-html[data-style="modern"] .simple-features,
-html[data-style="modern"] .simple-why,
-html[data-style="modern"] .support-page,
-html[data-style="modern"] .changelog-shell {
+html:root .simple-home,
+html:root .simple-features,
+html:root .simple-why,
+html:root .support-page,
+html:root .changelog-shell {
   --modern-section-gap: clamp(1.5rem, 4.8vw, 4.5rem);
 }
 
-html[data-style="modern"] .changelog-shell,
-html[data-style="modern"] main > .section {
+html:root .changelog-shell,
+html:root main > .section {
   margin-top: var(--modern-section-gap);
   padding-top: 0;
 }
 
-html[data-style="modern"] .docs-shell {
+html:root .docs-shell {
   margin-top: 0;
   padding-top: clamp(1rem, 1.5vw, 1.75rem);
 }
 
-html[data-style="modern"] :is(.simple-home, .simple-features, .simple-why, .support-page) .simple-eyebrow,
-html[data-style="modern"] main .section-index {
+html:root :is(.simple-home, .simple-features, .simple-why, .support-page) .simple-eyebrow,
+html:root main .section-index {
   display: none;
 }
 
-html[data-style="modern"] main :is(.section-header h2, .simple-section-heading h2, .simple-why-builder-title, .simple-why-changes h2, .simple-why-footer h2, .simple-features-stack h2, .docs-category h2, .docs-coverage-header h2, .article-body h2, .changelog-entry-content h2) {
+html:root main :is(.section-header h2, .simple-section-heading h2, .simple-why-builder-title, .simple-why-changes h2, .simple-why-footer h2, .simple-features-stack h2, .docs-category h2, .docs-coverage-header h2, .article-body h2, .changelog-entry-content h2) {
   max-width: none;
   font-family: var(--font-display);
   font-size: clamp(1.4rem, 2.2vw, 1.85rem);
@@ -4945,7 +4903,7 @@ html[data-style="modern"] main :is(.section-header h2, .simple-section-heading h
   line-height: 1.08;
 }
 
-html[data-style="modern"] main :is(.simple-features-hero h1, .simple-why-hero h1, .hero-copy h1, .docs-intro h1, .article-header h1, .changelog-header h1) {
+html:root main :is(.simple-features-hero h1, .simple-why-hero h1, .hero-copy h1, .docs-intro h1, .article-header h1, .changelog-header h1) {
   max-width: 18ch;
   font-family: var(--font-display);
   font-size: clamp(2.65rem, 5vw, 3.5rem);
@@ -4954,20 +4912,20 @@ html[data-style="modern"] main :is(.simple-features-hero h1, .simple-why-hero h1
   line-height: 0.98;
 }
 
-html[data-style="modern"] main .article-header h1 {
+html:root main .article-header h1 {
   max-width: none;
   font-size: clamp(1.75rem, 2.7vw, 2.35rem);
   letter-spacing: -0.045em;
   line-height: 1.06;
 }
 
-html[data-style="modern"] main .docs-intro h1 {
+html:root main .docs-intro h1 {
   font-size: clamp(1.75rem, 2.7vw, 2.35rem);
   letter-spacing: -0.045em;
   line-height: 1.06;
 }
 
-html[data-style="modern"] main .docs-category h2 {
+html:root main .docs-category h2 {
   font-size: 1.35rem;
   line-height: 1.1;
 }
@@ -4976,18 +4934,18 @@ html[data-style="modern"] main .docs-category h2 {
   margin-top: var(--space-3);
 }
 
-html[data-style="modern"] .simple-why-hero h1 {
+html:root .simple-why-hero h1 {
   max-width: 18ch;
   font-size: clamp(2rem, 3.4vw, 3rem);
   letter-spacing: -0.05em;
   line-height: 1.02;
 }
 
-html[data-style="modern"] main :is(.simple-section-heading > p, .section-header > p) {
+html:root main :is(.simple-section-heading > p, .section-header > p) {
   max-width: none;
 }
 
-html[data-style="modern"] main .screenshot-figure figcaption {
+html:root main .screenshot-figure figcaption {
   margin-top: 0.6rem;
   color: var(--muted);
   font-family: var(--font-body);
@@ -4996,15 +4954,15 @@ html[data-style="modern"] main .screenshot-figure figcaption {
   text-align: left;
 }
 
-html[data-style="modern"] .changelog-header {
+html:root .changelog-header {
   padding-bottom: 0;
 }
 
-html[data-style="modern"] .changelog-entry {
+html:root .changelog-entry {
   padding-block: var(--modern-section-gap);
 }
 
-html[data-style="modern"] .simple-feature-group + .simple-feature-group {
+html:root .simple-feature-group + .simple-feature-group {
   margin-top: var(--modern-section-gap);
 }
 
@@ -5019,7 +4977,7 @@ html[data-style="modern"] .simple-feature-group + .simple-feature-group {
   text-transform: uppercase;
 }
 
-html[data-style="modern"] .simple-feature-group-title {
+html:root .simple-feature-group-title {
   color: var(--text);
   font-family: var(--font-display);
   font-size: 1.05rem;
@@ -5405,30 +5363,30 @@ html[data-style="modern"] .simple-feature-group-title {
   line-height: 1;
 }
 
-/* Homepage experiment: modern style leads with the promise, then gives the product the full stage. */
-html[data-style="modern"] .simple-home {
+/* Homepage leads with the promise, then gives the product the full stage. */
+html:root .simple-home {
   --modern-home-section-gap: clamp(1.5rem, 4.8vw, 4.5rem);
   display: grid;
   gap: var(--modern-home-section-gap);
   margin-top: var(--modern-home-section-gap);
 }
 
-html[data-style="modern"] .modern-home-intro {
+html:root .modern-home-intro {
   display: grid;
   gap: var(--modern-home-section-gap);
   margin: 0;
 }
 
-html[data-style="modern"] .simple-home > section {
+html:root .simple-home > section {
   padding-block: 0;
   border-bottom: 0;
 }
 
-html[data-style="modern"] .simple-home .simple-home-hub {
+html:root .simple-home .simple-home-hub {
   padding-block: 0;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-home-hero {
+html:root .modern-home-intro .simple-home-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(17rem, 0.88fr);
   grid-template-areas:
@@ -5446,43 +5404,43 @@ html[data-style="modern"] .modern-home-intro .simple-home-hero {
   border: 0;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-eyebrow {
+html:root .modern-home-intro .simple-eyebrow {
   display: none;
 }
 
-html[data-style="modern"] .simple-home .simple-eyebrow {
+html:root .simple-home .simple-eyebrow {
   display: none;
 }
 
-html[data-style="modern"] .simple-home h2 {
+html:root .simple-home h2 {
   max-width: none;
   font-size: clamp(1.4rem, 2.2vw, 1.85rem);
   line-height: 1.08;
   letter-spacing: -0.04em;
 }
 
-html[data-style="modern"] .simple-home-image-description {
+html:root .simple-home-image-description {
   margin: 0.6rem 0 0;
   color: var(--muted);
   font-size: 0.76rem;
   line-height: 1.45;
 }
 
-html[data-style="modern"] .simple-home .simple-home-up-next-note,
-html[data-style="modern"] .simple-home .simple-home-flow > .simple-section-heading-note {
+html:root .simple-home .simple-home-up-next-note,
+html:root .simple-home .simple-home-flow > .simple-section-heading-note {
   max-width: none;
   margin-top: 0.75rem;
   padding-top: 0;
   border-top: 0;
 }
 
-html[data-style="modern"] .simple-home .simple-home-up-next-note > p,
-html[data-style="modern"] .simple-home .simple-home-flow > .simple-section-heading-note > p {
+html:root .simple-home .simple-home-up-next-note > p,
+html:root .simple-home .simple-home-flow > .simple-section-heading-note > p {
   max-width: none;
   flex: 1;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-home-hero h1 {
+html:root .modern-home-intro .simple-home-hero h1 {
   grid-area: title;
   max-width: 13ch;
   margin: 0;
@@ -5491,11 +5449,11 @@ html[data-style="modern"] .modern-home-intro .simple-home-hero h1 {
   letter-spacing: -0.06em;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-home-hero h1 span {
+html:root .modern-home-intro .simple-home-hero h1 span {
   color: var(--accent);
 }
 
-html[data-style="modern"] .modern-home-intro .simple-home-lede {
+html:root .modern-home-intro .simple-home-lede {
   grid-area: lede;
   max-width: 39ch;
   margin: 0;
@@ -5504,31 +5462,31 @@ html[data-style="modern"] .modern-home-intro .simple-home-lede {
   line-height: 1.65;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-actions {
+html:root .modern-home-intro .simple-actions {
   grid-area: actions;
   justify-content: flex-start;
   margin: 0.35rem 0 0;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-demo-note,
-html[data-style="modern"] .modern-home-intro .simple-meta {
+html:root .modern-home-intro .simple-demo-note,
+html:root .modern-home-intro .simple-meta {
   grid-area: note;
   margin-inline: 0;
   text-align: left;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-meta {
+html:root .modern-home-intro .simple-meta {
   grid-area: meta;
   align-self: end;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-home-preview {
+html:root .modern-home-intro .simple-home-preview {
   min-width: 0;
   padding: 0;
   border: 0;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-section-heading {
+html:root .modern-home-intro .simple-section-heading {
   display: flex;
   align-items: end;
   gap: 2rem;
@@ -5536,7 +5494,7 @@ html[data-style="modern"] .modern-home-intro .simple-section-heading {
   padding-inline: 0;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-section-heading h2 {
+html:root .modern-home-intro .simple-section-heading h2 {
   max-width: none;
   margin-top: 0;
   font-size: clamp(1.4rem, 2.2vw, 1.85rem);
@@ -5544,23 +5502,23 @@ html[data-style="modern"] .modern-home-intro .simple-section-heading h2 {
   letter-spacing: -0.04em;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-section-heading > p {
+html:root .modern-home-intro .simple-section-heading > p {
   max-width: 36ch;
   margin: 0 0 0.05rem auto;
   font-size: 0.76rem;
 }
 
-html[data-style="modern"] .modern-home-intro .simple-home-preview .screenshot-figure {
+html:root .modern-home-intro .simple-home-preview .screenshot-figure {
   margin-top: 0;
 }
 
-html[data-style="modern"] .modern-home-intro .screenshot-frame img {
+html:root .modern-home-intro .screenshot-frame img {
   border: 1px solid color-mix(in oklab, var(--accent) 18%, var(--line-strong));
   box-shadow: 0 26px 75px color-mix(in oklab, var(--bg) 65%, transparent);
 }
 
 @media (max-width: 900px) {
-  html[data-style="modern"] .modern-home-intro .simple-home-hero {
+  html:root .modern-home-intro .simple-home-hero {
     grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.85fr);
     grid-template-areas:
       "eyebrow eyebrow"
@@ -5571,31 +5529,31 @@ html[data-style="modern"] .modern-home-intro .screenshot-frame img {
     row-gap: 0.85rem;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-home-hero h1 {
+  html:root .modern-home-intro .simple-home-hero h1 {
     max-width: 13ch;
     font-size: clamp(2.65rem, 8vw, 4.1rem);
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-home-lede {
+  html:root .modern-home-intro .simple-home-lede {
     max-width: 58ch;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-actions {
+  html:root .modern-home-intro .simple-actions {
     margin-top: 0.3rem;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-home-preview .simple-section-heading {
+  html:root .modern-home-intro .simple-home-preview .simple-section-heading {
     padding-inline: 0;
   }
 }
 
 @media (max-width: 560px) {
-  html[data-style="modern"] .modern-home-intro {
+  html:root .modern-home-intro {
     width: min(calc(100% - 1.5rem), 78rem);
     margin: 0;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-home-hero {
+  html:root .modern-home-intro .simple-home-hero {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "eyebrow"
@@ -5607,25 +5565,25 @@ html[data-style="modern"] .modern-home-intro .screenshot-frame img {
     padding-inline: 0;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-home-hero h1 {
+  html:root .modern-home-intro .simple-home-hero h1 {
     max-width: 13ch;
     font-size: clamp(2.45rem, 11vw, 3.3rem);
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-actions {
+  html:root .modern-home-intro .simple-actions {
     justify-content: flex-start;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-section-heading {
+  html:root .modern-home-intro .simple-section-heading {
     display: block;
     padding-inline: 0;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-section-heading h2 {
+  html:root .modern-home-intro .simple-section-heading h2 {
     margin-top: 0.35rem;
   }
 
-  html[data-style="modern"] .modern-home-intro .simple-section-heading > p {
+  html:root .modern-home-intro .simple-section-heading > p {
     margin: 0.5rem 0 0;
   }
 }

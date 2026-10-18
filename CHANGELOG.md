@@ -4,6 +4,49 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.1.1 - 18 October 2026
+
+This update improves watch state and season matching, restyles the appearance and login page, and hides Card Art on media detail pages.
+
+[Visit the Plekt website](https://plekt.net)
+
+### New Features
+
+#### Sync & connection recovery
+
+- Add TV season source selection, episode translation, unmatched episode handling, and translated Up Next warmup.
+
+### Bug Fixes
+
+#### Up Next & watch-state
+
+- An item removed from Up Next no longer comes back minutes later when Plekt finishes syncing its unwatch.
+- A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail.
+
+### Tweaks
+
+#### Up Next & watch-state
+
+- Preserve completed Plex watch state across stale resume data and protect unwatch races.
+
+#### Manual Watch review
+
+- Re-check suspected Plex unwatches against live metadata and keep cached episode state aligned, preventing stale reports from reaching manual watch review.
+
+#### Sync & connection recovery
+
+- Preserve Trakt-only plays during show replacement and fail closed on occupied targets.
+- Keep TV season-source choice and watch-impact confirmation beside search controls, with less blank space across phone, tablet, and desktop.
+- Use provider-neutral empty-season messaging when episode lists are unavailable while preserving TV and movie match results.
+- Show and movie posters use provider artwork when a saved local image is unavailable.
+- Modern is the only look; the Classic style and its switch are removed.
+- Card Art and Background Art checkboxes are in the Appearance menu; Background Art shows only on the Dashboard and details pages, and Card Art is hidden on media detail pages, which have no cards to show it on.
+- Appearance menu rows match the media option rows with icons, and Text size sits at the bottom.
+- Improve appearance controls and changelog navigation.
+- Navbar, dashboard, settings, About card, and changelog panels use the left-menu tone in both themes; left-menu search is an underline field in light mode.
+- Buttons use a neutral default state in both themes (hover changes only text and border), the spoiler toggle tints only its checkbox, and the selected settings section has a softer outline.
+- Sign-in page uses a "Please log in" heading, a shorter intro, left-menu panel tone, a right-aligned "Forgot your password?" link, and no default focus outline on fields; the footer theme toggle shows the Light and Dark words only.
+
 ## v2.1.0 - 16 October 2026
 
 This update adds season posters and redesigned TV season pages, text size controls, safer rating sync, simpler Docker setup, and improvements to Up Next, dashboard history, and playback recovery.
