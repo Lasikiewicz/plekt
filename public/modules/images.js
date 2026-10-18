@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.0.4";
-import { state } from "./state.js?v=2.1.0.0.4";
-import { safeImageUrl, escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.0.4";
+import { buildAuthHeaders } from "./auth.js?v=2.1.0.0.5";
+import { state } from "./state.js?v=2.1.0.0.5";
+import { safeImageUrl, escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.0.5";
 
 // /api/poster resolves most requests from an already-cached DB row or webp
 // file (no outbound API call); the actual TMDB fallback downloads are

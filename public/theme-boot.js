@@ -30,7 +30,7 @@
     if (value === "off") document.documentElement.setAttribute(attribute, "off");
   }
 
-  const logo = light ? "/plekt_header_logo_light.png?v=2.1.0.0.4" : "/plekt_header_logo_dark.png?v=2.1.0.0.4";
+  const logo = light ? "/plekt_header_logo_light.png?v=2.1.0.0.5" : "/plekt_header_logo_dark.png?v=2.1.0.0.5";
   const preload = document.createElement("link");
   preload.rel = "preload";
   preload.as = "image";

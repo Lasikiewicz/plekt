@@ -1,14 +1,14 @@
 {
-  "version": "2.1.0.0.4",
-  "build": 4,
+  "version": "2.1.0.0.5",
+  "build": 5,
   "resetCommit": "5bd1293fce47f95e6d5dcb0c975b89857b0249d9",
-  "updatedAt": "2026-10-17T21:47:12.532Z",
+  "updatedAt": "2026-10-18T01:41:05.883Z",
   "entries": [
     {
-      "build": 4,
-      "date": "2026-10-17T21:47:12.532Z",
-      "commit": "1368bae788f23b930c97cd0e6b5f71a548749109",
-      "message": "This update includes improve watch state, season mapping and presentation and tighten match flow and confirm Plex unwatches.",
+      "build": 5,
+      "date": "2026-10-18T01:41:05.883Z",
+      "commit": "520a0fb0eb296508d10756efff11b853e7bbe377",
+      "message": "This update includes improve watch state, season mapping and presentation, tighten match flow and confirm Plex unwatches, and restyle appearance, brand surfaces and the login page.",
       "author": "Lasikiewicz",
       "details": [
         "Preserve completed Plex watch state across stale resume data and protect unwatch races.",
@@ -18,11 +18,29 @@
         "Improve appearance controls, changelog navigation, Reddit release bundling, and README screenshots.",
         "Re-check suspected Plex unwatches against live metadata and keep cached episode state aligned, preventing stale reports from reaching manual watch review.",
         "Keep TV season-source choice and watch-impact confirmation beside search controls, with less blank space across phone, tablet, and desktop.",
-        "Use provider-neutral empty-season messaging when episode lists are unavailable while preserving TV and movie match results."
+        "Use provider-neutral empty-season messaging when episode lists are unavailable while preserving TV and movie match results.",
+        "Modern is the only look; the Classic style and its switch are removed.",
+        "Card Art and Background Art checkboxes added to the Appearance menu (Background Art only on the Dashboard and details pages).",
+        "Appearance menu rows match the media option rows with icons, and Text size sits at the bottom.",
+        "Buttons use a neutral default state in both themes; hover changes only text and border.",
+        "Spoiler toggle no longer tints the whole button when checked; only the checkbox shows the state.",
+        "Settings use two brand surfaces in both themes, aligned with the left menu.",
+        "Dashboard and settings surfaces aligned with the left menu.",
+        "Navbar on every page uses the left-menu tone, not only media pages.",
+        "About card uses the left-menu tone in both themes.",
+        "Left-menu search is an underline field in light mode, as in dark.",
+        "Light-mode changelog entries use the white panel tone.",
+        "Softer outline on the selected settings section.",
+        "Onboarding and sign-in footer theme toggle shows the Light and Dark words only.",
+        "Login panel uses the left-menu tone and its fields use the main-background tone.",
+        "Login heading reads \"Please log in\"; the long intro text is removed.",
+        "\"Forgot your password?\" sits right-aligned under the password field.",
+        "Sign-in fields no longer show the default focus outline."
       ],
       "messageFragments": [
         "Feature - Improve watch state, season mapping and presentation",
-        "Fix - Tighten match flow and confirm Plex unwatches"
+        "Fix - Tighten match flow and confirm Plex unwatches",
+        "Feature - Restyle appearance, brand surfaces and the login page"
       ]
     }
   ]
