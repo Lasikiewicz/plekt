@@ -1,10 +1,41 @@
 {
   "baseVersion": "2.1.0",
-  "build": 2,
-  "version": "2.1.0.2.0",
-  "updatedAt": "2026-10-18T18:13:12.513Z",
+  "build": 3,
+  "version": "2.1.0.3.0",
+  "updatedAt": "2026-10-18T18:45:30.355Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 3,
+      "version": "2.1.0.3.0",
+      "shortVersion": "2.1.0.3.0",
+      "date": "2026-10-18T18:45:30.355Z",
+      "commit": "b132b470337687d02a21c6ec71c886debc493df7",
+      "message": "Fix - Keep Up Next dismissals after their unwatch is updated",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: An item removed from Up Next no longer comes back minutes later when Plekt finishes syncing its unwatch"
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "An item removed from Up Next no longer comes back minutes later when Plekt finishes syncing its unwatch"
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Up Next & watch-state",
+            "details": [
+              "An item removed from Up Next no longer comes back minutes later when Plekt finishes syncing its unwatch"
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 2,
       "version": "2.1.0.2.0",
@@ -172,5 +203,5 @@
       ]
     }
   ],
-  "shortVersion": "2.1.0.2.0"
+  "shortVersion": "2.1.0.3.0"
 }

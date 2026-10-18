@@ -1,18 +1,7 @@
 {
-  "version": "2.1.0.2.1",
-  "build": 1,
-  "resetCommit": "9e2b8a9fde1844be692baef82c381ff0859380eb",
-  "updatedAt": "2026-10-18T18:44:26.096Z",
-  "entries": [
-    {
-      "build": 1,
-      "date": "2026-10-18T18:44:26.096Z",
-      "commit": "f39665e7f1fed313cd6566ee6cb079c42359cd82",
-      "message": "Fix - Keep Up Next dismissals after their unwatch is updated",
-      "author": "Lasikiewicz",
-      "details": [
-        "An item removed from Up Next no longer comes back minutes later when Plekt finishes syncing its unwatch"
-      ]
-    }
-  ]
+  "version": "2.1.0.3.0",
+  "build": 0,
+  "resetCommit": "b132b470337687d02a21c6ec71c886debc493df7",
+  "updatedAt": "2026-10-18T18:45:30.355Z",
+  "entries": []
 }

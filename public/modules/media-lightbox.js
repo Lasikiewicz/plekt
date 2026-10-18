@@ -1,4 +1,4 @@
-import { escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.2.1";
+import { escapeAttribute, isDemoMode } from "./utils.js?v=2.1.0.3.0";
 
 export function initMediaLightbox() {
   // Side-effect globals below preserve existing inline/event-delegated handlers.
