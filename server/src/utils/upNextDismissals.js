@@ -284,7 +284,9 @@ export function restoreUpNextDismissalsForMedia(item = {}, { after = 0 } = {}) {
 // Clean up rows written before the server-side unwatch hook existed. The
 // dismissed popup is allowed to reconcile itself from canonical local history,
 // so a stale browser or an older build cannot leave a permanently visible
-// dismissal behind.
+// dismissal behind. The unwatch time is the row's created_at: later bookkeeping
+// (dispatch telemetry, artwork, ids) bumps updated_at, and comparing against
+// that deleted the dismissal Remove from Up Next records just after its unwatch.
 export function restoreUpNextDismissalsSupersededByUnwatch() {
   let restored = 0;
   for (const row of selectUnwatchedHistoryStmt.all(0)) {
@@ -295,7 +297,7 @@ export function restoreUpNextDismissalsSupersededByUnwatch() {
       show_tmdb_id: row.tmdb_id || "",
       show_tvdb_id: row.tvdb_id || "",
       show_imdb_id: row.imdb_id || "",
-    }, { after: row.updated_at });
+    }, { after: row.created_at || row.updated_at });
   }
   return restored;
 }

@@ -202,6 +202,36 @@ test("the dismissed list reconciliation preserves a dismissal created after an u
   assert.equal(listUpNextDismissals().length, 1);
 });
 
+test("a dismissal stays after later bookkeeping touches its unwatch row", () => {
+  restoreAllUpNextDismissals();
+  const inserted = insertWatchRecordSync({
+    title: "American Horror Story - S11E03",
+    media_type: "episode",
+    show_title: "American Horror Story",
+    tmdb_id: "1413",
+    season: 11,
+    episode: 3,
+    watched_at: "2026-10-18T18:23:01.453Z",
+    source: "manual",
+    sync_action: "unwatched",
+  });
+  const { created_at: unwatchedAt } = db.prepare("SELECT created_at FROM watch_history WHERE id = ?").get(inserted.id);
+  // Remove from Up Next records the dismissal just after its unwatch...
+  recordUpNextDismissal({
+    media_type: "episode",
+    show_title: "American Horror Story",
+    show_ids: { tmdb: "1413" },
+    season: 11,
+    episode: 3,
+    title: "American Horror Story - S11E03",
+  }, { now: unwatchedAt + 1 });
+  // ...and dispatch telemetry rewrites the unwatch row minutes later.
+  db.prepare("UPDATE watch_history SET updated_at = ? WHERE id = ?").run(unwatchedAt + 13 * 60 * 1000, inserted.id);
+
+  assert.equal(restoreUpNextDismissalsSupersededByUnwatch(), 0);
+  assert.equal(listUpNextDismissals().length, 1);
+});
+
 test("the projection hides a dismissed item from every device", async () => {
   restoreAllUpNextDismissals();
   const options = {
