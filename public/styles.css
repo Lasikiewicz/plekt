@@ -13801,6 +13801,11 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
   display: flex;
 }
 
+/* Card Art is hidden on media detail pages, which have no cards to show it on. */
+body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-item.sidebar-appearance-card-art {
+  display: none;
+}
+
 .sidebar-appearance-list-item svg {
   width: 1rem;
   height: 1rem;
