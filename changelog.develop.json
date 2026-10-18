@@ -1,14 +1,14 @@
 {
-  "version": "2.1.0.0.6",
-  "build": 6,
+  "version": "2.1.0.0.7",
+  "build": 7,
   "resetCommit": "5bd1293fce47f95e6d5dcb0c975b89857b0249d9",
-  "updatedAt": "2026-10-18T13:59:23.623Z",
+  "updatedAt": "2026-10-18T14:12:29.746Z",
   "entries": [
     {
-      "build": 6,
-      "date": "2026-10-18T13:59:23.623Z",
-      "commit": "ddec3f057c2a512982f924ff70d61831258975a4",
-      "message": "This update includes improve watch state, season mapping and presentation, tighten match flow and confirm Plex unwatches, restyle appearance, brand surfaces and the login page, and fall back when cached artwork files are missing.",
+      "build": 7,
+      "date": "2026-10-18T14:12:29.746Z",
+      "commit": "0ba929588e11930234a317f3ae092a57ba05fda0",
+      "message": "This update includes improve watch state, season mapping and presentation, tighten match flow and confirm Plex unwatches, restyle appearance, brand surfaces and the login page, fall back when cached artwork files are missing, and hide card art on media detail pages.",
       "author": "Lasikiewicz",
       "details": [
         "Preserve completed Plex watch state across stale resume data and protect unwatch races.",
@@ -36,13 +36,15 @@
         "Login heading reads \"Please log in\"; the long intro text is removed.",
         "\"Forgot your password?\" sits right-aligned under the password field.",
         "Sign-in fields no longer show the default focus outline.",
-        "Show and movie posters now use provider artwork when a saved local image is unavailable."
+        "Show and movie posters now use provider artwork when a saved local image is unavailable.",
+        "Card Art is no longer offered in the Appearance menu on media detail pages, which have no cards to show it on"
       ],
       "messageFragments": [
         "Feature - Improve watch state, season mapping and presentation",
         "Fix - Tighten match flow and confirm Plex unwatches",
         "Feature - Restyle appearance, brand surfaces and the login page",
-        "Fix - Fall back when cached artwork files are missing"
+        "Fix - Fall back when cached artwork files are missing",
+        "Fix - Hide card art on media detail pages"
       ]
     }
   ]
