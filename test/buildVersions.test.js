@@ -180,7 +180,7 @@ test("alpha limits runaway entries while a release keeps the reviewed cycle", ()
 
   assert.deepEqual(changelogEntryQualityViolations(entry(12), alpha), [], "three normal pushes must promote to alpha");
   assert.deepEqual(changelogEntryQualityViolations(entry(12)), [], "a release keeps all reviewed user-visible changes");
-  assert.ok(changelogEntryQualityViolations(entry(25), alpha).length > 0, "a runaway entry is still refused at alpha");
+  assert.ok(changelogEntryQualityViolations(entry(CHANGELOG_ALPHA_MAX_BULLETS + 1), alpha).length > 0, "a runaway entry is still refused at alpha");
 
   // Jargon is wrong at either boundary and must be caught at both.
   const jargon = { details: ["One real bullet", "Two real bullet", "Record every seed in up_next_rail_seeds"] };

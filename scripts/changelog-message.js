@@ -323,7 +323,7 @@ export const CHANGELOG_MIN_BULLETS = 3;
 export const CHANGELOG_MAX_BULLETS = Number.POSITIVE_INFINITY;
 // Alpha's ceiling catches a genuinely runaway entry without blocking a normal
 // multi-push cycle. See changelogEntryQualityViolations for why they differ.
-export const CHANGELOG_ALPHA_MAX_BULLETS = 20;
+export const CHANGELOG_ALPHA_MAX_BULLETS = 30;
 
 // Identifiers that read as code rather than as a description of behaviour.
 // Deliberately narrow: it must not fire on ordinary product nouns like
