@@ -1,51 +1,7 @@
 {
-  "version": "2.1.0.0.7",
-  "build": 7,
-  "resetCommit": "5bd1293fce47f95e6d5dcb0c975b89857b0249d9",
-  "updatedAt": "2026-10-18T14:12:29.746Z",
-  "entries": [
-    {
-      "build": 7,
-      "date": "2026-10-18T14:12:29.746Z",
-      "commit": "0ba929588e11930234a317f3ae092a57ba05fda0",
-      "message": "This update includes improve watch state, season mapping and presentation, tighten match flow and confirm Plex unwatches, restyle appearance, brand surfaces and the login page, fall back when cached artwork files are missing, and hide card art on media detail pages.",
-      "author": "Lasikiewicz",
-      "details": [
-        "Preserve completed Plex watch state across stale resume data and protect unwatch races.",
-        "Add TV season source selection, episode translation, unmatched episode handling, and translated Up Next warmup.",
-        "Preserve Trakt-only plays during show replacement and fail closed on occupied targets.",
-        "Split sync, history import, polling, and scheduling work into focused modules with retry and lease safeguards.",
-        "Improve appearance controls, changelog navigation, Reddit release bundling, and README screenshots.",
-        "Re-check suspected Plex unwatches against live metadata and keep cached episode state aligned, preventing stale reports from reaching manual watch review.",
-        "Keep TV season-source choice and watch-impact confirmation beside search controls, with less blank space across phone, tablet, and desktop.",
-        "Use provider-neutral empty-season messaging when episode lists are unavailable while preserving TV and movie match results.",
-        "Modern is the only look; the Classic style and its switch are removed.",
-        "Card Art and Background Art checkboxes added to the Appearance menu (Background Art only on the Dashboard and details pages).",
-        "Appearance menu rows match the media option rows with icons, and Text size sits at the bottom.",
-        "Buttons use a neutral default state in both themes; hover changes only text and border.",
-        "Spoiler toggle no longer tints the whole button when checked; only the checkbox shows the state.",
-        "Settings use two brand surfaces in both themes, aligned with the left menu.",
-        "Dashboard and settings surfaces aligned with the left menu.",
-        "Navbar on every page uses the left-menu tone, not only media pages.",
-        "About card uses the left-menu tone in both themes.",
-        "Left-menu search is an underline field in light mode, as in dark.",
-        "Light-mode changelog entries use the white panel tone.",
-        "Softer outline on the selected settings section.",
-        "Onboarding and sign-in footer theme toggle shows the Light and Dark words only.",
-        "Login panel uses the left-menu tone and its fields use the main-background tone.",
-        "Login heading reads \"Please log in\"; the long intro text is removed.",
-        "\"Forgot your password?\" sits right-aligned under the password field.",
-        "Sign-in fields no longer show the default focus outline.",
-        "Show and movie posters now use provider artwork when a saved local image is unavailable.",
-        "Card Art is no longer offered in the Appearance menu on media detail pages, which have no cards to show it on"
-      ],
-      "messageFragments": [
-        "Feature - Improve watch state, season mapping and presentation",
-        "Fix - Tighten match flow and confirm Plex unwatches",
-        "Feature - Restyle appearance, brand surfaces and the login page",
-        "Fix - Fall back when cached artwork files are missing",
-        "Fix - Hide card art on media detail pages"
-      ]
-    }
-  ]
+  "version": "2.1.0.1.0",
+  "build": 0,
+  "resetCommit": "36e25e64337ea0e88d0741a6743dbe7e46ae2698",
+  "updatedAt": "2026-10-18T14:12:36.151Z",
+  "entries": []
 }

@@ -4,7 +4,7 @@
 // included, grouped by season. The picked ones go to the top of the playlist
 // as one block in episode order. playlists.js passes its helpers in, so this
 // module imports only utils.
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.1.0.0.7";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.1.0.1.0";
 
 function titleKey(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
