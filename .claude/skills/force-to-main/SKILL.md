@@ -1,6 +1,7 @@
 ---
 name: force-to-main
 description: "Promote Plekt alpha to main when the user says Force to main exactly, or resume a named phase B/C handoff. Preserve candidate, changelog, website and final-review approvals; never push develop."
+model: opus
 ---
 
 # Force to main
@@ -22,6 +23,27 @@ the stop marked "here" and a one-line next action:
 - [ ] 8 Final review: release build presented for the user
 - [ ] 9 Force-push main and publish workflow
 - [ ] 10 OCI demo verified, website published, local develop reconciled
+
+## Standing approvals (no stops between the named STOPs)
+
+The only stops are the bold **STOP** gates below (changelog and build approval, phase B
+NEEDS HUMAN or FAIL, final review) and publication rules, which are unchanged. Everything else
+in phases A to C is pre-approved; do it, record it in the step file, and keep going:
+
+- Writes to the local server and the connected test apps in `.claude/local-environment.md`
+  (Plex, Emby, Jellyfin, Trakt, Seerr test instances): live states, dismissals, played or
+  unplayed marks, settings toggles, playback, and any echo they cause. Signing in with the
+  credentials in that file. Starting or restarting the test containers.
+- Browser checks: the agent does them itself, through preview or connected Chrome. Never ask
+  who checks. Retry a failed click or snapshot by another route (element ref, DOM, API, other
+  browser) instead of stopping after 2-3 failures.
+- Context size: the context-budget hook is silent while the release lock is held. Never hand
+  off to a fresh session for context; keep reads bounded and continue.
+- Judgement calls (which count, which episode, which selector, catalogue vs local notes): pick
+  the one the capture catalogue needs and record why. Do not ask.
+- A live state that still cannot be created after trying every route: record it as skipped
+  with the reason, carry it as a leftover for the user's website check, and continue.
+- Waiting on a background job is not a stop: never ask anything while waiting.
 
 ## 0. Precheck, lock and run record
 

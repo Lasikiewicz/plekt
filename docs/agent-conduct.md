@@ -19,7 +19,9 @@ conversation. Keep both small without cutting any verification.
   past 150k and 250k, at each prompt and once per level mid-task. Past 150k, "what's next" gets the next item plus a handoff line, not the
   item itself. Past 250k, finish only the current item, write the handoff into the summary, and
   recommend a fresh session. The audit that prompted this found 91% of input tokens were spent
-  above 200k context (`plan/agent-token-efficiency.md`).
+  above 200k context (`plan/agent-token-efficiency.md`). Force to main is exempt: while its
+  release lock is held the hook stays silent, and the run continues in the same session (keeping
+  reads bounded) until the next stop its skill names.
 - **Stale sessions.** When a large session resumes after an hour or more away, its cache has
   expired and the whole context is paid for again; recommend starting fresh from the plan summary.
 
