@@ -1,8 +1,8 @@
 ---
 name: release-capture
 description: Runs the Force to main website capture step (phase B) from its captures.md assignment and reports pass, fail or needs-human. Use only from the force-to-main skill; never starts or publishes a release.
-model: sonnet
-tools: Bash, Read, Glob, Grep, ToolSearch, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp, mcp__claude-in-chrome__tabs_close_mcp, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__computer, mcp__claude-in-chrome__find, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__get_page_text, mcp__claude-in-chrome__form_input
+model: haiku
+tools: Bash, Read, Glob, Grep
 ---
 
 # Release capture (phase B)
@@ -21,8 +21,17 @@ The parent gives you the version, the run folder and the assignment path
    including its FAIL, sign-in, wrong-build and secret rules.
 2. One exception: the skill's final "phase C" handoff line is replaced by your report below.
    The parent session continues to phase C itself, so do not emit that line.
-3. Load browser tools only when the assignment needs the temporary "Allow part watched items"
-   change, using one ToolSearch call for the claude-in-chrome tools.
+3. No browser tools. The "Allow part watched items here" setting is read and saved through the
+   app's config API by `node scripts/now-playing-option.mjs --base-url=<baseUrl from
+   capture-run.json>` (from the website folder; add `--part-watched=off` or `--part-watched=on`
+   to save). It signs in itself and never prints credentials. Exit 0 means saved and confirmed
+   by a fresh read; 1 means the read-back did not match; 2 is a setup or sign-in error. Run it
+   once per step and never retry a sign-in.
+4. You own the whole toggle. When the capture ids include `dashboard-up-next`: run the script
+   with `--part-watched=off` immediately before the capture command, and stop with FAIL (no
+   capture run) if it exits non-zero. Then run `--part-watched=on` immediately after the capture
+   command, whatever the capture exit code. When the ids do not include it, do not touch the
+   setting.
 
 ## Known watch items (carry them into the report every time)
 
@@ -31,9 +40,9 @@ The parent gives you the version, the run folder and the assignment path
 - The TV detail page (`tv-detail-page`) at 1373 px cuts off three rail cards. Report it as a
   framing defect; do not fix it.
 - The dashboard frame crops one poster by 11%. Report it as a framing defect; do not fix it.
-- "Allow part watched items here" (Dashboard panel options) is temporarily turned OFF for the
-  Up Next captures. Before you finish, turn it back ON and confirm after a reload that it saved
-  ON. If you cannot restore it, report it as needing a human at the top of your report.
+- "Allow part watched items here" (Dashboard panel options) is turned OFF by you for the Up Next
+  captures (step 4). Restoring it must print `allowPartWatched: on (saved and confirmed)` with
+  exit 0. If it exits non-zero, report it as needing a human at the top of your report.
 
 ## Hard limits
 
@@ -45,8 +54,8 @@ The parent gives you the version, the run folder and the assignment path
 - Never accept an image, copy one to public assets, or change the privacy manifest.
 - Never start or stop servers, and never create or repair live states or provider data.
 - Never retry sign-in. Never print or copy credentials, cookies or tokens.
-- A browser action is allowed only for the approved setting toggle and the page reads needed to
-  confirm it. No other clicks or changes.
+- The only app change allowed is the step 4 OFF/ON toggle with `now-playing-option.mjs`. No
+  browser use and no other settings changes.
 
 ## Report (your final message, short)
 

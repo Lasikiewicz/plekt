@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-let style = "modern";
 const sheetRules = [];
 globalThis.localStorage ??= { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.history ??= { state: null, pushState() {}, replaceState() {} };
@@ -9,7 +8,6 @@ globalThis.window ??= { addEventListener() {}, location: { origin: "http://local
 globalThis.document = {
   addEventListener() {},
   querySelector: () => null,
-  documentElement: { getAttribute: (name) => (name === "data-style" ? style : null) },
   createElement: () => ({ append: (rule) => sheetRules.push(rule) }),
   head: { append() {} },
 };
@@ -41,8 +39,7 @@ test("Discover and personal media records key shows as TV and movies as movies",
   assert.equal(mediaArtKey({ media_type: "movie", tmdb_id: 603, title: "A Movie" }), "movie|603|||A Movie");
 });
 
-test("Modern defers backdrop lookups until cards approach view", async () => {
-  style = "modern";
+test("backdrop lookups wait until cards approach view", async () => {
   const originalObserver = globalThis.IntersectionObserver;
   const originalWindowObserver = window.IntersectionObserver;
   const originalFetch = globalThis.fetch;

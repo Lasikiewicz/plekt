@@ -66,7 +66,6 @@
       "public/theme-boot.js"
     ],
     "modern": [
-      "public/styles-modern.css",
       "public/modules/card-art.js"
     ]
   },
@@ -231,7 +230,7 @@
         "modern-light"
       ],
       "route": "/",
-      "state": "Up Next rail including the heading, a resume card with progress, and Watch now links. Temporarily disable Allow part watched items here in the upper panel options so the resume card remains in this rail, then restore the original setting after capture.",
+      "state": "Up Next rail including the heading, a resume card with progress, and Watch now links. Allow part watched items here must be OFF so the resume card remains in this rail; the release-capture agent sets it OFF with scripts/now-playing-option.mjs before capture and back ON after.",
       "framing": {
         "type": "element",
         "target": {

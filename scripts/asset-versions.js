@@ -80,7 +80,6 @@ function managesAsset(assetPath) {
     || assetPath.startsWith("/icons/")
     || assetPath === "/app.js"
     || assetPath === "/styles.css"
-    || assetPath === "/styles-modern.css"
     || assetPath === "/manifest.webmanifest"
     || assetPath === "/theme-boot.js"
     || assetPath.startsWith("/fonts/")

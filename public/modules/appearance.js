@@ -1,5 +1,5 @@
 import { buildAuthHeaders } from "./auth.js?v=2.1.0.0.4";
-import { state, elements, THEME_STYLE_KEY } from "./state.js?v=2.1.0.0.4";
+import { state, elements } from "./state.js?v=2.1.0.0.4";
 
 export const APPEARANCE_DEFAULTS = {
   showLogoArt: true,
@@ -145,40 +145,40 @@ function populateAppearanceForm(prefs) {
   if (elements.appearShowRelated) elements.appearShowRelated.checked = prefs.showRelated;
 }
 
-// Theme style (Classic or Modern) is per browser, like the light/dark mode, and
-// independent of it. theme-boot.js applies the saved style before first paint;
-// this keeps it in sync afterwards. Classic is the absence of data-style.
-let themeStyleTransitionTimeout = null;
+// Card Art and Background Art are saved per browser, like light/dark, and shown
+// as html attributes (theme-boot.js sets them before first paint). card-art.js
+// and dashboard-modern.js read the attributes and listen for ART_TOGGLE_EVENT.
+export const ART_TOGGLES = {
+  card: { key: "plekt:card-art", attribute: "data-card-art", input: "#appearCardArt" },
+  background: { key: "plekt:background-art", attribute: "data-background-art", input: "#appearBackgroundArt" },
+};
+export const ART_TOGGLE_EVENT = "plekt:art-toggle-changed";
 
-// Dispatched on document after the style changes, for features that render
-// differently under Modern (modules/dashboard-modern.js).
-export const THEME_STYLE_EVENT = "plembfin:theme-style";
-
-export function isModernStyle() {
-  return typeof document !== "undefined" && document.documentElement?.getAttribute("data-style") === "modern";
+export function isArtEnabled(kind) {
+  return document.documentElement?.getAttribute?.(ART_TOGGLES[kind].attribute) !== "off";
 }
 
-export function toggleThemeStyle() {
-  const root = document.documentElement;
-  root.classList.add("theme-transition");
-  clearTimeout(themeStyleTransitionTimeout);
-  themeStyleTransitionTimeout = setTimeout(() => root.classList.remove("theme-transition"), 180);
-
-  const modern = root.getAttribute("data-style") !== "modern";
-  if (modern) root.setAttribute("data-style", "modern");
-  else root.removeAttribute("data-style");
+export function setArtEnabled(kind, enabled) {
+  const { key, attribute } = ART_TOGGLES[kind];
   try {
-    if (modern) localStorage.setItem(THEME_STYLE_KEY, "modern");
-    else localStorage.removeItem(THEME_STYLE_KEY);
-  } catch { /* storage unavailable: the choice lasts for this page only */ }
-  document.dispatchEvent(new CustomEvent(THEME_STYLE_EVENT));
+    if (enabled) localStorage.removeItem(key);
+    else localStorage.setItem(key, "off");
+  } catch { /* storage unavailable: applies to this page only */ }
+  if (enabled) document.documentElement.removeAttribute(attribute);
+  else document.documentElement.setAttribute(attribute, "off");
+  document.dispatchEvent(new CustomEvent(ART_TOGGLE_EVENT, { detail: { kind, enabled } }));
 }
 
-// The sidebar toggle is static markup and module scripts run after parsing,
-// so it can be bound here without a hook in app.js or app-events.js.
-if (typeof document !== "undefined") {
-  document.querySelector?.("#themeStyleButton")?.addEventListener("click", toggleThemeStyle);
+function bindArtToggles() {
+  for (const kind of Object.keys(ART_TOGGLES)) {
+    const input = document.querySelector(ART_TOGGLES[kind].input);
+    if (!input) continue;
+    input.checked = isArtEnabled(kind);
+    input.addEventListener("change", () => setArtEnabled(kind, input.checked));
+  }
 }
+
+if (typeof document !== "undefined" && typeof document.querySelector === "function") bindArtToggles();
 
 export async function loadAppearanceSettings() {
   const response = await fetch("/api/appearance", { headers: buildAuthHeaders(state.token) });

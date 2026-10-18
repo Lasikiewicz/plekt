@@ -1,19 +1,19 @@
 import { escapeAttribute, showName } from "./utils.js?v=2.1.0.0.4";
 import { tmdbImage } from "./images.js?v=2.1.0.0.4";
 import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.0.0.4";
-import { THEME_STYLE_EVENT, isModernStyle } from "./appearance.js?v=2.1.0.0.4";
+import { ART_TOGGLE_EVENT, isArtEnabled } from "./appearance.js?v=2.1.0.0.4";
 
 // --- Modern backdrop artwork behind cards -----------------------------------
 // Cards on every page (Dashboard, History, the library, Discover, Watchlist,
-// Ratings, Playlists) carry data-art="type|tmdb|tvdb|imdb|title". Under Modern
-// the backdrop for each key is looked up once through the batched TMDB details
+// Ratings, Playlists) carry data-art="type|tmdb|tvdb|imdb|title". The backdrop for each key is looked up once through the batched TMDB details
 // request and published as a CSS rule in one injected stylesheet, so the
 // cards themselves are never mutated (the dashboard's reconcile signature is
 // their outerHTML) and a re-rendered card picks its backdrop up immediately.
 // One page-wide watcher finds cards as any page renders them and requests a
 // key only when one of its cards nears view. A lookup that fails (a batch
 // timing out on a cold cache) is retried a few times, instead of leaving that
-// title blank until a reload.
+// title blank until a reload. With Card Art off (Appearance menu) no card
+// lookups run; the page backdrop still requests its own key.
 
 export function artKey(type, { tmdb = "", tvdb = "", imdb = "", title = "" } = {}) {
   const parts = [tmdb, tvdb, imdb].map((value) => String(value ?? "").trim().replace(/\|/g, ""));
@@ -114,10 +114,7 @@ export function requestArtKey(key) {
 
 let cardArtObserver = null;
 export function observeCardArtwork(root) {
-  if (!root || !isModernStyle()) {
-    cardArtObserver?.disconnect();
-    return;
-  }
+  if (!root || !isArtEnabled("card")) return;
   const cards = root.querySelectorAll("[data-art]");
   if (!("IntersectionObserver" in window)) {
     cards.forEach((card) => requestArtKey(card.getAttribute("data-art")));
@@ -125,7 +122,7 @@ export function observeCardArtwork(root) {
   }
   cardArtObserver ||= new IntersectionObserver((entries) => {
     for (const entry of entries) {
-      if (!entry.isIntersecting) continue;
+      if (!entry.isIntersecting || !isArtEnabled("card")) continue;
       cardArtObserver.unobserve(entry.target);
       requestArtKey(entry.target.getAttribute("data-art"));
     }
@@ -152,6 +149,5 @@ if (pageShell && typeof MutationObserver !== "undefined") {
   // updates); one pass per frame picks up every new card.
   new MutationObserver(scheduleCardArtScan).observe(pageShell, { childList: true, subtree: true });
   scheduleCardArtScan();
+  document.addEventListener(ART_TOGGLE_EVENT, scheduleCardArtScan);
 }
-
-if (hasDocument) document.addEventListener(THEME_STYLE_EVENT, scheduleCardArtScan);

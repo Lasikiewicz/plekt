@@ -10,7 +10,9 @@ const indexSource = fs.readFileSync(path.join(root, "public/index.html"), "utf8"
 const assetVersion = indexSource.match(/theme-boot\.js\?v=([A-Za-z0-9._-]+)/)?.[1];
 
 // Runs public/theme-boot.js against a minimal DOM and returns what it did.
-function runBoot({ saved, prefersDark, style = null }) {
+function runBoot({ saved, prefersDark, style = null, cardArt = null, backgroundArt = null }) {
+  const art = { "plekt:card-art": cardArt, "plekt:background-art": backgroundArt };
+  const removed = [];
   const classes = new Set();
   const attributes = {};
   const appended = [];
@@ -36,7 +38,7 @@ function runBoot({ saved, prefersDark, style = null }) {
     querySelectorAll: () => [],
   };
   const context = {
-    localStorage: { getItem: (key) => ({ "plembfin:theme": saved, "plembfin:style": style })[key] ?? null },
+    localStorage: { getItem: (key) => ({ "plembfin:theme": saved, "plembfin:style": style })[key] ?? null, removeItem: (key) => removed.push(key) },
     window: { matchMedia: (query) => ({ matches: query === "(prefers-color-scheme: dark)" ? prefersDark : false }) },
     document: {
       documentElement,
@@ -50,23 +52,40 @@ function runBoot({ saved, prefersDark, style = null }) {
       disconnect() { observerCallback = null; }
     },
   };
+  const getStored = context.localStorage.getItem;
+  context.localStorage.getItem = (key) => art[key] ?? getStored(key);
   vm.runInNewContext(bootSource, context);
   const parsed = makeImg();
   const alreadySet = makeImg("/custom.png");
   observerCallback?.([{ addedNodes: [parsed, alreadySet] }]);
-  return { light: classes.has("light-mode"), dataStyle: attributes["data-style"], preload: appended[0], parsed, alreadySet, listeners };
+  return { light: classes.has("light-mode"), dataStyle: attributes["data-style"], cardArt: attributes["data-card-art"], backgroundArt: attributes["data-background-art"], removed, preload: appended[0], parsed, alreadySet, listeners };
 }
 
-test("theme boot applies the saved Modern style independently of the mode; anything else is Classic", () => {
+test("theme boot clears the old Classic/Modern style key and sets no style attribute", () => {
   for (const saved of ["light", "dark"]) {
-    const modern = runBoot({ saved, prefersDark: true, style: "modern" });
-    assert.equal(modern.dataStyle, "modern", `saved=${saved}`);
-    assert.equal(modern.light, saved === "light", `saved=${saved}: the style does not change the mode`);
+    for (const style of [null, "classic", "modern"]) {
+      const result = runBoot({ saved, prefersDark: true, style });
+      const label = `saved=${saved} style=${style}`;
+      assert.equal(result.dataStyle, undefined, label);
+      assert.equal(result.light, saved === "light", `${label}: the style does not change the mode`);
+      assert.deepEqual(result.removed, ["plembfin:style"], label);
+    }
   }
-  // Classic is the absence of the attribute, so Classic users get no new selector matches.
-  for (const style of [null, "classic", "unknown"]) {
-    assert.equal(runBoot({ saved: "dark", prefersDark: true, style }).dataStyle, undefined, `style=${style}`);
-  }
+});
+
+test("theme boot marks Card Art and Background Art off only when this browser turned them off", () => {
+  const fresh = runBoot({ saved: null, prefersDark: true });
+  assert.equal(fresh.cardArt, undefined, "a new browser shows card art");
+  assert.equal(fresh.backgroundArt, undefined, "a new browser shows background art");
+  const cardOff = runBoot({ saved: "dark", prefersDark: true, cardArt: "off" });
+  assert.equal(cardOff.cardArt, "off");
+  assert.equal(cardOff.backgroundArt, undefined);
+  const backgroundOff = runBoot({ saved: "light", prefersDark: true, backgroundArt: "off" });
+  assert.equal(backgroundOff.cardArt, undefined);
+  assert.equal(backgroundOff.backgroundArt, "off");
+  const unknown = runBoot({ saved: null, prefersDark: true, cardArt: "on", backgroundArt: "maybe" });
+  assert.equal(unknown.cardArt, undefined);
+  assert.equal(unknown.backgroundArt, undefined);
 });
 
 test("theme boot follows the saved theme first, then the system preference", () => {

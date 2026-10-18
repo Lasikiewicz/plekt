@@ -2261,7 +2261,7 @@
           1
         ],
         [
-          "| `theme-boot.js` | Tiny classic script loaded with a blocking `<script>` in `<head>`, before the stylesheet. Applies the saved (or system) theme and the saved theme style (`plembfin:style`) before first paint and gives every `img[data-theme-logo]` the matching header logo as it is parsed. The logo `<img>` tags carry no `src` so the browser's preload scanner cannot fetch the wrong variant. `app.js` (`initializeTheme`/`updateThemeIcon`) keeps the theme in sync afterwards. |",
+          "| `theme-boot.js` | Tiny classic script loaded with a blocking `<script>` in `<head>`, before the stylesheet. Applies the saved (or system) theme and the Card Art / Background Art toggles (`html[data-card-art]`, `html[data-background-art]`) before first paint, clears the retired `plembfin:style` key, and gives every `img[data-theme-logo]` the matching header logo as it is parsed. The logo `<img>` tags carry no `src` so the browser's preload scanner cannot fetch the wrong variant. `app.js` (`initializeTheme`/`updateThemeIcon`) keeps the theme in sync afterwards. |",
           1
         ],
         [
@@ -3066,7 +3066,7 @@
           1
         ],
         [
-          "\"Recently watched\" title (both styles, stored per row under `plembfin:dashboard-compact:tv`",
+          "\"Recently watched\" title (stored per row under `plembfin:dashboard-compact:tv`",
           1
         ],
         [
@@ -4689,23 +4689,6 @@
         ]
       ]
     },
-    "public/styles-modern.css": {
-      "reason": "internal",
-      "lines": [
-        [
-          "* theme-boot.js sets data-style before first paint from plembfin:style.",
-          1
-        ],
-        [
-          "html[data-style=\"modern\"] .source-plembfin,",
-          1
-        ],
-        [
-          "html[data-style=\"modern\"] .media-app-link--plembfin {",
-          1
-        ]
-      ]
-    },
     "public/styles.css": {
       "reason": "internal",
       "lines": [
@@ -4736,6 +4719,14 @@
         [
           "#plembfinRestoreForm .backup-settings-right {",
           1
+        ],
+        [
+          "html:root .source-plembfin,",
+          1
+        ],
+        [
+          "html:root .media-app-link--plembfin {",
+          1
         ]
       ]
     },
@@ -4748,6 +4739,14 @@
         ],
         [
           "try { style = localStorage.getItem(\"plembfin:style\"); } catch { /* storage unavailable: Classic */ }",
+          1
+        ],
+        [
+          "// (plembfin:style) is cleared so no stale value lingers.",
+          1
+        ],
+        [
+          "try { localStorage.removeItem(\"plembfin:style\"); } catch { /* storage unavailable */ }",
           1
         ]
       ]
@@ -8663,6 +8662,14 @@
       "lines": [
         [
           "localStorage: { getItem: (key) => ({ \"plembfin:theme\": saved, \"plembfin:style\": style })[key] ?? null },",
+          1
+        ],
+        [
+          "localStorage: { getItem: (key) => ({ \"plembfin:theme\": saved, \"plembfin:style\": style })[key] ?? null, removeItem: (key) => removed.push(key) },",
+          1
+        ],
+        [
+          "assert.deepEqual(result.removed, [\"plembfin:style\"], label);",
           1
         ]
       ]

@@ -1,11 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-let style = null;
 globalThis.localStorage ??= { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.history ??= { state: null, pushState() {}, replaceState() {} };
 globalThis.window ??= { addEventListener() {}, location: { origin: "http://localhost:5055", pathname: "/" } };
-globalThis.document = { addEventListener() {}, querySelector: () => null, documentElement: { getAttribute: (name) => (name === "data-style" ? style : null) } };
+globalThis.document = { addEventListener() {}, querySelector: () => null };
 
 const { bindDashboardRuns, dashboardTvRowUnits, isDashboardRowCompact, setDashboardRowCompact, setDashboardRunExpanded } = await import("../public/modules/dashboard-modern.js");
 const { renderDashboardUpNextCard } = await import("../public/modules/dashboard.js");
@@ -56,17 +55,7 @@ test("cached Up Next cards put an accessible checking status beside the title", 
   assert.doesNotMatch(settled, /up-next-checking-status/);
 });
 
-test("Classic collapses runs the same as Modern in posters-only mode", () => {
-  style = null;
-  postersOnly();
-  const units = dashboardTvRowUnits(history);
-  assert.deepEqual(units.map((unit) => unit.entries.map((entry) => entry.id)), [[5, 4, 3], [2], [1]]);
-  assert.equal(units[0].key, "run:id:1:3");
-  fullCards();
-});
-
-test("Modern collapses consecutive episodes of one show into a keyed run", () => {
-  style = "modern";
+test("posters-only collapses consecutive episodes of one show into a keyed run", () => {
   postersOnly();
   const units = dashboardTvRowUnits(history);
   assert.deepEqual(units.map((unit) => unit.entries.map((entry) => entry.id)), [[5, 4, 3], [2], [1]]);
@@ -78,7 +67,6 @@ test("Modern collapses consecutive episodes of one show into a keyed run", () =>
 });
 
 test("the compact toggle is per row and re-renders the runs of the TV row only", () => {
-  style = null;
   const calls = [];
   bindDashboardRuns(() => calls.push("runs"));
   assert.equal(isDashboardRowCompact("tv"), false);
@@ -93,16 +81,14 @@ test("the compact toggle is per row and re-renders the runs of the TV row only",
   assert.deepEqual(calls, ["runs", "runs"]);
 });
 
-test("Modern never folds part-watched entries into a run", () => {
-  style = "modern";
+test("part-watched entries never fold entries into a run", () => {
   postersOnly();
   const units = dashboardTvRowUnits([{ ...episode(9, 1, 1, 6), isPartWatched: true }, ...history.slice(0, 2)]);
   assert.deepEqual(units.map((unit) => unit.entries.map((entry) => entry.id)), [[9], [5, 4]]);
   fullCards();
 });
 
-test("Modern never folds movies into a run, even repeat watches of one title", () => {
-  style = "modern";
+test("movies never fold into a run, even repeat watches of one title", () => {
   postersOnly();
   const movie = (id) => ({ id, media_type: "movie", tmdb_id: 7, title: "Film" });
   const units = dashboardTvRowUnits([movie(3), movie(2), ...history.slice(0, 2)]);
@@ -111,7 +97,6 @@ test("Modern never folds movies into a run, even repeat watches of one title", (
 });
 
 test("expanding or collapsing a run re-renders every view that shows runs", () => {
-  style = "modern";
   const calls = [];
   bindDashboardRuns(() => calls.push("dashboard"));
   bindDashboardRuns(() => calls.push("history"));
@@ -121,7 +106,6 @@ test("expanding or collapsing a run re-renders every view that shows runs", () =
 });
 
 test("an expanded run gives one card per episode, with no Collapse control", () => {
-  style = "modern";
   postersOnly();
   setDashboardRunExpanded("run:id:1:3", true);
   const expanded = dashboardTvRowUnits(history);
@@ -139,7 +123,6 @@ test("an expanded run gives one card per episode, with no Collapse control", () 
 });
 
 test("opening a run folds any other open run back into its stack", () => {
-  style = "modern";
   postersOnly();
   const rows = [...history.slice(0, 3), episode(8, 2, 2, 3), episode(7, 2, 2, 2)];
   setDashboardRunExpanded("run:id:1:3", true);

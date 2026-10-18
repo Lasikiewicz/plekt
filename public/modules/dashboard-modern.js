@@ -1,16 +1,16 @@
 import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.1.0.0.4";
 import { state } from "./state.js?v=2.1.0.0.4";
 import { artKey, requestArtKey } from "./card-art.js?v=2.1.0.0.4";
-import { THEME_STYLE_EVENT, isModernStyle } from "./appearance.js?v=2.1.0.0.4";
+import { ART_TOGGLE_EVENT, isArtEnabled } from "./appearance.js?v=2.1.0.0.4";
 import { nowPlayingOptions } from "./now-playing-options.js?v=2.1.0.0.4";
 // The same folded-poster behaviour on the Library and History pages.
 import "./page-card-open.js?v=2.1.0.0.4";
 
-// Dashboard behaviour added with the Modern theme style (plan/archive/theme-styles/plan.md).
-// Compact rows, collapsed TV runs and the featured Up Next cards apply under
-// both styles; backdrop artwork is Modern-only.
+// Dashboard behaviour added with the Modern theme style (plan/archive/theme-styles/plan.md),
+// now the only style: compact rows, collapsed TV runs, the featured Up Next cards
+// and backdrop artwork.
 
-// --- Compact rows (both styles) --------------------------------------------
+// --- Compact rows --------------------------------------------------------
 // The toggle beside each "Recently watched" title folds every card in that
 // row into its poster (the details slide closed behind it). Clicking a
 // folded poster opens that card in place, closing whichever was open; a
@@ -321,11 +321,9 @@ function sessionArtKey(session = {}) {
 }
 
 // --- Now Playing -----------------------------------------------------------
-// The section heading is hidden under Modern. While nothing plays, sync.js
-// renders an .idle-state placeholder in #nowPlayingGrid; under both styles,
-// features built from the first two Up Next cards are added beside it (CSS
-// hides the placeholder and those cards in the Up Next rail; only the backdrop
-// and shade are Modern's). sync.js removes every non-session
+// The section heading is hidden. While nothing plays, sync.js
+// renders an .idle-state placeholder in #nowPlayingGrid; features built from the first two Up Next cards are added beside it (CSS
+// hides the placeholder and those cards in the Up Next rail). sync.js removes every non-session
 // child when playback starts, which drops the features and returns the cards
 // to the rail; the live session cards take the same look, side by side.
 
@@ -336,7 +334,7 @@ let featuredSourceHtml = "";
 let syncFrame = 0;
 
 // Rail cards copied into the panel carry data-featured-in-panel, which
-// styles-modern.css hides in the rail. The attribute is outside the observer's
+// styles.css hides in the rail. The attribute is outside the observer's
 // filter, so marking cards does not schedule another pass.
 function markFeaturedSources(sources = []) {
   const featured = new Set(sources);
@@ -418,11 +416,11 @@ function tagLiveCards() {
 }
 
 // The main area takes the backdrop of the top item: the feature while idle,
-// otherwise the first live session.
+// otherwise the first live session. None while Background Art is off.
 function syncPageArt() {
   const pageShell = timelineView?.closest(".page-shell");
   if (!pageShell) return;
-  const key = isModernStyle() ? nowPlayingGrid?.querySelector("[data-art]")?.getAttribute("data-art") || "" : "";
+  const key = isArtEnabled("background") ? nowPlayingGrid?.querySelector("[data-art]")?.getAttribute("data-art") || "" : "";
   if (key) {
     // The featured backdrop spans the page, even when its source card is below view.
     requestArtKey(key);
@@ -436,7 +434,7 @@ function syncModernDashboard() {
   syncFrame = 0;
   syncIdleFeature();
   syncCompactOpenCards();
-  if (isModernStyle() && timelineView) {
+  if (timelineView) {
     tagLiveCards();
   }
   syncPageArt();
@@ -455,8 +453,5 @@ if (timelineView) {
 
 if (hasDocument) {
   document.addEventListener("plembfin:config-changed", scheduleModernSync);
-  document.addEventListener(THEME_STYLE_EVENT, () => {
-    rerenderRuns();
-    scheduleModernSync();
-  });
+  document.addEventListener(ART_TOGGLE_EVENT, scheduleModernSync);
 }

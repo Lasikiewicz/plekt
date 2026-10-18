@@ -26,7 +26,6 @@
     <link rel="modulepreload" href="/modules/sync.js?v=2.1.0.0.4" />
     <link rel="modulepreload" href="/modules/route-modules.js?v=2.1.0.0.4" />
     <link rel="stylesheet" href="/styles.css?v=2.1.0.0.4" />
-    <link rel="stylesheet" href="/styles-modern.css?v=2.1.0.0.4" />
   </head>
   <body class="auth-locked">
     <div class="app-chassis">
@@ -68,28 +67,34 @@
               <div id="sidebarAppearancePanel" class="sidebar-appearance-panel hidden">
                 <div class="sidebar-appearance-theme">
                   <div class="sidebar-appearance-theme-group">
-                  <button id="themeStyleButton" class="theme-toggle-button theme-style-toggle" type="button" title="Switch between the Classic and Modern theme styles" aria-label="Switch between the Classic and Modern theme styles">
-                    <span class="theme-toggle-track">
-                      <span class="theme-toggle-thumb"></span>
-                      <span class="theme-toggle-label theme-toggle-label--classic">Classic</span>
-                      <span class="theme-toggle-label theme-toggle-label--modern">Modern</span>
-                    </span>
-                  </button>
-                  </div>
-                  <div class="sidebar-appearance-theme-group">
                   <button id="themeToggleButton" class="theme-toggle-button" type="button" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
                     <span class="theme-toggle-track">
                       <span class="theme-toggle-thumb"></span>
-                      <span class="theme-toggle-label theme-toggle-label--light">Light</span>
-                      <span class="theme-toggle-label theme-toggle-label--dark">Dark</span>
+                      <span class="theme-toggle-label theme-toggle-label--light"><svg viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="3.2" fill="currentColor" /><path d="M9 1.8 V3.4 M9 14.6 V16.2 M1.8 9 H3.4 M14.6 9 H16.2 M4.1 4.1 L5.2 5.2 M12.8 12.8 L13.9 13.9 M4.1 13.9 L5.2 12.8 M12.8 5.2 L13.9 4.1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" /></svg><span>Light</span></span>
+                      <span class="theme-toggle-label theme-toggle-label--dark"><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M13.5 11.2 A5.6 5.6 0 0 1 6.8 4.5 A5.6 5.6 0 1 0 13.5 11.2 Z" fill="currentColor" /></svg><span>Dark</span></span>
                     </span>
                   </button>
                   </div>
                 </div>
-                <details class="sidebar-appearance-text-size">
-                  <summary class="sidebar-appearance-theme-title">Text size</summary>
-                  <input id="appearTextScale" type="range" min="100" max="130" step="5" value="100" aria-label="Text size" />
-                </details>
+                <div class="sidebar-appearance-list">
+                  <label class="sidebar-appearance-list-item" title="Show artwork behind cards">
+                    <input id="appearCardArt" type="checkbox" checked />
+                    <svg viewBox="0 0 18 18" aria-hidden="true">
+                      <rect x="2" y="4" width="14" height="10" rx="1.4" fill="currentColor" opacity="0.45" />
+                      <rect x="4" y="9.4" width="6" height="1.3" rx="0.65" fill="currentColor" />
+                      <rect x="4" y="11.4" width="4" height="1.1" rx="0.55" fill="currentColor" opacity="0.8" />
+                    </svg>
+                    <span>Card Art</span>
+                  </label>
+                  <label class="sidebar-appearance-list-item sidebar-appearance-background-art" title="Show background artwork on the Dashboard and details pages">
+                    <input id="appearBackgroundArt" type="checkbox" checked />
+                    <svg viewBox="0 0 18 18" aria-hidden="true">
+                      <rect x="2" y="2.5" width="14" height="13" rx="1.3" fill="none" stroke="currentColor" stroke-width="1.3" />
+                      <path d="M3.2 14.4 L7.4 8.6 L10.2 11.8 L12.2 9.6 L14.8 14.4 Z" fill="currentColor" opacity="0.8" />
+                    </svg>
+                    <span>Background Art</span>
+                  </label>
+                </div>
                 <div id="sidebarAppearanceMediaGroup" class="sidebar-appearance-list hidden">
                   <label class="sidebar-appearance-list-item" title="Show Logo Art">
                     <input id="appearShowLogoArt" type="checkbox" checked />
@@ -142,6 +147,10 @@
                     <span>Related Shows</span>
                   </label>
                 </div>
+                <details class="sidebar-appearance-text-size">
+                  <summary><svg viewBox="0 0 18 18" aria-hidden="true"><text x="9" y="13" text-anchor="middle" font-size="10" font-weight="700" fill="currentColor">Aa</text></svg><span>Text size</span></summary>
+                  <input id="appearTextScale" type="range" min="100" max="130" step="5" value="100" aria-label="Text size" />
+                </details>
               </div>
             </div>
             <button class="nav-tab" type="button" data-view="about">About</button>
@@ -190,9 +199,7 @@
         <section id="authPanel" class="auth-panel glass-panel hidden">
         <div id="authPanelSignIn">
           <div>
-            <p class="eyebrow">Admin access</p>
-            <h2>Unlock your archive</h2>
-            <p class="muted-copy">Sign in with your admin username and password to browse your library, import Trakt history, and review webhook appends.</p>
+            <h2>Please log in</h2>
           </div>
           <form id="authForm" class="auth-form" method="post" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
             <label class="field-label" for="adminEmail">
@@ -203,18 +210,18 @@
               Password
               <input id="adminToken" name="adminToken" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" class="field" />
             </label>
+            <details class="auth-recovery-help">
+              <summary>Forgot your password?</summary>
+              <div class="auth-recovery-help-body">
+                <p>Plekt keeps administrator login local to this instance, so it does not send email reset links.</p>
+                <p>If you can sign in, change the password in <strong>Settings → General → Account</strong> with your current password.</p>
+                <p>If you are locked out, stop Plekt, set a new <code>ADMIN_PASSWORD</code> in the host or container environment, and restart it. If the password was previously changed in Plekt, remove only the <code>authManagedInApp</code> property from <code>data/config.json</code> first so the environment value can be used.</p>
+                <p class="auth-recovery-note">The old password cannot be recovered from the stored hash.</p>
+              </div>
+            </details>
             <button class="button-primary" type="submit">Sign In</button>
           </form>
           <p id="message" class="message" role="status" aria-live="polite"></p>
-          <details class="auth-recovery-help">
-            <summary>Forgot your password?</summary>
-            <div class="auth-recovery-help-body">
-              <p>Plekt keeps administrator login local to this instance, so it does not send email reset links.</p>
-              <p>If you can sign in, change the password in <strong>Settings → General → Account</strong> with your current password.</p>
-              <p>If you are locked out, stop Plekt, set a new <code>ADMIN_PASSWORD</code> in the host or container environment, and restart it. If the password was previously changed in Plekt, remove only the <code>authManagedInApp</code> property from <code>data/config.json</code> first so the environment value can be used.</p>
-              <p class="auth-recovery-note">The old password cannot be recovered from the stored hash.</p>
-            </div>
-          </details>
         </div>
         <div id="claimPanelHome" class="hidden">
           <div id="claimPanel" class="hidden">

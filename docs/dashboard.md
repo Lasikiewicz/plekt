@@ -4,6 +4,12 @@ The home view (`/`): Now Playing, one mixed Up Next rail, and Watch History with
 TV-show and movie rows. Part Watched ("continue watching") belongs in Up Next; the recent
 history rows contain completed watches only.
 
+At desktop widths, the four sections split the available height evenly and use matching
+title bands. The three lower rails show a scrollbar when their content overflows; Up Next
+can use the slider space for cards when its content fits. Now Playing has no scrollbar and
+its cards use the space below the title. At mobile widths, the dashboard returns to
+vertically scrolling sections.
+
 ## Files
 
 | File | Role |
@@ -34,7 +40,7 @@ without waiting for either: when the Now Playing session poll (about every 45 se
 cannot reach a server whose feeds last succeeded, that server's feeds are re-read at once
 (at most every two minutes per server), so the status line appears within about a minute.
 
-In the modern style, the Now Playing panel holds three items by default. Live sessions come
+The Now Playing panel holds three items by default. Live sessions come
 first; the remaining slots (all of them when nothing is playing) feature the Up Next rail's
 part watched items, then its other Up Next items, and a featured item is hidden from the rail
 so nothing shows twice. A cog beside the heading opens the panel options: **Allow part watched

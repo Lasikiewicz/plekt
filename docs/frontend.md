@@ -9,6 +9,28 @@ the module rules. Feature-specific behavior lives in the per-feature docs
 
 ## Structure
 
+## Brand colours
+
+Use these shell surface colours as Plekt's brand colours for the two themes:
+
+| Theme | Left menu | Main background |
+| --- | --- | --- |
+| Dark mode | `#1f242c` | `#080b0f` |
+| Light mode | `#f1f5f9` | `#fbfbfb` |
+
+Keep the left menu and main background aligned with these values when changing the
+application theme styles. They are the `--brand-menu` and `--brand-main` tokens in
+`public/styles.css` (`:root` for dark, `html.light-mode` for light). Every page paints its
+navbar (and, on media pages, its stacked title and controls rows on phones) with `--brand-menu`,
+matching the left menu.
+
+Settings uses only these two tones in both themes and both styles. The settings canvas is
+`--brand-main`; each nested surface level (section card, box or disclosure, field, input
+or choice option) alternates, starting with `--brand-menu` for parent sections. One
+depth-based rule set at the end of `styles.css` paints every listed settings surface
+without gradients. Add a new settings surface to that shared list instead of giving it a
+per-section background.
+
 - **`public/index.html`** - the single shell: nav tabs, one `view-panel` section per
   view (`data-view-panel="dashboard|history|stats|explorer|upcoming|discover|personal-media|settings|search"`),
   every modal/dialog, and `modulepreload` links for each module. All element IDs the JS
@@ -103,20 +125,27 @@ Rules that keep this correct:
   requests exactly one logo whatever the combination of saved theme and system preference.
   The two logo URLs and the fonts are versioned (`?v=`) like other assets, so production
   caches them immutably and a theme toggle is served from cache.
-- The theme style (Classic or Modern) is a second setting, independent of light/dark. It is
-  stored under `plembfin:style` (`THEME_STYLE_KEY` in `state.js`; absent = Classic) and
-  applied by `theme-boot.js` as `html[data-style="modern"]` before first paint. Classic has no
-  attribute at all. The Classic/Modern pill sits in the sidebar footer above the Light/Dark
-  toggle; `toggleThemeStyle()` in `modules/appearance.js` binds it and keeps the attribute and
-  key in sync. Modern rules live in `public/styles-modern.css`, loaded after `styles.css`, and
-  every rule there is scoped to `html[data-style="modern"]` (dark) or
-  `html[data-style="modern"].light-mode` (light). See `plan/archive/theme-styles/plan.md`.
-  `toggleThemeStyle()` dispatches `plembfin:theme-style` (`THEME_STYLE_EVENT`) on `document`,
-  and `isModernStyle()` reports the current style. Modern-only dashboard behaviour lives in
+- There is one look (Modern; the old Classic style was removed in October 2026). Its rules
+  live in `styles.css`, with the merged Modern section near the end; dark rules use
+  `html:root:not(.light-mode)` and light rules `html:root.light-mode`. `theme-boot.js` clears
+  the retired Classic/Modern style key once so no stale value lingers. Settings help panels share
+  the same surface treatment as the main Settings panel beside them, including on the
+  Changelog page.
+- The sidebar Appearance panel has **Card Art** (every page) and **Background Art** (shown
+  only on the Dashboard and details pages, by a `body:has(...)` rule in `styles.css`)
+  checkboxes, both on by default and saved per browser like light/dark under
+  `plekt:card-art` / `plekt:background-art` (`off` when off, removed when on).
+  `theme-boot.js` sets `html[data-card-art="off"]` / `html[data-background-art="off"]` before
+  first paint; `modules/appearance.js` (`ART_TOGGLES`, `isArtEnabled()`, `setArtEnabled()`)
+  binds the checkboxes and dispatches `plekt:art-toggle-changed` (`ART_TOGGLE_EVENT`). With
+  Card Art off, `card-art.js` stops looking up card backdrops and a CSS rule clears
+  `--modern-art` on every `[data-art]`. With Background Art off, `dashboard-modern.js` sets no
+  `data-page-art` on the page shell and CSS hides the details-page `.modal-backdrop-image`.
+- Dashboard behaviour lives in
   `modules/dashboard-modern.js` (imported by `dashboard.js`): consecutive watches of one show
   collapse into a single TV history card that expands in place when clicked (the newest
   expanded card has a Collapse button). The same module owns the compact toggle beside each
-  "Recently watched" title (both styles, stored per row under `plembfin:dashboard-compact:tv`
+  "Recently watched" title (stored per row under `plembfin:dashboard-compact:tv`
   and `:movie`): every card in the row folds to its poster (the details slide closed behind
   it), clicking a folded poster opens that card, and a further click behaves as normal. The
   Now Playing heading is hidden; the panel holds 3 items by default. Live sessions come
@@ -149,7 +178,7 @@ Rules that keep this correct:
   `styles.css` hides it except on folded posters with Posters only on, where it sits along
   the bottom edge over a blurred dark tint (a stronger tint without `backdrop-filter`). A
   resolved episode title updates both the card and the overlay.
-- Modern card backdrops live in `modules/card-art.js`. Cards on the Dashboard, History, the
+- Card backdrops (the Card Art toggle) live in `modules/card-art.js`. Cards on the Dashboard, History, the
   library, Discover, Watchlist, Ratings, and Playlists carry
   `data-art="type|tmdb|tvdb|imdb|title"` (`cardArtAttribute()`; live cards get it from
   `state.activeSessions` in `dashboard-modern.js`). One MutationObserver on `.page-shell`
@@ -643,8 +672,8 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Sync status, sync history, now-playing polling | `modules/sync.js`, `modules/sync-preview.js` |
 | Sync Activity page (`/sync-activity`), including its route-scoped action/event handlers | `modules/sync-activity.js` |
 | Dashboard rendering | `modules/dashboard.js` |
-| Modern-style-only dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout) and the compact Recently watched rows | `modules/dashboard-modern.js` |
-| Modern backdrop artwork behind cards on every page | `modules/card-art.js` |
+| Dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout, the page backdrop) and the compact Recently watched rows | `modules/dashboard-modern.js` |
+| Backdrop artwork behind cards on every page (Card Art) | `modules/card-art.js` |
 | Posters only on the library and media pages: a clicked poster opens its card in place | `modules/page-card-open.js` |
 | History, Posters only: episode, date and app overlaid on each poster | `modules/history-poster-overlay.js` |
 | Shared media identity/deduplication | `modules/media-records.js` |

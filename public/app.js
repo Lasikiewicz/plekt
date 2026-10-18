@@ -2357,11 +2357,9 @@ function applyActiveViewNow() {
     } else if (!isSetupView) {
       const sidebarFooter = document.querySelector(".sidebar-footer");
       if (sidebarFooter) sidebarFooter.appendChild(elements.appVersion);
-      // The theme switchers live in their Appearance groups (Style, Theme); setup and sign-in move
-      // them out, so put each back in its own group.
-      const [styleGroup, themeGroup] = document.querySelectorAll(".sidebar-appearance-theme-group");
-      const styleButton = document.querySelector("#themeStyleButton");
-      if (styleGroup && styleButton) styleGroup.appendChild(styleButton);
+      // The theme switcher lives in its Appearance group; setup and sign-in move it out, so put
+      // it back.
+      const themeGroup = document.querySelector(".sidebar-appearance-theme-group");
       if (themeGroup && elements.themeToggleButton) themeGroup.appendChild(elements.themeToggleButton);
       elements.appVersion.disabled = false;
     }

@@ -81,7 +81,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Instant state restoration** - Automatically synchronizes watch history to newly added media and rebuilt server libraries
 - **Cross-platform resume** - Pause playback on one server and pick up right where you left off on another
 - **Rewatch tracking** - Full multi-watch history logging with smart deduplication that preserves authentic repeat viewings
-- **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plekt-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history
+- **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plekt-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history; desktop gives the four sections equal height and reserves matching space for their titles and card-rail sliders
 - **Sync Activity hub** - Live grouped activity by movie/show, with all resume checkpoints and destination results preserved behind each row, clear reasons for skipped destinations, unresolved cross-platform matches with per-item Fix match actions, targeted retry for actual failed destinations (only the newest unresolved result per movie/episode is retried, individually or all at once as a background job that survives closing the tab; expected missing-library skips are excluded), show-wide Fix Match and retry-all controls for Trakt mismatches, dismiss controls for shows Trakt does not contain, blocked-restore repair grouped by show with Fix Match and skip controls, and downloadable group logs
 - **Rich analytics & stats** - In-depth all-time and period reports, top shows, and platform playback distribution
 - **Personal media organization** - Save movies, shows, and episodes to a watch list or playlists (optionally synced two ways to Plex, Emby, and Jellyfin, or filled automatically from genre, original language, year, and watched rules, with TV playlists holding the next episode of each show, and watched items removed if you choose), and rate them from their media pages; episode ratings use one canonical show/season/episode identity everywhere
@@ -111,15 +111,16 @@ See [`docs/architecture.md`](docs/architecture.md) for how each feature is actua
 
 ## Appearance
 
-Use the two switches at the bottom of the sidebar to choose **Classic** or **Modern** and
-**Light** or **Dark**. The choices are independent: each style works in either mode. Classic
-is the default; Modern changes the surfaces and accents while keeping the same pages and
-controls. Both choices are saved in your browser and restored when you reopen Plekt.
-On a phone, open the navigation drawer to reach the switches.
+Open **Appearance** in the sidebar to switch between **Light** and **Dark**. Two checkboxes
+below it control artwork: **Card Art** shows each title's backdrop behind its card on every
+page, and **Background Art** (on the Dashboard and detail pages) shows the large backdrop
+behind the page. Both are on by default; turning one off also stops that artwork loading.
+Settings help panels share the background treatment of their main sections. These choices
+are saved in your browser and restored when you reopen Plekt.
+On a phone, open the navigation drawer to reach them.
 
 The **Appearance** menu on movie and TV detail pages controls which optional sections,
-such as cast, trailers, and reviews, are shown. It is separate from the style and mode
-switches.
+such as cast, trailers, and reviews, are shown.
 
 The sidebar **Appearance** panel has a **Text size** slider from 100% to 130%. The setting is
 saved on the Plekt server, so it applies wherever you open Plekt.

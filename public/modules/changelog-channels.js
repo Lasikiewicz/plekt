@@ -411,7 +411,7 @@ export async function renderChangelog(force = false) {
       ? `<h4 class="changelog-section-heading">New since your develop build - not pulled yet</h4>${pendingDevelopEntries.map((entry) => renderDevelopBuildEntry(entry, { pending: true })).join("")}`
       : "";
     const developSection = developBuildEntries.length
-      ? `<h4 class="changelog-section-heading">Develop builds since last alpha</h4>${developBuildEntries.map((entry) => renderDevelopBuildEntry(entry)).join("")}`
+      ? developBuildEntries.map((entry) => renderDevelopBuildEntry(entry)).join("")
       : "";
 
     const pendingAlphaSection = pendingAlphaEntries.length
@@ -433,13 +433,8 @@ export async function renderChangelog(force = false) {
 
     const visibleEntries = changelogExpanded ? entries : entries.slice(0, 20);
     const olderCount = entries.length - visibleEntries.length;
-    const releaseHeading = (developSection || alphaSection || olderAlphaSection) && entries.length
-      ? `<h4 class="changelog-section-heading">Published releases</h4>`
-      : "";
-
     const channel = selectedChangelogChannel(data.channel);
-    const mainPanel = releaseHeading +
-      visibleEntries.map(renderEntry).join("") + (
+    const mainPanel = visibleEntries.map(renderEntry).join("") + (
         olderCount > 0
           ? `<button id="changelogShowAll" class="button-ghost" type="button">Show ${olderCount} older releases</button>`
           : ""

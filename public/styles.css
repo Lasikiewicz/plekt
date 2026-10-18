@@ -62,6 +62,8 @@
   --panel: rgba(18, 22, 28, 0.45);
   --panel-2: rgba(18, 22, 28, 0.55);
   --panel-3: #080b0f;
+  --brand-menu: #1f242c;  /* Left menu brand surface */
+  --brand-main: #080b0f;  /* Main background brand surface */
   --line: rgba(255, 255, 255, 0.05);
   --line-strong: rgba(255, 255, 255, 0.12);
   --skeleton-base: #101010;
@@ -96,7 +98,7 @@
   --control-inline-padding: 0.7rem;
   --right-topbar-height: calc((var(--top-control-padding) * 2) + var(--sidebar-logo-height));
   --right-topbar-content-offset: 0.7rem;
-  /* Text sizes shared by Classic and Modern. --text-scale is set from the
+  /* Text sizes. --text-scale is set from the
      Appearance Text size slider (appearance.js applyTextScale). */
   --text-scale: 1;
   --fs-card-label: calc(0.64rem * var(--text-scale));
@@ -160,7 +162,6 @@
   max-width: 280px;
   aspect-ratio: 2 / 3;
   overflow: hidden;
-  border-radius: var(--poster-radius);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
   isolation: isolate;
 }
@@ -517,9 +518,6 @@ details.issue-category,
   justify-content: stretch !important;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  /* Matches .topnav's actual dark-mode background (#202428, set later in this
-     file) rather than var(--panel-3), which the sidebar no longer renders. */
-  background: #202428;
   box-shadow: none;
 }
 
@@ -586,12 +584,6 @@ html.light-mode .settings-disclosure {
   border-radius: var(--radius);
   background: #202428;
   scroll-margin-top: calc(var(--right-topbar-height) + var(--space-3));
-}
-
-/* Dark Classic settings boxes use the same colour as the left menu. */
-html:not(.light-mode):not([data-style="modern"]) .settings-card,
-html:not(.light-mode):not([data-style="modern"]) .settings-group-section {
-  background: #202428;
 }
 
 .settings-disclosure > summary {
@@ -914,7 +906,6 @@ h2 {
   max-width: 280px;
   aspect-ratio: 2 / 3;
   object-fit: cover;
-  border-radius: var(--poster-radius);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
 }
 
@@ -1558,7 +1549,6 @@ a.media-fact-chip:hover {
   width: 100%;
   aspect-ratio: 2 / 3;
   object-fit: cover;
-  border-radius: var(--poster-radius);
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
 }
 
@@ -1997,9 +1987,9 @@ body.demo-mode #manualWatchReviewButton {
 }
 
 .button-primary {
-  background: color-mix(in srgb, var(--blue), transparent 88%);
-  border-color: color-mix(in srgb, var(--blue), transparent 60%);
-  color: var(--blue);
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--muted);
 }
 
 .button-primary:disabled {
@@ -2014,8 +2004,8 @@ body.demo-mode #manualWatchReviewButton {
 }
 
 .button-danger {
-  border: 1px solid rgba(244, 63, 94, 0.45);
-  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid var(--line-strong);
+  background: transparent;
   color: #fda4af;
   transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
 }
@@ -2210,16 +2200,16 @@ body.demo-mode #manualWatchReviewButton {
 
 .button-danger:hover:not(:disabled) {
   border-color: rgba(244, 63, 94, 0.7);
-  background: rgba(244, 63, 94, 0.22);
+  background: transparent;
   color: #fff1f2;
 }
 
 .button-danger:active:not(:disabled) {
-  background: rgba(244, 63, 94, 0.28);
+  background: transparent;
 }
 
 .button-primary:hover {
-  background: color-mix(in srgb, var(--blue), transparent 80%);
+  background: transparent;
   border-color: color-mix(in srgb, var(--blue), transparent 40%);
   color: var(--blue);
 }
@@ -2350,7 +2340,7 @@ body.auth-locked .topnav {
   gap: var(--space-3);
   margin-inline: calc(var(--control-inline-padding) * -1);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: var(--panel-3);
+  background: var(--brand-menu);
   padding: var(--right-topbar-content-offset) var(--control-inline-padding);
 }
 
@@ -2493,6 +2483,20 @@ body.auth-locked .topnav {
   text-align: center;
 }
 
+.auth-panel.glass-panel,
+html.light-mode .auth-panel.glass-panel {
+  background: var(--brand-menu);
+}
+
+.auth-panel #message:empty {
+  display: none;
+}
+
+.auth-panel .field,
+html.light-mode .auth-panel .field {
+  background: var(--brand-main);
+}
+
 .auth-panel-logo {
   justify-self: center;
   height: 34px;
@@ -2540,9 +2544,7 @@ body.auth-locked .topnav {
 }
 
 .auth-recovery-help {
-  margin-top: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--line);
+  justify-self: end;
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -2553,7 +2555,11 @@ body.auth-locked .topnav {
   color: var(--blue);
   cursor: pointer;
   font-weight: 800;
-  list-style-position: inside;
+  list-style: none;
+}
+
+.auth-recovery-help > summary::-webkit-details-marker {
+  display: none;
 }
 
 .auth-recovery-help > summary:focus-visible {
@@ -2731,6 +2737,10 @@ body.auth-locked .topnav {
 .field:focus {
   border-color: #4b96e6;
   box-shadow: 0 0 0 2px rgba(75, 150, 230, 0.18);
+}
+
+.auth-panel .field:focus-visible {
+  outline: none;
 }
 
 .message {
@@ -5744,7 +5754,6 @@ details.sync-tool-details {
   gap: 0 !important;
   overflow: hidden;
   border-color: var(--line-strong);
-  background: var(--panel-2);
 }
 
 .settings-pane .settings-row-main > :is(.settings-card, .sync-panel, .logs-panel) > .section-heading {
@@ -5781,14 +5790,14 @@ details.sync-tool-details {
 }
 
 .settings-pane .sync-tools-content .sync-tools-cancel-button {
-  border: 1px solid rgba(244, 63, 94, 0.45) !important;
-  background: rgba(244, 63, 94, 0.12) !important;
+  border: 1px solid var(--line-strong) !important;
+  background: transparent !important;
   color: #fda4af !important;
 }
 
 .settings-pane .sync-tools-content .sync-tools-cancel-button:hover:not(:disabled) {
   border-color: rgba(244, 63, 94, 0.7) !important;
-  background: rgba(244, 63, 94, 0.22) !important;
+  background: transparent !important;
   color: #fff1f2 !important;
 }
 
@@ -6059,6 +6068,11 @@ html.light-mode .settings-choice-option:has(input:checked) {
 .diagnostic-result-card:hover {
   border-color: var(--blue) !important;
   background: var(--panel-3) !important;
+}
+
+html:not(.light-mode) :is(.sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card),
+html:not(.light-mode) :is(.sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card):is(:hover, :focus-within) {
+  background: #1f242c !important;
 }
 
 details.sync-tool-details > summary {
@@ -6386,9 +6400,6 @@ details.sync-tool-details[open] > summary {
   display: grid;
   gap: var(--space-2);
   padding: var(--space-2);
-}
-
-.folder-card {
 }
 
 .folder-trigger,
@@ -8872,21 +8883,21 @@ details.sync-tool-details[open] > summary {
    `outline` instead, which nothing else on those cards touches. */
 @keyframes sectionTargetHighlightPulse {
   0% {
-    outline-color: var(--blue);
+    outline-color: color-mix(in srgb, var(--blue), transparent 55%);
     outline-offset: 2px;
   }
   50% {
-    outline-color: color-mix(in srgb, var(--blue), transparent 35%);
+    outline-color: color-mix(in srgb, var(--blue), transparent 75%);
     outline-offset: 4px;
   }
   100% {
-    outline-color: var(--blue);
+    outline-color: color-mix(in srgb, var(--blue), transparent 55%);
     outline-offset: 2px;
   }
 }
 
 .settings-target-highlight {
-  outline: 2px solid var(--blue) !important;
+  outline: 1px solid color-mix(in srgb, var(--blue), transparent 55%) !important;
   animation: sectionTargetHighlightPulse 1.2s ease-in-out infinite;
   border-radius: var(--radius);
 }
@@ -9118,6 +9129,10 @@ details.sync-tool-details[open] > summary {
 html.light-mode .changelog-tag-current {
   background: #e2e8f0;
   color: #475569;
+}
+
+html.light-mode .changelog-entry {
+  background: var(--panel);
 }
 
 .changelog-entry-head {
@@ -11287,9 +11302,9 @@ html.light-mode .log-msg {
 }
 
 .action-pill {
-  background: color-mix(in srgb, var(--blue), transparent 88%);
-  border: 1px solid color-mix(in srgb, var(--blue), transparent 60%);
-  color: var(--blue);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
   font-size: 0.81rem;
@@ -11303,7 +11318,7 @@ html.light-mode .log-msg {
 }
 
 .action-pill:hover {
-  background: color-mix(in srgb, var(--blue), transparent 80%);
+  background: transparent;
   border-color: color-mix(in srgb, var(--blue), transparent 40%);
   color: var(--blue);
 }
@@ -11653,11 +11668,6 @@ html.light-mode .progress-bar-fill {
   accent-color: var(--blue);
   cursor: pointer;
   flex: 0 0 auto;
-}
-
-.media-spoiler-toggle:has(input:checked) {
-  background: color-mix(in srgb, var(--blue), transparent 80%);
-  border-color: color-mix(in srgb, var(--blue), transparent 40%);
 }
 
 .immersive-episode-copy {
@@ -12524,7 +12534,7 @@ html.light-mode .progress-bar-fill {
 }
 
 .action-pill-ghost:hover {
-  background: #2a1416;
+  background: transparent;
   border-color: #b4474f;
   color: #fca5a5;
 }
@@ -12535,15 +12545,15 @@ html.light-mode .progress-bar-fill {
 
 /* Strong destructive variant for the permanent "Delete" action. */
 .action-pill-danger {
-  background: #3a1518;
-  border-color: #b4474f;
+  background: transparent;
+  border-color: var(--line-strong);
   color: #fca5a5;
 }
 
 .action-pill-danger:hover {
-  background: #b4474f;
+  background: transparent;
   border-color: #b4474f;
-  color: #fff;
+  color: #fca5a5;
 }
 
 /* Seerr request button variant */
@@ -13377,7 +13387,7 @@ html.light-mode .global-search input {
   border: 0;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0;
-  background: #202428;
+  background: #1f242c;
   padding: 0 0.55rem 0.9rem;
 }
 
@@ -13681,7 +13691,7 @@ html.light-mode .global-search input {
   margin: 0.15rem 0 0.35rem;
   padding-left: var(--space-3);
   display: grid;
-  gap: 0.08rem;
+  gap: 0;
 }
 
 .sidebar-appearance-list {
@@ -13690,25 +13700,29 @@ html.light-mode .global-search input {
 }
 
 /* Text size: a heading like Style and Theme. The slider shows only while open. */
-.sidebar-appearance-text-size {
-  padding-top: 0.35rem;
-}
-
 .sidebar-appearance-text-size > summary {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  gap: 0.75rem;
-  min-height: 1.15rem;
-  padding: 0.15rem 0.6rem;
+  gap: 0.55rem;
+  min-height: 2rem;
+  padding: 0.4rem 0.65rem 0.4rem 1.4rem;
   border-left: 3px solid transparent;
   background: transparent;
   color: #c8c8c8;
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 600;
   cursor: pointer;
   list-style: none;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.sidebar-appearance-text-size > summary svg,
+.sidebar-appearance-theme .theme-toggle-label svg {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  opacity: 0.75;
 }
 
 .sidebar-appearance-text-size > summary:hover {
@@ -13774,6 +13788,17 @@ html.light-mode .sidebar-appearance-text-size[open] > summary {
   cursor: pointer;
   text-align: left;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+/* Background Art only matters where there is a page backdrop: the Dashboard
+   and details pages (the media rows show only on details pages). */
+.sidebar-appearance-list-item.sidebar-appearance-background-art {
+  display: none;
+}
+
+body:has(.page-shell[data-active-view="dashboard"]) .sidebar-appearance-list-item.sidebar-appearance-background-art,
+body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-item.sidebar-appearance-background-art {
+  display: flex;
 }
 
 .sidebar-appearance-list-item svg {
@@ -13950,16 +13975,15 @@ html.light-mode .sidebar-appearance-text-size[open] > summary {
 }
 
 .page-shell[data-active-view="dashboard"] #timeline-view {
-  display: flex;
+  display: grid;
+  grid-template-rows: repeat(4, minmax(0, 1fr));
   height: 100%;
   min-height: 0;
   overflow: hidden;
-  flex-direction: column;
   gap: 0.7rem;
 }
 
-/* Four dashboard sections: Now Playing is intentionally a little shorter;
-   Up Next, TV history, and movie history share the remaining space equally. */
+/* Keep four equal dashboard bands; each rail gets the space below its title. */
 .page-shell[data-active-view="dashboard"] .live-panel,
 .page-shell[data-active-view="dashboard"] #upNextDashboardSection,
 .page-shell[data-active-view="dashboard"] .dashboard-history-panel {
@@ -13970,9 +13994,52 @@ html.light-mode .sidebar-appearance-text-size[open] > summary {
   flex: 1 1 0;
 }
 
-#timeline-view .live-panel { flex-grow: 0.9; }
 #timeline-view #upNextDashboardSection,
 #timeline-view .dashboard-history-panel { flex-grow: 1; }
+
+@media (min-width: 761px) {
+  #timeline-view > .live-panel > .section-heading,
+  #timeline-view > #upNextDashboardSection > .section-heading,
+  #timeline-view > .dashboard-history-panel > .section-heading {
+    flex: 0 0 1.85rem;
+    min-height: 1.85rem;
+    margin-bottom: 0.1rem;
+    padding-left: 0.4rem;
+  }
+
+  #timeline-view #nowPlayingGrid {
+    scrollbar-width: none;
+  }
+
+  #timeline-view #nowPlayingGrid::-webkit-scrollbar {
+    display: none;
+  }
+
+  #timeline-view #tvHistoryRow,
+  #timeline-view #movieHistoryRow {
+    scrollbar-width: thin;
+    scrollbar-gutter: stable;
+  }
+
+  #timeline-view #upNextPanel::-webkit-scrollbar,
+  #timeline-view #tvHistoryRow::-webkit-scrollbar,
+  #timeline-view #movieHistoryRow::-webkit-scrollbar {
+    height: 0.5rem;
+  }
+
+  #timeline-view #upNextPanel::-webkit-scrollbar-track,
+  #timeline-view #tvHistoryRow::-webkit-scrollbar-track,
+  #timeline-view #movieHistoryRow::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #timeline-view #upNextPanel::-webkit-scrollbar-thumb,
+  #timeline-view #tvHistoryRow::-webkit-scrollbar-thumb,
+  #timeline-view #movieHistoryRow::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--line-strong);
+  }
+}
 
 /* A visible Part Watched rail shares its history section with the completed
    history rail. When no resume item exists this block is removed by .hidden. */
@@ -14291,11 +14358,6 @@ html.light-mode .sidebar-appearance-text-size[open] > summary {
   align-self: stretch;
   height: auto;
   max-height: none;
-  border-radius: var(--poster-radius) 0 0 var(--poster-radius);
-}
-
-#timeline-view .dashboard-history-page-card > .history-card-poster-wrapper .history-card-poster-link {
-  border-radius: var(--poster-radius) 0 0 var(--poster-radius);
 }
 
 #timeline-view .dashboard-history-page-card > .history-card-details {
@@ -14307,9 +14369,9 @@ html.light-mode .sidebar-appearance-text-size[open] > summary {
 }
 
 /* Compact history rows (modules/dashboard-modern.js): the toggle beside each
-   "Recently watched" title shows that row as posters only, in both styles.
-   The #timeline-view plus row-id selectors outrank the Classic and Modern
-   card rules, so compact holds in all four style and mode combinations. */
+   "Recently watched" title shows that row as posters only.
+   The #timeline-view plus row-id selectors outrank the card rules, so
+   compact holds in both modes. */
 .dashboard-history-heading {
   display: flex;
   min-width: 0;
@@ -14659,6 +14721,13 @@ html.light-mode #timeline-view .part-watched-app-badge {
   scroll-padding: 0.55rem 0.2rem;
 }
 
+/* Up Next may have no horizontal scrollbar, so let its cards use the rail's
+   full height. The panel's own bottom inset still keeps card borders clear. */
+#timeline-view #upNextPanel.dashboard-history-card-row {
+  padding-top: 0.55rem;
+  padding-bottom: 0;
+}
+
 /* Shared FLIP/entrance motion for live dashboard snapshots. Only transform
    and opacity move, so the row never reflows while the animation is running. */
 .dashboard-card-motion {
@@ -14737,11 +14806,6 @@ html.light-mode #timeline-view .part-watched-app-badge {
 
   #timeline-view .dashboard-history-page-card > .history-card-details {
     padding: 0.5rem;
-  }
-
-  #timeline-view .dashboard-history-page-card > .history-card-poster-wrapper,
-  #timeline-view .dashboard-history-page-card > .history-card-poster-wrapper .history-card-poster-link {
-    border-radius: var(--poster-radius) var(--poster-radius) 0 0;
   }
 
   .page-shell[data-active-view="dashboard"] .dashboard-history-card-row .history-card-title {
@@ -16097,7 +16161,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
     position: sticky !important;
     top: 0 !important;
     z-index: 90 !important;
-    background: var(--panel-3) !important;
+    background: var(--brand-menu) !important;
     border-bottom: 1px solid var(--line) !important;
     margin-inline: calc(var(--control-inline-padding) * -1) !important;
     width: calc(100% + (var(--control-inline-padding) * 2)) !important;
@@ -16125,7 +16189,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
   body:has(.page-shell[data-active-view="history"]) .page-topbar-actions {
     position: relative !important;
     z-index: 10 !important;
-    background: var(--panel-3) !important;
+    background: var(--brand-menu) !important;
     margin-inline: calc(var(--control-inline-padding) * -1) !important;
     width: calc(100% + (var(--control-inline-padding) * 2)) !important;
     max-width: calc(100% + (var(--control-inline-padding) * 2)) !important;
@@ -16691,8 +16755,16 @@ body:has(#explorerPanel > .modal-backdrop-image) .page-shell {
 }
 
 body:has(#explorerPanel > .modal-backdrop-image) .page-topbar {
-  background: var(--panel-3) !important;
+  background: var(--brand-menu) !important;
   border-bottom-color: color-mix(in srgb, var(--line), transparent 35%);
+}
+
+/* Media pages: the navbar (and its stacked title and controls rows on phones)
+   uses the left menu's colour. */
+body.media-detail-active .page-topbar,
+body.media-detail-active .page-topbar-title,
+body.media-detail-active .page-topbar-actions {
+  background: var(--brand-menu) !important;
 }
 
 body:has(#explorerPanel > .modal-backdrop-image) #explorerPanel > .modal-backdrop-image {
@@ -18615,13 +18687,6 @@ html.light-mode .history-mini-card-title {
 
 .seasons-section.season-accordions {
   scroll-margin-top: calc(var(--right-topbar-height) + 12px);
-  /* Outline colour of the open season's card and episode box (matches the card's own open border). */
-  --season-open-line: color-mix(in srgb, var(--text), transparent 24%);
-  /* Background of the open season's card and episode box where the curved join
-     meets them (the episode box's background at the card's bottom edge). */
-  --season-open-fill: color-mix(in srgb, var(--panel-2), transparent 92%);
-  /* Corner radius of the season cards; the row poster takes it on its left corners. */
-  --season-card-radius: 6px;
 }
 
 /* Season poster thumbnail at the start of each season row (media-detail-show.js). */
@@ -18982,8 +19047,6 @@ html.light-mode .history-mini-card-title {
   min-height: 0;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--panel-2), transparent 48%);
   padding: 0;
   box-shadow: none;
   cursor: pointer;
@@ -18994,8 +19057,6 @@ html.light-mode .history-mini-card-title {
 }
 
 .media-detail-page .season-accordion-panel .immersive-episode-row:hover {
-  border-color: color-mix(in srgb, var(--line-strong), transparent 10%);
-  background: color-mix(in srgb, var(--panel-3), transparent 38%);
   box-shadow: none;
 }
 
@@ -20033,7 +20094,7 @@ details[open] > .tool-section-summary::before {
   letter-spacing: 0.05em;
 }
 
-/* Card text weights match Modern's (styles-modern.css) on the same cards. */
+/* Card text weights on the dashboard, History and library cards. */
 :is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .meta-label {
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -20143,6 +20204,8 @@ html.light-mode {
   --panel: #ffffff;    /* Pure white - crisp cards and containers */
   --panel-2: #f8fafc;  /* Slate 50 - light surface for internal elements */
   --panel-3: #f1f5f9;  /* Slate 100 - cool grey sidebar background */
+  --brand-menu: #f1f5f9;
+  --brand-main: #fbfbfb;
   --line: #e2e8f0;     /* Slate 200 - clean and subtle border */
   --line-strong: #cbd5e1; /* Slate 300 - more visible border */
   --skeleton-base: #e2e8f0;   /* Slate 200 - placeholder tile while artwork loads */
@@ -20268,7 +20331,7 @@ html.light-mode .sidebar-appearance-list-item input:focus-visible {
 }
 
 html.light-mode .page-topbar {
-  background: var(--panel-3);
+  background: var(--brand-menu);
   border-bottom: 1px solid var(--line);
 }
 
@@ -20319,15 +20382,29 @@ html.light-mode .field:focus {
   outline: none;
 }
 
+/* The left menu search is an underlined field in both themes, not a boxed input. */
+html.light-mode .global-search input,
+html.light-mode .global-search input:focus {
+  border: 0;
+  border-bottom: 1px solid #cbd5e1;
+  background: transparent;
+  box-shadow: none;
+}
+
+html.light-mode .global-search input:focus {
+  border-bottom-color: #e5a00d;
+}
+
 html.light-mode .button-primary {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.35);
-  color: #2563eb;
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--muted);
 }
 
 html.light-mode .button-primary:hover {
-  background: rgba(37, 99, 235, 0.15);
+  background: transparent;
   border-color: rgba(37, 99, 235, 0.55);
+  color: #2563eb;
 }
 
 html.light-mode .button-ghost {
@@ -20358,15 +20435,15 @@ html.light-mode .up-next-sync-button:disabled:hover {
 }
 
 html.light-mode .button-danger {
-  border: 1px solid rgba(220, 38, 38, 0.35);
-  background: rgba(220, 38, 38, 0.08);
+  border: 1px solid var(--line-strong);
+  background: transparent;
   color: #dc2626;
   box-shadow: none;
 }
 
 html.light-mode .button-danger:hover:not(:disabled) {
   border-color: rgba(220, 38, 38, 0.6);
-  background: rgba(220, 38, 38, 0.16);
+  background: transparent;
   color: #b91c1c;
   box-shadow: none;
 }
@@ -20611,11 +20688,6 @@ html.light-mode .season-accordion.is-open {
   border-color: var(--line-strong);
 }
 
-/* The open card's episode box and join use the light open border too. */
-html.light-mode .seasons-section.season-accordions {
-  --season-open-line: var(--line-strong);
-}
-
 html.light-mode .season-accordion-trigger:hover {
   background: var(--panel);
 }
@@ -20710,31 +20782,11 @@ html.light-mode .theme-toggle-label--dark {
   color: var(--muted);
 }
 
-/* Theme style toggle: same pill, Classic on the left, Modern on the right.
-   Driven by html[data-style], independent of light/dark. */
-.theme-style-toggle .theme-toggle-thumb {
-  transform: translateX(0);
-}
-
-html[data-style="modern"] .theme-style-toggle .theme-toggle-thumb {
-  transform: translateX(100%);
-}
-
-.theme-toggle-label--classic,
-html[data-style="modern"] .theme-toggle-label--modern {
-  color: var(--text);
-}
-
-.theme-toggle-label--modern,
-html[data-style="modern"] .theme-toggle-label--classic {
-  color: var(--muted);
-}
-
-/* Appearance panel theme switchers: each option is a row styled like the
+/* Appearance panel theme switcher: each option is a row styled like the
    .sidebar-appearance-list-item rows above; the current option is highlighted. */
 .sidebar-appearance-theme {
   display: grid;
-  gap: 0.08rem;
+  gap: 0;
 }
 
 .sidebar-appearance-theme-group {
@@ -20773,29 +20825,19 @@ html[data-style="modern"] .theme-toggle-label--classic {
   display: none;
 }
 
-.sidebar-appearance-theme-title {
-  padding: 0.5rem 0.75rem 0.1rem 1.35rem;
-  color: #b8b8b8;
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-html.light-mode .sidebar-appearance-theme-title {
-  color: var(--muted);
-}
-
 .sidebar-appearance-theme .theme-toggle-label {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  min-height: 1.15rem;
-  padding: 0.15rem 0.6rem;
+  gap: 0.55rem;
+  min-height: 2rem;
+  padding: 0.4rem 0.65rem 0.4rem 1.4rem;
   border-left: 3px solid transparent;
   background: transparent;
   color: #c8c8c8;
   font-family: inherit;
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
@@ -20808,12 +20850,16 @@ html.light-mode .sidebar-appearance-theme-title {
 }
 
 html:not(.light-mode) .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--dark,
-html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light,
-html[data-style="modern"] .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--modern,
-html:not([data-style="modern"]) .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--classic {
+html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light {
   border-left-color: #e5a00d;
   background: rgba(229, 160, 13, 0.12);
   color: #e5a00d;
+}
+
+html:not(.light-mode) .sidebar-appearance-theme .theme-toggle-label--dark svg,
+html.light-mode .sidebar-appearance-theme .theme-toggle-label--light svg,
+.sidebar-appearance-text-size[open] > summary svg {
+  opacity: 1;
 }
 
 html.light-mode .sidebar-appearance-theme .theme-toggle-label {
@@ -20826,9 +20872,7 @@ html.light-mode .sidebar-appearance-theme .theme-toggle-button:hover .theme-togg
   color: var(--blue);
 }
 
-html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light,
-html.light-mode:not([data-style="modern"]) .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--classic,
-html.light-mode[data-style="modern"] .sidebar-appearance-theme #themeStyleButton .theme-toggle-label--modern {
+html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light {
   border-left-color: var(--blue);
   background: rgba(37, 99, 235, 0.08);
   color: var(--blue);
@@ -20854,10 +20898,10 @@ html.light-mode[data-style="modern"] .sidebar-appearance-theme #themeStyleButton
     position: sticky;
     bottom: 0;
     z-index: 2;
-    /* Matches .topnav's dark-mode background (#202428) so scrolling nav items
+    /* Matches .topnav's dark-mode background (#1f242c) so scrolling nav items
        don't show through behind the pinned footer. Light mode overrides this
        via `html.light-mode .sidebar-footer`. */
-    background: #202428;
+    background: #1f242c;
   }
 }
 
@@ -20875,14 +20919,14 @@ html.light-mode .cast-character-name {
 }
 
 html.light-mode .action-pill {
-  background: rgba(37, 99, 235, 0.08);
-  border-color: rgba(37, 99, 235, 0.35);
-  color: #2563eb;
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  background: transparent;
+  border-color: var(--line-strong);
+  color: var(--muted);
+  box-shadow: none;
 }
 
 html.light-mode .action-pill:hover {
-  background: rgba(37, 99, 235, 0.15);
+  background: transparent;
   border-color: rgba(37, 99, 235, 0.55);
   color: #2563eb;
 }
@@ -20895,23 +20939,23 @@ html.light-mode .action-pill-ghost {
 }
 
 html.light-mode .action-pill-ghost:hover {
-  background: rgba(220, 38, 38, 0.08);
+  background: transparent;
   border-color: rgba(220, 38, 38, 0.35);
   color: var(--red);
 }
 
 html.light-mode .action-pill-danger {
-  background: rgba(220, 38, 38, 0.08);
-  border-color: rgba(220, 38, 38, 0.25);
+  background: transparent;
+  border-color: var(--line-strong);
   color: var(--red);
-  box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.05);
+  box-shadow: none;
 }
 
 html.light-mode .action-pill-danger:hover {
-  background: var(--red);
-  border-color: var(--red);
-  color: #ffffff;
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+  background: transparent;
+  border-color: rgba(220, 38, 38, 0.45);
+  color: var(--red);
+  box-shadow: none;
 }
 
 html.light-mode .seerr-request-btn {
@@ -23718,7 +23762,6 @@ html.light-mode .settings-segmented-control .sidebar-segmented-btn:hover {
   border-radius: 8px;
   padding: 0.5rem 0.85rem !important;
   font-size: 0.9rem !important;
-  background: rgba(7, 10, 15, 0.6) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -23744,9 +23787,9 @@ html.light-mode .settings-segmented-control .sidebar-segmented-btn:hover {
 }
 
 .settings-pane .button-primary {
-  border: 1px solid color-mix(in srgb, var(--blue), transparent 60%) !important;
-  background: color-mix(in srgb, var(--blue), transparent 88%) !important;
-  color: var(--blue) !important;
+  border: 1px solid var(--line-strong) !important;
+  background: transparent !important;
+  color: var(--muted) !important;
 }
 
 .backup-settings-inline .field {
@@ -23756,7 +23799,7 @@ html.light-mode .settings-segmented-control .sidebar-segmented-btn:hover {
 
 .settings-pane .button-primary:hover:not(:disabled) {
   border-color: color-mix(in srgb, var(--blue), transparent 40%) !important;
-  background: color-mix(in srgb, var(--blue), transparent 80%) !important;
+  background: transparent !important;
   color: var(--blue) !important;
   transform: none !important;
 }
@@ -23776,14 +23819,14 @@ html.light-mode .settings-segmented-control .sidebar-segmented-btn:hover {
 }
 
 .settings-pane .button-danger {
-  border: 1px solid rgba(244, 63, 94, 0.45) !important;
-  background: rgba(244, 63, 94, 0.12) !important;
+  border: 1px solid var(--line-strong) !important;
+  background: transparent !important;
   color: #fda4af !important;
 }
 
 .settings-pane .button-danger:hover:not(:disabled) {
   border-color: rgba(244, 63, 94, 0.7) !important;
-  background: rgba(244, 63, 94, 0.22) !important;
+  background: transparent !important;
   color: #fff1f2 !important;
   transform: none !important;
 }
@@ -24146,7 +24189,6 @@ html.light-mode .settings-row-help .settings-card {
 }
 
 html.light-mode .settings-pane .field {
-  background: #ffffff !important;
   border: 1px solid rgba(0, 0, 0, 0.12) !important;
   color: #0f172a !important;
 }
@@ -24180,15 +24222,15 @@ html.light-mode .settings-pane .button-ghost:hover:not(:disabled) {
 }
 
 html.light-mode .settings-pane .button-primary {
-  border: 1px solid rgba(37, 99, 235, 0.35) !important;
-  background: rgba(37, 99, 235, 0.08) !important;
-  color: #2563eb !important;
+  border: 1px solid var(--line-strong) !important;
+  background: transparent !important;
+  color: var(--muted) !important;
   box-shadow: none !important;
 }
 
 html.light-mode .settings-pane .button-primary:hover:not(:disabled) {
   border-color: rgba(37, 99, 235, 0.55) !important;
-  background: rgba(37, 99, 235, 0.15) !important;
+  background: transparent !important;
   color: #2563eb !important;
   box-shadow: none !important;
   transform: none !important;
@@ -24196,8 +24238,8 @@ html.light-mode .settings-pane .button-primary:hover:not(:disabled) {
 
 html.light-mode .settings-pane .button-danger,
 html.light-mode .settings-pane .sync-tools-content .sync-tools-cancel-button {
-  border: 1px solid rgba(220, 38, 38, 0.35) !important;
-  background: rgba(220, 38, 38, 0.08) !important;
+  border: 1px solid var(--line-strong) !important;
+  background: transparent !important;
   color: #dc2626 !important;
   box-shadow: none !important;
 }
@@ -24205,7 +24247,7 @@ html.light-mode .settings-pane .sync-tools-content .sync-tools-cancel-button {
 html.light-mode .settings-pane .button-danger:hover:not(:disabled),
 html.light-mode .settings-pane .sync-tools-content .sync-tools-cancel-button:hover:not(:disabled) {
   border-color: rgba(220, 38, 38, 0.6) !important;
-  background: rgba(220, 38, 38, 0.16) !important;
+  background: transparent !important;
   color: #b91c1c !important;
   box-shadow: none !important;
   transform: none !important;
@@ -24265,7 +24307,6 @@ html.light-mode .cache-gauge-card {
 .settings-pane .drop-zone {
   min-height: 10rem;
   border: 1px dashed rgba(255, 255, 255, 0.15) !important;
-  background: rgba(255, 255, 255, 0.01) !important;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
@@ -24277,18 +24318,15 @@ html.light-mode .cache-gauge-card {
 
 .settings-pane .drop-zone:hover {
   border-color: var(--blue) !important;
-  background: color-mix(in srgb, var(--blue), transparent 97%) !important;
   box-shadow: 0 0 15px color-mix(in srgb, var(--blue), transparent 95%);
 }
 
 html.light-mode .settings-pane .drop-zone {
   border-color: rgba(0, 0, 0, 0.12) !important;
-  background: rgba(0, 0, 0, 0.01) !important;
 }
 
 html.light-mode .settings-pane .drop-zone:hover {
   border-color: var(--blue) !important;
-  background: rgba(59, 130, 246, 0.01) !important;
 }
 
 .mobile-controls-row {
@@ -25246,6 +25284,13 @@ details.sync-match-report > summary {
   transform: translateY(-2px);
 }
 
+/* Settings landing cards use the sidebar surface in both dark themes. */
+html:not(.light-mode):root .settings-group-section,
+html:not(.light-mode):root .settings-group-section:hover,
+html:not(.light-mode):root .settings-group-section:focus-visible {
+  background: #1f242c;
+}
+
 html.light-mode .settings-group-section {
   background: var(--panel-2);
 }
@@ -25366,6 +25411,10 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-footer-bar-meta { display: flex; align-items: center; justify-content: center; gap: var(--space-3); }
 .setup-footer-bar-meta:empty { display: none; }
 .setup-footer-bar .theme-toggle-button { width: 8rem; margin-bottom: 0; }
+/* Onboarding's footer toggle shows only the Light and Dark words, no icons. */
+#setupFooterBar .theme-toggle-label svg,
+#authFooterBar .theme-toggle-label svg { display: none; }
+#authFooterBar .setup-footer-bar-card { background: var(--brand-menu); }
 .setup-footer-bar .app-version { white-space: nowrap; }
 .setup-footer-bar .app-version:disabled { cursor: default; }
 .setup-footer-bar .app-version:disabled:hover { color: var(--muted); text-decoration: none; }
@@ -26620,26 +26669,13 @@ html.light-mode .settings-help-body code {
 .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card) {
   gap: 0 !important;
   border: 1px solid var(--line) !important;
-  border-radius: var(--radius) !important;
-  background: color-mix(in srgb, #1a1a1a, white 10%) !important;
   padding: 0 !important;
   overflow: hidden !important;
-  transition: border-color 160ms ease, background 160ms ease;
 }
 
 .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):hover,
 .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):focus-within {
   border-color: var(--blue) !important;
-  background: color-mix(in srgb, #1a1a1a, white 16%) !important;
-}
-
-html.light-mode .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card) {
-  background: var(--panel) !important;
-}
-
-html.light-mode .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):hover,
-html.light-mode .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):focus-within {
-  background: var(--panel-2) !important;
 }
 
 .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary {
@@ -26736,12 +26772,7 @@ html.light-mode .settings-pane .settings-row-main :is(details.sync-tool-details,
   overflow: hidden;
   border: 1px solid var(--line-strong) !important;
   border-radius: var(--radius) !important;
-  background: #202428 !important;
   box-shadow: none !important;
-}
-
-html.light-mode .settings-pane .settings-row-main > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) {
-  background: var(--panel-2) !important;
 }
 
 .settings-pane .settings-row-main > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) > .section-heading {
@@ -26897,12 +26928,7 @@ html.light-mode #restore-remote {
   justify-content: flex-start !important;
   border: 1px solid var(--line-strong) !important;
   border-radius: var(--radius) !important;
-  background: #202428 !important;
   box-shadow: none !important;
-}
-
-html.light-mode .settings-pane .settings-row-help > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) {
-  background: var(--panel-2) !important;
 }
 
 .settings-pane .settings-row-help > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) > .section-heading {
@@ -27050,7 +27076,6 @@ html.light-mode .settings-pane .settings-row-help > :is(.settings-card, .sync-pa
   padding: var(--space-3) !important;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius) !important;
-  background: color-mix(in srgb, #1a1a1a, white 10%) !important;
   transition: border-color 160ms ease, background 160ms ease !important;
 }
 
@@ -27059,19 +27084,6 @@ html.light-mode .settings-pane .settings-row-help > :is(.settings-card, .sync-pa
 .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:hover,
 .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:focus-within {
   border-color: var(--blue) !important;
-  background: color-mix(in srgb, #1a1a1a, white 16%) !important;
-}
-
-html.light-mode .settings-pane #adminCredentialsForm > .field-label,
-html.light-mode .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label {
-  background: var(--panel) !important;
-}
-
-html.light-mode .settings-pane #adminCredentialsForm > .field-label:hover,
-html.light-mode .settings-pane #adminCredentialsForm > .field-label:focus-within,
-html.light-mode .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:hover,
-html.light-mode .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:focus-within {
-  background: var(--panel-2) !important;
 }
 
 .settings-pane #adminCredentialsForm .admin-credentials-grid {
@@ -27111,9 +27123,6 @@ html.light-mode .settings-pane #adminCredentialsForm .admin-credentials-grid > .
   padding: var(--space-3) !important;
   border: 1px solid var(--line) !important;
   border-radius: var(--radius) !important;
-  /* Nested inside a #1a1a1a settings card - needs to read as a lighter box,
-     not the near-black panel-2/panel-3 tokens. */
-  background: color-mix(in srgb, #1a1a1a, white 10%) !important;
   transition: border-color 160ms ease, background 160ms ease !important;
   transform: none !important;
 }
@@ -27121,17 +27130,7 @@ html.light-mode .settings-pane #adminCredentialsForm .admin-credentials-grid > .
 .settings-pane .settings-card-grid .service-card:hover,
 .settings-pane .settings-card-grid .service-card:focus-visible {
   border-color: var(--blue) !important;
-  background: color-mix(in srgb, #1a1a1a, white 16%) !important;
   transform: none !important;
-}
-
-html.light-mode .settings-pane .settings-card-grid .service-card {
-  background: var(--panel) !important;
-}
-
-html.light-mode .settings-pane .settings-card-grid .service-card:hover,
-html.light-mode .settings-pane .settings-card-grid .service-card:focus-visible {
-  background: color-mix(in srgb, var(--panel), black 4%) !important;
 }
 
 .settings-pane .settings-card-grid .service-card b {
@@ -30421,7 +30420,13 @@ html.light-mode .manual-watch-review-season {
 .settings-pane .about-page-card {
   padding: 0 !important;
   overflow: hidden;
-  background: #202428 !important;
+}
+
+/* The centred About card uses the left menu's colour in both themes. The About
+   page is its own view (#about-view), not a Settings route, so the card is not
+   under #settings-view and the shared Settings depth rules do not reach it. */
+#about-view .about-page-card {
+  background: var(--brand-menu) !important;
 }
 
 .settings-pane .about-page-card > .about-page-inner {
@@ -30672,6 +30677,12 @@ html.light-mode .manual-watch-review-season {
   border-top: 0;
 }
 
+html.light-mode .about-fact,
+html.light-mode .about-capability-group,
+html.light-mode .about-integration-row {
+  background: var(--panel-2);
+}
+
 .about-integration-name {
   display: grid;
   gap: 0.2rem;
@@ -30857,16 +30868,6 @@ html.light-mode .manual-watch-review-season {
 
 .about-release-head > button {
   flex: 0 0 auto;
-}
-
-html.light-mode .settings-pane .about-page-card {
-  background: var(--panel-2) !important;
-}
-
-html.light-mode .about-fact,
-html.light-mode .about-capability-group,
-html.light-mode .about-integration-row {
-  background: var(--panel-2);
 }
 
 @media (max-width: 980px) {
@@ -32674,4 +32675,1397 @@ body #statsTopbarControls .stats-filter-field .field {
 .history-poster-overlay .source-badge-icon-set .source-badge-icon {
   width: 100%;
   height: 100%;
+}
+
+/* Settings surfaces use two brand tones only. The settings canvas is the main
+   background; each nested surface level (section, box, input, control) flips
+   between the left-menu and main-background tones. Every rule repeats the same
+   surface list; the #settings-view id keeps these above per-section rules. */
+
+#settings-view {
+  background: var(--brand-main);
+}
+
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+  background: var(--brand-main) !important;
+  background-image: none !important;
+}
+
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+  background: var(--brand-main) !important;
+  background-image: none !important;
+}
+
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+
+/* ==========================================================================
+   Modern look (merged from styles-modern.css; plan/archive/modern-only).
+   These rules override the base rules above. Each keeps the html:root prefix
+   so it has the same specificity it was written with (html:root matches the
+   same as the old html[data-style="modern"]); dark rules use
+   html:root:not(.light-mode) and light rules html:root.light-mode.
+   ========================================================================== */
+
+/* Dark: dashboard cards --------------------------------------------------- */
+/* The History page's cards mode uses the same card markup and styles. */
+
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card,
+html:root:not(.light-mode) #history-view .history-list .history-page-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.82) 0%, rgba(15, 19, 25, 0.82) 100%);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card:hover,
+html:root:not(.light-mode) #history-view .history-list .history-page-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(38, 46, 57, 0.9) 0%, rgba(18, 23, 30, 0.9) 100%);
+  /* Kept within the card row's ~8.8px bottom padding, which clips overflow. */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+  /* A 1px border fades on the rounded corners; an outline drawn over it keeps
+     the corners as bright as the straight edges. */
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* The card clips its own corners; square poster corners avoid a sliver of card
+   surface showing between the 8px poster radius and the 10px card radius. */
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card > .history-card-poster-wrapper,
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card > .history-card-poster-wrapper .history-card-poster-link,
+html:root:not(.light-mode) #history-view .history-list .history-page-card > .history-card-poster-wrapper,
+html:root:not(.light-mode) #history-view .history-list .history-page-card > .history-card-poster-wrapper .history-card-poster-link {
+  border-radius: 0;
+}
+
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card:hover .history-card-poster-wrapper,
+html:root:not(.light-mode) #history-view .history-list .history-page-card:hover .history-card-poster-wrapper {
+  transform: none;
+}
+
+/* Field labels recede so the values stand out. */
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card .meta-label,
+html:root:not(.light-mode) #history-view .history-list .history-page-card .meta-label {
+  color: rgba(148, 163, 184, 0.72);
+  font-size: var(--fs-card-label);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card .history-card-meta-row .meta-value,
+html:root:not(.light-mode) #history-view .history-list .history-page-card .history-card-meta-row .meta-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card .history-card-episode,
+html:root:not(.light-mode) #history-view .history-list .history-page-card .history-card-episode {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* "Watched Twice" / "Watched N Times" as a small blue pill. */
+html:root:not(.light-mode) #timeline-view .history-card-meta-row .meta-value.history-card-watch-count {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 0.08rem 0.5rem;
+  color: #7dd3fc;
+  font-size: var(--fs-card-watch-count);
+  font-weight: 700;
+}
+
+/* Dark: provider badges in each provider's colour (no pill background) ---- */
+
+html:root .source-plex,
+html:root .media-app-link--plex {
+  --modern-provider: #e5a00d;
+}
+
+html:root .source-emby,
+html:root .media-app-link--emby {
+  --modern-provider: #52b54b;
+}
+
+html:root .source-jellyfin,
+html:root .media-app-link--jellyfin {
+  --modern-provider: #aa5cc3;
+}
+
+html:root .source-plembfin,
+html:root .media-app-link--plembfin {
+  --modern-provider: #38bdf8;
+}
+
+/* App Used badges only: the Watch Now app links keep the plain text colour. */
+html:root:not(.light-mode) #timeline-view .source-badge:not([class*="media-app-link--"]),
+html:root:not(.light-mode) #history-view .history-list .source-badge,
+html:root:not(.light-mode) #explorerPanel .explorer-history-card .source-badge:not([class*="media-app-link--"]) {
+  color: color-mix(in srgb, var(--modern-provider, var(--soft)), #ffffff 35%);
+}
+
+/* Keep provider branding on the icon while the app name stays neutral. */
+html:root :is(#timeline-view, #history-view, #explorerPanel) .source-badge:not([class*="media-app-link--"]) > span:last-child {
+  color: var(--soft);
+}
+
+html:root .page-shell #explorerPanel .explorer-history-card .history-card-apps .source-badge > span:last-child {
+  color: var(--soft);
+}
+
+html:root:not(.light-mode) #timeline-view .source-badge--link:hover,
+html:root:not(.light-mode) #timeline-view .source-badge--link:focus-visible,
+html:root:not(.light-mode) #history-view .history-list .source-badge--link:hover,
+html:root:not(.light-mode) #history-view .history-list .source-badge--link:focus-visible,
+html:root:not(.light-mode) #timeline-view .part-watched-app-badge:hover {
+  color: #ffffff;
+}
+
+/* Collapsed runs (modules/dashboard-modern.js): the count pill, the expand
+   affordance and the expanded edge. */
+.dashboard-collapsed-run-card {
+  cursor: pointer;
+}
+
+.dashboard-run-count {
+  display: inline-flex;
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--accent), transparent 55%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent), transparent 86%);
+  padding: 0.05rem 0.5rem;
+  color: var(--accent);
+  font-size: var(--fs-badge);
+  font-weight: 700;
+}
+
+/* An expanded run: its cards share an accent top edge. */
+#timeline-view .dashboard-run-expanded,
+#history-view .dashboard-run-expanded {
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--accent), transparent 35%);
+}
+
+/* Backdrop artwork (modules/dashboard-modern.js). Each [data-art] key gets
+   --modern-art and --modern-art-shade from an injected stylesheet once its
+   backdrop resolves; until then (or without one) the surface shows as is. */
+html:root #nowPlayingGrid .live-now-card,
+html:root #timeline-view .dashboard-history-page-card {
+  position: relative;
+  isolation: isolate;
+}
+
+html:root #nowPlayingGrid .live-now-card::before,
+html:root #timeline-view .dashboard-history-page-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--modern-art, none) center 30% / cover no-repeat;
+  pointer-events: none;
+}
+
+html:root #nowPlayingGrid .live-now-card::after,
+html:root #timeline-view .dashboard-history-page-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: var(--modern-art-shade, 0);
+  background: linear-gradient(90deg, rgba(10, 13, 18, 0.97) 0%, rgba(10, 13, 18, 0.82) 32%, rgba(10, 13, 18, 0.2) 75%);
+  pointer-events: none;
+}
+
+/* The small cards' text runs the full width, so the shade stays heavy. */
+html:root:not(.light-mode) #timeline-view .dashboard-history-page-card::after {
+  background: linear-gradient(90deg, rgba(12, 16, 22, 0.94) 0%, rgba(12, 16, 22, 0.84) 55%, rgba(12, 16, 22, 0.66) 100%);
+}
+
+/* The featured Up Next card spans the Now Playing panel, so its shade fades
+   out to the right and the backdrop shows across the extra width. */
+html:root:not(.light-mode) #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card::after {
+  background: linear-gradient(90deg, rgba(12, 16, 22, 0.94) 0%, rgba(12, 16, 22, 0.84) 30%, rgba(12, 16, 22, 0.25) 75%);
+}
+
+html:root.light-mode #nowPlayingGrid .live-now-card::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.97) 0%, rgba(255, 255, 255, 0.86) 32%, rgba(255, 255, 255, 0.3) 75%);
+}
+
+/* Light: the same backdrops under a white shade, so the dark text reads. */
+html:root.light-mode #timeline-view .dashboard-history-page-card::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 55%, rgba(255, 255, 255, 0.7) 100%);
+}
+
+html:root.light-mode #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 30%, rgba(255, 255, 255, 0.3) 75%);
+}
+
+/* Card Art off (Appearance menu): no card shows a backdrop, even one already
+   loaded or loaded for the page backdrop. */
+html[data-card-art="off"] [data-art] {
+  --modern-art: none;
+  --modern-art-shade: 0;
+}
+
+/* Background Art off (Appearance menu): details pages drop their backdrop.
+   A hidden element's background image is not downloaded. The Dashboard
+   backdrop is never set while it is off (modules/dashboard-modern.js). */
+html[data-background-art="off"] .modal-backdrop-image {
+  display: none;
+}
+
+/* The dashboard's main area shows the backdrop of the top item (the featured
+   Up Next card, or the first live session) under a shade of the page colour,
+   fading to plain background further down. It stays put while the page
+   scrolls, since .page-shell is the scroller. */
+html:root .page-shell[data-active-view="dashboard"][data-page-art] {
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--bg), transparent 22%) 0%, color-mix(in srgb, var(--bg), transparent 10%) 55%, var(--bg) 100%),
+    var(--modern-page-art, none) center top / cover no-repeat,
+    var(--bg);
+}
+
+/* The dashboard sections keep their glass tint but not its blur, so the page
+   backdrop stays sharp behind every row. */
+html:root #timeline-view .glass-panel {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* Now Playing (modules/dashboard-modern.js). While idle, the panel holds copies of the first two Up Next cards, side by side and
+   stretched to share the panel width; the heading then reads "Up Next" and
+   the rail's own title is hidden. During playback it reads "Now Playing" and
+   the rail's title returns. Below: that layout, the chrome-less panel, the
+   live sessions' backdrop layout, and a backdrop spanning each featured card. */
+html:root #timeline-view .live-panel {
+  /* The glass tint stays, so the page backdrop reads the same behind this
+     panel as behind the other sections. */
+  border-color: transparent;
+  box-shadow: none;
+  /* Without the panel chrome the feature would sit against the top edge. */
+  padding: 0.75rem 0 0;
+}
+
+#timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) #upNextDashboardSection .up-next-heading-copy > h2 {
+  display: none;
+}
+
+html:root #nowPlayingGrid {
+  gap: 0.75rem;
+  padding: 0;
+}
+
+#nowPlayingGrid > .idle-state:has(~ .modern-idle-feature) {
+  display: none;
+}
+
+/* dashboard-modern.js marks each rail card it copies into the panel, so the
+   rail does not show it twice. */
+#timeline-view #upNextPanel > [data-up-next-card-id][data-featured-in-panel] {
+  display: none;
+}
+
+/* Up Next cards (in the rail and featured in the panel) show the episode title
+   in the normal text colour, not the accent. Two ids outrank the accent rules. */
+html :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] .history-card-episode,
+html #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] .history-card-episode {
+  color: var(--text);
+}
+
+/* Options popup opened by the cog beside the Now Playing heading
+   (modules/now-playing-options.js). */
+#timeline-view .live-panel {
+  position: relative;
+}
+
+.now-playing-options-menu {
+  position: absolute;
+  top: 2.4rem;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  gap: 0.75rem;
+  width: min(22rem, 100%);
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.now-playing-options-menu.hidden {
+  display: none;
+}
+
+.now-playing-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: var(--fs-option);
+  cursor: pointer;
+}
+
+.now-playing-option-count {
+  justify-content: space-between;
+}
+
+.now-playing-option-count input {
+  width: 4.5rem;
+}
+
+.now-playing-option-error {
+  margin: 0;
+  color: var(--danger, #f87171);
+  font-size: var(--fs-option-error);
+}
+
+.now-playing-option-error.hidden {
+  display: none;
+}
+
+/* The row wrapper normally adds breathing room around its cards. The featured
+   copies share a row with live cards, so remove that inset and let their card
+   edges align to the same full-height grid bounds. */
+#timeline-view #nowPlayingGrid .modern-idle-feature {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+}
+
+#timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 100%;
+}
+
+/* Only the card stretches: its text column keeps to the width of its text,
+   so the progress bar and Clear end where the text does. */
+#timeline-view #nowPlayingGrid .modern-idle-feature .history-card-details {
+  flex: 0 1 auto;
+  width: auto;
+  max-width: 24rem;
+}
+
+html:root #nowPlayingGrid .live-now-card {
+  display: flex;
+  flex: 1 1 0;
+  align-items: stretch;
+  gap: 1rem;
+  width: auto;
+  min-width: min(24rem, 100%);
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel-2);
+  /* The poster meets the top, left and bottom edges, like the other cards;
+     only the text side is inset. */
+  padding: 0 1rem 0 0;
+}
+
+html:root #nowPlayingGrid .live-now-card:hover {
+  border-color: color-mix(in srgb, var(--accent), transparent 40%);
+}
+
+html:root #nowPlayingGrid .live-now-card .now-poster-large-wrapper {
+  display: block;
+  flex: 0 0 auto;
+  width: auto;
+  height: 100%;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 0;
+}
+
+html:root #nowPlayingGrid .live-now-card .now-poster-large-wrapper :is(img, .poster-fallback) {
+  border-radius: 0;
+}
+
+html:root #nowPlayingGrid .live-now-card .now-card-details {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  /* Live, title and episode anchor to the top; the details and progress bar
+     sit at the bottom (the meta block's auto top margin). */
+  justify-content: flex-start;
+  gap: 0.3rem;
+  min-width: 0;
+  height: 100%;
+  /* The same 0.65rem the Up Next card's text column has, top and bottom; the
+     card's own padding and gap inset the sides. */
+  padding: 0.65rem 0;
+  overflow: hidden;
+}
+
+html:root #nowPlayingGrid .live-now-card .stream-indicator {
+  color: var(--accent);
+  font-size: var(--fs-badge);
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+html:root #nowPlayingGrid .live-now-card .stream-indicator.is-paused {
+  color: var(--muted);
+}
+
+html:root #nowPlayingGrid .live-now-card .now-card-title {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-now-title);
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html:root #nowPlayingGrid .live-now-card .now-card-episode {
+  overflow: hidden;
+  color: var(--text);
+  font-size: var(--fs-now-episode);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html:root #nowPlayingGrid .live-now-card .now-card-meta {
+  display: flex;
+  /* One detail per line: User, Device, App Used. */
+  flex-flow: column nowrap;
+  margin-top: auto;
+  gap: 0.15rem;
+  color: var(--muted);
+  font-size: var(--fs-now-meta);
+}
+
+html:root #nowPlayingGrid .live-now-card .now-card-progress-container {
+  width: min(18rem, 100%);
+  margin-top: 0.2rem;
+}
+
+html:root #nowPlayingGrid .live-now-card .now-card-progress-bar {
+  height: 4px;
+}
+
+@media (max-width: 760px) {
+  html:root #nowPlayingGrid .live-now-card {
+    height: auto;
+    min-height: 10.5rem;
+    min-width: min(22rem, 88vw);
+  }
+
+  html:root #nowPlayingGrid .live-now-card .now-poster-large-wrapper {
+    width: 6.5rem;
+    height: auto;
+    aspect-ratio: auto;
+    align-self: stretch;
+  }
+
+  html:root #nowPlayingGrid .live-now-card .now-card-details {
+    padding: 0.75rem 0;
+  }
+}
+
+/* Up to 760px the features take the live cards' layout (6.5rem poster beside
+   the text). Without it, phones stack the rail cards poster-over-text, so a
+   full-width feature's poster fills the screen, and at 641-760px the poster
+   sizes from the card height and squeezes the text into a sliver. */
+@media (max-width: 760px) {
+  #timeline-view #nowPlayingGrid .modern-idle-feature {
+    height: auto;
+    min-width: min(18rem, 100%);
+  }
+
+  #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card {
+    flex-direction: row;
+    gap: 0;
+    padding: 0;
+  }
+
+  #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card > .history-card-poster-wrapper {
+    flex: 0 0 6.5rem;
+    width: 6.5rem;
+    height: auto;
+    aspect-ratio: auto;
+    align-self: stretch;
+  }
+
+  #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card > .history-card-poster-wrapper,
+#timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card > .history-card-poster-wrapper .history-card-poster-link {
+    border-radius: 0;
+  }
+
+  #timeline-view #nowPlayingGrid .modern-idle-feature .history-card-details {
+    flex: 1 1 auto;
+    max-width: none;
+    padding: 0.65rem 0.75rem;
+  }
+
+  /* The text now runs the full width, so the shade stays heavy like the
+     rail cards' instead of fading out to the right. */
+  html:root:not(.light-mode) #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card::after {
+    background: linear-gradient(90deg, rgba(12, 16, 22, 0.94) 0%, rgba(12, 16, 22, 0.84) 55%, rgba(12, 16, 22, 0.66) 100%);
+  }
+
+  html:root.light-mode #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card::after {
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 55%, rgba(255, 255, 255, 0.7) 100%);
+  }
+}
+
+/* Phones: two features no longer fit side by side, so each takes most of the
+   row like the live cards and the second peeks in from the right. */
+@media (max-width: 640px) {
+  #timeline-view #nowPlayingGrid .modern-idle-feature {
+    min-width: min(22rem, 88vw);
+  }
+}
+
+/* Dark: sidebar ------------------------------------------------------------ */
+
+html:root:not(.light-mode) .topnav .nav-tab {
+  border-radius: 0 8px 8px 0;
+}
+
+html:root:not(.light-mode) .topnav .nav-tab.active {
+  border-left-color: transparent;
+  background: linear-gradient(90deg, rgba(229, 160, 13, 0.24) 0%, rgba(229, 160, 13, 0.05) 100%);
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: #f5c451;
+}
+
+/* Light ------------------------------------------------------------------- */
+/* The dark rules above, redrawn on white. The accent is the light mode's own
+   (blue), as dark uses the dark accent: amber text on white would not
+   meet contrast. */
+
+/* The sections are solid white, bordered cards in light mode. Over the page
+   backdrop any white tint or border shows as a box, so they go clear and the
+   page shade alone keeps the headings readable. */
+html:root.light-mode .page-shell[data-page-art] #timeline-view .glass-panel {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card,
+html:root.light-mode #history-view .history-list .history-page-card {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* Keep the featured Up Next copies and the rail on one light-theme edge
+   treatment. Their backdrops can leave the standard white card shadow reading
+   as a bright outline against the dashboard artwork. */
+html:root.light-mode #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] {
+  border-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+html:root.light-mode #timeline-view #nowPlayingGrid .live-now-card {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+html:root.light-mode #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card:hover,
+html:root.light-mode #history-view .history-list .history-page-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #ffffff 0%, rgba(248, 250, 252, 0.96) 100%);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+  transform: translateY(-2px);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card > .history-card-poster-wrapper,
+html:root.light-mode #timeline-view .dashboard-history-page-card > .history-card-poster-wrapper .history-card-poster-link,
+html:root.light-mode #history-view .history-list .history-page-card > .history-card-poster-wrapper,
+html:root.light-mode #history-view .history-list .history-page-card > .history-card-poster-wrapper .history-card-poster-link {
+  border-radius: 0;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card:hover .history-card-poster-wrapper,
+html:root.light-mode #history-view .history-list .history-page-card:hover .history-card-poster-wrapper {
+  transform: none;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card .meta-label,
+html:root.light-mode #history-view .history-list .history-page-card .meta-label {
+  color: rgba(71, 85, 105, 0.8);
+  font-size: var(--fs-card-label);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card .history-card-meta-row .meta-value,
+html:root.light-mode #history-view .history-list .history-page-card .history-card-meta-row .meta-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+html:root.light-mode #timeline-view .dashboard-history-page-card .history-card-episode,
+html:root.light-mode #history-view .history-list .history-page-card .history-card-episode {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+html:root.light-mode #timeline-view .history-card-meta-row .meta-value.history-card-watch-count {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(2, 132, 199, 0.3);
+  border-radius: 999px;
+  background: rgba(14, 165, 233, 0.1);
+  padding: 0.08rem 0.5rem;
+  color: #0369a1;
+  font-size: var(--fs-card-watch-count);
+  font-weight: 700;
+}
+
+/* Provider colours darkened, where dark lightens them, so they read on white. */
+html:root.light-mode #timeline-view .source-badge:not([class*="media-app-link--"]),
+html:root.light-mode #history-view .history-list .source-badge,
+html:root.light-mode #explorerPanel .explorer-history-card .source-badge:not([class*="media-app-link--"]) {
+  color: color-mix(in srgb, var(--modern-provider, var(--soft)), #000000 28%);
+}
+
+html:root.light-mode :is(#timeline-view, #history-view, #explorerPanel) .source-badge:not([class*="media-app-link--"]) > span:last-child {
+  color: var(--soft);
+}
+
+html:root.light-mode .page-shell #explorerPanel .explorer-history-card .history-card-apps .source-badge > span:last-child {
+  color: var(--soft);
+}
+
+html:root.light-mode #timeline-view .source-badge--link:hover,
+html:root.light-mode #timeline-view .source-badge--link:focus-visible,
+html:root.light-mode #history-view .history-list .source-badge--link:hover,
+html:root.light-mode #history-view .history-list .source-badge--link:focus-visible,
+html:root.light-mode #timeline-view .part-watched-app-badge:hover {
+  color: var(--text);
+}
+
+html:root.light-mode .topnav .nav-tab {
+  border-radius: 0 8px 8px 0;
+}
+
+html:root.light-mode .topnav .nav-tab.active {
+  border-left-color: transparent;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.16) 0%, rgba(37, 99, 235, 0.03) 100%);
+  box-shadow: inset 3px 0 0 var(--accent);
+  color: #1d4ed8;
+}
+
+/* Collapsed runs carry an episode counter on the poster (.dashboard-run-badge,
+   modules/dashboard-modern.js), so a posters-only card still shows the size of
+   the run. A corner tab flush with the poster's top left, following its rounded corner,
+   in the accent of the full card's .dashboard-run-count. */
+.dashboard-collapsed-run-card > .history-card-poster-wrapper {
+  position: relative;
+}
+
+.dashboard-collapsed-run-card > .history-card-poster-wrapper > .dashboard-run-badge {
+  position: absolute;
+  inset: -1px auto auto -1px;
+  width: auto !important;
+  height: auto !important;
+  z-index: 2;
+  border: 1px solid color-mix(in srgb, var(--accent), transparent 35%);
+  border-width: 0 1px 1px 0;
+  border-radius: 10px 0 9px 0;
+  background: #0b0f14;
+  padding: 0.2rem 0.6rem 0.22rem 0.55rem;
+  color: #fff;
+  font-size: var(--fs-badge);
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+/* Discover and Personal Media cards (.shared-media-card, modules/media-card.js)
+   take the dashboard card look: the same surface, hover, square poster corners
+   (the card clips its own), receding labels, and the rating as a small pill.
+   Scoped to .page-shell so the Fix Match dialog's result cards are untouched. */
+html:root:not(.light-mode) .page-shell .shared-media-card {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.82) 0%, rgba(15, 19, 25, 0.82) 100%);
+  box-shadow: none;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+html:root:not(.light-mode) .page-shell .shared-media-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(38, 46, 57, 0.9) 0%, rgba(18, 23, 30, 0.9) 100%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root.light-mode .page-shell .shared-media-card {
+  border: 1px solid rgba(15, 23, 42, 0.09);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+html:root.light-mode .page-shell .shared-media-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #ffffff 0%, rgba(248, 250, 252, 0.96) 100%);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+  transform: translateY(-2px);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+/* Library overview and list modes use the same Modern surface language as
+   dashboard and Discover cards, while keeping the existing library layouts. */
+html:root:not(.light-mode) .page-shell :is(.explorer-overview-card, .explorer-list-view) {
+  border-color: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+html:root:not(.light-mode) .page-shell .explorer-overview-card {
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.94), rgba(15, 19, 25, 0.94));
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+html:root:not(.light-mode) .page-shell .explorer-overview-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #262e39, #12171e);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root.light-mode .page-shell :is(.explorer-overview-card, .explorer-list-view) {
+  border-color: rgba(15, 23, 42, 0.1);
+  border-radius: 10px;
+}
+
+html:root.light-mode .page-shell .explorer-overview-card {
+  background: linear-gradient(180deg, #fff, #f1f5f9);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+html:root.light-mode .page-shell .explorer-overview-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #fff, #f8fafc);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+  transform: translateY(-2px);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root .page-shell .explorer-list-view {
+  overflow: hidden;
+}
+
+html:root .page-shell .explorer-list-header {
+  background: color-mix(in srgb, var(--panel-2) 78%, var(--accent) 7%);
+  border-color: color-mix(in srgb, var(--line) 75%, var(--accent) 25%);
+}
+
+html:root .page-shell .explorer-list-header span,
+html:root .page-shell .overview-card-attrs,
+html:root .page-shell .overview-card-date,
+html:root .page-shell .list-card-col {
+  letter-spacing: 0.025em;
+}
+
+html:root .page-shell .overview-card-meta {
+  padding: 0.9rem;
+  gap: 0.45rem;
+}
+
+html:root .page-shell .overview-card-header b,
+html:root .page-shell .overview-show-title-btn b,
+html:root .page-shell .list-card-title {
+  font-weight: 700;
+}
+
+html:root .page-shell .explorer-list-card {
+  transition: background 140ms ease;
+}
+
+html:root:not(.light-mode) .page-shell .explorer-list-card:hover {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+html:root.light-mode .page-shell .explorer-list-card:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+html:root .page-shell .explorer-overview-card .source-badge,
+html:root .page-shell .explorer-list-card .source-badge {
+  border-color: color-mix(in srgb, var(--modern-provider, currentColor), transparent 55%);
+  font-weight: 700;
+}
+
+/* Raw provider colours miss 4.5:1 on these surfaces: lighten in dark, darken in light. */
+html:root:not(.light-mode) .page-shell :is(.explorer-overview-card, .explorer-list-card) .source-badge {
+  color: color-mix(in srgb, var(--modern-provider, var(--soft)), #ffffff 35%);
+}
+
+html:root.light-mode .page-shell :is(.explorer-overview-card, .explorer-list-card) .source-badge {
+  color: color-mix(in srgb, var(--modern-provider, var(--soft)), #000000 40%);
+}
+
+html:root .page-shell .overview-thumb-poster,
+html:root .page-shell .list-thumb-poster {
+  border-radius: 0;
+}
+
+/* Discover and Personal Media posters sit flush with the card's edge (left on
+   desktop, top on phones), so the card's own corners round them. */
+html:root .page-shell .shared-media-card:is(.shared-media-card--discover, .shared-media-card--personal) .shared-media-card-poster-wrap,
+html:root .page-shell .shared-media-card:is(.shared-media-card--discover, .shared-media-card--personal) .shared-media-card-poster {
+  border-radius: 0;
+}
+
+html:root:not(.light-mode) .page-shell .shared-media-card :is(.shared-media-card-type, .shared-media-card-release-label) {
+  color: rgba(148, 163, 184, 0.72);
+}
+
+html:root.light-mode .page-shell .shared-media-card :is(.shared-media-card-type, .shared-media-card-release-label) {
+  color: rgba(71, 85, 105, 0.8);
+}
+
+html:root .page-shell .shared-media-card :is(.shared-media-card-type, .shared-media-card-release-label) {
+  font-size: var(--fs-card-label);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+html:root .page-shell .shared-media-card .shared-media-card-release-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* History, Discover, and Personal Media cards take the dashboard's backdrop
+   (modules/card-art.js) under the same heavy shade, which reads whether the
+   poster sits beside the text or above it on phones. */
+html:root #history-view .history-list .history-page-card[data-art],
+html:root .page-shell .shared-media-card[data-art] {
+  position: relative;
+  isolation: isolate;
+}
+
+html:root #history-view .history-list .history-page-card[data-art]::before,
+html:root #history-view .history-list .history-page-card[data-art]::after,
+html:root .page-shell .shared-media-card[data-art]::before,
+html:root .page-shell .shared-media-card[data-art]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+html:root #history-view .history-list .history-page-card[data-art]::before,
+html:root .page-shell .shared-media-card[data-art]::before {
+  background: var(--modern-art, none) center 30% / cover no-repeat;
+}
+
+html:root #history-view .history-list .history-page-card[data-art]::after,
+html:root .page-shell .shared-media-card[data-art]::after {
+  opacity: var(--modern-art-shade, 0);
+  background: linear-gradient(90deg, rgba(12, 16, 22, 0.94) 0%, rgba(12, 16, 22, 0.84) 55%, rgba(12, 16, 22, 0.66) 100%);
+}
+
+html:root.light-mode #history-view .history-list .history-page-card[data-art]::after,
+html:root.light-mode .page-shell .shared-media-card[data-art]::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 55%, rgba(255, 255, 255, 0.7) 100%);
+}
+
+html:root .page-shell .shared-media-card .shared-media-card-rating {
+  border: 1px solid color-mix(in srgb, var(--accent), transparent 60%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent), transparent 86%);
+  padding: 0.05rem 0.45rem;
+  font-size: var(--fs-badge);
+  line-height: 1.4;
+}
+
+/* Movies and TV library cards share the dashboard history card appearance.
+   The surface rules name [data-view-panel="explorer"] and .history-page-card to
+   outrank the cards-mode layout rule above (radius, border and background). */
+html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.82) 0%, rgba(15, 19, 25, 0.82) 100%);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, rgba(38, 46, 57, 0.9) 0%, rgba(18, 23, 30, 0.9) 100%);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::before,
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::before {
+  background: var(--modern-art, none) center 30% / cover no-repeat;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::after {
+  opacity: var(--modern-art-shade, 0);
+  background: linear-gradient(90deg, rgba(12, 16, 22, 0.94) 0%, rgba(12, 16, 22, 0.84) 55%, rgba(12, 16, 22, 0.66) 100%);
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card > .history-card-poster-wrapper,
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card > .history-card-poster-wrapper .history-card-poster-link {
+  border-radius: 0;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card:hover .history-card-poster-wrapper {
+  transform: none;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .meta-label {
+  color: rgba(148, 163, 184, 0.72);
+  font-size: var(--fs-card-label);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .history-card-meta-row .meta-value {
+  color: var(--text);
+  font-weight: 600;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .history-card-episode {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+html:root .page-shell[data-active-view="explorer"] #explorerPanel .history-card-meta-row .meta-value.history-card-watch-count {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.12);
+  padding: 0.08rem 0.5rem;
+  color: #7dd3fc;
+  font-size: var(--fs-card-watch-count);
+  font-weight: 700;
+}
+
+html:root.light-mode .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card {
+  border-color: rgba(15, 23, 42, 0.09);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+html:root.light-mode .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card:hover {
+  border-color: var(--accent);
+  background: linear-gradient(180deg, #ffffff 0%, rgba(248, 250, 252, 0.96) 100%);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+}
+
+html:root.light-mode .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 55%, rgba(255, 255, 255, 0.7) 100%);
+}
+
+html:root.light-mode .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .meta-label {
+  color: rgba(71, 85, 105, 0.8);
+}
+
+html:root.light-mode .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .history-card-meta-row .meta-value.history-card-watch-count {
+  border-color: rgba(2, 132, 199, 0.3);
+  background: rgba(14, 165, 233, 0.1);
+  color: #0369a1;
+}
+
+/* History grid and list modes. Poster mode (.page-card-mode-compact) is left
+   alone until its design call is made, except for a poster opened into its
+   tile or row (.page-card-open, modules/page-card-open.js). */
+html:root .page-shell [data-view-panel="history"] :where(.history-grid-card):is(:not(.page-card-mode-compact *), .page-card-open) .history-grid-poster {
+  border-radius: 10px;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+html:root:not(.light-mode) .page-shell [data-view-panel="history"] :where(.history-grid-card):is(:not(.page-card-mode-compact *), .page-card-open) .history-grid-poster {
+  border-color: rgba(255, 255, 255, 0.07);
+}
+
+html:root.light-mode .page-shell [data-view-panel="history"] :where(.history-grid-card):is(:not(.page-card-mode-compact *), .page-card-open) .history-grid-poster {
+  border-color: rgba(15, 23, 42, 0.09);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+html:root .page-shell [data-view-panel="history"] .history-grid-card:is(:not(.page-card-mode-compact *), .page-card-open):hover .history-grid-poster {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root:not(.light-mode) .page-shell [data-view-panel="history"] .history-grid-card:is(:not(.page-card-mode-compact *), .page-card-open):hover .history-grid-poster {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+html:root.light-mode .page-shell [data-view-panel="history"] .history-grid-card:is(:not(.page-card-mode-compact *), .page-card-open):hover .history-grid-poster {
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+}
+
+html:root .page-shell [data-view-panel="history"] :where(.history-grid-card, .history-list-row):is(:not(.page-card-mode-compact *), .page-card-open) :is(.history-grid-copy b, .history-list-title) {
+  font-weight: 700;
+}
+
+/* The episode title line, as on the cards; movies keep the muted "Movie". */
+html:root .page-shell [data-view-panel="history"] .history-grid-card[data-prefetch-type="tv"]:is(:not(.page-card-mode-compact *), .page-card-open) .history-grid-copy span:not(.rewatch-badge) {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+html:root .page-shell [data-view-panel="history"]:not(.page-card-mode-compact) .history-table-view {
+  border-radius: 10px;
+}
+
+html:root:not(.light-mode) .page-shell [data-view-panel="history"]:not(.page-card-mode-compact) .history-table-view {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+html:root.light-mode .page-shell [data-view-panel="history"]:not(.page-card-mode-compact) .history-table-view {
+  border-color: rgba(15, 23, 42, 0.1);
+}
+
+html:root .page-shell [data-view-panel="history"]:not(.page-card-mode-compact) .history-list-header {
+  background: color-mix(in srgb, var(--panel-2) 78%, var(--accent) 7%);
+  border-color: color-mix(in srgb, var(--line) 75%, var(--accent) 25%);
+}
+
+html:root .page-shell [data-view-panel="history"]:not(.page-card-mode-compact) .history-list-header span {
+  letter-spacing: 0.025em;
+}
+
+/* The accent tint drops --muted to about 4.2:1 on the light header. */
+html:root.light-mode .page-shell [data-view-panel="history"]:not(.page-card-mode-compact) .history-list-header span,
+html:root.light-mode .page-shell .explorer-list-header span {
+  color: #475569;
+}
+
+html:root:not(.light-mode) .page-shell [data-view-panel="history"] .history-list-row:is(:not(.page-card-mode-compact *), .page-card-open):hover {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+html:root.light-mode .page-shell [data-view-panel="history"] .history-list-row:is(:not(.page-card-mode-compact *), .page-card-open):hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+/* Provider badges as on the library list (step 3): tinted border, and the
+   colour lightened (dark) or darkened (light) to reach 4.5:1. */
+html:root .page-shell [data-view-panel="history"] .history-list-row:is(:not(.page-card-mode-compact *), .page-card-open) .source-badge {
+  border-color: color-mix(in srgb, var(--modern-provider, currentColor), transparent 55%);
+  font-weight: 700;
+}
+
+html:root:not(.light-mode) .page-shell [data-view-panel="history"] .history-list-row:is(:not(.page-card-mode-compact *), .page-card-open) .source-badge {
+  color: color-mix(in srgb, var(--modern-provider, var(--soft)), #ffffff 35%);
+}
+
+html:root.light-mode .page-shell [data-view-panel="history"] .history-list-row:is(:not(.page-card-mode-compact *), .page-card-open) .source-badge {
+  color: color-mix(in srgb, var(--modern-provider, var(--soft)), #000000 40%);
+}
+
+/* Media detail: corners, surfaces, labels and hover. The highlighted episode keeps its
+   !important yellow treatment from the rules above. */
+/* Shows wrap the poster in a frame; movies place the image directly. */
+html:root .media-detail-page .immersive-poster-frame,
+html:root .media-detail-page .immersive-poster-img,
+html:root .media-detail-page .season-poster-img {
+  border-radius: 10px;
+}
+
+html:root .media-detail-page .season-poster-img {
+  transition: transform 150ms ease, border-color 150ms ease, outline-color 160ms ease;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+
+html:root .media-detail-page .season-poster-card:hover .season-poster-img {
+  outline-color: var(--accent);
+}
+
+/* Fact labels recede like the card labels; their colours stay as the base
+   rules set them, since they sit over the backdrop. */
+html:root .media-detail-page :is(.media-fact > span, .media-fact-table-label, .media-facts-group-label) {
+  font-size: var(--fs-fact-label);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+html:root .media-detail-page .season-accordion {
+  border-radius: 10px;
+  transition: border-color 160ms ease;
+}
+
+html:root:not(.light-mode) .media-detail-page .season-accordion {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.55) 0%, rgba(15, 19, 25, 0.55) 100%);
+}
+
+html:root.light-mode .media-detail-page .season-accordion {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0%, rgba(241, 245, 249, 0.55) 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+html:root .media-detail-page .season-accordion.is-open {
+  border-color: color-mix(in srgb, var(--accent), transparent 55%);
+}
+
+html:root .seasons-section.season-accordions {
+  --season-open-line: color-mix(in srgb, var(--accent), transparent 55%);
+  --season-card-radius: 10px;
+  --season-open-fill: rgba(15, 19, 25, 0.55);
+}
+
+html:root.light-mode .seasons-section.season-accordions {
+  --season-open-fill: rgba(241, 245, 249, 0.55);
+}
+
+html:root .media-detail-page .season-accordion.is-open .season-accordion-trigger:hover {
+  background: transparent;
+}
+
+/* The gradient runs over the open card's height (--season-card-h, set beside the
+   card on desktop; minus the card's two border lines), then holds its end colour,
+   so the episode box matches the card row for row across the join. */
+html:root:not(.light-mode) .media-detail-page .season-accordion-detail {
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.55) 0, rgba(15, 19, 25, 0.55) calc(var(--season-card-h, 100%) - 2px), rgba(15, 19, 25, 0.55) 100%);
+}
+
+html:root.light-mode .media-detail-page .season-accordion-detail {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55) 0, rgba(241, 245, 249, 0.55) calc(var(--season-card-h, 100%) - 2px), rgba(241, 245, 249, 0.55) 100%);
+}
+
+html:root .media-detail-page .season-accordion.is-open .season-accordion-trigger {
+  border-bottom-color: color-mix(in srgb, var(--line), var(--accent) 20%);
+}
+
+html:root .media-detail-page .season-accordion.is-open .season-accordion-chevron {
+  color: var(--accent);
+}
+
+html:root:not(.light-mode) .media-detail-page .season-accordion-trigger:hover {
+  background: rgba(245, 158, 11, 0.08);
+}
+
+html:root.light-mode .media-detail-page .season-accordion-trigger:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+/* Episode tiles take the dashboard card surface. The tile clips its corners
+   around the flush, square thumbnail. */
+html:root .media-detail-page .season-accordion-panel .immersive-episode-row {
+  border-radius: 10px;
+  transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+html:root:not(.light-mode) .media-detail-page .season-accordion-panel .immersive-episode-row {
+  border-color: rgba(255, 255, 255, 0.07);
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.82) 0%, rgba(15, 19, 25, 0.82) 100%);
+}
+
+html:root.light-mode .media-detail-page .season-accordion-panel .immersive-episode-row {
+  border-color: rgba(15, 23, 42, 0.09);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+html:root .media-detail-page .season-accordion-panel .immersive-episode-row:hover {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root:not(.light-mode) .media-detail-page .season-accordion-panel .immersive-episode-row:hover {
+  background: linear-gradient(180deg, rgba(38, 46, 57, 0.9) 0%, rgba(18, 23, 30, 0.9) 100%);
+}
+
+html:root.light-mode .media-detail-page .season-accordion-panel .immersive-episode-row:hover {
+  background: linear-gradient(180deg, #ffffff 0%, rgba(248, 250, 252, 0.96) 100%);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+}
+
+html:root .media-detail-page .season-accordion-panel .immersive-episode-row .episode-thumb-syncing {
+  border-radius: 0;
+}
+
+html:root .media-detail-page .action-pill {
+  border-radius: 8px;
+}
+
+/* Settings, a light pass: corners, surfaces and field labels only. The
+   settings rules above use !important throughout, so these must too. */
+html:root .settings-pane :is(.settings-row-main, .settings-row-help) > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) {
+  border-radius: 10px !important;
+}
+
+html:root:not(.light-mode) .settings-pane :is(.settings-row-main, .settings-row-help) > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html:root.light-mode .settings-pane :is(.settings-row-main, .settings-row-help) > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) {
+  border-color: rgba(15, 23, 42, 0.1) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* The accordions and history cards inside a section. */
+html:root .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card) {
+  border-radius: 10px !important;
+  transition: border-color 160ms ease, background 160ms ease, outline-color 160ms ease;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+}
+
+html:root:not(.light-mode) .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card) {
+  border-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+html:root.light-mode .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card) {
+  border-color: rgba(15, 23, 42, 0.09) !important;
+}
+
+html:root .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):is(:hover, :focus-within) {
+  border-color: var(--accent) !important;
+  outline-color: var(--accent);
+}
+
+html:root .settings-pane .settings-row-main details:is(.sync-tool-details, .sync-match-report, .issue-category)[open] > summary .accordion-chevron {
+  color: var(--accent);
+}
+
+/* Field labels recede like the card labels. Inputs and selects keep their own
+   case and spacing (the browser resets both on form controls). The passphrase
+   labels carry a sentence-case hint, so they are left as they are. */
+html:root .settings-pane .field-label:not(.checkbox-label):not(.backup-enable-row):not(.backup-passphrase-label) {
+  font-size: var(--fs-field-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+html:root:not(.light-mode) .settings-pane .field-label:not(.checkbox-label):not(.backup-enable-row):not(.backup-passphrase-label) {
+  color: #94a3b8;
+}
+
+html:root.light-mode .settings-pane .field-label:not(.checkbox-label):not(.backup-enable-row):not(.backup-passphrase-label) {
+  color: #64748b;
+}
+
+/* Match the queue card hover treatment to the Recently watched cards. */
+html:root #timeline-view #upNextDashboardSection .dashboard-history-page-card,
+html:root #timeline-view #upNextPanel .dashboard-history-page-card,
+html:root #timeline-view #nowPlayingGrid .dashboard-history-page-card,
+html:root #timeline-view #nowPlayingGrid .live-now-card {
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+/* Resting queue cards have no edge in either mode: over the dashboard
+   artwork any border or shadow reads as a bright outline. Only hover and
+   keyboard focus draw an edge. The artwork layers stop at the padding box,
+   so the card's own panel colour is clipped there too; otherwise it shows
+   through the transparent border as a light ring. */
+html:root #timeline-view #upNextDashboardSection .dashboard-history-page-card,
+html:root #timeline-view #upNextPanel .dashboard-history-page-card,
+html:root #timeline-view #nowPlayingGrid .dashboard-history-page-card,
+html:root #timeline-view #nowPlayingGrid .live-now-card {
+  border-color: transparent;
+  box-shadow: none;
+  background-clip: padding-box;
+}
+
+html:root #timeline-view #upNextDashboardSection .dashboard-history-page-card:hover,
+html:root #timeline-view #upNextPanel .dashboard-history-page-card:hover,
+html:root #timeline-view #nowPlayingGrid .dashboard-history-page-card:hover,
+html:root #timeline-view #nowPlayingGrid .live-now-card:hover {
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+
+html:root:not(.light-mode) #timeline-view #upNextDashboardSection .dashboard-history-page-card:hover,
+html:root:not(.light-mode) #timeline-view #upNextPanel .dashboard-history-page-card:hover,
+html:root:not(.light-mode) #timeline-view #nowPlayingGrid .dashboard-history-page-card:hover,
+html:root:not(.light-mode) #timeline-view #nowPlayingGrid .live-now-card:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
+}
+
+html:root.light-mode #timeline-view #upNextDashboardSection .dashboard-history-page-card:hover,
+html:root.light-mode #timeline-view #upNextPanel .dashboard-history-page-card:hover,
+html:root.light-mode #timeline-view #nowPlayingGrid .dashboard-history-page-card:hover,
+html:root.light-mode #timeline-view #nowPlayingGrid .live-now-card:hover {
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
+}
+
+/* The regular Up Next row has a few pixels of inset, like the Recently
+   watched rails, so its cards can lift without clipping. The featured rail
+   touches its scrollport edge, so it keeps the outline and shadow in place. */
+html:root #timeline-view #upNextDashboardSection .dashboard-history-page-card:hover,
+html:root #timeline-view #upNextPanel .dashboard-history-page-card:hover,
+html:root #timeline-view #nowPlayingGrid .dashboard-history-page-card:hover,
+html:root #timeline-view #nowPlayingGrid .live-now-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Both scrolling rails need the same inset as Recently watched so a lifted
+   card and its shadow remain inside the scrollport. */
+html:root #timeline-view #nowPlayingGrid {
+  padding: 0.55rem 0.2rem 0;
+}
+
+/* The idle-feature wrapper is a single featured card, not a scrolling rail.
+   Let its hover edge reach the padding on #nowPlayingGrid instead of clipping
+   it at a nested overflow boundary. */
+html:root #timeline-view #nowPlayingGrid .modern-idle-feature {
+  overflow: visible;
 }
