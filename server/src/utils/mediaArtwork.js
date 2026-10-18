@@ -1,4 +1,7 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { db, parseJson, transaction } from "../db.js";
+import { MEDIA_DIR } from "../paths.js";
 
 // Show and movie artwork is deliberately stored separately from watch_history.poster_url.
 // The latter belongs to the recorded media item (and can be an episode still),
@@ -100,6 +103,15 @@ function clean(value) {
   return String(value ?? "").trim();
 }
 
+function posterUrlIsAvailable(value = "") {
+  const url = clean(value);
+  if (!url.startsWith("/media/")) return Boolean(url);
+
+  const storagePath = url.slice("/media/".length).split(/[?#]/, 1)[0];
+  if (!/^(?:posters|backdrops|profiles|logos)\/[\w.-]+$/.test(storagePath)) return false;
+  return existsSync(path.join(MEDIA_DIR, storagePath));
+}
+
 function mediaTypeFor(item = {}) {
   const raw = clean(item.media_type || item.mediaType || item.type).toLowerCase();
   if (raw === "movie") return "movie";
@@ -173,7 +185,7 @@ export function canonicalMediaArtworkCacheKey(item = {}) {
 function posterUrlFromTmdbDetails(details, tmdbId = "", mediaType = "tv") {
   if (!details) return "";
   const cached = clean(details.cached_poster_url || details.cachedPosterUrl);
-  if (cached) return cached;
+  if (posterUrlIsAvailable(cached)) return cached;
   const path = clean(details.poster_path || details.posterPath);
   if (path) {
     return `/api/tmdb-poster?path=${encodeURIComponent(path)}&tmdbId=${encodeURIComponent(tmdbId)}&mediaType=${encodeURIComponent(mediaType)}`;
@@ -345,7 +357,7 @@ function metadataPosterForIdentity(identity) {
 
     if (identity.tmdb_id) {
       const cached = selectPosterCacheStmt.get(`tmdb:movie:${identity.tmdb_id}`);
-      if (cached?.url) return cached.url;
+      if (posterUrlIsAvailable(cached?.url)) return cached.url;
     }
     return "";
   }
@@ -369,7 +381,7 @@ function storedPosterForKeys(keys = []) {
   for (const key of keys) {
     const row = selectArtworkByIdentityStmt.get(key);
     const poster = clean(row?.poster_url);
-    if (poster) return poster;
+    if (posterUrlIsAvailable(poster)) return poster;
   }
   return "";
 }

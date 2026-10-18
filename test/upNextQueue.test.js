@@ -1,14 +1,24 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { makeTempDataDir } from "./helpers.js";
 
 makeTempDataDir("plembfin-up-next-queue-");
+const { MEDIA_DIR } = await import("../server/src/paths.js");
 const { buildUpNextProjection, publicUpNextItems } = await import("../server/src/utils/upNextService.js");
 const { insertWatchRecordSync } = await import("../server/src/utils/dataRepo.js");
 const { saveCanonicalPoster } = await import("../server/src/utils/mediaArtwork.js");
 const { recordUpNextRailSeeds } = await import("../server/src/utils/upNextSeedLedger.js");
 const { removeManualUpNextShow, upsertManualUpNextShow } = await import("../server/src/utils/upNextManual.js");
 const { withUpNextFeedSeriesIdentity } = await import("../server/src/utils/upNextRepository.js");
+
+function seedCachedPoster(fileName) {
+  const filePath = path.join(MEDIA_DIR, "posters", fileName);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, "test cached poster");
+  return `/media/posters/${fileName}`;
+}
 
 test("queue projection keeps canonical resumes first and provider next-up after them", async () => {
   const projection = await buildUpNextProjection({
@@ -893,7 +903,7 @@ test("provider-backed posters use the authenticated poster proxy", async () => {
 });
 
 test("canonical episode rows reuse the cached show poster when no provider poster exists", async () => {
-  saveCanonicalPoster({ media_type: "episode", show_title: "Reacher", show_tmdb_id: "108978" }, "/media/posters/reacher.webp", { source: "test" });
+  saveCanonicalPoster({ media_type: "episode", show_title: "Reacher", show_tmdb_id: "108978" }, seedCachedPoster("reacher.webp"), { source: "test" });
   const projection = await buildUpNextProjection({
     now: Date.parse("2026-09-01T12:00:00.000Z"),
     localFallback: false,
@@ -921,7 +931,7 @@ test("canonical episode rows reuse the cached show poster when no provider poste
 });
 
 test("canonical movie rows reuse the cached movie poster when no provider poster exists", async () => {
-  saveCanonicalPoster({ media_type: "movie", title: "Arrival", tmdb_id: "329865" }, "/media/posters/arrival.webp", { source: "test" });
+  saveCanonicalPoster({ media_type: "movie", title: "Arrival", tmdb_id: "329865" }, seedCachedPoster("arrival.webp"), { source: "test" });
   const projection = await buildUpNextProjection({
     now: Date.parse("2026-09-01T12:00:00.000Z"),
     localFallback: false,
@@ -973,7 +983,7 @@ test("provider-sourced local resumes expose a safe poster proxy when their store
 test("title-only movie resumes collapse into the identified provider item and keep its poster", async () => {
   saveCanonicalPoster(
     { media_type: "movie", title: "Moana", tmdb_id: "1108427", imdb_id: "tt27419466" },
-    "/media/posters/moana.webp",
+    seedCachedPoster("moana.webp"),
     { source: "test" },
   );
   const projection = await buildUpNextProjection({

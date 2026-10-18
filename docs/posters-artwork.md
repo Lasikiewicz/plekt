@@ -86,6 +86,11 @@ only) and redirects to the new file. A missing file with no downloadable source 
 or `token` as `redacted`, so a provider URL that carried an API key in its query cannot be
 downloaded again; it returns 404 and the row is marked `failed`.
 
+Canonical show and movie poster resolution also checks saved `/media/...` references
+against the local file before returning them. If an old artwork override or metadata-cache
+row points at a file that is absent from local storage, resolution falls through to the
+provider poster path instead of repeatedly selecting the broken file.
+
 **Negative caching:** failures are recorded as `failed` (retry after 24h) or `missing`
 (retry after 7 days) so a dead lookup doesn't hammer upstream on every page view.
 HTTP 429/503 are treated as transient and not persisted. `usableCachedPoster` only
