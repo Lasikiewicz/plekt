@@ -1,22 +1,4 @@
-import { slug } from "./utils.js?v=2.1.0.2.1";
-
-function stablePosterIdentity(value = "") {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  const lowered = raw.toLowerCase();
-  if (lowered.includes("favicon") || lowered.includes("placeholder") || lowered.includes("no-poster")) return "";
-  try {
-    const url = new URL(raw, window.location.origin);
-    if (url.hostname.toLowerCase() === "image.tmdb.org") {
-      return `tmdb-poster:${url.pathname.split("/").filter(Boolean).pop() || raw}`;
-    }
-    url.search = "";
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return raw;
-  }
-}
+import { slug } from "./utils.js?v=2.1.1.0.2";
 
 export function mediaRecordIdentity(record = {}, mode = "") {
   if (mode === "shows" || record.media_type === "episode") {
@@ -29,12 +11,14 @@ export function mediaRecordIdentity(record = {}, mode = "") {
     if (imdbId) return `show:imdb:${String(imdbId).toLowerCase()}`;
     return `show:${slug(title)}`;
   }
-  const poster = stablePosterIdentity(record.poster_url || record.posterUrl || record.imageUrl || record.thumb || "");
-  if (poster) return `movie:poster:${poster}`;
+  // Artwork is presentation data, not a media identifier: different titles
+  // can legitimately share a poster URL, especially when a provider uses a
+  // generic or bundled image. Prefer stable provider IDs before title fallback.
   if (record.imdb_id) return `movie:imdb:${String(record.imdb_id).toLowerCase()}`;
   if (record.tmdb_id) return `movie:tmdb:${String(record.tmdb_id).toLowerCase()}`;
   if (record.tvdb_id) return `movie:tvdb:${String(record.tvdb_id).toLowerCase()}`;
-  return `movie:title:${slug(record.title)}`;
+  const title = slug(record.title);
+  return title ? `movie:title:${title}` : `movie:id:${String(record.id || "unknown")}`;
 }
 
 export function dedupeMediaRecords(records = [], mode = "") {

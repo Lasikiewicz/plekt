@@ -3,7 +3,7 @@ title: Movies media page
 description: Read and use a single movie media page in Plekt.
 category: Dashboard and libraries
 order: 2.1
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/app.js
   - public/index.html
@@ -159,6 +159,7 @@ when the movie was watched but the date is wrong.
 ### Tools
 
 <ScreenshotFigure
+  compact={true}
   darkSrc="/assets/app-captures/media-tools-focus-dark.png"
   lightSrc="/assets/app-captures/media-tools-focus-light.png"
   alt="Plekt movie Options menu showing Mark unwatched, Force Sync, Info, Edit Images, Fix Match, and Delete"
@@ -227,8 +228,9 @@ artwork type, choose a provider result or upload a custom image, and save.
   caption="Fix Match changes the movie identity used for metadata and sync."
 />
 
-Choose **Fix Match** when the record is attached to the wrong movie. Compare title, year,
-and provider details before confirming; use it for identity, not artwork.
+Choose **Fix Match** when the record is attached to the wrong movie. Compare each result's
+title, poster, overview, source labels, and provider IDs before confirming; use it for
+identity, not artwork.
 
 #### Delete
 
@@ -312,7 +314,7 @@ These sections belong to the selected movie. They are not additional library pag
   caption="The full Appearance panel shows the switches that control optional movie detail sections."
 />
 
-Open [Appearance](/docs/appearance/#media-detail-options) in the sidebar footer while this movie media page is active. The
+Open [Appearance](/docs/appearance/#media-detail-options) in the sidebar while this movie media page is active. The
 movie-specific switches control which optional sections are rendered:
 
 - **Logo Art**

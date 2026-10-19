@@ -1,9 +1,9 @@
-import { state } from "./state.js?v=2.1.0.2.1";
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.1.0.2.1";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.0.2.1";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.0.2.1";
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.1.0.2.1";
+import { state } from "./state.js?v=2.1.1.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.1.1.0.2";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.1.0.2";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.1.0.2";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.1.1.0.2";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;
@@ -438,7 +438,7 @@ function reviewPosterHtml(review, title, options = {}) {
 
 function reviewActionButtons({ includeEpisodeTiming = true, source = "" } = {}) {
   return `
-    <button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="now">Mark watched now</button>
+    <button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="detected">Mark watched at detection time</button>
     <button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="release_day">Use release day</button>
     ${includeEpisodeTiming ? `<button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="episode_timing">Use episode timing</button>` : ""}
     <button class="button-ghost" type="button" data-manual-watch-review-custom="item">Choose date &amp; time</button>
@@ -725,8 +725,8 @@ function scopedReviewActionButtons({ scope, groupKey, seasonKey = "", source = "
   const keyAttribute = scope === "show"
     ? `data-manual-watch-review-group-key="${escapeAttribute(groupKey)}"`
     : `data-manual-watch-review-group-key="${escapeAttribute(groupKey)}" data-manual-watch-review-season-key="${escapeAttribute(seasonKey)}"`;
-  // "Mark watched" opens the watched-date popup (release day, episode timing,
-  // now, or a picked date), like the media page's season and show buttons.
+  // "Mark watched" opens the watched-date popup (detection time, release day,
+  // episode timing, now, or a picked date), like the media page's season and show buttons.
   const customAttributes = scope === "show"
     ? `data-manual-watch-review-custom="group" data-manual-watch-review-group-key="${escapeAttribute(groupKey)}"`
     : `data-manual-watch-review-custom="season" data-manual-watch-review-group-key="${escapeAttribute(groupKey)}" data-manual-watch-review-season-key="${escapeAttribute(seasonKey)}"`;
@@ -1206,6 +1206,10 @@ function renderManualDatePrompt(target) {
         ` : ""}
         <div class="watch-date-section-label">Watched date</div>
         <div class="watch-date-options">
+          <button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="detected">
+            <span class="watch-date-pick-title">At detection time</span>
+            <span class="watch-date-pick-sub">Use the time Plekt detected each watch flag</span>
+          </button>
           <button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="release_day"${hasReleaseDate ? "" : " disabled"}>
             <span class="watch-date-pick-title">Day of release</span>
             <span class="watch-date-pick-sub">Use each episode's air date</span>
@@ -1320,7 +1324,10 @@ function openManualDatePrompt(target) {
     const host = document.querySelector("[data-manual-watch-review-date-picker]");
     if (host) {
       const reviews = target.reviews || [target.review];
-      const initial = reviews[0]?.observed_watched_at || reviews[0]?.release_date || new Date().toISOString();
+      const detectedAt = Number(reviews[0]?.updated_at || reviews[0]?.created_at || 0);
+      const initial = Number.isFinite(detectedAt) && detectedAt > 0
+        ? new Date(detectedAt).toISOString()
+        : reviews[0]?.observed_watched_at || reviews[0]?.release_date || new Date().toISOString();
       const pickerState = calendarStateFromIso(initial);
       mountCalendarPicker(host, pickerState, {
         showCancel: false,
@@ -1880,13 +1887,22 @@ function restoreOptimisticReviews(reviews = []) {
 }
 
 function policyLabel(mode) {
+  if (mode === "detected") return "detection time";
   if (mode === "release_day") return "release day";
   if (mode === "episode_timing") return "episode timing";
   if (mode === "custom") return "manual date & time";
   return "now";
 }
 
-export function manualWatchReviewConfirmation({ action = "approve", mode = "now", title = "this item", count = 1, source = "the reporting app" } = {}) {
+function policyConfirmationPhrase(mode) {
+  if (mode === "detected") return "at the time it was detected";
+  if (mode === "release_day") return "on the release day";
+  if (mode === "episode_timing") return "using episode timing";
+  if (mode === "custom") return "using the selected date and time";
+  return "now";
+}
+
+export function manualWatchReviewConfirmation({ action = "approve", mode = "detected", title = "this item", count = 1, source = "the reporting app" } = {}) {
   const itemCount = Number(count) || 1;
   const subject = itemCount === 1
     ? `“${title}”`
@@ -1902,7 +1918,7 @@ export function manualWatchReviewConfirmation({ action = "approve", mode = "now"
   }
   return {
     title: itemCount === 1 ? "Confirm manual watch decision" : "Confirm manual watch decisions",
-    body: `Mark ${subject} watched using the ${policyLabel(mode)} date? This will save the decision and queue it for sync to connected apps.`,
+    body: `Mark ${subject} watched ${policyConfirmationPhrase(mode)}? This will save the decision and queue it for sync to connected apps.`,
     confirmLabel: itemCount === 1 ? "Confirm watch decision" : "Confirm all decisions",
     danger: false,
   };

@@ -3,7 +3,7 @@ title: Manual Watch review
 description: Resolve uncertain watch events, correct provider state, and recheck stale reviews.
 category: Sync and maintain
 order: 6.5
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/index.html
   - public/modules/manual-watch-review.js
@@ -15,12 +15,7 @@ sourcePaths:
   - docs/settings.md
   - docs/scheduled-sync.md
   - docs/webhooks.md
-screenshots:
-  - /assets/app-captures/manual-watch-review-dark.png
-  - /assets/app-captures/manual-watch-review-light.png
 ---
-
-import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
 Manual Watch review is the decision queue for watch events that do not have a reliable
 completion time. It keeps Plekt from assigning an invented date and gives you a focused
@@ -36,12 +31,6 @@ event is held for a decision instead of being silently rejected or sent on to th
 media servers. The link is shown while there are decisions to make, including when a new
 item is flagged after you already decided an earlier review.
 
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/manual-watch-review-dark.png"
-  lightSrc="/assets/app-captures/manual-watch-review-light.png"
-  alt="Plekt Manual Watch review showing a provider-marked episode waiting for a decision"
-  caption="Manual Watch review keeps a provider-marked episode visible with the surrounding season context before confirmation."
-/>
 
 Episode reviews are grouped by show, while movies appear as individual items. Use the search
 field to narrow the queue, then open a show group when you want to process its episodes together.

@@ -1,12 +1,12 @@
-import { buildAuthHeaders, buildNowPlayingUrl, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./auth.js?v=2.1.0.2.1";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.1.0.2.1";
-import { state, elements, explorerCardModeKey } from "./state.js?v=2.1.0.2.1";
-import { escapeHtml, sanitizeTitle, safeImageUrl, movieSlug, showTitleFrom, slug, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel } from "./utils.js?v=2.1.0.2.1";
-import { compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, markArtworkUnavailable, tmdbProfile } from "./images.js?v=2.1.0.2.1";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerCronSync, triggerStopSync } from "./sync.js?v=2.1.0.2.1";
-import { attachSidebarMiddleClickNavigation } from "./sidebar-navigation.js?v=2.1.0.2.1";
-import { applyTextScale } from "./appearance.js?v=2.1.0.2.1";
-import { WATCH_ROUTE_MODULES, ifLoaded, lazyExport, loadRouteModules, onRouteModuleLoaded } from "./route-modules.js?v=2.1.0.2.1";
+import { buildAuthHeaders, buildNowPlayingUrl, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./auth.js?v=2.1.1.0.2";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.1.1.0.2";
+import { state, elements, explorerCardModeKey } from "./state.js?v=2.1.1.0.2";
+import { escapeHtml, sanitizeTitle, safeImageUrl, movieSlug, showTitleFrom, slug, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel } from "./utils.js?v=2.1.1.0.2";
+import { compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, markArtworkUnavailable, tmdbProfile } from "./images.js?v=2.1.1.0.2";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerCronSync, triggerStopSync } from "./sync.js?v=2.1.1.0.2";
+import { attachSidebarMiddleClickNavigation } from "./sidebar-navigation.js?v=2.1.1.0.2";
+import { applyTextScale } from "./appearance.js?v=2.1.1.0.2";
+import { WATCH_ROUTE_MODULES, ifLoaded, lazyExport, loadRouteModules, onRouteModuleLoaded } from "./route-modules.js?v=2.1.1.0.2";
 
 // Route modules are not imported statically: that pulled the whole route graph
 // (about 1 MB) into the event wiring every page loads. Actions load their module
@@ -44,7 +44,7 @@ const dontRecommendDiscoverItem = lazyExport("discover", "dontRecommendDiscoverI
 const syncMediaActionsMenuState = ifLoaded("media-detail", "syncMediaActionsMenuState"), closeDebugModal = ifLoaded("media-detail", "closeDebugModal"), closeMediaDetail = ifLoaded("media-detail", "closeMediaDetail"), closeMediaInfoModal = ifLoaded("media-detail", "closeMediaInfoModal");
 const openHistoryDebugModal = lazyExport("media-detail", "openHistoryDebugModal");
 const closePersonProfile = ifLoaded("media-person", "closePersonProfile");
-import { hydrateDeferredCastDisclosure } from "./cast-disclosure.js?v=2.1.0.2.1";
+import { hydrateDeferredCastDisclosure } from "./cast-disclosure.js?v=2.1.1.0.2";
 
 let _cb = {};
 
@@ -256,11 +256,30 @@ function attachEvents() {
     try { compact = localStorage.getItem(cardModeKey(target)) === "1"; } catch { /* storage unavailable */ }
     cardModeTargets[target]?.classList.toggle("page-card-mode-compact", compact);
     document.querySelectorAll(`[data-card-mode-toggle="${target}"]`).forEach((button) => {
+      const label = compact ? "Show full cards" : "Show poster view";
       button.setAttribute("aria-pressed", String(compact));
-      button.title = compact ? "Show full cards" : "Posters only";
+      button.setAttribute("aria-label", label);
+      button.title = label;
+      const labelNode = button.querySelector(".page-card-mode-label");
+      if (labelNode) labelNode.textContent = label;
+    });
+    document.querySelectorAll(`[data-card-mode-select="${target}"]`).forEach((input) => {
+      input.checked = input.dataset.cardMode === (compact ? "posters" : "full");
     });
   };
   Object.keys(cardModeTargets).forEach(syncCardMode);
+  document.addEventListener("change", (event) => {
+    const input = event.target.closest("input[data-card-mode-select]");
+    if (!input) return;
+    const target = input.dataset.cardModeSelect;
+    if (!(target in cardModeTargets)) return;
+    const compact = input.dataset.cardMode === "posters";
+    try {
+      if (compact) localStorage.setItem(cardModeKey(target), "1");
+      else localStorage.removeItem(cardModeKey(target));
+    } catch { /* storage unavailable; this page still updates */ }
+    syncCardMode(target);
+  });
   document.addEventListener("click", (event) => {
     const button = event.target.closest("[data-card-mode-toggle]");
     if (!button) return;
@@ -271,11 +290,7 @@ function attachEvents() {
       if (compact) localStorage.setItem(cardModeKey(target), "1");
       else localStorage.removeItem(cardModeKey(target));
     } catch { /* storage unavailable; this page still updates */ }
-    cardModeTargets[target]?.classList.toggle("page-card-mode-compact", compact);
-    document.querySelectorAll(`[data-card-mode-toggle="${target}"]`).forEach((control) => {
-      control.setAttribute("aria-pressed", String(compact));
-      control.title = compact ? "Show full cards" : "Posters only";
-    });
+    syncCardMode(target);
   });
 
   document.querySelectorAll(".backup-managed-form").forEach((form) => {

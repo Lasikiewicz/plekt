@@ -52,8 +52,11 @@ if (!fs.existsSync(privacyPath)) {
       if (!prefix) return null;
       const remainder = asset.slice(prefix.length);
       if (remainder === "plembfin-hub.svg") return "public/assets/plembfin-hub.svg";
-      const source = remainder.replace(/-\d+\.(?:webp|png)$/i, ".png");
-      return source === remainder ? null : `public/assets/${source}`;
+      const sourceStem = remainder.replace(/-\d+\.(?:webp|png)$/i, "");
+      if (sourceStem === remainder) return null;
+      return [".png", ".jpg", ".jpeg"]
+        .map((extension) => `public/assets/${sourceStem}${extension}`)
+        .find((source) => reviewed.has(source)) || null;
     }
 
     for (const asset of discovered) {

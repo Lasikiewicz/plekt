@@ -68,7 +68,9 @@ The calendar renders one block per month, stacked in date order. A block is a st
 month heading (e.g. "July 2026") pinned below the topbar while that month is in view,
 followed by that month's Monday-start week rows. Each row is a 7-column grid of day
 cards - the same card style used across the app for a single day (weekday name, date
-number, episode entries). A week that straddles a month boundary appears in both blocks,
+number, episode entries). Episodes for the same show on a day are grouped together;
+when there are more than two, the first two appear with a View more button for the rest.
+The same limit applies to search results. A week that straddles a month boundary appears in both blocks,
 and the days belonging to the other month render as invisible spacers, so every date is
 drawn once, under its own heading, with the columns still aligned. Confining each heading
 to its own block is what stops the headings stacking on top of one another at the top of

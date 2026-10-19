@@ -37,10 +37,13 @@ rewatch gets recorded instead of dropped as a duplicate webhook echo).
   "movies"`. The Movies and TV Shows pages share the explorer panel and most controls.
 - **Paging** - pages of 240 (`EXPLORER_PAGE_SIZE` in `app.js`) with an
   IntersectionObserver sentinel (1200px rootMargin) pre-fetching the next page before
-  the user reaches the bottom (`observeExplorerSentinel`).
+  the user reaches the bottom (`observeExplorerSentinel`). Movie cards merge by provider
+  identity (then title fallback), never by poster URL, because different movies can share
+  artwork. Both the initial load and later-page fetches show an animated loading indicator.
 - **Page cache** - responses are cached per query key in `state.explorerPageCache` and
   persisted to localStorage (`plembfin:explorerPageCache:v3`, 14-day TTL) so revisits
-  render instantly.
+  render instantly. If the saved first page has an older history version, it is shown
+  immediately while `/api/movies` refreshes it; the fresh response replaces that page.
 - **View modes** - posters or list, persisted per mode (`plembfin:explorerView:movies`);
   poster width is adjustable (`applyExplorerPosterWidth`).
 - **Sort** - persisted in `plembfin:explorerSort:movies`; list headers are clickable

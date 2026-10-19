@@ -1,10 +1,10 @@
-import { state } from "./state.js?v=2.1.0.2.1";
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { escapeHtml, escapeAttribute, slug, movieSlug, movieHref, showName, formatTmdbDate, tvShowTmdbHref, movieTmdbHref, platformIconUrl, isDemoMode } from "./utils.js?v=2.1.0.2.1";
-import { tmdbImage, tmdbPoster, tmdbProfile } from "./images.js?v=2.1.0.2.1";
-import { fetchTmdbDetails } from "./tmdb.js?v=2.1.0.2.1";
-import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.1.0.2.1";
-import { hydrateDeferredCastDisclosure, renderCastActor } from "./cast-disclosure.js?v=2.1.0.2.1";
+import { state } from "./state.js?v=2.1.1.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { escapeHtml, escapeAttribute, slug, movieSlug, movieHref, showName, formatTmdbDate, tvShowTmdbHref, movieTmdbHref, platformIconUrl, isDemoMode } from "./utils.js?v=2.1.1.0.2";
+import { tmdbImage, tmdbPoster, tmdbProfile } from "./images.js?v=2.1.1.0.2";
+import { fetchTmdbDetails } from "./tmdb.js?v=2.1.1.0.2";
+import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.1.1.0.2";
+import { hydrateDeferredCastDisclosure, renderCastActor } from "./cast-disclosure.js?v=2.1.1.0.2";
 
 export { movieById, movieBySlugOrId, nowPlayingHref, hydrateDeferredCastDisclosure };
 
@@ -600,7 +600,7 @@ function findProviderLogoForNetwork(networkName, providers) {
   return match?.logo_path || "";
 }
 
-export function renderMediaFacts(tmdbData, mediaType = "movie", placement = "sidebar", { ratingsHtml = "", appLinksHtml = "" } = {}) {
+export function renderMediaFacts(tmdbData, mediaType = "movie", placement = "sidebar", { ratingsHtml = "", appLinksHtml = "", openOnMobile = false } = {}) {
   if (!tmdbData && !ratingsHtml) return "";
   tmdbData = tmdbData || {};
   const watchProviders = tmdbData["watch/providers"]?.results?.GB || tmdbData["watch/providers"]?.results?.US;
@@ -680,63 +680,42 @@ export function renderMediaFacts(tmdbData, mediaType = "movie", placement = "sid
     tableRows.push({ label: "Runtime", text: runtime });
   }
 
+  // Available on
+  const availableProvidersHtml = providers.length
+    ? providerChipsHtml(providers.map((p) => ({ name: p.provider_name, logoPath: p.logo_path })), watchLink)
+    : "";
+  if (availableProvidersHtml) {
+    tableRows.push({ label: "Available on", kind: "available", html: availableProvidersHtml });
+  }
+
+  // Watch Now
+  if (appLinksHtml) {
+    tableRows.push({ label: "Watch Now", kind: "watch-now", html: appLinksHtml });
+  }
+
+  // Ratings
+  if (ratingsHtml) {
+    tableRows.push({
+      label: "Ratings",
+      kind: "ratings",
+      html: `<div class="media-ratings-row">${ratingsHtml}</div>`,
+    });
+  }
+
   const tableHtml = tableRows.length ? `
     <div class="media-fact-table">
       ${tableRows.map((row) => `
-        <div class="media-fact-table-row">
+        <div class="media-fact-table-row${row.kind ? ` media-fact-table-row--${row.kind}` : ""}">
           <div class="media-fact-table-label">${escapeHtml(row.label)}</div>
-          <div class="media-fact-table-value">${escapeHtml(row.text)}</div>
+          <div class="media-fact-table-value${row.html ? " media-fact-table-value--rich" : ""}">
+            ${row.html ?? escapeHtml(row.text)}
+          </div>
         </div>
       `).join("")}
     </div>
   ` : "";
 
-  // Available on
-  const availableProvidersHtml = providers.length
-    ? providerChipsHtml(providers.map((p) => ({ name: p.provider_name, logoPath: p.logo_path })), watchLink)
-    : "";
-
-  const availableSectionHtml = availableProvidersHtml ? `
-    <div class="media-facts-group media-facts-group--available">
-      <span class="media-facts-group-label">Available on</span>
-      <div class="media-facts-group-content">
-        ${availableProvidersHtml}
-      </div>
-    </div>
-  ` : "";
-
-  // Watch Now
-  const watchNowSectionHtml = appLinksHtml ? `
-    <div class="media-facts-group media-facts-group--watch-now">
-      <span class="media-facts-group-label">Watch Now</span>
-      <div class="media-facts-group-content">
-        ${appLinksHtml}
-      </div>
-    </div>
-  ` : "";
-
-  // Ratings
-  let ratingsSectionHtml = "";
-  if (ratingsHtml) {
-    ratingsSectionHtml = `
-      <div class="media-facts-group media-facts-group--ratings">
-        <span class="media-facts-group-label">Ratings</span>
-        <div class="media-ratings-row">
-          ${ratingsHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  const bottomSectionHtml = (availableSectionHtml || watchNowSectionHtml || ratingsSectionHtml) ? `
-    <div class="media-facts-bottom-group">
-      ${availableSectionHtml}
-      ${watchNowSectionHtml}
-      ${ratingsSectionHtml}
-    </div>
-  ` : "";
-
-  const openAttr = window.innerWidth <= 640 ? "" : " open";
+  const openAttr = window.innerWidth <= 640 && !openOnMobile ? "" : " open";
 
   const topGroupHtml = tableHtml ? `
     <div class="media-facts-top-group">
@@ -746,7 +725,6 @@ export function renderMediaFacts(tmdbData, mediaType = "movie", placement = "sid
 
   const contentHtml = `
     ${topGroupHtml}
-    ${bottomSectionHtml}
   `;
 
   if (placement === "sidebar") {
@@ -863,15 +841,15 @@ export async function hydrateMediaAppLinks(root = document, { allowNetwork = tru
       : `
         <b class="media-app-link-row">
           <a class="media-app-link media-app-link--plex media-app-link--disabled" title="Checking Plex..." aria-label="Checking Plex..." style="opacity: 0.4; cursor: not-allowed;">
-            <img class="media-app-link-logo" src="/icons/plex.svg?v=2.1.0.2.1" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
+            <img class="media-app-link-logo" src="/icons/plex.svg?v=2.1.1.0.2" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
             <span>Plex</span>
           </a>
           <a class="media-app-link media-app-link--emby media-app-link--disabled" title="Checking Emby..." aria-label="Checking Emby..." style="opacity: 0.4; cursor: not-allowed;">
-            <img class="media-app-link-logo" src="/icons/emby.svg?v=2.1.0.2.1" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
+            <img class="media-app-link-logo" src="/icons/emby.svg?v=2.1.1.0.2" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
             <span>Emby</span>
           </a>
           <a class="media-app-link media-app-link--jellyfin media-app-link--disabled" title="Checking Jellyfin..." aria-label="Checking Jellyfin..." style="opacity: 0.4; cursor: not-allowed;">
-            <img class="media-app-link-logo" src="/icons/jellyfin.svg?v=2.1.0.2.1" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
+            <img class="media-app-link-logo" src="/icons/jellyfin.svg?v=2.1.1.0.2" alt="" loading="eager" decoding="async" data-err="hide-show-next" />
             <span>Jellyfin</span>
           </a>
         </b>
@@ -953,7 +931,7 @@ export function tvdbSeriesUrl(tvdbId) {
   return `https://thetvdb.com/dereferrer/series/${encodeURIComponent(id)}`;
 }
 
-const RATING_SOURCE_ICONS = { TMDB: "/icons/tmdb.svg?v=2.1.0.2.1", TVDB: "/icons/tvdb.svg?v=2.1.0.2.1", IMDb: "/icons/imdb.svg?v=2.1.0.2.1" };
+const RATING_SOURCE_ICONS = { TMDB: "/icons/tmdb.svg?v=2.1.1.0.2", TVDB: "/icons/tvdb.svg?v=2.1.1.0.2", IMDb: "/icons/imdb.svg?v=2.1.1.0.2" };
 
 export function ratingPillHtml({ label, value = "View", href = "", title = "" } = {}) {
   if (!label || !href) return "";

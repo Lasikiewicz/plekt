@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Start with the symptom, confirm the source of truth, and take the smallest safe action.
 category: Fix a problem
 order: 7
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - docs/troubleshooting.md
   - docs/webhooks.md
@@ -212,7 +212,7 @@ Plex. Use **Sync now** or the panel's retry action after correcting the provider
   darkSrc="/assets/app-captures/fix-match-dark.png"
   lightSrc="/assets/app-captures/fix-match-light.png"
   alt="Plekt Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback"
-  caption="Before choosing a match, compare the returned artwork and year with the title you actually own."
+  caption="Compare the result title, poster, overview, source labels, and provider IDs before choosing a match."
 />
 
 Fix Match is for a wrong or missing provider identity.
@@ -225,8 +225,8 @@ For a movie:
 
 1. Open the movie detail page, or open the movie card's three-dot menu.
 2. Choose **Fix Match**.
-3. Search by the exact title, year, or a distinctive title fragment.
-4. Compare the year and result details with the local movie.
+3. Search by the title or a distinctive title fragment.
+4. Compare the result title, poster, overview, source labels, and provider IDs with the local movie.
 5. Select the correct TMDB result and confirm it.
 6. Reopen the detail page and check the provider identity and artwork.
 7. Open Sync Activity and retry the affected destination if the original row was skipped.
@@ -236,7 +236,7 @@ For a TV show:
 1. Open the show detail page. Start from the show rather than an individual episode when
    the series identity is wrong.
 2. Choose **Fix Match** and search for the series.
-3. Compare the title, year, network, and season information.
+3. Compare each result's title, poster, overview, source labels, and provider IDs.
 4. Select the correct series (each result card names its sources) and confirm it.
 5. Wait for the background metadata, episode rematch, and poster refresh.
 6. Confirm the seasons and episodes now belong to the intended show.
@@ -294,12 +294,12 @@ For the full list of menu actions and their effects, see [the shared library con
   caption="Media-detail Appearance options only hide or show Logo Art, Cast Members, Trailers & Clips, Reviews, Images, and Related Shows."
 />
 
-Appearance is available in the app sidebar footer when a movie or TV detail page is active.
+Appearance is available in the app sidebar when a movie or TV detail page is active.
 
 Use the correct scope:
 
 1. Open **Movies** or **TV Shows** and select a title.
-2. Open **Appearance** in the sidebar footer.
+2. Open **Appearance** in the sidebar.
 3. Change **Logo Art**, **Cast Members**, **Trailers & Clips**, **Reviews**, **Images**, or
    **Related Shows** as needed.
 4. Navigate away and return to confirm the selected detail sections remain.

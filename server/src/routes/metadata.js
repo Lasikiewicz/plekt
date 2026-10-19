@@ -39,6 +39,7 @@ import { getManualWatchReview } from "../utils/manualWatchReview.js";
 import { getFanartMovieArt, getFanartTvArt, getAllFanartMovieImages, getAllFanartTvImages } from "../utils/fanartGateway.js";
 import { getOmdbRating } from "../utils/omdbGateway.js";
 import { createRecommendationExclusion, filterExcludedRecommendations } from "../utils/recommendationExclusions.js";
+import { getPersonCreditWatchRows } from "../utils/personCreditWatchRows.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
 import {
   countPlaybackProgressRows,
@@ -1457,21 +1458,9 @@ export async function handleTmdbPerson(req, res) {
         if (title) creditTitles.push(title.toLowerCase());
       }
 
-      if (creditTmdbIds.length > 0) {
+      if (creditTmdbIds.length > 0 || creditTitles.length > 0) {
         const dbInstance = requireDb();
-        const placeholdersTmdb = creditTmdbIds.map(() => "?").join(",");
-        const placeholdersTitle = creditTitles.map(() => "?").join(",");
-        
-        // Fetch all matching rows from watch_history
-        const query = `
-          SELECT id, tmdb_id, title, media_type, season, episode, show_title, title_lower, show_title_lower, source
-          FROM watch_history
-          WHERE (tmdb_id IS NOT NULL AND tmdb_id IN (${placeholdersTmdb}))
-             OR (title_lower IN (${placeholdersTitle}))
-             OR (show_title_lower IN (${placeholdersTitle}))
-        `;
-        const params = [...creditTmdbIds, ...creditTitles, ...creditTitles];
-        const rows = dbInstance.prepare(query).all(params);
+        const rows = getPersonCreditWatchRows(dbInstance, { creditTmdbIds, creditTitles });
 
         // Sources that mean the item is physically on a connected media server.
         const isMediaServerSource = (src) => {

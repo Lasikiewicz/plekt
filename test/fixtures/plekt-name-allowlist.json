@@ -2269,14 +2269,6 @@
           1
         ],
         [
-          "app installed only in r/plembfin: a scheduled job polls this repository's public",
-          1
-        ],
-        [
-          "r/plembfin (un-pinning whichever release post it had pinned before). It has its own",
-          1
-        ],
-        [
           "`X-Plembfin-Webhook-Secret`, `Authorization: Bearer`, or the compatibility",
           2
         ],
@@ -2290,6 +2282,10 @@
         ],
         [
           "- Session: stateless HMAC-SHA256 signed cookie (`plembfin_session`), 7-day TTL.",
+          1
+        ],
+        [
+          "Platform listing may still link to them. The legacy installation in r/plembfin was",
           1
         ]
       ]
@@ -2940,6 +2936,10 @@
         [
           "`plembfin.db` databases, backup folders, cookies, browser storage keys, provider",
           1
+        ],
+        [
+          "branch finding. Retain the independent CodeQL #64 note until the next main scan. The r/plembfin",
+          1
         ]
       ]
     },
@@ -3016,15 +3016,11 @@
           1
         ],
         [
-          "r/plembfin gets release announcements too, but not via this repo's CI - Reddit's Data",
-          1
-        ],
-        [
-          "[`reddit-app/`](../reddit-app) is a separate Devvit app, installed only in r/plembfin,",
-          1
-        ],
-        [
           "- **`Dockerfile`** - `node:25-trixie-slim`, production deps only, non-root `plembfin`",
+          1
+        ],
+        [
+          "uninstalled from r/plembfin on 2026-10-19, and a follow-up CLI listing showed no apps",
           1
         ]
       ]
@@ -4780,43 +4776,27 @@
       "reason": "compatibility",
       "lines": [
         [
-          "after activation. Production Redis state remains unverified. The old `plembfin` app",
+          "The old `plembfin-release-bot` installation in r/plembfin is independent of this repository;",
           1
         ],
         [
-          "is still installed separately on r/plembfin and is untouched by this revision.",
+          "npx devvit list installs r/plembfin",
           1
         ],
         [
-          "Set-Location C:\\Github\\plembfin\\reddit-app",
+          "npx devvit uninstall r/plembfin plembfin-release-bot",
           1
         ],
         [
-          "A small [Devvit](https://developers.reddit.com) app installed only in r/plembfin. On a",
+          "This requires moderator permissions. You can also open the app in the [Developer Platform](https://developers.reddit.com/apps/plembfin-release-bot), choose **Installed in communities**, select r/plembfin, and choose **Remove from community**. Reddit's [Devvit FAQ](https://developers.reddit.com/docs/guides/faq#how-do-i-uninstall-or-remove-a-devvit-app-from-a-subreddit) notes that uninstalling may remove that installation's stored data and settings.",
           1
         ],
         [
-          "has been published, it posts a release announcement to r/plembfin and pins it,",
+          "The legacy `plembfin` release bot (v0.0.1) was uninstalled from r/plembfin on 2026-10-19.",
           1
         ],
         [
-          "Reddit identity, not any particular moderator's account. The `u/plembfin-releases`",
-          1
-        ],
-        [
-          "You'll need Node.js 24+ and to be logged in as a moderator of r/plembfin (your main",
-          1
-        ],
-        [
-          "manually and confirm it posts and pins correctly before touching r/plembfin.",
-          1
-        ],
-        [
-          "Once uploaded, install it to r/plembfin from",
-          1
-        ],
-        [
-          "`https://developers.reddit.com/apps/plembfin-release-bot` (or via",
+          "The follow-up `devvit list installs r/plembfin` check returned no installed apps.",
           1
         ]
       ]
@@ -9111,7 +9091,7 @@
       "reason": "website",
       "lines": [
         [
-          "\"public/assets/videos/plembfin-features-poster-57caf32586.webp\",",
+          "\"public/assets/videos/plembfin-features-poster-57caf32586.webp\"",
           1
         ],
         [
@@ -9147,7 +9127,7 @@
           1
         ],
         [
-          "\"public/assets/plembfin-hub.svg\"",
+          "\"public/assets/plembfin-hub.svg\",",
           1
         ]
       ]
@@ -11510,6 +11490,10 @@
         [
           "\"summary\": \"Merge branch 'main' of https://github.com/Lasikiewicz/plembfin\",",
           16
+        ],
+        [
+          "\"New installs keep the backups/plembfin folder name for compatibility.\",",
+          2
         ]
       ]
     },
@@ -11621,6 +11605,18 @@
     "website/src/pages/index.astro": {
       "reason": "website",
       "lines": [
+        [
+          "data-dark-src=\"/assets/optimized/plembfin_header_logo_dark-376.webp\"",
+          1
+        ],
+        [
+          "data-light-src=\"/assets/optimized/plembfin_header_logo_light-376.webp\"",
+          1
+        ],
+        [
+          "src=\"/assets/optimized/plembfin_header_logo_dark-376.webp\"",
+          1
+        ],
         [
           "const demoUrl = \"https://demo.plembfin.com/\";",
           1
@@ -12069,7 +12065,7 @@
           1
         ],
         [
-          "For the stable v2.0.0 update, use `plembfin/plekt:2.0.0` or",
+          "For the stable v2.1.1 update, use `plembfin/plekt:2.1.1` or",
           1
         ],
         [

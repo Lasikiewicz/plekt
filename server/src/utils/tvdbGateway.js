@@ -17,6 +17,8 @@ const API_ROOT = "https://api4.thetvdb.com/v4";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const SEARCH_TTL_MS = 180 * DAY_MS;
 const SEARCH_MISS_TTL_MS = 60 * 60 * 1000;
+const SERIES_ENGLISH_OVERVIEW_TTL_MS = 30 * DAY_MS;
+const SERIES_ENGLISH_OVERVIEW_ERROR_TTL_MS = 15 * 60 * 1000;
 // The movie page's "Recommended TV Shows" rail asks "is there a series named
 // like this film?" on every view, and 9 in 10 answers are no. It reads a miss
 // for a week instead of an hour; the TTL is applied on read, so sync's own
@@ -298,6 +300,12 @@ function tvdbEndpointUrl(endpoint, params = {}) {
     const id = normalizeTvdbId(endpoint.id);
     if (!id) throw Object.assign(new Error("Valid TVDB series id is required"), { status: 400 });
     url.pathname = `/v4/series/${id}/extended`;
+  } else if (endpoint?.type === "series-translation") {
+    const id = normalizeTvdbId(endpoint.id);
+    if (!id) throw Object.assign(new Error("Valid TVDB series id is required"), { status: 400 });
+    const language = String(endpoint.language || "").trim().toLowerCase();
+    if (!/^[a-z]{3}$/.test(language)) throw Object.assign(new Error("Valid TVDB language is required"), { status: 400 });
+    url.pathname = `/v4/series/${id}/translations/${language}`;
   } else if (endpoint?.type === "series-artworks") {
     const id = normalizeTvdbId(endpoint.id);
     if (!id) throw Object.assign(new Error("Valid TVDB series id is required"), { status: 400 });
@@ -551,13 +559,63 @@ export async function getTvdbSeriesExtended(tvdbId, { force = false, lane = "enr
     // meta switch below (which lacked per-season episode counts) are refetched.
     if (!force && cached?.details && Array.isArray(cached.details.episodes) && fresh(cached.updatedAtMs, seriesCacheTtl(cached.details))) return cached.details;
     try {
-      const details = await upstream({ type: "series-extended", id }, { meta: "episodes" }, 0, { lane });
+      const fetched = await upstream({ type: "series-extended", id }, { meta: "episodes" }, 0, { lane });
+      // A forced refresh of the structural record should not discard a still
+      // useful English synopsis cached beside it. The overview has its own TTL.
+      const details = cached?.details?._plektEnglishOverview
+        ? { ...fetched, _plektEnglishOverview: cached.details._plektEnglishOverview }
+        : fetched;
       seriesSetStmt.run({ id: cacheId, tvdb_id: id, title: details?.name || "", details: toJson(details), updated_at_ms: Date.now() });
       return details;
     } catch (error) {
       if (cached?.details) return cached.details;
       throw error;
     }
+  });
+}
+
+// TVDB's extended series request follows its default language. The dedicated
+// translation endpoint supplies an English overview when one exists; store its
+// small cache record in the series row so Fix Match and cache-clear paths keep
+// their existing identity and invalidation behavior.
+export async function getTvdbEnglishSeriesOverview(tvdbId, { force = false, lane = "enrichment" } = {}) {
+  const id = normalizeTvdbId(tvdbId);
+  if (!id) return "";
+  return collapse(`series-english-overview:${id}`, async () => {
+    const cacheId = `series_${id}`;
+    const row = seriesGetStmt.get(cacheId);
+    if (!row?.details) return { overview: "", status: "error", checkedAtMs: Date.now() };
+    const details = parseJson(row.details) || {};
+    const cached = details._plektEnglishOverview;
+    const ttl = cached?.status === "error" ? SERIES_ENGLISH_OVERVIEW_ERROR_TTL_MS : SERIES_ENGLISH_OVERVIEW_TTL_MS;
+    if (!force && cached && fresh(cached.checkedAtMs, ttl)) {
+      return { overview: String(cached.overview || ""), status: cached.status, checkedAtMs: Number(cached.checkedAtMs) || 0 };
+    }
+
+    let next;
+    try {
+      const translation = await upstream({ type: "series-translation", id, language: "eng" }, {}, 0, { lane });
+      const overview = String(translation?.overview || "").trim();
+      next = { overview, status: overview ? "available" : "missing", checkedAtMs: Date.now() };
+    } catch (error) {
+      next = {
+        // Keep a prior English synopsis usable during a temporary TVDB outage.
+        overview: String(cached?.overview || "").trim(),
+        status: Number(error?.status) === 404 ? "missing" : "error",
+        checkedAtMs: Date.now(),
+      };
+    }
+
+    seriesSetStmt.run({
+      id: cacheId,
+      tvdb_id: id,
+      title: row.title || details.name || "",
+      details: toJson({ ...details, _plektEnglishOverview: next }),
+      // Translation refreshes must not make an old structural series row look
+      // new; its normal 14/180-day TTL remains tied to the extended response.
+      updated_at_ms: row.updated_at_ms,
+    });
+    return next;
   });
 }
 
@@ -674,7 +732,7 @@ function bestRemoteId(remoteIds, sourceNames) {
   return match ? String(match.id || "") : "";
 }
 
-export function shapeTvdbSeriesAsTmdb(extended) {
+export function shapeTvdbSeriesAsTmdb(extended, { englishOverview = "" } = {}) {
   if (!extended) return null;
   const episodeCounts = new Map();
   for (const episode of Array.isArray(extended.episodes) ? extended.episodes : []) {
@@ -704,7 +762,7 @@ export function shapeTvdbSeriesAsTmdb(extended) {
 
   return {
     name: extended.name || "",
-    overview: extended.overview || "",
+    overview: String(englishOverview || "").trim() || extended.overview || "",
     first_air_date: extended.firstAired || "",
     status: extended.status?.name || "",
     genres: (extended.genres || []).map((genre) => ({ id: genre.id, name: genre.name })),

@@ -4,14 +4,17 @@ import { fetchWithTimeout } from "./outbound.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
 import { cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, getPosterCache, markPosterMissing, usableCachedPoster } from "./posterCache.js";
 import { getFanartMovieArt, getFanartTvArt } from "./fanartGateway.js";
-import { RELATED_TV_SEARCH_MISS_TTL_MS, resolveTvdbSeriesId,resolveTvdbSeriesIdFromEpisodeId, getTvdbSeriesExtended, getTvdbSeasonEpisodes, getCachedTvdbSeasonEpisodes, shapeTvdbSeriesAsTmdb, tvdbSeriesTitleMatches } from "./tvdbGateway.js";
+import { RELATED_TV_SEARCH_MISS_TTL_MS, resolveTvdbSeriesId, resolveTvdbSeriesIdFromEpisodeId, getTvdbSeriesExtended, getTvdbEnglishSeriesOverview, getTvdbSeasonEpisodes, getCachedTvdbSeasonEpisodes, shapeTvdbSeriesAsTmdb, tvdbSeriesTitleMatches } from "./tvdbGateway.js";
 import { isDemoMode } from "./demoMode.js";
 import { readShowNumbering, resolveAndRecordSeasonSource } from "./seasonSource.js";
+import { buildEpisodeNumberMap, translateEpisode } from "./episodeNumberMap.js";
 import { needsTranslatedSeasonWarmup, warmTranslatedRowSeasons } from "./translatedSeasonWarmup.js";
 const API_ROOT = "https://api.themoviedb.org/3";
 const IMAGE_ROOT = "https://image.tmdb.org/t/p";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DETAILS_SCHEMA_VERSION = 15; // bumped: refetch structural-only TV rows so full metadata append data is restored
+const TV_SYNOPSIS_LANGUAGE_VERSION = 1;
+const TV_SYNOPSIS_LANGUAGE_RETRY_MS = 15 * 60 * 1000;
 const PERSON_SCHEMA_VERSION = 5;
 const SEARCH_TTL_MS = 15 * 60 * 1000;
 const RECOMMENDATION_TTL_MS = 6 * 60 * 60 * 1000;
@@ -220,9 +223,12 @@ function fresh(data, ttl) {
 // A cached row satisfies a caller when it is schema-current and inside its TTL -
 // and, for full callers, was not produced by a light fetch (light rows skip
 // next-airing derivation and artwork enrichment, so a full request must refetch).
-function cacheSatisfies(cached, { light = false } = {}) {
+function cacheSatisfies(cached, { light = false, requireEnglishTvSynopsis = false } = {}) {
   if (!cached?.details) return false;
   if (!light && cached.details.details_light) return false;
+  if (requireEnglishTvSynopsis && cached.details.tv_synopsis_language_version !== TV_SYNOPSIS_LANGUAGE_VERSION) return false;
+  if (requireEnglishTvSynopsis && cached.details.tv_synopsis_language_status === "error"
+    && !fresh({ updatedAtMs: cached.details.tv_synopsis_language_checked_at_ms }, TV_SYNOPSIS_LANGUAGE_RETRY_MS)) return false;
   return cached.schemaVersion >= DETAILS_SCHEMA_VERSION && fresh(cached, detailsTtl(cached.details));
 }
 
@@ -733,7 +739,7 @@ export function queueTmdbMetadataWarmup(items = [], { reason = "discovery" } = {
       || cached.details.poster_path
       || cached.details.tvdb_poster_url
     );
-    if (cacheSatisfies(cached, { light: false }) && cachedArtwork && !needsTranslatedSeasonWarmup(cached.details)) continue;
+    if (cacheSatisfies(cached, { light: false, requireEnglishTvSynopsis: normalized.mediaType === "tv" }) && cachedArtwork && !needsTranslatedSeasonWarmup(cached.details)) continue;
     metadataWarmupQueued.add(key);
     accepted.push({ ...normalized, force: normalized.force || Boolean(cached), key });
   }
@@ -853,7 +859,7 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
     // never serve cached metadata for a different series merely because the
     // TMDB id matches. This is what otherwise allows same-title shows such as
     // The Assembly (UK) and The Assembly to render each other's watch rows.
-    if (!force && cachedIdentityIsSafe && cachedTitleIsSafe && cacheSatisfies(cached, { light })) return cached.details;
+    if (!force && cachedIdentityIsSafe && cachedTitleIsSafe && cacheSatisfies(cached, { light, requireEnglishTvSynopsis: true })) return cached.details;
     try {
       // Older library records can carry a TVDB episode ID rather than the
       // series ID. If that ID cannot be loaded as a series, first ask TVDB
@@ -891,7 +897,8 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
           throw error;
         }
       }
-      const shaped = shapeTvdbSeriesAsTmdb(extended);
+      const englishSynopsis = await getTvdbEnglishSeriesOverview(seriesTvdbId, { force: forceTvdb, lane });
+      const shaped = shapeTvdbSeriesAsTmdb(extended, { englishOverview: englishSynopsis.overview });
       const tvdbTmdbId = String(shaped.external_ids.tmdb_id || "");
       // TVDB is the authoritative identity when it was supplied explicitly.
       // Prefer its remote TMDB id if the caller's TMDB id disagrees, otherwise
@@ -926,7 +933,7 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
         // remoteIds mapping and cached its title-search fallback under this same
         // tmdb id). Only reuse it when it actually corresponds to this tvdbId,
         // or a show rematched away from that tmdb id would keep serving forever.
-        if (cacheSatisfies(resolvedCached, { light })
+        if (cacheSatisfies(resolvedCached, { light, requireEnglishTvSynopsis: true })
           && String(resolvedCached.details?.external_ids?.tvdb_id || "") === seriesTvdbId
           && (!requestedImdbId || !resolvedCached.details?.external_ids?.imdb_id
             || String(resolvedCached.details.external_ids.imdb_id).toLowerCase() === requestedImdbId.toLowerCase())) {
@@ -958,6 +965,9 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
       const details = {
         ...shaped,
         ...extras,
+        tv_synopsis_language_version: TV_SYNOPSIS_LANGUAGE_VERSION,
+        tv_synopsis_language_status: englishSynopsis.status,
+        tv_synopsis_language_checked_at_ms: englishSynopsis.checkedAtMs,
         id: resolvedTmdbId || undefined,
         external_ids: {
           ...shaped.external_ids,
@@ -1422,6 +1432,57 @@ function shapeTmdbSeason(details) {
   };
 }
 
+function episodeDateValue(value) {
+  const time = Date.parse(String(value || ""));
+  return Number.isFinite(time) ? time : null;
+}
+
+// Match the selected provider's episode rows to the complementary provider by
+// the same air-date numbering map used by Fix Match. Keep a same-number match
+// when one date is missing, but do not guess across a numbering difference.
+function matchingEpisodeText(sourceEpisode, targetEpisodes, map, seasonNumber) {
+  const match = translateEpisode(map, seasonNumber, sourceEpisode.episode_number);
+  if (!match) return null;
+  const target = targetEpisodes.find((episode) => Number(episode.episode_number) === Number(match.episode));
+  if (!target) return null;
+  const sourceDate = episodeDateValue(sourceEpisode.air_date);
+  const targetDate = episodeDateValue(target.air_date);
+  if (sourceDate === null || targetDate === null) {
+    return Number(sourceEpisode.episode_number) === Number(target.episode_number) ? target : null;
+  }
+  return Math.abs(sourceDate - targetDate) <= DAY_MS ? target : null;
+}
+
+function mergeEpisodeText(primary, secondary, seasonNumber, { preferSecondary = false } = {}) {
+  const primaryEpisodes = Array.isArray(primary?.episodes) ? primary.episodes : [];
+  const secondaryEpisodes = Array.isArray(secondary?.episodes) ? secondary.episodes : [];
+  if (!primaryEpisodes.length || !secondaryEpisodes.length) return primary;
+  const map = buildEpisodeNumberMap({
+    from: [{ season: seasonNumber, episodes: primaryEpisodes }],
+    to: [{ season: seasonNumber, episodes: secondaryEpisodes }],
+  });
+  return {
+    ...primary,
+    episodes: primaryEpisodes.map((episode) => {
+      const matched = matchingEpisodeText(episode, secondaryEpisodes, map, seasonNumber);
+      if (!matched) return episode;
+      const preferred = preferSecondary ? matched : episode;
+      const fallback = preferSecondary ? episode : matched;
+      return {
+        ...episode,
+        name: String(preferred?.name || "").trim() || String(fallback?.name || ""),
+        overview: String(preferred?.overview || "").trim() || String(fallback?.overview || ""),
+      };
+    }),
+  };
+}
+
+function needsEpisodeTextFallback(season = {}) {
+  return (Array.isArray(season.episodes) ? season.episodes : []).some((episode) => (
+    !String(episode?.name || "").trim() || !String(episode?.overview || "").trim()
+  ));
+}
+
 export async function getTmdbSeasonEpisodes({ tmdbId, seasonNumber, lane = "enrichment" }) {
   const id = String(tmdbId || "");
   const number = Number(seasonNumber);
@@ -1430,7 +1491,7 @@ export async function getTmdbSeasonEpisodes({ tmdbId, seasonNumber, lane = "enri
   if (row && Date.now() - Number(row.updated_at_ms || 0) < TMDB_SEASON_TTL_MS) return shapeTmdbSeason(parseJson(row.details));
   let season;
   try {
-    season = await upstream(`tv/${id}/season/${number}`, {}, 0, { lane });
+    season = await upstream(`tv/${id}/season/${number}`, { language: "en-US" }, 0, { lane });
   } catch (error) {
     // A season TMDB does not have is cached as empty, so every page load does not repeat the request.
     if (Number(error?.status) !== 404) throw error;
@@ -1489,7 +1550,7 @@ export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seas
   // client receives a valid merged show but its episode list stays empty.
   const cached = id
     ? (metaGet(`tv_${id}`) || metaGet(`tv_tvdb_${id}`) || metaGetByTmdbId(id))
-    : null;
+    : metaGetByTvdbId(directTvdbId);
   const tvdbId = directTvdbId || String(cached?.details?.external_ids?.tvdb_id || "");
   if (!tvdbId) {
     const error = new Error("TVDB ID not resolved for this show yet");
@@ -1503,16 +1564,32 @@ export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seas
     error.status = 404;
     throw error;
   }
-  // The show's season source is saved on its first read (write-once). A TMDB
-  // source with no episodes falls back to TVDB rather than showing nothing.
-  if (resolveAndRecordSeasonSource(tvdbId) === "tmdb") {
+  // The show's season source is saved on its first read (write-once). Keep its
+  // numbering and non-text metadata, while preferring English TMDB text where
+  // the episode maps safely by air date. Missing text falls back per field.
+  const seasonSource = resolveAndRecordSeasonSource(tvdbId);
+  if (seasonSource === "tmdb") {
     const tmdbSeasonId = id || String(cached?.details?.id || metaGet(`tv_tvdb_${tvdbId}`)?.details?.id || "");
     const tmdbSeason = tmdbSeasonId
       ? await getTmdbSeasonEpisodes({ tmdbId: tmdbSeasonId, seasonNumber: number, lane }).catch(() => null)
       : null;
-    if (tmdbSeason?.episodes?.length) return tmdbSeason;
+    if (tmdbSeason?.episodes?.length) {
+      if (needsEpisodeTextFallback(tmdbSeason)) {
+        const tvdbSeason = await getTvdbSeasonEpisodes({ tvdbId, seasonNumber: number, lane }).catch(() => null);
+        return mergeEpisodeText(tmdbSeason, tvdbSeason, number);
+      }
+      return tmdbSeason;
+    }
   }
-  return getTvdbSeasonEpisodes({ tvdbId, seasonNumber: number, lane });
+  const tvdbSeason = await getTvdbSeasonEpisodes({ tvdbId, seasonNumber: number, lane });
+  if (!tvdbSeason?.episodes?.length) return tvdbSeason;
+  const originalLanguage = String(cached?.details?.original_language || "").trim().toLowerCase();
+  if (originalLanguage === "en") return tvdbSeason;
+  const tmdbSeasonId = id || String(cached?.details?.id || metaGet(`tv_tvdb_${tvdbId}`)?.details?.id || "");
+  const englishSeason = tmdbSeasonId
+    ? await getTmdbSeasonEpisodes({ tmdbId: tmdbSeasonId, seasonNumber: number, lane }).catch(() => null)
+    : null;
+  return mergeEpisodeText(tvdbSeason, englishSeason, number, { preferSecondary: true });
 }
 
 // Cache-only companion for Up Next. It deliberately accepts stale season rows:

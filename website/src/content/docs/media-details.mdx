@@ -3,7 +3,7 @@ title: Media details and actions
 description: Understand the detail page, watch dates, Fix Match, artwork, the Options menu, and provider content.
 category: Media and discovery
 order: 5
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/modules/media-detail.js
   - public/modules/media-detail-context.js
@@ -230,8 +230,8 @@ If none remain, the title becomes unwatched.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/fix-match-focus-dark.png"
   lightSrc="/assets/app-captures/fix-match-focus-light.png"
-  alt="Plekt Fix Match dialog showing a search across all sources, result cards with their source, and YouTube fallback"
-  caption="Fix Match searches your library, TMDB, and (for TV) TheTVDB at once, and also provides a YouTube fallback for unmatched video content."
+  alt="Plekt movie Fix Match dialog showing TMDB search results for A Quiet Place and a YouTube fallback"
+  caption="Movie Fix Match searches TMDB and also provides a YouTube fallback for unmatched video content."
 />
 
 **Fix Match** changes the provider identity of the local record.
@@ -249,7 +249,7 @@ used by the archive and future syncs.
 2. Choose **Fix Match**.
 3. Search by title, year, or a distinctive part of the title. **Search all sources** checks
    your library and TMDB together.
-4. Compare the result's year and metadata with the local movie.
+4. Compare the result's title, poster, overview, source labels, and provider IDs with the local movie.
 5. Select the correct result.
 6. Confirm the change.
 7. Reopen the detail page and check its provider details, poster, and Sync Activity.
@@ -264,9 +264,9 @@ permanently under the old one.
 1. Open the show detail page. For an episode card, use the show-level match action so the
    series identity is corrected for the whole show.
 2. Choose **Fix Match**.
-3. Search for the series and compare title, year, network, and season information.
-4. Select the correct series. Each result card names the sources it came from; the show is
-   rematched by its TheTVDB series.
+3. Search for the series. Compare each result's title, poster, overview, source labels, and
+   provider IDs.
+4. Select the correct series. TMDB results are resolved to their TheTVDB series identity.
 5. Confirm the change.
 6. Wait for the background metadata and progress refresh.
 7. Confirm the intended seasons and episodes, then check Sync Activity before retrying a

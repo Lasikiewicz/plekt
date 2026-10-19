@@ -1,10 +1,10 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { state, elements } from "./state.js?v=2.1.0.2.1";
-import { escapeAttribute, escapeHtml, formatTmdbDate, episodeCode } from "./utils.js?v=2.1.0.2.1";
-import { hydratePosters } from "./images.js?v=2.1.0.2.1";
-import { normalizeMediaCardRecord, renderMediaCard } from "./media-card.js?v=2.1.0.2.1";
-import { hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata } from "./personal-media-metadata.js?v=2.1.0.2.1";
-import { bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog, openImportPlaylistsDialog, openShowEpisodePicker, recentlyDeletedButtonHtml, renderPlaylists, watchUncheckedPlaylistRules } from "./playlists.js?v=2.1.0.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { state, elements } from "./state.js?v=2.1.1.0.2";
+import { escapeAttribute, escapeHtml, formatTmdbDate, episodeCode } from "./utils.js?v=2.1.1.0.2";
+import { hydratePosters } from "./images.js?v=2.1.1.0.2";
+import { normalizeMediaCardRecord, renderMediaCard } from "./media-card.js?v=2.1.1.0.2";
+import { hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata } from "./personal-media-metadata.js?v=2.1.1.0.2";
+import { bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog, openImportPlaylistsDialog, openShowEpisodePicker, recentlyDeletedButtonHtml, renderPlaylists, watchUncheckedPlaylistRules } from "./playlists.js?v=2.1.1.0.2";
 
 export { openAddToListDialog, openCreateListDialog };
 
@@ -655,6 +655,18 @@ function renderPersonalControls() {
           <svg class="dashboard-compact-icon-card" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
           <svg class="dashboard-compact-icon-posters" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
         </button>
+          <div class="mobile-card-mode-options" role="radiogroup" aria-label="Personal media card display">
+            <label class="mobile-card-mode-option">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
+              <span>Card view</span>
+              <input type="radio" name="personalCardDisplay" value="full" data-card-mode-select="personal" data-card-mode="full"${compactCards ? "" : " checked"} />
+            </label>
+            <label class="mobile-card-mode-option">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
+              <span>Poster view</span>
+              <input type="radio" name="personalCardDisplay" value="posters" data-card-mode-select="personal" data-card-mode="posters"${compactCards ? " checked" : ""} />
+            </label>
+          </div>
         ${action}
       </div>
     </div>

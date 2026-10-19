@@ -3,10 +3,10 @@
 // and server-to-server callers (webhooks, cron) never preflight, so no other
 // CORS headers are needed either.
 function sanitizeResponseBody(body, status) {
-  if (!body || typeof body !== "object") return body;
   if (status >= 500) {
-    return { ...(body.ok !== undefined ? { ok: false } : {}), error: "Internal server error" };
+    return { ...(body && typeof body === "object" && body.ok !== undefined ? { ok: false } : {}), error: "Internal server error" };
   }
+  if (!body || typeof body !== "object") return body;
   return body;
 }
 

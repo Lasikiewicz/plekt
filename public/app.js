@@ -1,15 +1,16 @@
-import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=2.1.0.2.1";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs, formatLogLineToHtml } from "./modules/logs.js?v=2.1.0.2.1";
-import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=2.1.0.2.1";
-import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=2.1.0.2.1";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=2.1.0.2.1";
-import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=2.1.0.2.1";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=2.1.0.2.1";
-import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=2.1.0.2.1";
-import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=2.1.0.2.1";
-import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=2.1.0.2.1";
-import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=2.1.0.2.1";
-import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=2.1.0.2.1";
+import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=2.1.1.0.2";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs, formatLogLineToHtml } from "./modules/logs.js?v=2.1.1.0.2";
+import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=2.1.1.0.2";
+import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=2.1.1.0.2";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=2.1.1.0.2";
+import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=2.1.1.0.2";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=2.1.1.0.2";
+import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=2.1.1.0.2";
+import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=2.1.1.0.2";
+import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=2.1.1.0.2";
+import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=2.1.1.0.2";
+import { cachedExplorerPage, rememberExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows } from "./modules/explorer-page-cache.js?v=2.1.1.0.2";
+import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=2.1.1.0.2";
 
 // Route, dialog, media-detail, and maintenance modules load on demand through
 // modules/route-modules.js: a route downloads only the modules it renders.
@@ -140,6 +141,7 @@ const ROUTE_MODULE_INITIALIZERS = {
     initExplorer({
       setMessage,
       selectView,
+      navigateTo,
       syncPageTopbar,
       cachedExplorerPage,
       rememberExplorerPage,
@@ -361,7 +363,7 @@ const THEME_KEY = "plembfin:theme";
 
 function updateThemeIcon() {
   const isLightMode = document.documentElement.classList.contains("light-mode");
-  const src = isLightMode ? "/plekt_header_logo_light.png?v=2.1.0.2.1" : "/plekt_header_logo_dark.png?v=2.1.0.2.1";
+  const src = isLightMode ? "/plekt_header_logo_light.png?v=2.1.1.0.2" : "/plekt_header_logo_dark.png?v=2.1.1.0.2";
   // Several logos can exist at once - the sidebar, setup wizard, and locked
   // login panel all need to track the selected theme.
   for (const logo of document.querySelectorAll(".brand-logo, [data-theme-logo]")) {
@@ -417,10 +419,6 @@ const HISTORY_PREVIEW_LIMIT = 120;
 const DASHBOARD_HISTORY_ROWS = 2;
 const EXPLORER_PAGE_SIZE = 240;
 const MANUAL_WATCH_BATCH_SIZE = 100;
-const EXPLORER_CACHE_TTL_MS = 30 * 60 * 1000;
-const EXPLORER_PERSISTED_CACHE_KEY = "plembfin:explorerPageCache:v3";
-const EXPLORER_PERSISTED_CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
-const EXPLORER_PERSISTED_CACHE_LIMIT = 24;
 const STARTUP_DEFERRED_WORK_TIMEOUT_MS = 1200;
 
 // Keep non-critical status panels and provider-backed dashboard enrichment out
@@ -1220,14 +1218,6 @@ bootstrapTokenFromUrl();
 
 
 
-function historyVersionFromRows(rows = []) {
-  const newest = rows.reduce((latest, row) => {
-    const watchedAt = String(row?.watched_at || "");
-    return watchedAt > latest ? watchedAt : latest;
-  }, "");
-  return newest ? `rows:${newest}:${rows.length}` : "empty";
-}
-
 function persistentDashboardHistoryCacheKey() {
   const userKey = state.currentUser?.uid || state.currentUser?.email || "local";
   return `${DASHBOARD_HISTORY_CACHE_KEY}:${userKey}`;
@@ -1266,95 +1256,6 @@ function applyCachedDashboardHistory() {
   renderDashboard();
   return true;
 }
-
-function explorerCacheVersion() {
-  return String(state.historyVersion || historyVersionFromRows(state.history));
-}
-
-function persistentExplorerCacheKey() {
-  const userKey = state.currentUser?.uid || state.currentUser?.email || "local";
-  return `${EXPLORER_PERSISTED_CACHE_KEY}:${userKey}`;
-}
-
-function readPersistentExplorerCache() {
-  try {
-    const raw = localStorage.getItem(persistentExplorerCacheKey());
-    const parsed = raw ? JSON.parse(raw) : {};
-    return Array.isArray(parsed.entries) ? parsed.entries : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function writePersistentExplorerCache(entries) {
-  try {
-    localStorage.setItem(persistentExplorerCacheKey(), JSON.stringify({ entries }));
-  } catch (error) {
-    // Storage is best-effort; the in-memory cache and API remain available.
-  }
-}
-
-function isShowsExplorerPageKey(key) {
-  return /\/api\/shows(?:\?|$)/.test(String(key || ""));
-}
-
-function explorerPersistedCacheTtlMs(key) {
-  // Show summaries also contain independently refreshed next-airing dates.
-  // A history-version match alone cannot keep those fields fresh for 14 days.
-  return isShowsExplorerPageKey(key) ? EXPLORER_CACHE_TTL_MS : EXPLORER_PERSISTED_CACHE_TTL_MS;
-}
-
-function clearPersistentExplorerPageCache() {
-  try {
-    localStorage.removeItem(persistentExplorerCacheKey());
-  } catch (error) { }
-}
-
-function cachedExplorerPage(key) {
-  const version = explorerCacheVersion();
-  const cached = state.explorerPageCache.get(key);
-  if (cached && cached.version === version && Date.now() - cached.savedAt <= EXPLORER_CACHE_TTL_MS) {
-    return cached.body;
-  }
-  if (cached) {
-    state.explorerPageCache.delete(key);
-  }
-
-  const now = Date.now();
-  const entries = readPersistentExplorerCache().filter((entry) => now - Number(entry.savedAt || 0) <= explorerPersistedCacheTtlMs(entry.key));
-  const persisted = entries.find((entry) => entry.key === key && entry.version === version);
-  if (!persisted) {
-    if (entries.length) writePersistentExplorerCache(entries);
-    return null;
-  }
-
-  // Preserve the original fetch time for shows so a persisted hit cannot
-  // restart another 30-minute in-memory window for old next-airing data.
-  const savedAt = isShowsExplorerPageKey(key)
-    ? Number(persisted.savedAt || now)
-    : now;
-  state.explorerPageCache.set(key, { savedAt, version, body: persisted.body });
-  return persisted.body;
-}
-
-function rememberExplorerPage(key, body) {
-  const savedAt = Date.now();
-  const version = explorerCacheVersion();
-  state.explorerPageCache.set(key, { savedAt, version, body });
-  if (state.explorerPageCache.size > 40) {
-    const oldestKey = state.explorerPageCache.keys().next().value;
-    state.explorerPageCache.delete(oldestKey);
-  }
-
-  const nextEntries = readPersistentExplorerCache()
-    .filter((entry) => entry.key !== key && savedAt - Number(entry.savedAt || 0) <= explorerPersistedCacheTtlMs(entry.key))
-    .concat({ key, version, savedAt, body })
-    .sort((a, b) => Number(b.savedAt || 0) - Number(a.savedAt || 0))
-    .slice(0, EXPLORER_PERSISTED_CACHE_LIMIT);
-  writePersistentExplorerCache(nextEntries);
-}
-
-
 
 function isLikelyActionableFailure(text, tone) {
   if (!["error", "warning"].includes(String(tone || "").toLowerCase())) return false;
@@ -2151,7 +2052,9 @@ function syncPageTopbar() {
   const isPersonDetail = path.startsWith("/person/");
   const isInlineDetail = state.mediaDetailInline || isPersonDetail;
   const isMobile = window.matchMedia("(max-width: 640px)").matches;
+  const isMobileTopbar = window.matchMedia("(max-width: 760px)").matches;
   document.body.classList.toggle("media-detail-active", isInlineDetail);
+  document.body.classList.toggle("person-detail-active", isPersonDetail);
   const controlGroups = [
     elements.explorerTopbarControls,
     elements.historyTopbarControls,
@@ -2246,6 +2149,8 @@ function syncPageTopbar() {
     subtitle = "";
   }
 
+  const usePageOptionsMenu = Boolean(activeControls && isMobileTopbar && !isInlineDetail);
+
   if (elements.explorerTitle) elements.explorerTitle.textContent = title;
   if (elements.explorerSubtitle) {
     elements.explorerSubtitle.textContent = subtitle;
@@ -2260,6 +2165,23 @@ function syncPageTopbar() {
   const backButton = document.querySelector("#explorerBackButton");
   backButton?.classList.toggle("hidden", !isInlineDetail);
 
+  document.body.classList.toggle("page-controls-options-active", usePageOptionsMenu);
+  if (elements.topbarControlsMenu && elements.pageTopbarActions) {
+    if (!usePageOptionsMenu && elements.topbarControlsMenu.parentElement !== elements.pageTopbarActions) {
+      elements.pageTopbarActions.insertBefore(elements.topbarControlsMenu, elements.pageTopbarActions.firstChild);
+    }
+    elements.topbarControlsMenu.classList.toggle("hidden", !usePageOptionsMenu);
+    const controlGroupId = usePageOptionsMenu ? activeControls.id : "";
+    if (!usePageOptionsMenu || elements.topbarControlsMenu.dataset.controlsFor !== controlGroupId) {
+      elements.topbarControlsMenu.removeAttribute("open");
+    }
+    if (usePageOptionsMenu) {
+      elements.topbarControlsMenu.dataset.controlsFor = controlGroupId;
+    } else {
+      delete elements.topbarControlsMenu.dataset.controlsFor;
+    }
+  }
+
   for (const group of controlGroups) {
     restoreTopbarControlGroup(group);
     group.classList.add("hidden");
@@ -2270,24 +2192,42 @@ function syncPageTopbar() {
   }
 
 
-  if (elements.topbarControlsMenu) {
-    elements.topbarControlsMenu.classList.add("hidden");
-  }
-
   const mediaDetailActions = document.getElementById("mediaDetailActions");
+  // The detail action manager moves Options into the title row on phones.
+  // Keep it there when syncing the rest of the topbar because the original
+  // toolbar row is hidden at that viewport size.
+  const keepMediaActionsInline = isInlineDetail && isMobile &&
+    mediaDetailActions?.parentElement?.classList.contains("page-topbar-title");
   if (elements.pageTopbarActions) {
-    if (activeControls) {
+    if (usePageOptionsMenu && elements.topbarControlsMenu && elements.topbarControlsPanel) {
+      const titleContainer = elements.pageTopbar?.querySelector(".page-topbar-title");
+      if (titleContainer && elements.topbarControlsMenu.parentElement !== titleContainer) {
+        titleContainer.appendChild(elements.topbarControlsMenu);
+      }
+      elements.topbarControlsPanel.appendChild(activeControls);
+      activeControls.classList.remove("hidden");
+    } else if (activeControls) {
       const targetNextSibling = mediaDetailActions || null;
       if (activeControls.parentElement !== elements.pageTopbarActions || activeControls.nextSibling !== targetNextSibling) {
         elements.pageTopbarActions.insertBefore(activeControls, targetNextSibling);
       }
       activeControls.classList.remove("hidden");
     }
-    if (mediaDetailActions && mediaDetailActions.parentElement !== elements.pageTopbarActions) {
+    if (mediaDetailActions && mediaDetailActions.parentElement !== elements.pageTopbarActions && !keepMediaActionsInline) {
       elements.pageTopbarActions.appendChild(mediaDetailActions);
     }
   }
   syncTopbarControlsMenuState();
+  const hasVisibleTopbarAction = Boolean(
+    usePageOptionsMenu
+    || (activeControls && !activeControls.classList.contains("hidden"))
+    || Array.from(elements.pageTopbarActions?.querySelectorAll("button, a, input, select, [role='button']") || [])
+      .some((control) => (
+        !control.closest(".hidden") && getComputedStyle(control).display !== "none" && control.getClientRects().length > 0
+      )),
+  );
+  const hasVisibleBackAction = isInlineDetail && backButton && !backButton.classList.contains("hidden");
+  elements.pageTopbar.classList.toggle("page-topbar--empty", !hasVisibleTopbarAction && !hasVisibleBackAction);
 }
 
 function restoreTopbarControlGroup(group) {
@@ -2297,7 +2237,11 @@ function restoreTopbarControlGroup(group) {
     if (settingsButton && (group.parentElement !== settingsButton.parentElement || settingsButton.nextElementSibling !== group)) {
       settingsButton.after(group);
     }
-
+    return;
+  }
+  if (elements.topbarControlsPanel?.contains(group) && elements.pageTopbarActions) {
+    const mediaDetailActions = document.getElementById("mediaDetailActions");
+    elements.pageTopbarActions.insertBefore(group, mediaDetailActions || null);
   }
 }
 

@@ -89,13 +89,18 @@ test("Now Playing TV fallback reuses a loaded local show identity when the provi
   state.showsRaw = [];
 });
 
-test("media records dedupe by show identity and keep the latest watch", () => {
+test("media records dedupe by provider identity and keep distinct movies with shared artwork", () => {
   const older = { media_type: "episode", show_tmdb_id: 100, show_title: "Reacher", watched_at: "2026-01-01" };
   const newer = { media_type: "episode", show_tmdb_id: 100, show_title: "Reacher", watched_at: "2026-02-01" };
   assert.equal(mediaRecordIdentity(older), "show:tmdb:100");
   assert.deepEqual(dedupeMediaRecords([older, newer]), [newer]);
-  const poster = { media_type: "movie", title: "Heat", poster_url: "https://image.tmdb.org/t/p/w342/heat.jpg?x=1" };
-  assert.equal(mediaRecordIdentity(poster), "movie:poster:tmdb-poster:heat.jpg");
+
+  const sharedPoster = "https://image.tmdb.org/t/p/w342/shared.jpg";
+  const firstMovie = { media_type: "movie", title: "Heat", imdb_id: "tt0113277", poster_url: sharedPoster };
+  const secondMovie = { media_type: "movie", title: "Heat 2", imdb_id: "tt1234567", poster_url: sharedPoster };
+  assert.equal(mediaRecordIdentity(firstMovie), "movie:imdb:tt0113277");
+  assert.equal(mediaRecordIdentity({ media_type: "movie", title: "Heat", poster_url: sharedPoster }), "movie:title:heat");
+  assert.deepEqual(dedupeMediaRecords([firstMovie, secondMovie]), [firstMovie, secondMovie]);
 });
 
 test("Up Next show helpers match across id field spellings and escape markup", () => {
@@ -264,12 +269,74 @@ test("mobile show detail episodes stay in a two-column grid", () => {
   );
 });
 
+test("mobile explorer poster grid uses capped portrait tiles with readable titles", () => {
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 760px\) \{\s+\.page-shell\[data-active-view="explorer"\] \[data-view-panel="explorer"\]:not\(\.page-card-mode-compact\) #explorerPanel \.movie-grid:not\(\.explorer-list-view, \.explorer-overview-view\) \{\s+grid-template-columns: repeat\(auto-fill, minmax\(min\(10rem, 100%\), 1fr\)\);/,
+  );
+  assert.match(
+    stylesSource,
+    /\.movie-grid:not\(\.explorer-list-view, \.explorer-overview-view\) > \.explorer-history-card:not\(\.page-card-open\) > \.history-card-poster-wrapper \{[\s\S]*?aspect-ratio: 2 \/ 3;/,
+  );
+  assert.match(
+    stylesSource,
+    /\.movie-grid:not\(\.explorer-list-view, \.explorer-overview-view\) > \.explorer-history-card:not\(\.page-card-open\) :is\(\.history-card-summary, \.history-card-meta, \.history-card-footer\) \{\s+display: none;/,
+  );
+});
+
+test("mobile Dashboard history cards keep metadata directly under the episode header", () => {
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 640px\) \{\s+#timeline-view :is\(#tvHistoryRow, #movieHistoryRow\) > \.dashboard-history-page-card > \.history-card-details \{\s+justify-content: flex-start;\s+gap: 0\.45rem;/,
+  );
+  assert.match(
+    stylesSource,
+    /#timeline-view :is\(#tvHistoryRow, #movieHistoryRow\) > \.dashboard-history-page-card \.history-card-header \{\s+margin-bottom: 0;/,
+  );
+});
+
+test("desktop Discover poster cards size to their rail height", () => {
+  assert.match(
+    stylesSource,
+    /@media \(min-width: 761px\)[\s\S]*?\.page-shell\[data-active-view="discover"\] \[data-view-panel="discover"\]\.page-card-mode-compact \.discover-feed-row > \.shared-media-card--discover:not\(\.page-card-open\)[\s\S]*?width: auto;[\s\S]*?flex: 0 0 auto;[\s\S]*?height: 100%;/,
+  );
+});
+
+test("mobile media detail header centers its title independently of Back", () => {
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 980px\) \{[\s\S]*?body\.media-detail-active \.page-topbar-title \{\s+display: grid !important;\s+grid-template-columns: minmax\(0, 1fr\) auto minmax\(0, 1fr\);/,
+  );
+  assert.match(
+    stylesSource,
+    /body\.media-detail-active \.page-topbar-title > #explorerBackButton \{\s+grid-column: 1;\s+grid-row: 1;/,
+  );
+  assert.match(
+    stylesSource,
+    /body\.media-detail-active \.page-topbar-title > \.page-topbar-copy \{[\s\S]*?max-width: calc\(100vw - 160px\);/,
+  );
+  assert.match(stylesSource, /body\.media-detail-active \.page-topbar-copy h1 \{\s+min-width: 0;/);
+  assert.match(
+    stylesSource,
+    /@media \(min-width: 761px\) and \(max-width: 980px\) \{\s+body\.media-detail-active \.page-topbar \{\s+flex-direction: column;\s+align-items: stretch;/,
+  );
+  assert.match(
+    stylesSource,
+    /body\.media-detail-active \.page-topbar-actions \{\s+width: 100%;\s+max-width: 100%;\s+margin-left: 0;\s+justify-content: flex-start;\s+overflow-x: auto;/,
+  );
+});
+
 test("mobile TV show summaries sit below the logo without moving progress", () => {
   assert.match(showDetailSource, /media-detail-page media-detail-show-page/);
+  assert.match(showDetailSource, /renderMediaFacts\(tmdbData, "tv", "sidebar", \{ ratingsHtml: ratingsFactHtml, appLinksHtml: appLinksFactHtml, openOnMobile: true \}\)/);
   assert.match(
     stylesSource,
     /@media \(max-width: 640px\) \{[\s\S]*?\.media-detail-page\.media-detail-show-page \.immersive-overview \{\s+grid-column: 2;\s+grid-row: 2 \/ 6;/,
   );
+  assert.match(stylesSource, /\.media-detail-page\.media-detail-show-page \.immersive-overview \{[^}]*text-align: center;/);
+  assert.match(stylesSource, /\.media-fact-table-value--rich \{\s+display: flex;\s+align-items: center;\s+min-width: 0;\s+flex-wrap: wrap;/);
+  assert.match(stylesSource, /\.media-detail-page\.media-detail-show-page \.media-fact-table-row--watch-now \.media-app-link-row \{\s+gap: 0\.25rem;/);
+  assert.doesNotMatch(stylesSource, /\.media-detail-page\.media-detail-show-page \.media-facts-bottom-group/);
   assert.match(
     stylesSource,
     /\.media-detail-page \.progress-section \{\s+grid-column: 1 \/ -1;\s+grid-row: 6;/,
@@ -341,6 +408,24 @@ test("mobile media controls keep watch actions in Options and popup surfaces wit
   assert.doesNotMatch(mediaDetailContextSource, /Force <br>Sync/);
   assert.match(mediaDetailContextSource, /aria-label="Open media options" title="Options"/);
   assert.match(mediaDetailContextSource, /<span>Options<\/span>/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions \{\s+display: flex !important;\s+align-items: center !important;/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions \.actions-tools-dropdown \{\s+display: flex !important;\s+align-items: center !important;\s+justify-content: center !important;/);
+  assert.match(stylesSource, /body #mediaDetailActions \{\s+min-height: 3\.5rem !important;\s+align-items: center !important;/);
+  assert.match(mediaDetailContextSource, /function moveMediaActionsIntoOptions\(el, dropdown, panel\)/);
+  assert.match(mediaDetailContextSource, /function moveMediaActionsContainerInline\(el\)/);
+  assert.match(mediaDetailContextSource, /const mobile = window\.innerWidth <= 640;/);
+  assert.match(appSource, /const keepMediaActionsInline = isInlineDetail && isMobile &&[\s\S]*?classList\.contains\("page-topbar-title"\);[\s\S]*?mediaDetailActions\.parentElement !== elements\.pageTopbarActions && !keepMediaActionsInline/);
+  assert.match(stylesSource, /body\.media-detail-active \.page-topbar-title > #mediaDetailActions \{\s+grid-column: 3;\s+grid-row: 1;/);
+  assert.match(stylesSource, /body\.media-detail-active #pageTopbarActions\.media-actions-inline-source \{\s+display: none !important;/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions \.actions-tools-trigger \{[\s\S]*?width: 2\.75rem !important;[\s\S]*?font-size: 0 !important;/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions \.actions-tools-trigger svg \{\s+width: 1\.3rem !important;\s+height: 1\.3rem !important;/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions \.actions-tools-trigger span \{\s+display: none !important;/);
+  assert.match(stylesSource, /body #mediaDetailActions\.actions-collapsed \.actions-tools-panel \{[\s\S]*?background: var\(--brand-menu\);/);
+  assert.match(stylesSource, /body #mediaDetailActions\.actions-collapsed \.actions-tools-panel \{[\s\S]*?background: var\(--brand-menu\) !important;/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions\.actions-collapsed \.actions-tools-panel \{[\s\S]*?height: auto !important;[\s\S]*?max-height: min\(68vh, 28rem\) !important;[\s\S]*?overflow-y: auto !important;[\s\S]*?white-space: nowrap !important;/);
+  assert.match(stylesSource, /@keyframes mobile-actions-options-enter \{\s+from \{ transform: translateX\(100%\); \}\s+to \{ transform: translateX\(0\); \}/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions\.actions-collapsed \.actions-tools-dropdown\[open\] > \.actions-tools-panel \{\s+animation: mobile-actions-options-enter 220ms/);
+  assert.match(stylesSource, /body\.media-detail-active #mediaDetailActions\.actions-collapsed \.actions-tools-panel br \{\s+display: none !important;/);
   assert.doesNotMatch(personalMediaSource, /title="Personal media options"[\s\S]*<span>Options<\/span>/);
   assert.match(stylesSource, /actions-tools-panel \.action-pill span,[\s\S]*white-space: nowrap;/);
   assert.match(stylesSource, /\.watch-date-options \{\s+grid-template-columns: minmax\(0, 1fr\);/);
@@ -354,7 +439,7 @@ test("mobile media controls keep watch actions in Options and popup surfaces wit
   assert.match(stylesSource, /body \.page-topbar-actions > \.hidden,[\s\S]*body #upcomingTopbarControls\.hidden,[\s\S]*display: none !important;/);
 });
 
-test("mobile page controls share the media action-bar layout without redundant Options menus", () => {
+test("mobile page controls use the shared title Options menu", () => {
   for (const id of [
     "discoverTopbarControls",
     "historyTopbarControls",
@@ -400,6 +485,15 @@ test("mobile page controls share the media action-bar layout without redundant O
   assert.match(stylesSource, /Shared media-style page action bars/);
   assert.match(stylesSource, /page-topbar-actions \.page-action-bar:not\(\.hidden\)/);
   assert.match(stylesSource, /page-tools-dropdown\[open\] > \.page-tools-panel/);
+  assert.match(indexSource, /<details id="topbarControlsMenu" class="topbar-controls-menu hidden">[\s\S]*aria-label="Open page options"[\s\S]*<span class="sr-only">Options<\/span>/);
+  assert.match(appSource, /const usePageOptionsMenu = Boolean\(activeControls && isMobileTopbar && !isInlineDetail\);/);
+  assert.match(appSource, /page-controls-options-active/);
+  assert.match(appSource, /topbarControlsPanel\.appendChild\(activeControls\)/);
+  assert.match(appSource, /titleContainer\.appendChild\(elements\.topbarControlsMenu\)/);
+  assert.match(mediaDetailContextSource, /matchMedia\("\(max-width: 760px\)"\)[\s\S]*page-controls-options-active/);
+  assert.match(stylesSource, /body\.page-controls-options-active #pageTopbarActions\s*\{\s*display: none !important;/);
+  assert.match(stylesSource, /body\.page-controls-options-active #topbarControlsPanel\s*\{[\s\S]*right: 0 !important;[\s\S]*width: min\(22rem, calc\(100vw - 1\.5rem\)\) !important;[\s\S]*background: var\(--brand-menu\) !important;/);
+  assert.match(stylesSource, /@keyframes page-options-menu-enter\s*\{\s*from \{ transform: translateX\(100%\); \}\s*to \{ transform: translateX\(0\); \}/);
   assert.match(stylesSource, /\.upcoming-week-day\.is-outside \{\s+display: none;/);
   assert.doesNotMatch(stylesSource, /\.upcoming-week-day\.is-outside,\s+\.upcoming-week-day\.is-empty/);
   assert.match(stylesSource, /grid-template-areas: "search month today"/);

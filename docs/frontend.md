@@ -22,7 +22,8 @@ Keep the left menu and main background aligned with these values when changing t
 application theme styles. They are the `--brand-menu` and `--brand-main` tokens in
 `public/styles.css` (`:root` for dark, `html.light-mode` for light). Every page paints its
 navbar (and, on media pages, its stacked title and controls rows on phones) with `--brand-menu`,
-matching the left menu.
+matching the left menu. Boxed controls inside the navbar use `--brand-main` as the alternating
+surface; a selected view-toggle button returns to `--brand-menu`.
 
 Settings uses only these two tones in both themes and both styles. The settings canvas is
 `--brand-main`; each nested surface level (section card, box or disclosure, field, input
@@ -174,7 +175,9 @@ Rules that keep this correct:
   Posters-off look: three poster slots in a grid (the whole row on phones, or with
   `.page-card-open-full` where fewer than three posters fit), a full-width row in a list or
   table view, its caption under its poster in History's grid view, and its full width in the
-  Discover and Playlists rails.
+  Discover and Playlists rails. In the Movies and TV Shows poster grid, an open card keeps the
+  clicked tile's poster dimensions while its details expand; on phones it spans the grid row
+  with the details beside the poster.
 - On History, `modules/history-poster-overlay.js` (imported by `explorer.js`) adds an overlay
   to every poster in all three views: episode name (TV only), watched date, and app badge.
   `styles.css` hides it except on folded posters with Posters only on, where it sits along
@@ -502,15 +505,17 @@ At mobile widths, Discover, Watchlist, Ratings, Playlists, and History use the
 dashboard's compact poster-first card geometry. Each feed or collection is a
 horizontal rail that exposes the next card at the right edge, while the card's
 metadata and actions remain below its poster inside the tile.
+At desktop widths, full-size Discover cards use the same 385px width as the other
+media pages.
 
-The mobile page topbar mounts only the active page's controls. Explorer and Upcoming
-control groups keep their hidden state when they are moved into the shared topbar, so
-their search/calendar controls cannot leak onto Discover, personal-media, History,
-Stats, or Settings pages. Upcoming, Discover, Watchlist, Ratings, Playlists, History,
-Stats, and Settings use the same media-detail-style icon/label action strip; secondary
-filters, search, sizing, and settings-section controls live in a compact Options disclosure.
-Calendar navigation remains visible for Upcoming, while the other page controls keep the
-same compact action geometry without squeezing a full desktop form into the phone width.
+At widths up to 760px, the active page's topbar control group moves into the shared
+Options menu beside the page title. This keeps Movies, TV Shows, Upcoming, Discover,
+Watchlist, Ratings, Playlists, History, Stats, and Search controls available without
+adding a second toolbar row. The menu slides in from the right, uses the sidebar menu
+surface, and stays within the viewport; desktop keeps its inline topbar controls. The
+media-detail action menu remains separate from these page-level controls.
+Pages without visible topbar actions hide the empty action row while retaining the page title
+and navbar.
 
 ## Settings Layout & Design Standards
 
@@ -678,9 +683,10 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Backdrop artwork behind cards on every page (Card Art) | `modules/card-art.js` |
 | Posters only on the library and media pages: a clicked poster opens its card in place | `modules/page-card-open.js` |
 | History, Posters only: episode, date and app overlaid on each poster | `modules/history-poster-overlay.js` |
-| Shared media identity/deduplication | `modules/media-records.js` |
+| Shared media identity/deduplication (provider IDs before title fallback; artwork URLs are never identities) | `modules/media-records.js` |
 | Stats rendering | `modules/stats.js` |
 | Explorer grid, history page, search page | `modules/explorer.js` |
+| Persisted Movies and TV Shows explorer-page cache | `modules/explorer-page-cache.js` |
 | Upcoming page (scrolling month calendar of upcoming episode air dates) | `modules/upcoming.js` |
 | Up Next rail, provider push, dismissed-items dialog | `modules/up-next.js` |
 | Up Next show identity, same-title show veto, dismissal keys, and action markup | `modules/up-next-shared.js` |

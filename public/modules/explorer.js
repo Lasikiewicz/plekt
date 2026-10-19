@@ -1,4 +1,4 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
 import {
   state, elements, explorerCardModeKey,
   EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS,
@@ -6,24 +6,25 @@ import {
   HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS,
   HISTORY_VIEW_KEY, HISTORY_FILTER_KEY,
   HISTORY_VIEW_MODES, HISTORY_FILTERS,
-} from "./state.js?v=2.1.0.2.1";
+} from "./state.js?v=2.1.1.0.2";
 import {
   escapeHtml, escapeAttribute, slug, showTitleFrom, showName, tvShowBaseHrefFromEpisode,
   movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, platformBadge, sourceClass, sourceBadgeHtml, formatDate,
   computeProgress, sanitizeTitle, episodeTitle, episodeCode, appendRestInChunks,
-} from "./utils.js?v=2.1.0.2.1";
-import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.1.0.2.1";
+} from "./utils.js?v=2.1.1.0.2";
+import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.1.1.0.2";
 import {
   historySyncPill, renderSyncStatusDot, renderMediaSyncPills,
   renderAvailabilityPills, renderShowAvailabilityPills, showAvailIssuePopup,
   isWatchedHistoryAction,
-} from "./sync.js?v=2.1.0.2.1";
-import { dedupeMediaRecords } from "./media-records.js?v=2.1.0.2.1";
-import { renderMediaCard } from "./media-card.js?v=2.1.0.2.1";
-import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.1.0.2.1";
-import { cardArtAttribute } from "./card-art.js?v=2.1.0.2.1";
-import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.1.0.2.1";
-import { nextAiringCell, nextAiringDateValue, formatListDate, futureListDate } from "./stats.js?v=2.1.0.2.1";
+} from "./sync.js?v=2.1.1.0.2";
+import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.2";
+import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.1.1.0.2";
+import { renderMediaCard } from "./media-card.js?v=2.1.1.0.2";
+import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.1.1.0.2";
+import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.2";
+import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.1.1.0.2";
+import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.1.1.0.2";
 // ---------------------------------------------------------------------------
 // Callback injection - functions defined outside the 2636-4016 range in app.js
 // ---------------------------------------------------------------------------
@@ -56,6 +57,10 @@ function initExplorerEvents() {
   if (explorerEventsInitialized) return;
   explorerEventsInitialized = true;
 
+  window.matchMedia("(max-width: 760px)").addEventListener("change", () => {
+    if (state.activeView === "explorer" && !state.mediaDetailInline) renderExplorer();
+  });
+
   elements.explorerButtons.forEach((button) => {
     button.addEventListener("click", () => {
       state.explorerMode = button.dataset.explorerMode;
@@ -86,6 +91,18 @@ function initExplorerEvents() {
     }, 220);
   });
   elements.explorerPanel?.addEventListener("click", (event) => {
+    const nextAirShowLink = event.target.closest(".next-air-card-view > a.explorer-list-show-card[data-show-href]");
+    if (nextAirShowLink && elements.explorerPanel.contains(nextAirShowLink)) {
+      // Next Airing cards are rendered on the Explorer route, where the
+      // media-detail click delegate is not loaded. Keep the card a real link
+      // for keyboard and modified-click behavior, and route plain clicks via
+      // the SPA navigator.
+      if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+        event.preventDefault();
+        _cb.navigateTo?.(nextAirShowLink.dataset.showHref || nextAirShowLink.href);
+      }
+      return;
+    }
     const header = event.target.closest("[data-sort-key]");
     if (!header) return;
     applyListHeaderSort(header.dataset.sortKey);
@@ -700,12 +717,25 @@ export function renderSearchPage() {
 // ---------------------------------------------------------------------------
 // The posters-only toggle is remembered per library (Movies, TV Shows).
 function syncExplorerCardMode() {
+  const nextAirListLocked = state.explorerMode === "shows" && state.explorerSortShows === "next_air_asc";
   let compact = false;
   try { compact = localStorage.getItem(explorerCardModeKey(state.explorerMode)) === "1"; } catch { /* storage unavailable */ }
+  compact = compact && !nextAirListLocked;
   document.querySelector('#explorer-view-root, [data-view-panel="explorer"]')?.classList.toggle("page-card-mode-compact", compact);
   document.querySelectorAll('[data-card-mode-toggle="explorer"]').forEach((button) => {
+    const label = compact ? "Show full cards" : "Show poster view";
     button.setAttribute("aria-pressed", String(compact));
-    button.title = compact ? "Show full cards" : "Posters only";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    const labelNode = button.querySelector(".page-card-mode-label");
+    if (labelNode) labelNode.textContent = label;
+    button.classList.toggle("hidden", nextAirListLocked);
+  });
+  document.querySelectorAll('[data-card-mode-select="explorer"]').forEach((input) => {
+    input.checked = input.dataset.cardMode === (compact ? "posters" : "full");
+  });
+  document.querySelectorAll(".mobile-card-mode-options").forEach((group) => {
+    group.classList.toggle("hidden", nextAirListLocked);
   });
 }
 
@@ -887,8 +917,8 @@ function isCurrentExplorerRoute(mode) {
 export function renderExplorerSentinel(mode, hasMore, loading) {
   if (!hasMore && !loading) return "";
   return `
-    <div class="explorer-scroll-sentinel" data-explorer-sentinel="${mode}" aria-live="polite">
-      <span>${loading ? "Loading..." : ""}</span>
+    <div class="explorer-scroll-sentinel" data-explorer-sentinel="${mode}" aria-live="polite" role="status">
+      <span>${loading ? '<span class="explorer-loading-indicator"><span class="empty-log-spinner empty-log-spinner--inline" aria-hidden="true"></span>Loading more…</span>' : ""}</span>
     </div>
   `;
 }
@@ -995,6 +1025,9 @@ export function observeExplorerTmdbPrefetch(container) {
                     epsEl.dataset.total = String(total);
                     epsEl.outerHTML = `<div class="list-eps-progress" data-list-eps data-watched="${watched}" data-total="${total}"><div class="list-eps-bar-track"><div class="list-eps-bar-fill" style="width:${pct}%"></div></div><span class="list-eps-label">${watched} / ${total}</span></div>`;
                   }
+                  const seasonCountEl = el.querySelector("[data-list-season-count]");
+                  const seasonCount = regularTmdbSeasonCount(data);
+                  if (seasonCountEl && seasonCount) seasonCountEl.textContent = String(seasonCount);
                 }
               }
               const progressPill = el.querySelector(".show-progress-bar-attached");
@@ -1050,6 +1083,7 @@ export function scheduleNextAirResort() {
 // ---------------------------------------------------------------------------
 export function currentExplorerView() {
   if (state.explorerMode === "shows" && state.explorerSortShows === "next_air_asc") return "list";
+  if (window.matchMedia("(max-width: 760px)").matches) return "posters";
   return state.explorerMode === "shows" ? state.explorerViewShows : state.explorerViewMovies;
 }
 export function currentExplorerSort() {
@@ -1067,7 +1101,7 @@ export function setCurrentExplorerSort(value) {
 function explorerGridClass(isShows = false) {
   const base = isShows ? "movie-grid explorer-show-grid" : "movie-grid";
   const view = currentExplorerView();
-  if (view === "list") return `explorer-list-view ${isShows ? "shows-list" : "movies-list"}`;
+  if (view === "list") return `explorer-list-view ${isShows ? "shows-list" : "movies-list"}${isShows && state.explorerSortShows === "next_air_asc" ? " next-air-card-view" : ""}`;
   if (view === "overview") return "explorer-overview-view";
   return base;
 }
@@ -1106,6 +1140,13 @@ export function resolvedTmdbCache(mediaType, tmdbId, title) {
     if (cached && typeof cached.then !== "function") return cached;
   }
   return null;
+}
+function regularTmdbSeasonCount(details = {}) {
+  const regularSeasons = Array.isArray(details?.seasons)
+    ? details.seasons.filter((season) => Number(season.season_number ?? season.season) > 0).length
+    : 0;
+  const count = regularSeasons || Number(details?.number_of_seasons || 0);
+  return Number.isFinite(count) && count > 0 ? count : 0;
 }
 // ---------------------------------------------------------------------------
 // Rewatch badge - shown wherever a card/row has more than one actual watch.
@@ -1290,7 +1331,7 @@ export function renderMovieExplorer() {
   if (!state.moviesRaw.length && state.moviesLoading) {
     movieExplorerRenderKey = "";
     movieExplorerRenderedCount = 0;
-    elements.explorerPanel.innerHTML = emptyExplorer("Loading movies...");
+    elements.explorerPanel.innerHTML = loadingExplorer("Loading movies...");
     return;
   }
   const viewKey = `${key}|${currentExplorerView()}|${currentExplorerSort()}`;
@@ -1324,7 +1365,6 @@ export async function loadExplorerMovies() {
   if (state.moviesLoading || !state.moviesHasMore) return;
   const requestVersion = state.moviesRequestVersion;
   state.moviesLoading = true;
-  renderMovieExplorer();
   try {
     const url = new URL("/api/movies", window.location.origin);
     url.searchParams.set("limit", String(EXPLORER_PAGE_SIZE));
@@ -1333,7 +1373,15 @@ export async function loadExplorerMovies() {
     if (state.explorerSearch) url.searchParams.set("search", state.explorerSearch);
     const cacheKey = url.toString();
     let body = cachedExplorerPage(cacheKey);
-    if (!body) {
+    const showingStaleCache = isStaleExplorerPage(body);
+    if (showingStaleCache) {
+      state.moviesRaw = dedupeMediaRecords(Array.isArray(body.movies) ? body.movies : [], "movies");
+      state.moviesOffset = 0;
+      state.moviesHasMore = true;
+      renderMovieExplorer();
+    }
+    if (!body || showingStaleCache) {
+      if (!showingStaleCache) renderMovieExplorer();
       // /api/movies is served with Cache-Control: max-age=60,
       // stale-while-revalidate=300 so routine pagination can reuse the
       // browser's HTTP cache. This fetch only runs once the app's own
@@ -1349,7 +1397,7 @@ export async function loadExplorerMovies() {
     }
     if (requestVersion !== state.moviesRequestVersion) return;
     const movies = Array.isArray(body.movies) ? body.movies : [];
-    state.moviesRaw = dedupeMediaRecords([...state.moviesRaw, ...movies], "movies");
+    state.moviesRaw = dedupeMediaRecords(showingStaleCache ? movies : [...state.moviesRaw, ...movies], "movies");
     state.moviesOffset += movies.length;
     state.moviesHasMore = movies.length === EXPLORER_PAGE_SIZE;
     if (state.moviesHasMore) state.explorerScrollArmed = true;
@@ -1747,7 +1795,7 @@ function updateShowExplorerCards(viewKey, showsToRender) {
       cursor = node.nextElementSibling;
       const nextAirEl = node.querySelector("[data-list-next-air]");
       if (nextAirEl) {
-        const nextAiring = nextAiringCell(resolvedTmdbCache("tv", record.tmdb_id, record.title) || record);
+        const nextAiring = nextAiringCell(mergeShowAiringMetadata(record, resolvedTmdbCache("tv", record.tmdb_id, record.title)));
         if (nextAirEl.textContent !== nextAiring.text) nextAirEl.textContent = nextAiring.text;
         nextAirEl.classList.toggle("list-next-air-status", Boolean(nextAiring.text && nextAiring.isStatus));
       }
@@ -1773,7 +1821,7 @@ export function renderShowExplorer() {
   if (!state.showsRaw.length && state.showsLoading) {
     showExplorerRenderKey = "";
     showExplorerRenderedRecords = [];
-    elements.explorerPanel.innerHTML = emptyExplorer("Loading TV shows...");
+    elements.explorerPanel.innerHTML = loadingExplorer("Loading TV shows...");
     return;
   }
   const viewKey = `${key}|${currentExplorerView()}|${currentExplorerSort()}`;
@@ -1783,10 +1831,8 @@ export function renderShowExplorer() {
   }
   const showsToRender = state.explorerSortShows === "next_air_asc"
     ? [...state.showsRaw].sort((a, b) => {
-      const tmdbA = resolvedTmdbCache("tv", a.tmdb_id, a.title);
-      const tmdbB = resolvedTmdbCache("tv", b.tmdb_id, b.title);
-      const dateA = nextAiringDateValue(tmdbA || a);
-      const dateB = nextAiringDateValue(tmdbB || b);
+      const dateA = nextAiringDateValue(mergeShowAiringMetadata(a, resolvedTmdbCache("tv", a.tmdb_id, a.title)));
+      const dateB = nextAiringDateValue(mergeShowAiringMetadata(b, resolvedTmdbCache("tv", b.tmdb_id, b.title)));
       if (dateA && dateB) return dateA.localeCompare(dateB);
       if (dateA) return -1;
       if (dateB) return 1;
@@ -1817,7 +1863,6 @@ export async function loadExplorerShows() {
   if (state.showsLoading || !state.showsHasMore) return;
   const requestVersion = state.showsRequestVersion;
   state.showsLoading = true;
-  renderShowExplorer();
   try {
     const url = new URL("/api/shows", window.location.origin);
     url.searchParams.set("limit", String(EXPLORER_PAGE_SIZE));
@@ -1828,7 +1873,15 @@ export async function loadExplorerShows() {
     if (state.hideEndedShows) url.searchParams.set("hideEnded", "true");
     const cacheKey = url.toString();
     let body = cachedExplorerPage(cacheKey);
-    if (!body) {
+    const showingStaleCache = isStaleExplorerPage(body);
+    if (showingStaleCache) {
+      state.showsRaw = dedupeMediaRecords(Array.isArray(body.shows) ? body.shows : [], "shows");
+      state.showsOffset = 0;
+      state.showsHasMore = true;
+      renderShowExplorer();
+    }
+    if (!body || showingStaleCache) {
+      if (!showingStaleCache) renderShowExplorer();
       const res = await fetch(url, { headers: authHeaders(), cache: "no-store" });
       body = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(body.error || `Shows load failed ${res.status}`);
@@ -1836,7 +1889,7 @@ export async function loadExplorerShows() {
     }
     if (requestVersion !== state.showsRequestVersion) return;
     const shows = Array.isArray(body.shows) ? body.shows : [];
-    state.showsRaw = dedupeMediaRecords([...state.showsRaw, ...shows], "shows");
+    state.showsRaw = dedupeMediaRecords(showingStaleCache ? shows : [...state.showsRaw, ...shows], "shows");
     state.showsOffset += shows.length;
     state.showsHasMore = shows.length === EXPLORER_PAGE_SIZE;
     if (state.showsHasMore) state.explorerScrollArmed = true;
@@ -2182,34 +2235,35 @@ export function renderShowRecord(show = {}) {
   const showKey = unresolvedShowTitle(show.title) ? "unknown-show" : slug(displayTitle);
   const representative = summaryEpisodeFromShow(show);
   const seasons = Array.isArray(show.episodes) && show.episodes.length ? seasonsFromShowRecord(show) : null;
+  const isListView = currentExplorerView() === "list";
+  const listTmdbShow = isListView ? resolvedTmdbCache("tv", show.tmdb_id || "", displayTitle) : null;
   const episodeCount = show.episode_count || (seasons ? allSeasonEpisodes(seasons).length : 0);
-  const seasonCount = show.season_count || (seasons ? seasons.size : 0);
+  const seasonCount = regularTmdbSeasonCount(listTmdbShow) || Number(show.season_count || 0) || (seasons ? seasons.size : 0);
   const totalWatches = Math.max(Number(show.total_watches || 0), Number(episodeCount || 0));
   const actualWatchText = totalWatches > episodeCount ? ` · ${totalWatches} actual watches` : "";
   const latestEpisode = seasons ? representativeEpisode(seasons) : representative;
   const tmdbId = show.tmdb_id || "";
   const historyId = latestEpisode?.id || "";
   const detailHref = showDetailHref(show, displayTitle, showKey, historyId);
-  if (currentExplorerView() === "list") {
-    const tmdbShow = resolvedTmdbCache("tv", tmdbId, displayTitle);
-    const year = tmdbShow?.first_air_date?.slice(0, 4) || "";
-    const totalEps = show.total_episodes || tmdbShow?.number_of_episodes || 0;
-    const nextAiring = nextAiringCell(tmdbShow || show);
+  if (isListView) {
+    const year = listTmdbShow?.first_air_date?.slice(0, 4) || "";
+    const totalEps = show.total_episodes || listTmdbShow?.number_of_episodes || 0;
+    const nextAiring = nextAiringCell(mergeShowAiringMetadata(show, listTmdbShow));
     const pct = totalEps ? Math.round((episodeCount / totalEps) * 100) : null;
     const episodeProgressHtml = totalEps
       ? `<div class="list-eps-progress" data-list-eps data-watched="${episodeCount}" data-total="${totalEps}"><div class="list-eps-bar-track"><div class="list-eps-bar-fill" style="width:${pct}%"></div></div><span class="list-eps-label">${episodeCount} / ${totalEps}${actualWatchText}</span></div>`
       : `<span class="list-card-col" data-list-eps data-watched="${episodeCount}" data-total="0">${episodeCount}${actualWatchText}</span>`;
     const sourceEl = latestEpisode?.source ? `<span class="source-badge ${sourceClass(latestEpisode.source)}"><span>${escapeHtml(platformBadge(latestEpisode.source))}</span></span>` : "";
     return `
-      <article class="explorer-list-card explorer-list-show-card" data-show-key="${escapeAttribute(showKey)}" data-show-href="${escapeAttribute(detailHref)}" data-alpha-letter="${firstAlphaLetter(displayTitle)}" data-prefetch-type="tv" data-prefetch-tmdb="${escapeAttribute(tmdbId)}" data-prefetch-title="${escapeAttribute(displayTitle)}">
+      <a class="explorer-list-card explorer-list-show-card" href="${escapeAttribute(detailHref)}" aria-label="${escapeAttribute(`Open ${displayTitle} media page`)}" data-show-key="${escapeAttribute(showKey)}" data-show-href="${escapeAttribute(detailHref)}" data-alpha-letter="${firstAlphaLetter(displayTitle)}" data-prefetch-type="tv" data-prefetch-tmdb="${escapeAttribute(tmdbId)}" data-prefetch-title="${escapeAttribute(displayTitle)}">
         ${posterMarkup(showLibraryPosterEntry(show, latestEpisode), "list-thumb-poster")}
         <span class="list-card-title">${escapeHtml(displayTitle)}</span>
         <span class="list-card-col${nextAiring.isStatus && nextAiring.text ? " list-next-air-status" : ""}" data-list-next-air>${escapeHtml(nextAiring.text)}</span>
         ${episodeProgressHtml}
-        <span class="list-card-col">${escapeHtml(String(seasonCount || ""))}</span>
+        <span class="list-card-col" data-list-season-count>${escapeHtml(String(seasonCount || ""))}</span>
         <span class="list-card-col">${latestEpisode?.watched_at ? escapeHtml(formatDate(latestEpisode.watched_at)) : ""}</span>
         <span class="list-card-col list-card-year" data-list-year>${escapeHtml(year)}</span>
-      </article>
+      </a>
     `;
   }
   if (currentExplorerView() === "overview") {
@@ -2322,6 +2376,9 @@ export function renderSeasonFolder(showKey, season, episodes) {
 // ---------------------------------------------------------------------------
 // Empty state
 // ---------------------------------------------------------------------------
+function loadingExplorer(message) {
+  return `<div class="empty-log empty-log--loading"><span class="empty-log-spinner" aria-hidden="true"></span><div><b>${escapeHtml(message)}</b><span>Fetching your saved library.</span></div></div>`;
+}
 export function emptyExplorer(message) {
   return `<div class="empty-log"><b>${escapeHtml(message)}</b><span>Import history or wait for webhook events.</span></div>`;
 }

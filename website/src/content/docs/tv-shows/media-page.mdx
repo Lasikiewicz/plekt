@@ -3,7 +3,7 @@ title: TV Shows media page
 description: Read and use a single TV show media page in Plekt.
 category: Dashboard and libraries
 order: 3.1
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/app.js
   - public/index.html
@@ -41,8 +41,6 @@ screenshots:
   - /assets/app-captures/media-edit-images-focus-light.png
   - /assets/app-captures/media-sections-dark.png
   - /assets/app-captures/media-sections-light.png
-  - /assets/app-captures/tv-sections-overview-dark.png
-  - /assets/app-captures/tv-sections-overview-light.png
   - /assets/app-captures/tv-cast-focus-dark.png
   - /assets/app-captures/tv-cast-focus-light.png
   - /assets/app-captures/tv-images-focus-dark.png
@@ -193,6 +191,7 @@ metadata, watch state, progress, or sync.
 ### Tools
 
 <ScreenshotFigure
+  compact={true}
   darkSrc="/assets/app-captures/media-tools-focus-dark.png"
   lightSrc="/assets/app-captures/media-tools-focus-light.png"
   alt="Plekt media detail Tools menu showing the common Force Sync, Info, Edit Images, Fix Match, and Delete actions"
@@ -263,16 +262,10 @@ the series itself is wrong.
 
 #### Fix Match
 
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/fix-match-focus-dark.png"
-  lightSrc="/assets/app-captures/fix-match-focus-light.png"
-  alt="Plekt TV show Fix Match dialog showing candidate provider identities"
-  caption="Fix Match changes the series identity used by metadata and episode sync."
-/>
-
-Choose **Fix Match** when the show is attached to the wrong series. Compare title, year,
-network, seasons, and provider details before confirming. A TV match applies to the series
-and its episode records.
+Choose **Fix Match** when the show is attached to the wrong series. Search for the series,
+then compare each result's title, poster, overview, source labels, and provider IDs before
+confirming. TMDB results are resolved to their TheTVDB series identity. A TV match applies
+to the series and its episode records.
 
 #### Merge
 
@@ -294,12 +287,6 @@ are warmed before the refreshed show details return.
 
 ## TV show detail sections
 
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/tv-sections-overview-dark.png"
-  lightSrc="/assets/app-captures/tv-sections-overview-light.png"
-  alt="Plekt TV show detail page showing Cast, Images, and Trailers and Clips sections"
-  caption="The TV detail view places Cast, Images, and Trailers & Clips below the season controls."
-/>
 
 When provider data is available, the page can render:
 
@@ -367,7 +354,7 @@ These sections belong to the selected series. They are not additional library pa
   caption="The full Appearance panel shows the switches that control optional TV detail sections."
 />
 
-Open [Appearance](/docs/appearance/#media-detail-options) in the sidebar footer while this TV show media page is active. The
+Open [Appearance](/docs/appearance/#media-detail-options) in the sidebar while this TV show media page is active. The
 TV-specific switches control which optional sections are rendered:
 
 - **Logo Art**

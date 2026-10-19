@@ -3,10 +3,11 @@ title: Navigation and global controls
 description: Find the main Plekt pages and use the controls shared across the app.
 category: Use the app
 order: 1
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/index.html
   - public/app.js
+  - public/modules/appearance.js
   - website/src/data/site.js
 screenshots:
   - /assets/app-captures/dashboard-dark.png
@@ -25,22 +26,24 @@ pages, sync status, appearance controls, and instance actions in one consistent 
   darkSrc="/assets/app-captures/dashboard-dark.png"
   lightSrc="/assets/app-captures/dashboard-light.png"
   alt="Plekt sidebar showing the main navigation pages"
-  caption="The sidebar exposes every primary workflow, including dedicated Watchlist, Ratings, and Playlists pages."
+  caption="The sidebar lists the primary workflows, including dedicated Watchlist, Playlists, and Ratings pages."
 />
 
 The main sidebar links to:
 
-- **Dashboard** for active playback, a mixed Up Next queue, and recent completed TV and movie history;
-- **Movies** for tracked movie records;
-- **TV Shows** for tracked series, seasons, episodes, and progress;
-- **Upcoming** for episode air dates;
-- **Discover** for current TMDB-backed movie and TV feeds;
-- **Watchlist** for media saved for later;
-- **Ratings** for private 1–10 scores across movies, shows, and episodes;
-- **Playlists** for ordered collections that can sync to Plex, Emby, or Jellyfin;
-- **History** for the durable watch-event archive;
-- **Stats** for reports and viewing breakdowns; and
-- **Settings** for connections, metadata, sync tools, backups, diagnostics, and maintenance.
+- **Dashboard** for active playback, the **Up Next** queue, and recent completed TV and movie history;
+- **Movies** for tracked [movie records](/docs/movies/);
+- **TV Shows** for tracked [series, seasons, episodes, and progress](/docs/tv-shows/);
+- **Upcoming** for [episode air dates](/docs/upcoming/);
+- **Discover** for current TMDB-backed [movie and TV feeds](/docs/discover/);
+- **Watchlist** for [media saved for later](/docs/watchlist/);
+- **Playlists** for [ordered collections](/docs/playlists/) that can sync to Plex, Emby, or Jellyfin;
+- **Ratings** for [private 1–10 scores](/docs/ratings/) across movies, shows, and episodes;
+- **History** for the durable [watch-event archive](/docs/history-search/); and
+- **Stats** for [reports and viewing breakdowns](/docs/stats/).
+
+Below these, the sidebar also holds **Settings** for connections, metadata, sync tools,
+backups, diagnostics, and maintenance, the **Appearance** panel, and **About**.
 
 When a review decision is pending, the sidebar status area also links to [Manual Watch
 review](/docs/manual-watch-review/). The documentation sidebar keeps **Sync Activity**,
@@ -56,8 +59,8 @@ title can move between workflows without creating a duplicate library record.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/appearance-dashboard-dark.png"
   lightSrc="/assets/app-captures/appearance-dashboard-light.png"
-  alt="Plekt sidebar footer with theme style and light or dark controls"
-  caption="The sidebar footer contains status, version, and independent style and colour mode controls."
+  alt="Plekt sidebar with the Appearance panel open"
+  caption="The Appearance panel holds the colour mode, the artwork switches, and the text size slider."
 />
 
 The lower part of the sidebar contains controls that are available across pages:
@@ -67,16 +70,23 @@ The lower part of the sidebar contains controls that are available across pages:
   activity row or [Settings → Logs](/docs/settings/#logs) for the detailed reason.
 - **Attention - Issue** appears when a restore or sync item needs repair; use it to open the
   grouped attention panel and follow the retry, skip, or Fix Match action.
-- The version control, above the style and colour switches, opens **Settings → Changelog** for
-  the release history.
-- **Appearance**, in the left menu between Settings and About, opens a panel with the **Text
-  size** slider (100% to 130%) on every page. On movie and TV detail pages the same panel also
-  holds the optional detail section switches. Dashboard history always uses Card View.
-- **Classic / Modern** changes the visual style without changing the pages or controls.
-  Classic is the default. The choice is saved in this browser.
-- **Light / Dark** changes the colour mode independently of the style. Both styles work
-  in either mode, and the choice is saved in this browser. On phones, open the navigation
-  drawer to reach both switches.
+- The app version at the bottom of the sidebar opens [Settings → Changelog](/docs/settings/changelog/)
+  for the release history.
+
+## Appearance panel
+
+**Appearance** sits in the sidebar between Settings and About. It opens a panel with these
+controls:
+
+- **Light / Dark** changes the colour mode. The choice is saved in this browser.
+- **Card Art** shows or hides artwork behind cards. **Background Art** shows or hides
+  backdrop artwork on the Dashboard and detail pages. Both choices are saved in this browser.
+- **Text size** (100% to 130%) scales the text on every page.
+- On movie and TV detail pages, the same panel also holds the optional section switches
+  for Logo Art, Cast Members, Trailers & Clips, Reviews, Images, and Related Shows.
+
+On phones, open the navigation drawer to reach the Appearance panel. For what each switch
+changes on a page, see [Appearance](/docs/appearance/).
 
 ## Page navigation
 
@@ -87,8 +97,9 @@ The lower part of the sidebar contains controls that are available across pages:
   caption="Use the current page's section navigation and browser history to move through focused workflows."
 />
 
-The selected sidebar item identifies the current page. Links in the right-hand **On this
-page** menu jump to sections within that page and account for the sticky navigation bar.
+The selected sidebar item identifies the current page. On documentation pages, the
+right-hand **On this page** menu jumps to sections within that page and accounts for the
+sticky navigation bar.
 
 Use the browser back button when you want to return to the previous page or detail view.
 

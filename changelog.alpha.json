@@ -1,8 +1,8 @@
 {
-  "baseVersion": "2.1.0",
-  "build": 2,
-  "version": "2.1.0.2.0",
-  "updatedAt": "2026-10-18T18:13:12.513Z",
+  "baseVersion": "2.1.1",
+  "build": 0,
+  "version": "2.1.1.0.0",
+  "updatedAt": "2026-10-18T20:37:39.660Z",
   "releaseMessage": "",
   "entries": [
     {

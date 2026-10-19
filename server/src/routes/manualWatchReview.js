@@ -24,7 +24,6 @@ import {
 import { createLoopStore } from "../utils/loopStore.js";
 import { syncMediaPlaystate } from "../utils/syncOrchestrator.js";
 import { applyUnwatchedTransition } from "../utils/watchStateTransitions.js";
-import { watchImportMode } from "../utils/tuning.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "../utils/watchProvenance.js";
 import { isoDateTime, resolveWatchImportDate } from "../utils/watchDates.js";
 import {
@@ -38,7 +37,7 @@ import {
 import { recordWatchAuditEvent } from "../utils/watchAudit.js";
 import { resolveEpisodeSeriesItemId, withSeriesIdentity } from "../utils/seriesIdentity.js";
 
-const REVIEW_MODES = new Set(["now", "release_day", "episode_timing", "custom"]);
+const REVIEW_MODES = new Set(["detected", "now", "release_day", "episode_timing", "custom"]);
 const REVIEW_SOURCES = new Set(["plex", "emby", "jellyfin"]);
 
 function reviewPath(req) {
@@ -321,10 +320,21 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
   const requested = String(requestedMode || "").toLowerCase();
   const mode = REVIEW_MODES.has(requested)
     ? requested
-    : (watchImportMode() === "review" ? "now" : watchImportMode());
+    : "detected";
   const media = withProfileSeriesIds(await reviewMediaWithIdentity(review, config));
   let dateChoice;
-  if (mode === "custom") {
+  if (mode === "detected") {
+    const detectedAt = isoDateTime(review.updated_at || review.created_at);
+    const watchedAt = detectedAt
+      || isoDateTime(review.observed_watched_at || media.watched_at)
+      || new Date().toISOString();
+    dateChoice = {
+      watchedAt,
+      previewWatchedAt: watchedAt,
+      requiresReview: false,
+      reason: "review detection time",
+    };
+  } else if (mode === "custom") {
     const watchedAt = isoDateTime(requestedWatchedAt);
     if (!watchedAt) {
       throw Object.assign(new Error("A valid manual watch date and time is required."), { status: 400 });

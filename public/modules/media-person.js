@@ -1,10 +1,10 @@
-import { state, elements } from "./state.js?v=2.1.0.2.1";
-import { escapeHtml, escapeAttribute, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, showEpisodeKey } from "./utils.js?v=2.1.0.2.1";
-import { tmdbProfile, tmdbPoster, hydratePosters } from "./images.js?v=2.1.0.2.1";
-import { isWatchedHistoryAction } from "./sync.js?v=2.1.0.2.1";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.0.2.1";
-import { movieBySlugOrId, clearMediaDetailState, mediaDetailRoot, mediaDetailLoaderHtml } from "./media-detail.js?v=2.1.0.2.1";
-import { FILMOGRAPHY_PAGE_SIZE, resolvedTmdbCache } from "./explorer.js?v=2.1.0.2.1";
+import { state, elements } from "./state.js?v=2.1.1.0.2";
+import { escapeHtml, escapeAttribute, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, showEpisodeKey } from "./utils.js?v=2.1.1.0.2";
+import { tmdbProfile, tmdbPoster, hydratePosters } from "./images.js?v=2.1.1.0.2";
+import { isWatchedHistoryAction } from "./sync.js?v=2.1.1.0.2";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.1.0.2";
+import { movieBySlugOrId, clearMediaDetailState, mediaDetailRoot, mediaDetailLoaderHtml } from "./media-detail.js?v=2.1.1.0.2";
+import { FILMOGRAPHY_PAGE_SIZE, resolvedTmdbCache } from "./explorer.js?v=2.1.1.0.2";
 
 let _cb = {};
 const PERSON_LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -179,18 +179,18 @@ export async function loadCastMemberDetails(personId, personName = null) {
     const personKey = String(personId);
     if (state.personCreditsPersonId !== personKey) {
       state.personCreditsPersonId = personKey;
-      state.personCreditsFilter = "all";
+      state.personCreditsFilter = "movie";
       state.personCreditsYear = "all";
       state.personCreditsGenre = "all";
       state.personCreditsSort = "date_desc";
       state.personCreditsMovieSort = "date_desc";
       state.personCreditsTvSort = "date_desc";
     }
-    state.personCreditsFilter = state.personCreditsFilter || "all";
+    state.personCreditsFilter = state.personCreditsFilter || "movie";
     state.personCreditsYear = state.personCreditsYear || "all";
     state.personCreditsGenre = state.personCreditsGenre || "all";
     state.personCreditsSort = state.personCreditsSort || "date_desc";
-    if (!["all", "movie", "tv"].includes(state.personCreditsFilter)) state.personCreditsFilter = "all";
+    if (!["movie", "tv"].includes(state.personCreditsFilter)) state.personCreditsFilter = "movie";
     if (state.personCreditsGenre !== "all" && !creditGenreIds.includes(Number(state.personCreditsGenre))) state.personCreditsGenre = "all";
     if (!["popularity", "date_desc", "date_asc", "title_asc", "title_desc"].includes(state.personCreditsSort)) state.personCreditsSort = "date_desc";
     state.personCreditsMovieSort = state.personCreditsMovieSort || state.personCreditsSort;
@@ -263,6 +263,7 @@ export async function loadCastMemberDetails(personId, personName = null) {
           ${data.biography ? `
           <div class="person-biography-section">
             <p class="person-biography-text">${escapeHtml(data.biography)}</p>
+            <button class="person-biography-toggle hidden" type="button" aria-expanded="false" data-person-bio-toggle>Read more</button>
           </div>
           ` : '<p class="muted-copy">No biography available for this cast member.</p>'}
         </div>
@@ -296,26 +297,28 @@ export async function loadCastMemberDetails(personId, personName = null) {
 
         <div class="person-credits-section">
           <div class="person-credits-header">
-            <div class="person-credits-header-main">
-              <h3>Filmography</h3>
-              <div class="person-credits-controls" aria-label="Filmography filters">
-                ${renderSelectFilter("personCreditsYearFilter", "Year", state.personCreditsYear, [["all", "All years"], ...yearOptions])}
-                ${renderSelectFilter("personCreditsGenreFilter", "Genre", state.personCreditsGenre, [["all", "All genres"], ...creditGenreIds.map((genreId) => [String(genreId), PERSON_CREDIT_GENRES.get(genreId)])])}
-              </div>
-            </div>
+            <h3>Filmography</h3>
             <span class="person-credits-count"><span id="personCreditsCount">${castCredits.length}</span> matching titles</span>
           </div>
+          <div class="person-media-filter-buttons" role="group" aria-label="Filmography type">
+            <button class="person-filter-button${state.personCreditsFilter === "movie" ? " active" : ""}" type="button" data-person-media-type="movie" aria-pressed="${state.personCreditsFilter === "movie"}">Movies <span class="person-media-filter-count" id="personMoviesCount">0</span></button>
+            <button class="person-filter-button${state.personCreditsFilter === "tv" ? " active" : ""}" type="button" data-person-media-type="tv" aria-pressed="${state.personCreditsFilter === "tv"}">TV Shows <span class="person-media-filter-count" id="personTvCount">0</span></button>
+          </div>
+          <div class="person-credits-controls" aria-label="Filmography filters">
+            ${renderSelectFilter("personCreditsYearFilter", "Year", state.personCreditsYear, [["all", "All years"], ...yearOptions])}
+            ${renderSelectFilter("personCreditsGenreFilter", "Genre", state.personCreditsGenre, [["all", "All genres"], ...creditGenreIds.map((genreId) => [String(genreId), PERSON_CREDIT_GENRES.get(genreId)])])}
+          </div>
           <div class="person-credits-split">
-            <section class="person-credits-pane">
+            <section class="person-credits-pane${state.personCreditsFilter === "movie" ? " is-active" : ""}" data-person-media-pane="movie"${state.personCreditsFilter === "movie" ? "" : " hidden"}>
               <div class="person-credits-pane-header">
-                <h4>Movies <span class="person-credits-count"><span id="personMoviesCount">0</span></span></h4>
+                <h4>Movies</h4>
                 ${renderFilterMenu("movie-sort", "Sort", state.personCreditsMovieSort, sortOptions)}
               </div>
               <div class="person-credits-grid" id="personMoviesGrid"><div class="person-credits-loading"><span>Sorting movies...</span></div></div>
             </section>
-            <section class="person-credits-pane">
+            <section class="person-credits-pane${state.personCreditsFilter === "tv" ? " is-active" : ""}" data-person-media-pane="tv"${state.personCreditsFilter === "tv" ? "" : " hidden"}>
               <div class="person-credits-pane-header">
-                <h4>TV Shows <span class="person-credits-count"><span id="personTvCount">0</span></span></h4>
+                <h4>TV Shows</h4>
                 ${renderFilterMenu("tv-sort", "Sort", state.personCreditsTvSort, sortOptions)}
               </div>
               <div class="person-credits-grid" id="personTvGrid"><div class="person-credits-loading"><span>Sorting TV shows...</span></div></div>
@@ -326,12 +329,28 @@ export async function loadCastMemberDetails(personId, personName = null) {
     </div>
     `;
 
+    const biography = root.querySelector(".person-biography-text");
+    const biographyToggle = root.querySelector("[data-person-bio-toggle]");
+    if (biography && biographyToggle) {
+      requestAnimationFrame(() => {
+        if (renderToken !== personRenderToken) return;
+        biographyToggle.classList.toggle("hidden", biography.scrollHeight <= biography.clientHeight + 1);
+      });
+      biographyToggle.addEventListener("click", () => {
+        const expanded = biography.classList.toggle("is-expanded");
+        biographyToggle.setAttribute("aria-expanded", String(expanded));
+        biographyToggle.textContent = expanded ? "Show less" : "Read more";
+      });
+    }
+
     const yearFilter = root.querySelector("#personCreditsYearFilter");
     const genreFilter = root.querySelector("#personCreditsGenreFilter");
     const movieGrid = root.querySelector("#personMoviesGrid");
     const tvGrid = root.querySelector("#personTvGrid");
     const movieCount = root.querySelector("#personMoviesCount");
     const tvCount = root.querySelector("#personTvCount");
+    const mediaTypeButtons = [...root.querySelectorAll("[data-person-media-type]")];
+    const mediaTypePanes = [...root.querySelectorAll("[data-person-media-pane]")];
     const photosGrid = root.querySelector(".person-photos-grid");
     const visibleCounts = { movie: FILMOGRAPHY_PAGE_SIZE, tv: FILMOGRAPHY_PAGE_SIZE };
     let movieObserver = null;
@@ -536,6 +555,21 @@ export async function loadCastMemberDetails(personId, personName = null) {
     };
 
     root.addEventListener("click", (event) => {
+      const mediaTypeButton = event.target.closest("[data-person-media-type]");
+      if (mediaTypeButton) {
+        state.personCreditsFilter = mediaTypeButton.dataset.personMediaType;
+        mediaTypeButtons.forEach((button) => {
+          const selected = button.dataset.personMediaType === state.personCreditsFilter;
+          button.classList.toggle("active", selected);
+          button.setAttribute("aria-pressed", String(selected));
+        });
+        mediaTypePanes.forEach((pane) => {
+          const selected = pane.dataset.personMediaPane === state.personCreditsFilter;
+          pane.hidden = !selected;
+          pane.classList.toggle("is-active", selected);
+        });
+        return;
+      }
       const option = event.target.closest("[data-person-filter-option]");
       if (!option) return;
       const menu = option.closest("[data-menu-id]");

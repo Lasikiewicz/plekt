@@ -50,6 +50,10 @@ the measured 90,000-row rebuild cost.
 - Leaderboard posters hydrate through the standard poster pipeline
   ([posters-artwork.md](posters-artwork.md)).
 
+On desktop, the Most Played title and selected scope stay on one line, the top-ten
+panel fills the available page height, and Watch Activity expands into the remaining
+space in the right column.
+
 ## Gotchas
 
 - All filtering happens client-side against the pre-computed reports; if a new

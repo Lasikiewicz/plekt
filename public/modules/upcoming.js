@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { state, elements } from "./state.js?v=2.1.0.2.1";
-import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.1.0.2.1";
-import { posterMarkup, hydratePosters } from "./images.js?v=2.1.0.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { state, elements } from "./state.js?v=2.1.1.0.2";
+import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.1.1.0.2";
+import { posterMarkup, hydratePosters } from "./images.js?v=2.1.1.0.2";
 
 let _cb = {};
 
@@ -45,6 +45,19 @@ export function initUpcoming(callbacks) {
     scheduleUpcomingSearchWindow();
   });
   elements.upcomingCalendar?.addEventListener("click", (event) => {
+    const viewMoreButton = event.target.closest("[data-upcoming-view-more]");
+    if (viewMoreButton) {
+      const group = viewMoreButton.closest(".upcoming-entry-group");
+      const overflow = group?.querySelector(".upcoming-entry-overflow");
+      if (!overflow) return;
+      const isExpanded = viewMoreButton.getAttribute("aria-expanded") === "true";
+      overflow.hidden = isExpanded;
+      viewMoreButton.setAttribute("aria-expanded", String(!isExpanded));
+      viewMoreButton.textContent = isExpanded
+        ? viewMoreButton.dataset.collapsedLabel || "View more"
+        : "View less";
+      return;
+    }
     const entry = event.target.closest("[data-upcoming-tmdb], [data-upcoming-show]");
     if (!entry) return;
     const tmdbId = entry.dataset.upcomingTmdb || "";
@@ -513,6 +526,39 @@ function entryMarkup(episode) {
     </button>`;
 }
 
+function episodesByShow(episodes) {
+  const groups = new Map();
+  for (const episode of episodes) {
+    const showId = String(episode.showId || "").trim();
+    const tmdbId = String(episode.tmdbId || "").trim();
+    const title = String(episode.showTitle || "").trim().toLowerCase();
+    const key = showId ? `show:${showId}` : tmdbId ? `tmdb:${tmdbId}` : `title:${title}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(episode);
+  }
+  return Array.from(groups.values());
+}
+
+function dayEntriesMarkup(episodes) {
+  return episodesByShow(episodes).map((showEpisodes) => {
+    const visibleEpisodes = showEpisodes.slice(0, 2);
+    const extraEpisodes = showEpisodes.slice(2);
+    const entries = visibleEpisodes.map(entryMarkup).join("");
+    if (!extraEpisodes.length) {
+      return `<div class="upcoming-entry-group">${entries}</div>`;
+    }
+
+    const collapsedLabel = `View ${extraEpisodes.length} more`;
+    return `
+      <div class="upcoming-entry-group">
+        ${entries}
+        <div class="upcoming-entry-overflow" hidden>${extraEpisodes.map(entryMarkup).join("")}</div>
+        <button class="upcoming-view-more" type="button" data-upcoming-view-more
+          data-collapsed-label="${escapeAttribute(collapsedLabel)}" aria-expanded="false">${escapeHtml(collapsedLabel)}</button>
+      </div>`;
+  }).join("");
+}
+
 // Episodes are indexed by day once per render instead of re-scanning each
 // month's list for every cell.
 function episodesByDayInRange() {
@@ -543,7 +589,7 @@ function dayCellMarkup(dayIso, episodes, todayIso) {
         <span class="upcoming-week-day-weekday">${escapeHtml(weekday)}</span>
         <span class="upcoming-week-day-number">${date.getDate()}</span>
       </div>
-      <div class="upcoming-week-day-entries">${episodes.map(entryMarkup).join("")}</div>
+      <div class="upcoming-week-day-entries">${dayEntriesMarkup(episodes)}</div>
     </div>`;
 }
 

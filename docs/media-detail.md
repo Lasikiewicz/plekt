@@ -122,7 +122,13 @@ of a premature "no episodes" message.
 
 - **Metadata** - overview, genres, runtime, status, ratings; TV structure (seasons/
   episodes, air dates) comes from TVDB, extras (cast, trailers, recommendations,
-  watch providers) from TMDB - see [metadata.md](metadata.md).
+  watch providers) from TMDB - see [metadata.md](metadata.md). TV-show synopses prefer
+  TheTVDB's English translation where available and fall back to its regular overview.
+  Episode titles and synopses prefer the English TMDB season fields when an episode can
+  be matched safely to the selected season numbering; each missing English field falls
+  back to the selected season provider. The selected provider continues to supply episode
+  numbers, air dates, artwork, and runtime. Streaming availability, Watch Now links, and
+  ratings share the same labeled facts table on desktop and mobile.
 - **Responsive episode cards** - expanded TV seasons use a five-column desktop grid,
   narrowing with the available width and settling into two cards per row on phone-sized
   screens so episode artwork and actions remain scannable without making each tile fill
@@ -131,7 +137,11 @@ of a premature "no episodes" message.
   its edit action; older watch rows, source badges, and the watched-state action stay
   available on wider layouts without crowding the mobile tile.
 - **Mobile TV controls** - the phone navigation centers the Plekt mark with the menu
-  trigger at the left. TV season headers keep episode and watched counts inline, suppress
+  trigger at the left. Phone and compact-tablet detail pages center the Back/title row's
+  title independently of Back, with long titles ellipsized before the navigation target;
+  on phones the Options trigger sits to the right of the title, while compact tablets place
+  the action row below it. TV season headers keep
+  episode and watched counts inline, suppress
   redundant complete-season progress text, and place season options inline with the watched
   count. Episode cards keep their compact watch state and watch-history controls without a
   separate per-episode options disclosure.
@@ -592,14 +602,16 @@ of a premature "no episodes" message.
 TTL), renders a sidebar with profile image, name, age, biography, and personal info
 (birthdate, place of birth, known-for department), plus social media links (IMDb,
 Instagram, X, Facebook, TikTok, Wikidata). The main content area shows filmography
-with three filter/sort controls: media type (all/movie/TV), year, and genre. Credits
-are sorted by default by release date (newest first); other sort options are popularity,
-release date (oldest first), and alphabetical title sort. A watch badge overlay on each
-credit indicates whether it's in the library. Filmography paginates with an
+with Movies and TV Shows toggle buttons on one row, followed by boxed Year and Genre
+filters. Credits are sorted by default by release date (newest first); other sort options
+are popularity, release date (oldest first), and alphabetical title sort. A watch badge
+overlay on each credit indicates whether it's in the library. Filmography paginates with an
 IntersectionObserver (`FILMOGRAPHY_PAGE_SIZE` 40) and matches entries against the local
 library (`findLibraryItem`, `hydratePersonFilmographyWatchStatuses`). The page layout
-is responsive and stacks vertically on smaller screens. `state.personReturnUrl` remembers
-where to go back to.
+is responsive and stacks vertically on smaller screens. On phones, the portrait is capped
+at 250px wide with top spacing and centered profile details, and a biography longer than
+five lines is clamped with a Read more/Show less control; larger screens keep the full
+biography visible. `state.personReturnUrl` remembers where to go back to.
 
 ## Gotchas
 

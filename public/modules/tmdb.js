@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { state } from "./state.js?v=2.1.0.2.1";
-import { showTitleFrom, slug } from "./utils.js?v=2.1.0.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { state } from "./state.js?v=2.1.1.0.2";
+import { showTitleFrom, slug } from "./utils.js?v=2.1.1.0.2";
 
 let _tmdbBatchQueue = [];
 let _tmdbBatchTimer = null;
@@ -154,7 +154,9 @@ export async function fetchTmdbSeasonDetails(showId, seasonNumber) {
   const idParam = tvdbOnly
     ? `tvdbId=${encodeURIComponent(String(showId).slice(5))}`
     : `tmdbId=${encodeURIComponent(showId)}`;
-  const promise = fetch(`/api/tmdb-season?${idParam}&seasonNumber=${encodeURIComponent(seasonNumber)}`, { headers: authHeaders() })
+  // Version the response URL so browsers do not reuse a season body cached
+  // before the English-first episode text policy was added.
+  const promise = fetch(`/api/tmdb-season?${idParam}&seasonNumber=${encodeURIComponent(seasonNumber)}&episodeTextVersion=1`, { headers: authHeaders() })
     .then(async (res) => {
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);

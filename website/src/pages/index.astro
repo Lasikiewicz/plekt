@@ -60,20 +60,55 @@ const appAreas = [
     href: "/docs/stats/#reported-totals",
   },
 ];
+
+const comparisonApps = [
+  { name: "Plekt", href: "https://github.com/Lasikiewicz/plekt", plekt: true },
+  { name: "Yamtrack", href: "https://github.com/rpmalouin/yamtrack" },
+  { name: "Floppy", href: "https://github.com/dannyvfilms/Floppy" },
+  { name: "PlexTraktSync", href: "https://github.com/Taxel/PlexTraktSync" },
+  { name: "WatchState", href: "https://github.com/arabcoders/watchstate" },
+  { name: "CrossWatch", href: "https://github.com/cenodude/CrossWatch" },
+  { name: "JellyPlex-Watched", href: "https://github.com/luigi311/JellyPlex-Watched" },
+];
+
+const comparisonFeatures = [
+  { name: "Self-hosted", supported: [true, true, true, true, true, true, true] },
+  { name: "Connects to Plex", supported: [true, true, true, true, true, true, true] },
+  { name: "Connects to Emby", supported: [true, true, true, false, true, true, true] },
+  { name: "Connects to Jellyfin", supported: [true, true, true, false, true, true, true] },
+  { name: "Syncs watch state across media servers", supported: [true, false, false, false, true, true, true] },
+  { name: "Syncs resume progress across media servers", supported: [true, false, false, false, true, false, true] },
+  { name: "Connects to or imports from Trakt", supported: [true, true, true, true, false, true, false] },
+  { name: "Tracks books, games, or other media", supported: [false, true, true, false, false, false, false] },
+  { name: "Includes personal history or stats", supported: [true, true, true, false, false, true, false] },
+  { name: "Keeps a canonical archive and restores watch state to rebuilt libraries", supported: [true, false, false, false, false, false, false] },
+];
 ---
 
 <SiteLayout
   title="The local brain for your media stack."
-  description="Plekt is the self-hosted source of truth for watched state, playback progress, media history, and sync across Plex, Emby, Jellyfin, and Trakt."
-  image="/assets/app-captures/dashboard-modern-dark.png"
+  description="Keep Plex, Emby, and Jellyfin in sync from one private watch-history archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild."
+  image="/assets/home-dashboard.jpg"
 >
   <div class="simple-home">
     <div class="modern-home-intro">
     <section class="simple-home-hero" aria-labelledby="home-title">
       <p class="simple-eyebrow">SELF-HOSTED WATCH HISTORY</p>
-        <h1 id="home-title">The local brain for your <span>media stack.</span></h1>
+        <div class="simple-home-title">
+          <img
+            class="simple-home-logo"
+            data-theme-image
+            data-dark-src="/assets/optimized/plembfin_header_logo_dark-376.webp"
+            data-light-src="/assets/optimized/plembfin_header_logo_light-376.webp"
+            src="/assets/optimized/plembfin_header_logo_dark-376.webp"
+            alt="Plekt"
+            width="376"
+            height="61"
+          />
+          <h1 id="home-title">The local brain for your<br /><span>media stack.</span></h1>
+        </div>
         <p class="simple-home-lede">
-          Plekt keeps watched status, playback progress, and playlists in sync across Plex, Emby, Jellyfin, and Trakt. Watch anywhere; your whole stack stays up to date.
+        Keep Plex, Emby, and Jellyfin in sync from one private watch-history archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild.
         </p>
       <div class="simple-actions">
         <a class="simple-button simple-button--primary" href="/docs/getting-started/">Get started <span aria-hidden="true">↗</span></a>
@@ -90,65 +125,97 @@ const appAreas = [
       <div class="simple-section-heading">
         <div>
           <p class="simple-eyebrow">THE DASHBOARD</p>
-          <h2 id="preview-title">One place to see what is happening.</h2>
+          <h2 id="preview-title">Your whole media stack, at a glance.</h2>
         </div>
-          <p>Now Playing, Up Next, recent watches.</p>
+        <p>See what is playing, what is next, and what you watched across Plex, Emby, and Jellyfin, all in one private dashboard.</p>
+        <a class="simple-text-link" href="/docs/dashboard/">Explore the dashboard <span aria-hidden="true">→</span></a>
       </div>
       <ScreenshotFigure
-        darkSrc="/assets/app-captures/dashboard-modern-dark.png"
-        lightSrc="/assets/app-captures/dashboard-modern-light.png"
-        alt="Plekt dashboard showing Now Playing, Up Next, recently watched TV, and recently watched movies"
-          loading="eager"
+        src="/assets/home-dashboard.jpg"
+        darkSrc="/assets/home-dashboard-dark.jpg"
+        alt="Plekt dashboard showing an Up Next row and recent watch history for TV and movies"
+        loading="eager"
         fetchpriority="high"
-        width={1440}
-        height={688}
+        width={2000}
+        height={998}
       />
-      <p class="simple-home-image-description">See live playback, what’s next, and recent watches at a glance.</p>
     </section>
     </div>
+
+    <section class="simple-home-comparison" aria-labelledby="comparison-title">
+      <div class="simple-section-heading">
+        <div>
+          <p class="simple-eyebrow">PICK THE RIGHT FIT</p>
+          <h2 id="comparison-title">How does Plekt compare?</h2>
+        </div>
+        <p>Different tools solve different parts of media tracking and sync.</p>
+      </div>
+
+      <div class="simple-home-comparison-wrap" tabindex="0" role="region" aria-label="Feature comparison table. Scroll horizontally to see every app.">
+        <table class="simple-home-comparison-table">
+          <thead>
+            <tr>
+              <th scope="col">Capability</th>
+              {comparisonApps.map((app) => (
+                <th scope="col" class:list={{ "is-plekt": app.plekt }}>
+                  <a href={app.href} target="_blank" rel="noopener noreferrer">{app.name}</a>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {comparisonFeatures.map((feature) => (
+              <tr>
+                <th scope="row">{feature.name}</th>
+                {feature.supported.map((supported, index) => (
+                  <td class:list={{ "is-plekt": index === 0 }}>
+                    {supported && <span class="comparison-check" aria-label="Yes">✓</span>}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p class="simple-home-comparison-note">Plekt keeps one restorable watch history in sync across your servers. Ticks mark each app’s documented core capabilities.</p>
+    </section>
 
     <section class="simple-home-up-next" aria-labelledby="up-next-home-title">
       <div class="simple-section-heading">
         <div>
           <p class="simple-eyebrow">UP NEXT</p>
-          <h2 id="up-next-home-title">Up Next, all in one queue.</h2>
+          <h2 id="up-next-home-title">Pick up right where you left off.</h2>
         </div>
-        <p>Resume a movie or keep watching.</p>
+        <p>Bring in-progress films and episodes from your servers into one queue. Check resume progress, jump to the right player, or restore anything you dismissed.</p>
+        <a class="simple-text-link" href="/docs/dashboard/#up-next">Explore the Up Next queue <span aria-hidden="true">→</span></a>
       </div>
       <ScreenshotFigure
-        darkSrc="/assets/app-captures/dashboard-up-next-modern-dark.png"
-        lightSrc="/assets/app-captures/dashboard-up-next-modern-light.png"
+        darkSrc="/assets/app-captures/dashboard-up-next-dark.png"
+        lightSrc="/assets/app-captures/dashboard-up-next-light.png"
         alt="Plekt Up Next queue showing movie and TV continuation cards with real resume context and provider Watch now links"
-          loading="lazy"
+        loading="lazy"
         width={1232}
         height={167}
       />
-      <div class="simple-section-heading-note simple-home-up-next-note">
-        <p>Queue changes sync to providers in the background. Restore dismissed titles anytime.</p>
-        <a class="simple-text-link" href="/docs/dashboard/#up-next">Read the Up Next guide <span aria-hidden="true">→</span></a>
-      </div>
     </section>
 
     <section class="simple-home-playlists" aria-labelledby="playlists-home-title">
       <div class="simple-section-heading">
         <div>
           <p class="simple-eyebrow">PLAYLISTS</p>
-          <h2 id="playlists-home-title">Playlists, the Plekt way.</h2>
+          <h2 id="playlists-home-title">One playlist. Every server.</h2>
         </div>
-        <p>Playlists stay in sync across your apps.</p>
+        <p>Create hand-picked playlists or set rules to build them for you. Plekt keeps them in sync across Plex, Emby, and Jellyfin, with automatic playlists refreshing hourly.</p>
+        <a class="simple-text-link" href="/docs/playlists/">Explore playlists <span aria-hidden="true">→</span></a>
       </div>
       <ScreenshotFigure
-        darkSrc="/assets/app-captures/playlists-modern-dark.png"
-        lightSrc="/assets/app-captures/playlists-modern-light.png"
+        darkSrc="/assets/app-captures/playlists-dark.png"
+        lightSrc="/assets/app-captures/playlists-light.png"
         alt="Plekt Playlists page with automatic and hand-picked playlists, each showing its type, synced apps, and item count"
-          loading="lazy"
+        loading="lazy"
         width={1440}
         height={683}
       />
-      <div class="simple-section-heading-note simple-home-up-next-note">
-        <p>Playlists stay in sync across Plex, Emby, and Jellyfin. Automatic rules refresh hourly.</p>
-        <a class="simple-text-link" href="/docs/playlists/">Read the Playlists guide <span aria-hidden="true">→</span></a>
-      </div>
     </section>
 
     <section class="simple-home-flow" aria-labelledby="flow-title">

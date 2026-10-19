@@ -199,11 +199,14 @@ const proofScreens = [
   description="The full Plekt feature inventory: canonical watch-state sync, playback and library browsing, private shelves, and self-hosted operation."
   image="/assets/app-captures/sync-activity-focused-dark.png"
 >
-  <div class="simple-features">
-    <header class="simple-features-hero" aria-labelledby="features-title">
+  <div class="simple-home simple-features">
+    <div class="modern-home-intro">
+    <header class="simple-home-hero" aria-labelledby="features-title">
       <p class="simple-eyebrow">PLEKT / FEATURES</p>
-      <h1 id="features-title">Everything your watch history needs.</h1>
-      <p>
+      <div class="simple-home-title">
+        <h1 id="features-title">Everything your watch<br />history needs.</h1>
+      </div>
+      <p class="simple-home-lede">
         Plekt keeps the important parts of your media stack together: the event, the local record, the next thing to watch, and the sync that follows.
       </p>
       <div class="simple-actions">
@@ -213,20 +216,25 @@ const proofScreens = [
       <p class="simple-meta">v{release.version} · self-hosted · local source of truth</p>
     </header>
 
+    </div>
+
     <section class="simple-features-index" aria-labelledby="feature-index-title">
       <div class="simple-section-heading">
         <div>
-          <h2 id="feature-index-title">Grouped by what it does for you.</h2>
+          <h2 id="feature-index-title">Explore Plekt’s features.</h2>
         </div>
-        <p>Open a feature to jump straight to the section of the guide that covers it.</p>
+        <p>Choose an area to see what Plekt can do.</p>
       </div>
 
       {numberedGroups.map((group) => (
-        <div class="simple-feature-group">
-          <div class="simple-feature-group-heading">
-            <h3 class="simple-feature-group-title">{group.label}</h3>
-            <p>{group.summary}</p>
-          </div>
+        <details class="simple-feature-group">
+          <summary class="simple-feature-group-heading">
+            <span class="simple-feature-group-copy">
+              <span class="simple-feature-group-title">{group.label}</span>
+              <span class="simple-feature-group-summary">{group.summary}</span>
+            </span>
+            <span class="simple-feature-group-count">{String(group.items.length).padStart(2, "0")} features</span>
+          </summary>
           <div class="simple-feature-grid">
             {group.items.map((item) => (
               <a class="simple-feature-item" href={item.href}>
@@ -239,7 +247,7 @@ const proofScreens = [
               </a>
             ))}
           </div>
-        </div>
+        </details>
       ))}
     </section>
 

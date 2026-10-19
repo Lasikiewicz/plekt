@@ -403,17 +403,6 @@ The focused `node:test` suite run by `npm test` and the build check. Each file r
 its own process; DB-backed tests point `DATA_DIR` at a temp directory before importing
 server modules.
 
-### `reddit-app/`
-
-A separate deployable, not part of the main app's build/test/CI - see
-[`reddit-app/README.md`](../reddit-app/README.md). A [Devvit](https://developers.reddit.com)
-app installed only in r/plembfin: a scheduled job polls this repository's public
-`changelog.json` and, when a new release appears, posts and pins an announcement to
-r/plembfin (un-pinning whichever release post it had pinned before). It has its own
-`package.json`, builds with `vite`/`devvit` rather than this repo's Node tooling, and is
-deployed with the `devvit` CLI, not Docker/GHCR. `PRIVACY.md`/`TERMS.md` in that
-directory are linked from the app's Reddit developer-platform listing.
-
 | File | What it covers |
 | --- | --- |
 | `changelogMessage.test.js` | Changelog subject formatting, bullet extraction, and rejection of missing or title-repeating release details. |
@@ -433,6 +422,15 @@ directory are linked from the app's Reddit developer-platform listing.
 | `upNextIdentity.test.js` | Canonical mixed movie/episode identity, provider-ID aliases, deterministic ordering, and queue merging. |
 | `upNextQueue.test.js` | Unified Up Next projection, local resume precedence, canonical watched-state filtering, and bounded metadata fallback. |
 | `upNextProviderFeeds.test.js` | Generation-based provider feed snapshots, last-good retention, source-ledger metadata, and credential-redacted errors. |
+
+### Reddit release app (retired)
+
+The Devvit implementation and dependency lock have been removed. The `reddit-app/`
+directory retains its README, privacy policy and terms because the external Developer
+Platform listing may still link to them. The legacy installation in r/plembfin was
+uninstalled on 2026-10-19; a follow-up CLI listing showed no apps installed there. The
+Developer Platform listing remains, and other community installations were not changed;
+see [`reddit-app/README.md`](../reddit-app/README.md).
 
 ## Request flow
 

@@ -43,11 +43,14 @@ const capturesDir = path.join(runDir, "captures");
 const autoDir = path.join(capturesDir, "auto");
 await fs.mkdir(autoDir, { recursive: true });
 
-// Live states are created by the tool in a later version; until then entries that need one FAIL.
-const liveNote = live.length ? `Live states requested but not created by this version: ${live.join(", ")}` : "";
+// Phase A creates the live states and names them in `live`; the tool only takes the entries that
+// need one when it is told the state exists, so the list is passed through. Without it those
+// entries FAIL even though the state is in place.
+const liveNote = live.length ? `Live states passed to the capture tool (created by phase A): ${live.join(", ")}` : "";
 
 const toolArgs = [path.join(scriptsDir, "recapture.mjs"), ...ids, `--out=${autoDir}`, `--expect-version=${expectVersion}`, `--expect-channel=${expectChannel}`];
 if (baseUrl) toolArgs.push(`--base-url=${baseUrl}`);
+if (live.length) toolArgs.push(`--live=${live.join(",")}`);
 
 let output = "";
 const exitCode = await new Promise((resolve) => {

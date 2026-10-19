@@ -13,18 +13,10 @@
   },
   "variants": {
     "dark": {
-      "style": "classic",
-      "mode": "dark"
-    },
-    "light": {
-      "style": "classic",
-      "mode": "light"
-    },
-    "modern-dark": {
       "style": "modern",
       "mode": "dark"
     },
-    "modern-light": {
+    "light": {
       "style": "modern",
       "mode": "light"
     }
@@ -81,9 +73,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
       "state": "Dashboard at scroll top. Now Playing / Up Next panel, the Up Next rail and the first history rows loaded with posters. Dashboard history rows in full-card mode (Posters only off). Capture at 1396x950: four complete cards per rail and portrait poster areas; do not reuse the short 683px frame.",
@@ -99,20 +89,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1396,
-          "height": 950
+          "height": 950,
+          "width": 1396
         },
         "light": {
-          "width": 1396,
-          "height": 950
-        },
-        "modern-dark": {
-          "width": 1396,
-          "height": 950
-        },
-        "modern-light": {
-          "width": 1396,
-          "height": 950
+          "height": 950,
+          "width": 1396
         }
       },
       "viewport": {
@@ -127,12 +109,10 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
-      "state": "Dashboard at scroll top with live sessions playing (the script starts playback first). The panel heading reads Now Playing.",
+      "state": "Dashboard at scroll top; wait for the live session or idle feature cards to render in the Now Playing panel.",
       "framing": {
         "type": "element",
         "target": {
@@ -150,33 +130,30 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 156
+          "height": 162,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 156
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 156
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 156
+          "height": 162,
+          "width": 1231
         }
-      }
+      },
+      "steps": [
+        {
+          "waitFor": "#nowPlayingGrid .modern-idle-feature, #nowPlayingGrid [data-now-playing-card-id]"
+        }
+      ]
     },
     "now-playing-options": {
       "pages": [
         "dashboard"
       ],
       "variants": [
-        "modern-dark",
-        "modern-light"
+        "dark",
+        "light"
       ],
       "route": "/",
-      "state": "Modern only. Dashboard with live sessions playing; the cog beside the panel heading is open. Change nothing; close the options afterwards.",
+      "state": "Dashboard with live sessions playing; the cog beside the panel heading is open. Change nothing; close the options afterwards.",
       "framing": {
         "type": "element",
         "target": {
@@ -197,13 +174,13 @@
         "public/modules/sync.js"
       ],
       "sizes": {
-        "modern-dark": {
-          "width": 1255,
-          "height": 188
+        "dark": {
+          "height": 194,
+          "width": 1255
         },
-        "modern-light": {
-          "width": 1255,
-          "height": 188
+        "light": {
+          "height": 194,
+          "width": 1255
         }
       },
       "steps": [
@@ -225,9 +202,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
       "state": "Up Next rail including the heading, a resume card with progress, and Watch now links. Allow part watched items here must be OFF so the resume card remains in this rail; the release-capture agent sets it OFF with scripts/now-playing-option.mjs before capture and back ON after.",
@@ -250,25 +225,17 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 172
+          "height": 216,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 172
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 172
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 172
+          "height": 216,
+          "width": 1231
         }
       },
       "steps": [
         {
-          "waitFor": "#upNextPanel .part-watched-progress-fill"
+          "waitFor": "#upNextPanel > [data-up-next-card-id]:not([data-featured-in-panel]) .part-watched-progress-fill"
         },
         {
           "wait": 3000
@@ -285,9 +252,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
       "state": "Open Dismissed Up Next with at least two dismissed shows, so Add back and Add all back are visible. The operator restores only the two temporary items individually after capture; never press Add all back.",
@@ -312,20 +277,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -335,9 +292,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
       "state": "Dashboard; the Recently watched TV Shows row in full-card mode, scrolled into view. Capture at 1396x950: four complete cards per rail and portrait poster areas; do not reuse the short 683px frame.",
@@ -355,20 +310,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1187,
-          "height": 232
+          "height": 229,
+          "width": 1187
         },
         "light": {
-          "width": 1187,
-          "height": 232
-        },
-        "modern-dark": {
-          "width": 1187,
-          "height": 232
-        },
-        "modern-light": {
-          "width": 1187,
-          "height": 232
+          "height": 229,
+          "width": 1187
         }
       },
       "viewport": {
@@ -382,9 +329,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
       "state": "Dashboard; the Recently watched Movies row in full-card mode, scrolled into view. Capture at 1396x950: four complete cards per rail and portrait poster areas; do not reuse the short 683px frame.",
@@ -402,20 +347,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1187,
-          "height": 232
+          "height": 229,
+          "width": 1187
         },
         "light": {
-          "width": 1187,
-          "height": 232
-        },
-        "modern-dark": {
-          "width": 1187,
-          "height": 232
-        },
-        "modern-light": {
-          "width": 1187,
-          "height": 232
+          "height": 229,
+          "width": 1187
         }
       },
       "viewport": {
@@ -429,9 +366,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
       "state": "Open Global Search from the Dashboard sidebar and search for Ted Lasso; wait for TMDB and TheTVDB groups.",
@@ -466,20 +401,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 900,
-          "height": 355
+          "height": 358,
+          "width": 900
         },
         "light": {
-          "width": 900,
-          "height": 355
-        },
-        "modern-dark": {
-          "width": 900,
-          "height": 355
-        },
-        "modern-light": {
-          "width": 900,
-          "height": 355
+          "height": 358,
+          "width": 900
         }
       }
     },
@@ -490,21 +417,16 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/",
-      "state": "The sidebar Appearance control showing the Light and Dark theme switch.",
+      "state": "The sidebar Appearance panel open, showing the Light and Dark toggle, the Card Art and Background Art switches, and the Text size slider.",
       "framing": {
         "type": "element",
         "target": {
-          "css": "#themeStyleButton"
+          "css": "#sidebarAppearancePanel"
         },
-        "padding": 50,
-        "through": {
-          "css": "#themeToggleButton"
-        }
+        "padding": 16
       },
       "automation": "auto",
       "sources": [
@@ -512,22 +434,25 @@
       ],
       "sizes": {
         "dark": {
-          "width": 259,
-          "height": 138
+          "height": 152,
+          "width": 209
         },
         "light": {
-          "width": 259,
-          "height": 138
-        },
-        "modern-dark": {
-          "width": 259,
-          "height": 138
-        },
-        "modern-light": {
-          "width": 259,
-          "height": 138
+          "height": 152,
+          "width": 209
         }
-      }
+      },
+      "steps": [
+        {
+          "click": "#sidebarAppearanceButton"
+        },
+        {
+          "waitFor": "#sidebarAppearancePanel:not(.hidden)"
+        },
+        {
+          "wait": 500
+        }
+      ]
     },
     "movies": {
       "pages": [
@@ -536,9 +461,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movies",
       "state": "Movies library at scroll top, default card view, posters loaded. Do not change filters.",
@@ -552,20 +475,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -576,9 +491,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshows",
       "state": "TV Shows library at scroll top, default card view (Posters only off), posters loaded.",
@@ -592,20 +505,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -617,9 +522,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movies",
       "state": "Movies library; open the three-dot quick-actions menu on the first poster card. Change nothing.",
@@ -642,20 +545,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 722,
-          "height": 546
+          "height": 546,
+          "width": 722
         },
         "light": {
-          "width": 722,
-          "height": 546
-        },
-        "modern-dark": {
-          "width": 722,
-          "height": 546
-        },
-        "modern-light": {
-          "width": 722,
-          "height": 546
+          "height": 546,
+          "width": 722
         }
       },
       "steps": [
@@ -674,9 +569,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/history",
       "state": "History page at scroll top, default card view, cards loaded.",
@@ -690,20 +583,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -713,14 +598,19 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/upcoming",
-      "state": "Upcoming calendar at scroll top, current month loaded.",
+      "state": "Upcoming calendar; the complete current month, from its heading through the final week. The tall viewport keeps every calendar row and poster inside the frame.",
       "framing": {
-        "type": "viewport"
+        "type": "element",
+        "target": {
+          "css": ".upcoming-month-block:has(.upcoming-week-day.is-today)"
+        },
+        "through": {
+          "css": ".upcoming-month-block:has(.upcoming-week-day.is-today) .upcoming-week-row:last-child"
+        },
+        "padding": 0
       },
       "automation": "auto",
       "sources": [
@@ -728,21 +618,17 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 2833,
+          "width": 1161
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 2833,
+          "width": 1161
         }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 3000
       }
     },
     "discover": {
@@ -752,9 +638,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/discover",
       "state": "Discover at scroll top, feeds loaded with posters.",
@@ -767,20 +651,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -790,9 +666,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/stats",
       "state": "Stats at scroll top with its media type, period and range controls visible.",
@@ -805,20 +679,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -829,9 +695,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/watchlist",
       "state": "Watchlist at scroll top, cards loaded.",
@@ -846,20 +710,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -869,9 +725,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/watchlist",
       "state": "Watchlist; the first row of cards with posters, rating actions and remove controls.",
@@ -889,20 +743,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 182
+          "height": 182,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 182
+          "height": 182,
+          "width": 1231
         }
       }
     },
@@ -912,9 +758,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/ratings",
       "state": "Ratings overview at scroll top.",
@@ -928,20 +772,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       }
     },
@@ -951,9 +787,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/ratings",
       "state": "Ratings; the Movies, TV Shows and Episodes groups.",
@@ -974,20 +808,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 629
+          "height": 629,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 629
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 629
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 629
+          "height": 629,
+          "width": 1231
         }
       }
     },
@@ -997,9 +823,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/ratings",
       "state": "Ratings; the Episodes group scrolled into view.",
@@ -1017,20 +841,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 201
+          "height": 201,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 201
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 201
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 201
+          "height": 201,
+          "width": 1231
         }
       }
     },
@@ -1040,14 +856,20 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/playlists",
-      "state": "Playlists at scroll top, rails loaded with app badges and item counts.",
+      "state": "Playlists at scroll top; the headings, app badges, item counts, and first three complete cards in each of the four rails.",
       "framing": {
-        "type": "viewport"
+        "type": "element",
+        "target": {
+          "css": ".personal-media-list-section:first-child .personal-media-list-heading h2"
+        },
+        "through": {
+          "css": ".personal-media-list-section:nth-of-type(4) [data-playlist-rail] > .shared-media-card:nth-child(3)"
+        },
+        "padding": 5,
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -1056,20 +878,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 623,
+          "width": 889
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 623,
+          "width": 889
         }
       },
       "steps": [
@@ -1079,7 +893,11 @@
         {
           "wait": 2000
         }
-      ]
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 683
+      }
     },
     "playlists-cards": {
       "pages": [
@@ -1087,9 +905,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/playlists",
       "state": "Playlists; the first playlist's cards showing the Move pill.",
@@ -1106,64 +922,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1216,
-          "height": 124
+          "height": 124,
+          "width": 1216
         },
         "light": {
-          "width": 1216,
-          "height": 124
-        },
-        "modern-dark": {
-          "width": 1216,
-          "height": 124
-        },
-        "modern-light": {
-          "width": 1216,
-          "height": 124
-        }
-      }
-    },
-    "manual-watch-review": {
-      "pages": [
-        "manual-watch-review"
-      ],
-      "variants": [
-        "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
-      ],
-      "route": "/manual-watch-review",
-      "state": "Manual Watch review open with a provider-marked episode waiting for a decision. Needs a pending review item; decide nothing.",
-      "viewport": {
-        "width": 2560,
-        "height": 1290
-      },
-      "framing": {
-        "type": "viewport"
-      },
-      "live": "manual-review-item",
-      "automation": "auto",
-      "sources": [
-        "public/modules/manual-watch-review.js",
-        "public/modules/sync.js"
-      ],
-      "sizes": {
-        "dark": {
-          "width": 2560,
-          "height": 1290
-        },
-        "light": {
-          "width": 2560,
-          "height": 1290
-        },
-        "modern-dark": {
-          "width": 2560,
-          "height": 1290
-        },
-        "modern-light": {
-          "width": 2560,
-          "height": 1290
+          "height": 124,
+          "width": 1216
         }
       }
     },
@@ -1179,9 +943,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/sync-activity",
       "state": "Sync Activity at scroll top, rows loaded with sources, destinations and outcomes.",
@@ -1198,20 +960,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 682
+          "height": 682,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 682
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 682
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 682
+          "height": 682,
+          "width": 1231
         }
       }
     },
@@ -1243,12 +997,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 206
+          "height": 210,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 206
+          "height": 210,
+          "width": 1231
         }
       },
       "steps": [
@@ -1269,9 +1023,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail for A Quiet Place, every section loaded (cast, images, trailers, collection, recommendations).",
@@ -1289,20 +1041,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 1669
+          "height": 1676,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 1669
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 1669
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 1669
+          "height": 1676,
+          "width": 1440
         }
       }
     },
@@ -1312,9 +1056,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail at scroll top; header with poster, title, synopsis, facts, ratings and availability.",
@@ -1323,7 +1065,8 @@
         "target": {
           "css": ".immersive-header"
         },
-        "padding": 0
+        "padding": 8,
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -1334,20 +1077,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 315
+          "height": 331,
+          "width": 1247
         },
         "light": {
-          "width": 1231,
-          "height": 315
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 315
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 315
+          "height": 331,
+          "width": 1247
         }
       }
     },
@@ -1360,9 +1095,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the action bar with Hide Spoilers, Force Sync, watch state, artwork, match, merge, delete and info controls.",
@@ -1371,7 +1104,8 @@
         "target": {
           "css": ".immersive-header"
         },
-        "padding": 0
+        "padding": 8,
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -1382,20 +1116,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 315
+          "height": 331,
+          "width": 1247
         },
         "light": {
-          "width": 1231,
-          "height": 315
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 315
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 315
+          "height": 331,
+          "width": 1247
         }
       }
     },
@@ -1410,9 +1136,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the watchlist, custom-list, rating and watch-state action row.",
@@ -1434,20 +1158,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 308,
-          "height": 63
+          "height": 62,
+          "width": 320
         },
         "light": {
-          "width": 308,
-          "height": 63
-        },
-        "modern-dark": {
-          "width": 308,
-          "height": 63
-        },
-        "modern-light": {
-          "width": 308,
-          "height": 63
+          "height": 62,
+          "width": 320
         }
       }
     },
@@ -1458,9 +1174,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the Watch Status section with watched date and completion percentage.",
@@ -1482,20 +1196,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 604,
-          "height": 68
+          "height": 69,
+          "width": 604
         },
         "light": {
-          "width": 604,
-          "height": 68
-        },
-        "modern-dark": {
-          "width": 604,
-          "height": 68
-        },
-        "modern-light": {
-          "width": 604,
-          "height": 68
+          "height": 69,
+          "width": 604
         }
       }
     },
@@ -1506,17 +1212,14 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; media facts with a personal rating beside provider ratings.",
       "framing": {
         "type": "element",
         "target": {
-          "css": ".media-facts-group--ratings",
-          "padding": 16
+          "css": ".media-facts-group--ratings"
         },
         "padding": 0
       },
@@ -1529,20 +1232,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 411,
-          "height": 69
+          "height": 37,
+          "width": 386
         },
         "light": {
-          "width": 411,
-          "height": 69
-        },
-        "modern-dark": {
-          "width": 411,
-          "height": 68
-        },
-        "modern-light": {
-          "width": 411,
-          "height": 68
+          "height": 37,
+          "width": 386
         }
       }
     },
@@ -1553,9 +1248,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the Cast section scrolled into view.",
@@ -1576,20 +1269,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 188
+          "height": 189,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 188
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 188
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 188
+          "height": 189,
+          "width": 1231
         }
       }
     },
@@ -1600,9 +1285,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the Images gallery.",
@@ -1622,20 +1305,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 145
+          "height": 146,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 145
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 145
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 145
+          "height": 146,
+          "width": 1231
         }
       }
     },
@@ -1646,9 +1321,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the Trailers and Clips section.",
@@ -1668,20 +1341,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 260
+          "height": 260,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 260
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 260
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 260
+          "height": 260,
+          "width": 1231
         }
       }
     },
@@ -1692,9 +1357,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the collection row.",
@@ -1714,20 +1377,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 234
+          "height": 236,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 234
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 234
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 234
+          "height": 236,
+          "width": 1231
         }
       }
     },
@@ -1737,9 +1392,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the recommendations row.",
@@ -1759,20 +1412,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 194
+          "height": 196,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 194
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 194
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 194
+          "height": 196,
+          "width": 1231
         }
       }
     },
@@ -1783,9 +1428,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the collection row and the recommended movie row together.",
@@ -1796,7 +1439,12 @@
         },
         "padding": 0,
         "through": {
-          "heading": "Recommended"
+          "css": ".seasons-section:has(> h3:text-is(\"Recommended movies\")) .season-poster-card:first-child"
+        },
+        "noScroll": true,
+        "size": {
+          "width": 1108,
+          "height": 600
         }
       },
       "automation": "auto",
@@ -1808,22 +1456,23 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 385
+          "height": 600,
+          "width": 1108
         },
         "light": {
-          "width": 1231,
-          "height": 385
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 385
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 385
+          "height": 600,
+          "width": 1108
         }
-      }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 4000
+      },
+      "steps": [
+        {
+          "wait": 3000
+        }
+      ]
     },
     "media-sections": {
       "pages": [
@@ -1855,12 +1504,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 612
+          "height": 612,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 612
+          "height": 612,
+          "width": 1231
         }
       }
     },
@@ -1874,9 +1523,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail with the Appearance menu open showing the section switches. Change nothing.",
@@ -1893,20 +1540,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       },
       "steps": [
@@ -1929,19 +1568,17 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; the Options menu open (Mark unwatched, Force Sync, Info, Edit Images, Fix Match, Delete). Press nothing in it.",
       "framing": {
         "type": "element",
         "target": {
-          "css": ".actions-tools-dropdown[open] .actions-tools-panel",
-          "padding": 8
+          "css": ".actions-tools-dropdown[open] .actions-tools-panel"
         },
-        "padding": 0
+        "padding": 0,
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -1952,20 +1589,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 142,
-          "height": 174
+          "height": 152,
+          "width": 126
         },
         "light": {
-          "width": 142,
-          "height": 174
-        },
-        "modern-dark": {
-          "width": 142,
-          "height": 174
-        },
-        "modern-light": {
-          "width": 142,
-          "height": 174
+          "height": 152,
+          "width": 126
         }
       },
       "steps": [
@@ -1985,9 +1614,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; Options, Info: the Info panel open with watch status, latest watched date, sync results and audit details.",
@@ -2008,20 +1635,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1199,
-          "height": 581
+          "height": 581,
+          "width": 1199
         },
         "light": {
-          "width": 1199,
-          "height": 581
-        },
-        "modern-dark": {
-          "width": 1199,
-          "height": 581
-        },
-        "modern-light": {
-          "width": 1199,
-          "height": 581
+          "height": 581,
+          "width": 1199
         }
       },
       "steps": [
@@ -2047,9 +1666,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Edit Images open with Poster, Season Posters, Logo, Background and YouTube Show tabs. Frame the tabs and first complete artwork row, ending before the next row; choose/save nothing.",
@@ -2074,20 +1691,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1411,
-          "height": 648
+          "height": 520,
+          "width": 1411
         },
         "light": {
-          "width": 1411,
-          "height": 648
-        },
-        "modern-dark": {
-          "width": 1411,
-          "height": 648
-        },
-        "modern-light": {
-          "width": 1411,
-          "height": 648
+          "height": 520,
+          "width": 1411
         }
       },
       "steps": [
@@ -2111,9 +1720,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Movie detail; Fix Match open with a search across all sources, result cards and the YouTube fallback. Apply nothing.",
@@ -2130,20 +1737,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 683,
+          "width": 1440
         }
       },
       "steps": [
@@ -2169,9 +1768,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/movie/a-quiet-place",
       "state": "Same state as fix-match, cropped to the dialog.",
@@ -2192,20 +1789,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1320,
-          "height": 642
+          "height": 642,
+          "width": 1320
         },
         "light": {
-          "width": 1320,
-          "height": 642
-        },
-        "modern-dark": {
-          "width": 1320,
-          "height": 642
-        },
-        "modern-light": {
-          "width": 1320,
-          "height": 642
+          "height": 642,
+          "width": 1320
         }
       },
       "steps": [
@@ -2229,9 +1818,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/lioness",
       "state": "Show detail for Lioness, every section loaded (header, progress, seasons, cast, images, trailers). Use 1373px width so Related Shows ends after eleven complete cards; compose the entire scrollable page without resizing.",
@@ -2249,73 +1836,17 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1373,
-          "height": 2177
+          "height": 2183,
+          "width": 1373
         },
         "light": {
-          "width": 1373,
-          "height": 2177
-        },
-        "modern-dark": {
-          "width": 1373,
-          "height": 2177
-        },
-        "modern-light": {
-          "width": 1373,
-          "height": 2177
+          "height": 2183,
+          "width": 1373
         }
       },
       "viewport": {
         "width": 1373,
         "height": 950
-      }
-    },
-    "tv-sections-overview": {
-      "pages": [
-        "tv-shows/media-page"
-      ],
-      "variants": [
-        "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
-      ],
-      "route": "/tvshow/lioness",
-      "state": "Show detail; the Cast, Images and Trailers and Clips sections.",
-      "framing": {
-        "type": "element",
-        "target": {
-          "heading": "Cast"
-        },
-        "through": {
-          "css": ".trailers-section"
-        },
-        "padding": 0
-      },
-      "automation": "auto",
-      "sources": [
-        "public/modules/media-detail.js",
-        "public/modules/media-detail-events.js",
-        "public/modules/media-detail-show.js",
-        "public/modules/media-detail-shared.js"
-      ],
-      "sizes": {
-        "dark": {
-          "width": 1231,
-          "height": 612
-        },
-        "light": {
-          "width": 1231,
-          "height": 612
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 612
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 612
-        }
       }
     },
     "tv-cast-focus": {
@@ -2324,9 +1855,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/lioness",
       "state": "Show detail; the Cast section.",
@@ -2347,20 +1876,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 200
+          "height": 201,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 200
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 200
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 200
+          "height": 201,
+          "width": 1231
         }
       }
     },
@@ -2370,9 +1891,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/lioness",
       "state": "Show detail; the Images gallery.",
@@ -2392,20 +1911,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 145
+          "height": 146,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 145
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 145
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 145
+          "height": 146,
+          "width": 1231
         }
       }
     },
@@ -2415,9 +1926,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/lioness",
       "state": "Show detail; Trailers and Clips with four populated video cards.",
@@ -2437,20 +1946,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 260
+          "height": 260,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 260
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 260
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 260
+          "height": 260,
+          "width": 1231
         }
       }
     },
@@ -2460,9 +1961,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/lioness",
       "state": "Show detail; a populated Related Shows rail.",
@@ -2482,20 +1981,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 200
+          "height": 202,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 200
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 200
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 200
+          "height": 202,
+          "width": 1231
         }
       }
     },
@@ -2505,9 +1996,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/lioness/season/3",
       "state": "Show detail with the Season 3 accordion open: episode cards, watched state, release dates and episode actions. Capture the complete season-card column and episode panel; no season poster or episode card may be clipped.",
@@ -2530,25 +2019,17 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 672
+          "height": 1063,
+          "width": 1161
         },
         "light": {
-          "width": 1231,
-          "height": 672
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 672
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 672
+          "height": 1063,
+          "width": 1161
         }
       },
       "viewport": {
         "width": 1440,
-        "height": 1100
+        "height": 1400
       },
       "steps": [
         {
@@ -2562,9 +2043,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/the-war-between-the-land-and-the-sea",
       "state": "The War Between the Land and the Sea detail; Options, Info: the Info panel open with watched episodes, destination results and audit events.",
@@ -2585,20 +2064,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1199,
-          "height": 581
+          "height": 581,
+          "width": 1199
         },
         "light": {
-          "width": 1199,
-          "height": 581
-        },
-        "modern-dark": {
-          "width": 1199,
-          "height": 581
-        },
-        "modern-light": {
-          "width": 1199,
-          "height": 581
+          "height": 581,
+          "width": 1199
         }
       },
       "steps": [
@@ -2624,9 +2095,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/bridgerton/season/3",
       "state": "Bridgerton detail with Season 3 expanded (5 of 8 episodes watched) and Hide Spoilers unchecked. Capture the complete season-card column and episode panel; no season poster or episode card may be clipped.",
@@ -2662,20 +2131,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 622
+          "height": 1022,
+          "width": 1196
         },
         "light": {
-          "width": 1231,
-          "height": 622
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 622
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 622
+          "height": 1022,
+          "width": 1196
         }
       },
       "viewport": {
@@ -2689,9 +2150,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/tvshow/bridgerton/season/3",
       "state": "Bridgerton detail with Season 3 expanded (5 of 8 episodes watched) and Hide Spoilers checked, hiding unwatched artwork and synopses. Capture the complete season-card column and episode panel; no season poster or episode card may be clipped.",
@@ -2727,20 +2186,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 622
+          "height": 1022,
+          "width": 1196
         },
         "light": {
-          "width": 1231,
-          "height": 622
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 622
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 622
+          "height": 1022,
+          "width": 1196
         }
       },
       "viewport": {
@@ -2758,9 +2209,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings",
       "state": "Settings landing list.",
@@ -2775,7 +2224,8 @@
           "top": 0,
           "width": 1440,
           "height": 759
-        }
+        },
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -2785,21 +2235,17 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 682
+          "height": 936,
+          "width": 1196
         },
         "light": {
-          "width": 1231,
-          "height": 682
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 682
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 682
+          "height": 936,
+          "width": 1196
         }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1100
       }
     },
     "settings-about": {
@@ -2808,9 +2254,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/about",
       "state": "About page with the installed version and project links.",
@@ -2830,20 +2274,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 508
+          "height": 517,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 508
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 508
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 508
+          "height": 517,
+          "width": 1231
         }
       }
     },
@@ -2854,9 +2290,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/general",
       "state": "Settings general page at scroll top; section panels loaded.",
@@ -2880,20 +2314,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 196
+          "height": 198,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 196
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 196
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 196
+          "height": 198,
+          "width": 1231
         }
       }
     },
@@ -2904,9 +2330,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/general",
       "state": "Settings general page at scroll top; section panels loaded.",
@@ -2931,20 +2355,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 165
+          "height": 168,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 165
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 165
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 165
+          "height": 168,
+          "width": 1231
         }
       }
     },
@@ -2954,9 +2370,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/general",
       "state": "Settings general page at scroll top; section panels loaded.",
@@ -2980,20 +2394,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 107
+          "height": 108,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 107
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 107
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 107
+          "height": 108,
+          "width": 1231
         }
       }
     },
@@ -3003,9 +2409,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/media-servers",
       "state": "Media servers page with the Plex, Emby and Jellyfin cards.",
@@ -3025,20 +2429,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 353
+          "height": 355,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 353
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 353
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 353
+          "height": 355,
+          "width": 1231
         }
       }
     },
@@ -3049,16 +2445,14 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/media-servers",
-      "state": "Settings media-servers page at scroll top; section panels loaded.",
+      "state": "Settings media-servers page; the Plex connection card and its help panel.",
       "framing": {
         "type": "element",
         "target": {
-          "css": "[data-settings-panel='apps']:not(.hidden)"
+          "subPanel": "media-servers-plex"
         },
         "padding": 0
       },
@@ -3071,20 +2465,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 353
+          "height": 112,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 353
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 353
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 353
+          "height": 112,
+          "width": 1231
         }
       }
     },
@@ -3095,9 +2481,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/media-servers",
       "state": "Settings media-servers page at scroll top; section panels loaded.",
@@ -3121,20 +2505,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         }
       }
     },
@@ -3145,9 +2521,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/media-servers",
       "state": "Settings media-servers page at scroll top; section panels loaded.",
@@ -3171,20 +2545,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         }
       }
     },
@@ -3197,9 +2563,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/webhooks",
       "state": "Settings webhooks page at scroll top; section panels loaded.",
@@ -3218,20 +2582,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 346
+          "height": 350,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 346
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 346
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 346
+          "height": 350,
+          "width": 1231
         }
       }
     },
@@ -3242,9 +2598,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/webhooks",
       "state": "Settings webhooks page at scroll top; section panels loaded.",
@@ -3268,20 +2622,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 107
+          "height": 108,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 107
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 107
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 107
+          "height": 108,
+          "width": 1231
         }
       }
     },
@@ -3294,9 +2640,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/connections",
       "state": "Settings connections page at scroll top; section panels loaded.",
@@ -3318,20 +2662,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 233
+          "height": 236,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 233
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 233
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 233
+          "height": 236,
+          "width": 1231
         }
       }
     },
@@ -3342,9 +2678,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/connections",
       "state": "Settings connections page at scroll top; section panels loaded.",
@@ -3366,20 +2700,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         }
       }
     },
@@ -3390,9 +2716,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/connections",
       "state": "Settings connections page at scroll top; section panels loaded.",
@@ -3413,20 +2737,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 111
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 111
+          "height": 112,
+          "width": 1231
         }
       }
     },
@@ -3438,9 +2754,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/metadata",
       "state": "Settings metadata page at scroll top; section panels loaded.",
@@ -3465,20 +2779,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 363
+          "height": 525,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 363
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 363
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 363
+          "height": 525,
+          "width": 1231
         }
       }
     },
@@ -3489,9 +2795,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/metadata",
       "state": "Settings metadata page at scroll top; section panels loaded.",
@@ -3515,20 +2819,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 182
+          "height": 182,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 182
+          "height": 182,
+          "width": 1231
         }
       }
     },
@@ -3538,13 +2834,11 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/metadata",
       "hash": "refresh-tmdb-metadata",
-      "state": "Settings metadata page at scroll top; section panels loaded.",
+      "state": "Settings metadata page; the TMDB refresh row expanded, with its refresh button visible. Do not run the refresh.",
       "framing": {
         "type": "crop",
         "source": "settings-metadata",
@@ -3565,22 +2859,22 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 182
+          "height": 220,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 182
+          "height": 220,
+          "width": 1231
         }
-      }
+      },
+      "steps": [
+        {
+          "click": "#refresh-tmdb-metadata:not([open]) > summary"
+        },
+        {
+          "waitFor": "#refresh-tmdb-metadata[open] .settings-actions"
+        }
+      ]
     },
     "settings-metadata-refresh-tvdb": {
       "pages": [
@@ -3588,13 +2882,11 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/metadata",
       "hash": "refresh-tvdb-metadata",
-      "state": "Settings metadata page at scroll top; section panels loaded.",
+      "state": "Settings metadata page; the TVDB refresh row expanded, with its refresh button visible. Do not run the refresh.",
       "framing": {
         "type": "crop",
         "source": "settings-metadata",
@@ -3615,22 +2907,22 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 182
+          "height": 263,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 182
+          "height": 263,
+          "width": 1231
         }
-      }
+      },
+      "steps": [
+        {
+          "click": "#refresh-tvdb-metadata:not([open]) > summary"
+        },
+        {
+          "waitFor": "#refresh-tvdb-metadata[open] .settings-actions"
+        }
+      ]
     },
     "settings-sync-overview-focused": {
       "pages": [
@@ -3638,18 +2930,17 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/sync",
-      "state": "Sync page at scroll top.",
+      "state": "Sync settings; the complete Sync Tuning card and its help panel, including the save action. Subsequent Sync Tools cards are outside this frame.",
       "framing": {
-        "type": "crop",
-        "source": "settings-sync",
+        "type": "element",
         "target": {
-          "css": "[data-settings-panel='sync']"
-        }
+          "subPanel": "sync-tuning"
+        },
+        "padding": 0,
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -3660,21 +2951,17 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 629
+          "height": 736,
+          "width": 1161
         },
         "light": {
-          "width": 1231,
-          "height": 629
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 629
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 629
+          "height": 736,
+          "width": 1161
         }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 1400
       }
     },
     "settings-sync-tuning": {
@@ -3686,9 +2973,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/sync",
       "state": "Settings sync page at scroll top; section panels loaded.",
@@ -3712,20 +2997,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 548
+          "height": 556,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 548
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 548
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 548
+          "height": 556,
+          "width": 1231
         }
       }
     },
@@ -3739,9 +3016,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/sync",
       "state": "Settings sync page at scroll top; section panels loaded.",
@@ -3766,20 +3041,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 283
+          "height": 287,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 283
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 283
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 283
+          "height": 287,
+          "width": 1231
         }
       }
     },
@@ -3790,9 +3057,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/backup",
       "state": "Settings backup page at scroll top; section panels loaded.",
@@ -3816,20 +3081,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 733,
-          "height": 174
+          "height": 176,
+          "width": 733
         },
         "light": {
-          "width": 733,
-          "height": 174
-        },
-        "modern-dark": {
-          "width": 733,
-          "height": 174
-        },
-        "modern-light": {
-          "width": 733,
-          "height": 174
+          "height": 176,
+          "width": 733
         }
       }
     },
@@ -3840,9 +3097,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/backup",
       "state": "Settings backup page at scroll top; section panels loaded.",
@@ -3866,20 +3121,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 733,
-          "height": 237
+          "height": 240,
+          "width": 733
         },
         "light": {
-          "width": 733,
-          "height": 237
-        },
-        "modern-dark": {
-          "width": 733,
-          "height": 237
-        },
-        "modern-light": {
-          "width": 733,
-          "height": 237
+          "height": 240,
+          "width": 733
         }
       }
     },
@@ -3889,9 +3136,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/restore",
       "state": "Restore page at scroll top with local watch-history and full-backup sources.",
@@ -3911,20 +3156,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 345
+          "height": 349,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 345
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 345
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 345
+          "height": 349,
+          "width": 1231
         }
       }
     },
@@ -3934,9 +3171,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/restore",
       "state": "Local Watch History Restore expanded with stored backups and Merge into existing state / Replace existing state choices. Restore nothing.",
@@ -3964,20 +3199,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 713,
-          "height": 423
+          "height": 429,
+          "width": 713
         },
         "light": {
-          "width": 713,
-          "height": 423
-        },
-        "modern-dark": {
-          "width": 713,
-          "height": 423
-        },
-        "modern-light": {
-          "width": 713,
-          "height": 423
+          "height": 429,
+          "width": 713
         }
       }
     },
@@ -3989,9 +3216,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/restore",
       "state": "Restore page with the Local Watch History Restore accordion (details#local-watch-history-restore) open, so the backup rows and the Merge or Replace choice show. Change and restore nothing.",
@@ -4011,20 +3236,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 629
+          "height": 629,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 629
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 629
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 629
+          "height": 629,
+          "width": 1231
         }
       },
       "steps": [
@@ -4042,9 +3259,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/tools",
       "state": "Settings tools page at scroll top; section panels loaded.",
@@ -4070,20 +3285,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 389
+          "height": 389,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 389
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 389
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 389
+          "height": 389,
+          "width": 1231
         }
       }
     },
@@ -4093,9 +3300,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/tools",
       "state": "Settings tools page at scroll top; section panels loaded.",
@@ -4119,20 +3324,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 182
+          "height": 182,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 182
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 182
+          "height": 182,
+          "width": 1231
         }
       }
     },
@@ -4142,9 +3339,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/tools",
       "state": "Settings tools page at scroll top; section panels loaded.",
@@ -4168,20 +3363,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 418
+          "height": 425,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 418
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 418
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 418
+          "height": 425,
+          "width": 1231
         }
       }
     },
@@ -4191,14 +3378,17 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/tools",
-      "state": "Tools page with the Reopen Onboarding control visible in the top bar; do not open or change setup.",
+      "state": "Tools top bar with its Reopen Onboarding control; do not open or change setup.",
       "framing": {
-        "type": "viewport"
+        "type": "element",
+        "target": {
+          "css": ".page-topbar:has(#pageTopbarOnboardingButton:not(.hidden))"
+        },
+        "padding": 0,
+        "noScroll": true
       },
       "automation": "auto",
       "sources": [
@@ -4209,20 +3399,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1440,
-          "height": 683
+          "height": 44,
+          "width": 1248
         },
         "light": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-dark": {
-          "width": 1440,
-          "height": 683
-        },
-        "modern-light": {
-          "width": 1440,
-          "height": 683
+          "height": 44,
+          "width": 1248
         }
       }
     },
@@ -4233,9 +3415,7 @@
       ],
       "variants": [
         "dark",
-        "light",
-        "modern-dark",
-        "modern-light"
+        "light"
       ],
       "route": "/settings/logs",
       "state": "Logs page with its controls.",
@@ -4254,20 +3434,12 @@
       ],
       "sizes": {
         "dark": {
-          "width": 1231,
-          "height": 434
+          "height": 434,
+          "width": 1231
         },
         "light": {
-          "width": 1231,
-          "height": 434
-        },
-        "modern-dark": {
-          "width": 1231,
-          "height": 434
-        },
-        "modern-light": {
-          "width": 1231,
-          "height": 434
+          "height": 434,
+          "width": 1231
         }
       }
     }

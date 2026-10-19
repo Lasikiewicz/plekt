@@ -184,7 +184,7 @@ test("manual watch review confirmation describes grouped watch decisions", () =>
 
   assert.equal(prompt.title, "Confirm manual watch decisions");
   assert.match(prompt.body, /3 episodes from “Lioness”/);
-  assert.match(prompt.body, /episode timing date/);
+  assert.match(prompt.body, /episode timing/);
   assert.equal(prompt.confirmLabel, "Confirm all decisions");
   assert.equal(prompt.danger, false);
 });

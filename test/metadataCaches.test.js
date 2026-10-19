@@ -51,6 +51,8 @@ test("light-cached details satisfy light callers but full callers refetch", asyn
     name: "Light Show",
     status: "Ended",
     details_light: true,
+    tv_synopsis_language_version: 1,
+    tv_synopsis_language_status: "missing",
     external_ids: { tvdb_id: "333", tmdb_id: "666" },
   }), 9999, Date.now());
   // … plus the TVDB series cache and a fanart miss, so the full refetch below
@@ -85,6 +87,8 @@ test("getTmdbDetails returns fresh cached TV details without upstream fetches", 
     id: "555",
     name: "Cached Show",
     status: "Returning Series",
+    tv_synopsis_language_version: 1,
+    tv_synopsis_language_status: "missing",
     seasons: [{ season_number: 1, episode_count: 8 }],
     external_ids: { tvdb_id: "444", tmdb_id: "555" },
     next_airing_date: "2999-01-01",

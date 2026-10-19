@@ -123,14 +123,12 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
 ---
 
 <SiteLayout title="Documentation" description="Practical guides for installing, connecting, using, and maintaining Plekt.">
-  <div class="docs-shell">
+  <div class="docs-shell docs-home-shell">
     <DocsSidebar />
     <div class="docs-main">
       <header class="docs-intro">
-        <div>
-          <h1>Documentation</h1>
-          <p>Practical guides for installing Plekt, understanding the sync model, using each page, and keeping your archive safe.</p>
-        </div>
+        <h1>Documentation</h1>
+        <p>Setup, daily use, integrations, and maintenance for your Plekt instance.</p>
       </header>
 
       <section class="docs-search-results" id="docs-search-results" aria-live="polite" hidden>
@@ -172,31 +170,23 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
         <p class="docs-search-empty" id="docs-search-empty" hidden>No documentation matches that search.</p>
       </section>
 
-      <section class="docs-category" data-doc-search-category data-search-text="start here installation setup first run">
-        <h2>Start here</h2>
-        <div class="docs-card-grid">
-          {docsNav[0].items.map((item) => {
-            const entry = docsBySlug.get(item.slug);
-            return entry && <a class="docs-card" href={`/docs/${item.slug}/`} data-doc-search-card data-search-text={`${item.label} ${item.description} ${entry.body}`}>
-              <h3>{item.label}</h3><p>{item.description}</p>
-            </a>;
-          })}
-        </div>
-      </section>
-
-      {docsNav.slice(1).map((section) => (
-        <section class="docs-category" data-doc-search-category data-search-text={`${section.label} ${section.items.map((item) => `${item.label} ${item.description}`).join(" ")}`}>
-          <h2>{section.label}</h2>
-          <div class="docs-card-grid">
-            {section.items.map((item) => {
-              const entry = docsBySlug.get(item.slug);
-              return entry && <a class="docs-card" href={`/docs/${item.slug}/`} data-doc-search-card data-search-text={`${item.label} ${item.description} ${entry.body}`}>
-                <h3>{item.label}</h3><p>{item.description}</p>
-              </a>;
-            })}
-          </div>
-        </section>
-      ))}
+      <div class="docs-home-directory">
+        <div class="docs-home-directory-heading"><h2>Browse the guides</h2><p>Choose a topic to get straight to the details.</p></div>
+        {docsNav.map((section) => (
+          <section class="docs-category docs-home-category" data-doc-search-category data-search-text={`${section.label} ${section.items.map((item) => `${item.label} ${item.description}`).join(" ")}`}>
+            <header class="docs-home-category-heading"><h3>{section.label}</h3></header>
+            <div class="docs-home-guide-list">
+              {section.items.map((item) => {
+                const entry = docsBySlug.get(item.slug);
+                return entry && <a class="docs-home-guide" href={`/docs/${item.slug}/`} data-doc-search-card data-search-text={`${item.label} ${item.description} ${entry.body}`}>
+                  <span class="docs-home-guide-copy"><strong>{item.label}</strong><span>{item.description}</span></span>
+                  <span class="docs-home-guide-arrow" aria-hidden="true">↗</span>
+                </a>;
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
 
     </div>
   </div>

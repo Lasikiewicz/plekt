@@ -1,9 +1,9 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { state, elements } from "./state.js?v=2.1.0.2.1";
-import { escapeHtml, escapeAttribute, platformName, formatDate } from "./utils.js?v=2.1.0.2.1";
-import { historyAction, syncStatus, telemetryLineValue } from "./sync.js?v=2.1.0.2.1";
-import { syncInlineMediaDetailHeading } from "./explorer.js?v=2.1.0.2.1";
-import { auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync } from "./media-info-summary.js?v=2.1.0.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { state, elements } from "./state.js?v=2.1.1.0.2";
+import { escapeHtml, escapeAttribute, platformName, formatDate } from "./utils.js?v=2.1.1.0.2";
+import { historyAction, syncStatus, telemetryLineValue } from "./sync.js?v=2.1.1.0.2";
+import { syncInlineMediaDetailHeading } from "./explorer.js?v=2.1.1.0.2";
+import { auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync } from "./media-info-summary.js?v=2.1.1.0.2";
 
 let _cb = {};
 let _mediaRenderToken = 0;
@@ -102,6 +102,12 @@ export function mediaToolsActionHtml(content = "") {
   return `
     <details class="actions-tools-dropdown">
       <summary class="action-pill actions-tools-trigger" aria-label="Open media options" title="Options">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M4 6h5m4 0h7M4 12h9m4 0h3M4 18h2m4 0h10" />
+          <circle cx="11" cy="6" r="2" fill="none" />
+          <circle cx="15" cy="12" r="2" fill="none" />
+          <circle cx="8" cy="18" r="2" fill="none" />
+        </svg>
         <span>Options</span>
       </summary>
       <div class="actions-tools-panel" role="group" aria-label="Media options">
@@ -1047,6 +1053,57 @@ export function prepareInlineMediaDetail(mode = state.explorerMode || "movies") 
   elements.alphaFilterNav?.classList.add("hidden");
   syncPageTopbar();
 }
+const mobileMediaActionPlaceholders = new WeakMap();
+const mobileMediaActionsContainerPlaceholders = new WeakMap();
+
+function moveMediaActionsIntoOptions(el, dropdown, panel) {
+  const actionNodes = [...el.children].filter((child) => child !== dropdown);
+  for (const action of actionNodes) {
+    if (action.parentElement === panel) continue;
+    const placeholder = document.createComment("media-detail-action");
+    el.insertBefore(placeholder, action);
+    mobileMediaActionPlaceholders.set(action, placeholder);
+  }
+  for (const action of actionNodes.reverse()) {
+    if (mobileMediaActionPlaceholders.has(action)) panel.insertBefore(action, panel.firstChild);
+  }
+}
+
+function restoreMediaActionsToToolbar(el, panel) {
+  if (!panel) return;
+  for (const action of [...panel.children]) {
+    const placeholder = mobileMediaActionPlaceholders.get(action);
+    if (!placeholder || placeholder.parentNode !== el) continue;
+    placeholder.replaceWith(action);
+    mobileMediaActionPlaceholders.delete(action);
+  }
+}
+
+function moveMediaActionsContainerInline(el) {
+  const title = document.querySelector(".page-topbar-title");
+  const source = el.parentElement;
+  if (!title || !source || title.contains(el)) return;
+  const placeholder = document.createComment("media-detail-actions-container");
+  source.insertBefore(placeholder, el);
+  mobileMediaActionsContainerPlaceholders.set(el, placeholder);
+  source.classList.add("media-actions-inline-source");
+  title.appendChild(el);
+}
+
+function restoreMediaActionsContainer(el) {
+  const placeholder = mobileMediaActionsContainerPlaceholders.get(el);
+  const source = placeholder?.parentNode || document.getElementById("pageTopbarActions");
+  if (!source) return;
+  if (placeholder?.parentNode === source) {
+    source.insertBefore(el, placeholder);
+    placeholder.remove();
+  } else if (el.parentElement !== source) {
+    source.appendChild(el);
+  }
+  source.classList.remove("media-actions-inline-source");
+  mobileMediaActionsContainerPlaceholders.delete(el);
+}
+
 export function setMediaDetailActions(html) {
   const el = document.getElementById("mediaDetailActions");
   if (el) el.innerHTML = html || "";
@@ -1067,6 +1124,8 @@ export function syncMediaActionsMenuState() {
   if (!el) return;
   const dropdown = el.querySelector(".actions-tools-dropdown");
   if (!dropdown) {
+    restoreMediaActionsToToolbar(el, null);
+    restoreMediaActionsContainer(el);
     el.classList.remove("actions-collapsed");
     return;
   }
@@ -1074,6 +1133,15 @@ export function syncMediaActionsMenuState() {
   // popup treatment at every viewport width instead of flattening the tool
   // actions into the main control bar when there is spare room.
   el.classList.add("actions-collapsed");
+  const mobile = window.innerWidth <= 640;
+  const panel = dropdown.querySelector(".actions-tools-panel");
+  if (mobile && panel) {
+    moveMediaActionsIntoOptions(el, dropdown, panel);
+    moveMediaActionsContainerInline(el);
+  } else {
+    restoreMediaActionsToToolbar(el, panel);
+    restoreMediaActionsContainer(el);
+  }
 }
 export function syncTopbarControlsMenuState() {
   const menu = elements.topbarControlsMenu;
@@ -1081,10 +1149,8 @@ export function syncTopbarControlsMenuState() {
     menu?.removeAttribute("open");
     return;
   }
-  const isMobileControls = window.matchMedia("(max-width: 640px)").matches;
-  if (isMobileControls) {
-    menu.removeAttribute("open");
-  } else {
+  const isMobileControls = window.matchMedia("(max-width: 760px)").matches;
+  if (!isMobileControls || !document.body.classList.contains("page-controls-options-active")) {
     menu.removeAttribute("open");
   }
 }

@@ -1,6 +1,5 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
-import ScreenshotFigure from "../components/ScreenshotFigure.astro";
 
 const importOptions = [
   { id: "none", name: "No, start fresh", role: "Manual tracking", icon: "/assets/icons/plembfin.png" },
@@ -14,65 +13,27 @@ const mediaServerOptions = [
   { id: "jellyfin", name: "Jellyfin", role: "Media server", icon: "/assets/icons/jellyfin.svg" },
 ];
 
-const reasons = [
-  {
-    number: "01",
-    title: "One local record",
-    text: "Every watched event, resume position, source, and rewatch has a durable place to land before it is sent anywhere else.",
-  },
-  {
-    number: "02",
-    title: "One bridge, fewer conflicts",
-    text: "Connected services do not need to write directly to each other. Plekt is the point of comparison that prevents stale state from winning silently.",
-  },
-  {
-    number: "03",
-    title: "One visible result",
-    text: "Sync Activity records the origin, every destination, the outcome, and the retry path when a provider is unavailable or a title needs matching.",
-  },
-];
-
-const changes = [
-  "A media server is rebuilt: push the local record back when the library is ready.",
-  "A provider is offline: keep the local history and retry only the missing destination later.",
-  "Two services report the same watch: collapse the delivery echo, preserve a genuine rewatch.",
-  "You add another server: connect it to the same record instead of starting over.",
-];
 ---
 
 <SiteLayout
-  title="Why Plekt"
-  description="See how Plekt fits different media stacks, from private manual tracking to Plex, Emby, Jellyfin, and Trakt working from one local source of truth."
+  title="Your Plekt"
+  description="Choose your watch-history import and media servers to see how your Plekt can bring them together, keep watch state in sync, and preserve a local archive you can restore."
   image="/assets/optimized/plembfin-hub.svg"
 >
   <div class="simple-why">
     <header class="simple-why-hero" aria-labelledby="why-plekt-title">
       <div>
-        <p class="simple-eyebrow">PLEKT / WHY</p>
-        <h1 id="why-plekt-title">One watch history. Every server in sync.</h1>
+        <p class="simple-eyebrow">YOUR MEDIA / YOUR SETUP</p>
+        <h1 id="why-plekt-title">See how your Plekt would work.</h1>
         <p>
-          Use Plekt as a private manual tracker, a bridge to Trakt, or the local source of truth for a whole mixed media stack.
+          Choose the history you want to bring in and the servers you use. See how Plekt can keep your watch state together and ready to restore.
         </p>
-        <div class="simple-actions">
-          <a class="simple-button simple-button--primary" href="/docs/getting-started/">Get started <span aria-hidden="true">↗</span></a>
-          <a class="simple-button" href="/features/">View features <span aria-hidden="true">→</span></a>
-        </div>
-      </div>
-      <div class="simple-why-hero-proof">
-        <ScreenshotFigure
-          src="/assets/optimized/plembfin-hub.svg"
-          alt="Plekt connected as the local hub between Plex, Emby, Jellyfin, Trakt, and supporting services"
-          caption="Every service has a role. Plekt keeps the record they can agree on."
-          width={1200}
-          height={540}
-        />
       </div>
     </header>
 
-    <section class="simple-why-builder" aria-labelledby="builder-title">
+    <section class="simple-why-builder" aria-label="Choose your Plekt setup">
       <div class="simple-why-builder-grid">
         <div class="simple-why-builder-questions">
-          <h2 class="simple-why-builder-title" id="builder-title">Build your setup.</h2>
           <fieldset class="simple-why-builder-options">
             <legend>1. Import existing history?</legend>
             <p class="simple-why-builder-help">Start fresh, or import from Trakt or Tautulli.</p>
@@ -144,65 +105,28 @@ const changes = [
               ))}
             </div>
           </fieldset>
-          <button class="simple-why-reset" type="button" data-stack-reset>Reset builder</button>
         </div>
 
         <div class="simple-why-builder-result" data-stack-result aria-live="polite">
-          <p class="simple-eyebrow" data-stack-label>YOUR STARTING POINT</p>
-          <p class="simple-why-builder-audience" data-stack-audience>No history to import? Start private and local.</p>
-          <p data-stack-description>Search for a title, mark it watched, choose the date, and keep the record on your own instance. Add connections whenever your stack grows.</p>
           <div class="simple-stack-flow" data-stack-flow>
             <span class="simple-stack-node simple-stack-node--hub"><img data-theme-image src="/assets/icons/plembfin.png" data-dark-src="/assets/icons/plembfin.png" data-light-src="/assets/icons/plembfin-light.png" alt="" aria-hidden="true" width="24" height="24" />Plekt</span>
           </div>
-          <a class="simple-text-link" data-stack-link href="/docs/media-details/#mark-watched">See manual tracking <span aria-hidden="true">→</span></a>
         </div>
       </div>
     </section>
 
-    <section class="simple-why-reasons" aria-labelledby="reasons-title">
-      <div class="simple-section-heading">
-        <div>
-          <p class="simple-eyebrow">WHY THE MIDDLE MATTERS</p>
-          <h2 id="reasons-title">A bridge is useful when it remembers.</h2>
-        </div>
-        <p>Media players are good at playback. Trackers are good at sharing. Plekt keeps the durable, explainable record between them.</p>
+    <section class="simple-why-explanation" aria-labelledby="setup-explanation-title">
+      <div class="simple-why-explanation-copy">
+        <p class="simple-eyebrow">HOW IT WILL WORK</p>
+        <h2 id="setup-explanation-title">Your setup, step by step</h2>
+        <p class="simple-why-explanation-intro" data-stack-explanation-intro>Your Plekt starts as a private watch tracker. Add media servers whenever you are ready to sync playback history.</p>
       </div>
-
-      <div class="simple-why-reason-list">
-        {reasons.map((reason) => (
-          <div class="simple-why-reason">
-            <span class="simple-number">{reason.number}</span>
-            <div>
-              <h3>{reason.title}</h3>
-              <p>{reason.text}</p>
-            </div>
-          </div>
-        ))}
-      </div>
+      <ol class="simple-why-explanation-steps" data-stack-explanation-steps>
+        <li>Search for a title in Plekt and record a watch yourself, including its date.</li>
+        <li>Keep the watch history in your local Plekt archive, ready to use as your setup grows.</li>
+      </ol>
     </section>
 
-    <section class="simple-why-changes" aria-labelledby="changes-title">
-      <div>
-        <p class="simple-eyebrow">WHEN THE STACK CHANGES</p>
-        <h2 id="changes-title">Your history does not have to start over.</h2>
-        <p>Servers go offline, libraries get rebuilt, and providers occasionally disagree. Plekt keeps the local archive steady while the rest catches up.</p>
-        <a class="simple-text-link" href="/docs/sync-tools/">See sync tools and recovery paths <span aria-hidden="true">→</span></a>
-      </div>
-      <ul class="simple-why-change-list">
-        {changes.map((change) => <li>{change}</li>)}
-      </ul>
-    </section>
-
-    <section class="simple-why-footer" aria-labelledby="start-title">
-      <div>
-        <p class="simple-eyebrow">YOUR NEXT STEP</p>
-        <h2 id="start-title">Connect one thing. Keep the history yours.</h2>
-      </div>
-      <div class="simple-actions">
-        <a class="simple-button simple-button--primary" href="/docs/getting-started/">Start with Plekt <span aria-hidden="true">↗</span></a>
-        <a class="simple-button" href="/docs/integrations/">Browse integrations <span aria-hidden="true">→</span></a>
-      </div>
-    </section>
   </div>
 </SiteLayout>
 
@@ -212,12 +136,9 @@ const changes = [
   const traktModeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>("[data-trakt-mode]"));
   const traktQuestion = document.querySelector("[data-trakt-question]");
   const result = document.querySelector("[data-stack-result]");
-  const label = document.querySelector("[data-stack-label]");
-  const audience = document.querySelector("[data-stack-audience]");
-  const description = document.querySelector("[data-stack-description]");
+  const explanationIntro = document.querySelector("[data-stack-explanation-intro]");
+  const explanationSteps = document.querySelector("[data-stack-explanation-steps]");
   const flow = document.querySelector("[data-stack-flow]");
-  const link = document.querySelector("[data-stack-link]");
-  const reset = document.querySelector("[data-stack-reset]");
   const selectedImports = new Set<string>(["none"]);
   let traktMode = "once";
   const selectedServers = new Set<string>();
@@ -233,56 +154,76 @@ const changes = [
     const hasTrakt = selectedImports.has("trakt");
     const hasTautulli = selectedImports.has("tautulli");
 
-    let nextLabel = "YOUR STARTING POINT";
-    let nextAudience = "No history to import? Start private and local.";
-    let nextDescription = "Search for a title, mark it watched, choose the date, and keep the record on your own instance. Add connections whenever your stack grows.";
-    let nextHref = "/docs/media-details/#mark-watched";
-    let nextLinkLabel = "See manual tracking";
-
+    const serverNames = servers.map((server) => server.name);
+    const serverList = serverNames.length > 1
+      ? `${serverNames.slice(0, -1).join(", ")} and ${serverNames.at(-1)}`
+      : serverNames[0] || "your media servers";
+    let nextExplanation = "Your Plekt starts as a private watch tracker. Add media servers whenever you are ready to sync playback history.";
+    let nextSteps = [
+      "Search for a title in Plekt and record a watch yourself, including its date.",
+      "Keep the watch history in your local Plekt archive, ready to use as your setup grows.",
+    ];
     if (hasTrakt && hasTautulli) {
-      nextLabel = "DUAL HISTORY IMPORT";
-      nextAudience = "Bring both your shared Trakt archive and completed Plex history into one local record.";
-      nextDescription = traktMode === "continuous"
-        ? "Plekt can import your existing Trakt history and completed Plex history from Tautulli, then keep the combined archive local while Trakt and your selected media servers stay in sync. Tautulli remains a one-time import."
-        : "Plekt can import your existing Trakt history and completed Plex history from Tautulli, then keep the combined archive local and ready for future watches. Tautulli remains a one-time import; choose Continuous sync to keep Trakt and your selected media servers in sync.";
-      nextHref = "/docs/integrations/";
-      nextLinkLabel = "See the integration setup";
+      nextExplanation = `Bring your existing Trakt history and completed Plex history from Tautulli into one local Plekt archive${serverNames.length ? ` for use with ${serverList}` : ""}.`;
+      nextSteps = [
+        "Tautulli supplies your completed Plex history. Plekt previews and matches the records, then creates a backup before importing them.",
+        traktMode === "continuous"
+          ? "Import your Trakt history and keep Trakt connected so supported watch-state changes continue to sync through Plekt."
+          : "Import your Trakt history once. Future watches are recorded in Plekt from your selected servers or through manual tracking.",
+        serverNames.length > 1
+          ? `Connect ${serverList}. Plekt records playback from each server and keeps watched status and resume progress aligned across them.`
+          : serverNames.length === 1
+            ? `Connect ${serverList} to send playback events to Plekt, where the combined history stays ready to restore.`
+            : "Keep the imported history in Plekt and add servers later if you want playback sync.",
+      ];
     } else if (hasTrakt) {
-      nextLabel = traktMode === "continuous" ? "CONTINUOUS SYNC" : "ONE-TIME IMPORT";
-      nextAudience = traktMode === "continuous" ? "Keep Trakt connected while Plekt remains your local source of truth." : "Bring an existing Trakt archive into a private local record.";
-      nextDescription = traktMode === "continuous" ? "Import your existing Trakt history, then let future changes flow through Plekt to your selected media servers." : "Import your existing Trakt history once, then use Plekt as the archive for future manual or server-reported watches.";
-      nextHref = "/docs/integrations/#trakt";
-      nextLinkLabel = "See the Trakt setup";
+      nextExplanation = traktMode === "continuous"
+        ? `Plekt imports your existing Trakt history and remains the local archive${serverNames.length ? ` connecting Trakt with ${serverList}` : " for your watch history"}.`
+        : `Plekt imports your existing Trakt history once${serverNames.length ? `, then keeps watches from ${serverList} in the same local archive` : " and keeps it locally for future manual tracking"}.`;
+      nextSteps = [
+        traktMode === "continuous"
+          ? "Import your existing Trakt history, then leave Trakt connected so supported watch-state changes can sync through Plekt."
+          : "Import the existing Trakt watch history once. Trakt is not kept connected for ongoing sync in this option.",
+        serverNames.length > 1
+          ? `Connect ${serverList}. Plekt records playback and syncs watched status and resume progress across those servers.`
+          : serverNames.length === 1
+            ? `Connect ${serverList}. Plekt records its playback history in your local archive, ready to restore if the library changes.`
+            : "Record future watches manually in Plekt; the Trakt import remains part of your local archive.",
+      ];
     } else if (hasTautulli) {
-      nextLabel = "PLEX HISTORY IMPORT";
-      nextAudience = "Bring completed Plex history across before you connect the servers you use today.";
-      nextDescription = "Tautulli provides the completed Plex history. Plekt previews and matches it, creates a backup, then keeps the imported archive local.";
-      nextHref = "/docs/integrations/#tautulli";
-      nextLinkLabel = "See the Tautulli setup";
+      nextExplanation = `Use Tautulli to bring your completed Plex history into Plekt${serverNames.length ? `, then use the archive with ${serverList}` : " as a private local archive"}.`;
+      nextSteps = [
+        "Plekt previews the completed Plex history from Tautulli and matches it to your library.",
+        "Plekt creates a backup before importing the history. Tautulli is used for this one-time import.",
+        serverNames.length > 1
+          ? `Connect ${serverList} to record playback and keep watched status and resume progress in sync across them.`
+          : serverNames.length === 1
+            ? `Connect ${serverList} to store playback history in Plekt and restore it if the library changes.`
+            : "Keep the imported history in Plekt and add media servers later if you want sync.",
+      ];
     } else if (servers.length > 1) {
-      nextLabel = "MIXED MEDIA STACK";
-      nextAudience = "For households and self-hosters who move between more than one media server.";
-      nextDescription = "Watch on whichever server is convenient. Plekt keeps watched state, resume progress, and genuine rewatches aligned across the stack.";
-      nextHref = "/docs/concepts/#the-canonical-record";
-      nextLinkLabel = "Understand the canonical record";
+      nextExplanation = `Plekt becomes the shared watch-history archive for ${serverList}.`;
+      nextSteps = [
+        `Connect ${serverList} to Plekt so each service can report playback events.`,
+        "Plekt stores each watch locally, then syncs watched status and resume progress across the connected servers.",
+        "If a library is rebuilt, use the local archive to restore its watch state.",
+      ];
     } else if (servers.length === 1) {
-      nextLabel = "ONE MEDIA SERVER";
-      nextAudience = `For ${servers[0].name} users who want their history to outlive the library.`;
-      nextDescription = `${servers[0].name} provides playback events while Plekt stores the local record, resume progress, and rewatch history.`;
-      nextHref = `/docs/integrations/#${servers[0].id}`;
-      nextLinkLabel = `See the ${servers[0].name} setup`;
+      nextExplanation = `Plekt receives playback events from ${servers[0].name} and keeps your watch history on your own instance.`;
+      nextSteps = [
+        `Connect ${servers[0].name} to Plekt so playback events are recorded locally.`,
+        "Plekt keeps watched status, resume progress, and rewatch history in its archive.",
+        "If the library changes or is rebuilt, use the local archive to restore watch state.",
+      ];
     }
 
-    label?.replaceChildren(nextLabel);
-    audience?.replaceChildren(nextAudience);
-    description?.replaceChildren(nextDescription);
-    if (link instanceof HTMLAnchorElement) {
-      link.href = nextHref;
-      link.replaceChildren(nextLinkLabel, document.createTextNode(" "));
-      const arrow = document.createElement("span");
-      arrow.setAttribute("aria-hidden", "true");
-      arrow.textContent = "→";
-      link.append(arrow);
+    explanationIntro?.replaceChildren(nextExplanation);
+    if (explanationSteps) {
+      explanationSteps.replaceChildren(...nextSteps.map((step) => {
+        const item = document.createElement("li");
+        item.textContent = step;
+        return item;
+      }));
     }
     if (flow) {
       flow.replaceChildren();
@@ -455,21 +396,6 @@ const changes = [
       updatePressed(traktModeButtons, button);
       renderStack();
     });
-  });
-
-  reset?.addEventListener("click", () => {
-    selectedImports.clear();
-    selectedImports.add("none");
-    traktMode = "once";
-    selectedServers.clear();
-    updatePressed(importButtons, importButtons[0]);
-    updatePressed(traktModeButtons, traktModeButtons[0]);
-    mediaButtons.forEach((button) => {
-      button.setAttribute("aria-pressed", "false");
-      button.classList.remove("is-selected");
-    });
-    if (traktQuestion instanceof HTMLElement) traktQuestion.hidden = true;
-    renderStack();
   });
 
   renderStack();

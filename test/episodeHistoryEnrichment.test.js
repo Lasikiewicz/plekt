@@ -45,6 +45,7 @@ test("history episode titles resolve by show title without requiring Fix Match i
     assert.equal(element.textContent, "Picture Says a Thousand Words");
     assert.equal(entry.air_date, "2023-12-15");
     assert.equal(requests.length, 2);
+    assert.match(requests[1].url, /episodeTextVersion=1/, "season requests bypass pre-policy browser cache entries");
   } finally {
     globalThis.fetch = originalFetch;
   }

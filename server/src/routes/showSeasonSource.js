@@ -105,7 +105,10 @@ export async function handleShowSeasonSourceTraktReplace(req, res) {
     tvdbId,
     tmdbId: tmdbId || show.tmdb_id || "",
     logger: (line) => console.log(`[ShowSeasonSource] ${show.title}: ${line}`),
-  }).catch((error) => ({ ok: false, error: error.message || String(error) }));
+  }).catch((error) => {
+    console.error("[ShowSeasonSource] Trakt replace failed", error);
+    return { ok: false, error: error?.message || "Trakt replace failed" };
+  });
   writeAuditLog("show.season_source.trakt_replace", { ip: req.ip || req.socket?.remoteAddress, detail: { tvdbId, ...result } });
   return sendJson(res, result, result.ok ? 200 : 409);
 }

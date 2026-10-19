@@ -7,7 +7,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.1.0.2.1") format("woff2");
+  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.1.1.0.2") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -16,7 +16,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.1.0.2.1") format("woff2");
+  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.1.1.0.2") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -25,7 +25,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.1.0.2.1") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.1.1.0.2") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -34,7 +34,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.1.0.2.1") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.1.1.0.2") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -987,21 +987,6 @@ h2 {
   gap: 0.4rem;
 }
 
-/* The "Watch Now" row's app-links container defaults to full-width/centered
-   for its old home in the collapsible facts aside - left-align it like every
-   other chip row here instead. */
-.media-fact-chip-row .media-app-links {
-  width: auto;
-  justify-content: flex-start;
-}
-
-/* Ratings, Available on, and Watch Now each get a dedicated full-width row -
-   unlike .media-fact--wide, this isn't neutralized for the non-bio layout,
-   since these three are meant to stand alone rather than pair up. */
-.media-fact--full {
-  grid-column: 1 / -1;
-}
-
 /* Same pill style as the Plex/Emby/Jellyfin app-link chips (.media-app-link) -
    no background fill, just the icon and label. */
 .media-fact-chip {
@@ -1140,58 +1125,25 @@ a.media-fact-chip:hover {
   overflow-wrap: anywhere;
 }
 
-.media-facts-group {
+.media-fact-table-value--rich {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  min-width: 0;
   flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
-.media-facts-group--available {
-  margin-top: 1.1rem;
+.media-fact-table-row--watch-now .media-app-links {
+  width: auto;
+  min-width: 0;
+  justify-content: flex-start;
 }
 
-.media-facts-bottom-group {
-  margin-top: auto;
-  padding-top: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.85rem;
-  width: 100%;
-}
-
-.media-facts-bottom-group .media-facts-group--available,
-.media-facts-bottom-group .media-facts-group--watch-now,
-.media-facts-bottom-group .media-facts-group--ratings {
-  margin-top: 0;
-}
-
-.media-facts-group--watch-now {
-  margin-top: 0.9rem;
-}
-
-.media-facts-group--ratings {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.45rem;
-}
-
-.media-facts-group-label {
-  color: var(--muted, #94a3b8);
-  font-size: var(--fs-fact-label);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.media-facts-group-content {
+.media-fact-table-row--watch-now .media-app-link-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: flex-start;
+  gap: 0.75rem;
   flex-wrap: wrap;
 }
 
@@ -1243,18 +1195,7 @@ a.media-fact-chip:hover {
 }
 
 /* Watch now badges - no border, no background */
-.media-facts-group--watch-now .media-app-links {
-  width: auto;
-}
-
-.media-facts-group--watch-now .media-app-link-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.media-facts-group--watch-now .media-app-link {
+.media-fact-table-row--watch-now .media-app-link {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -1271,14 +1212,14 @@ a.media-fact-chip:hover {
   transition: opacity 0.15s ease, filter 0.15s ease, transform 0.15s ease;
 }
 
-.media-facts-group--watch-now .media-app-link:hover {
+.media-fact-table-row--watch-now .media-app-link:hover {
   background: transparent !important;
   border: none !important;
   filter: brightness(1.25);
   transform: translateY(-1px);
 }
 
-.media-facts-group--watch-now .media-app-link-logo {
+.media-fact-table-row--watch-now .media-app-link-logo {
   width: 1.35rem;
   height: 1.35rem;
   object-fit: contain;
@@ -1581,6 +1522,21 @@ a.media-fact-chip:hover {
 }
 
 @media (max-width: 760px) {
+  .page-shell[data-active-view="dashboard"] .dashboard-history-heading {
+    align-items: center !important;
+  }
+
+  .page-shell[data-active-view="dashboard"] .dashboard-history-heading > .dashboard-compact-toggle {
+    box-sizing: border-box !important;
+    width: 1.85rem !important;
+    min-width: 1.85rem !important;
+    height: 1.85rem !important;
+    min-height: 1.85rem !important;
+    flex: 0 0 1.85rem !important;
+    align-self: center !important;
+    padding: 0 !important;
+  }
+}
   .media-detail-page .immersive-header,
   .media-detail-page .immersive-header:has(.media-facts-rail--sidebar) {
     grid-template-columns: auto minmax(0, 1fr);
@@ -1604,6 +1560,7 @@ a.media-fact-chip:hover {
     grid-template-rows: auto;
   }
 }
+
 
 /* Public demo guardrails -------------------------------------------------- */
 .demo-mode-banner {
@@ -2948,6 +2905,13 @@ html.light-mode .theme-aware-icon-set .theme-aware-icon--dark {
   font-size: 0.80rem;
   font-weight: 700;
   color: var(--soft);
+}
+
+/* Season grid cards are narrow: wrap the source badges under the date
+   instead of letting them run past the card edge. */
+.immersive-episode-row .episode-watch-history-row {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
 }
 
 .part-watched-app-badge:hover,
@@ -6146,10 +6110,14 @@ details.sync-tool-details[open] > summary {
   overflow: visible;
 }
 
+/* The collapsed height matches the settings row, so the clip can land mid-line;
+   fade the last line out rather than show the tops of its letters. */
 .help-collapsed .help-content {
   flex: 1 1 auto !important;
   overflow: hidden !important;
   min-height: 0 !important;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
 }
 
 @media (max-width: 640px) {
@@ -6481,6 +6449,12 @@ details.sync-tool-details[open] > summary {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.explorer-loading-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 @media (max-width: 1600px) {
@@ -11373,7 +11347,7 @@ body #mediaDetailActions.actions-collapsed .actions-tools-panel {
   padding: 0.25rem 0;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--panel-3);
+  background: var(--brand-menu);
   box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.25));
 }
 
@@ -15679,49 +15653,6 @@ html.light-mode #timeline-view .part-watched-app-badge {
     margin-bottom: 0.2rem !important;
   }
 
-  /* Mobile: Show sort option directly instead of dropdown */
-  #topbarControlsMenu {
-    display: block !important;
-    border: none;
-    background: transparent;
-    padding: 0;
-  }
-
-  #topbarControlsMenu summary {
-    display: none;
-  }
-
-  #topbarControlsPanel {
-    display: grid !important;
-    grid-template-columns: 1fr;
-    gap: 0.4rem;
-    width: 100%;
-    margin-top: 0.5rem;
-  }
-
-  #topbarControlsPanel > #explorerTopbarControls {
-    display: grid !important;
-    grid-template-columns: 1fr;
-    width: 100%;
-    gap: 0.4rem;
-  }
-
-  #topbarControlsPanel #explorerTopbarControls .compact-field.explorer-search-box,
-  #topbarControlsPanel #explorerTopbarControls .compact-field:nth-of-type(2),
-  #topbarControlsPanel #explorerTopbarControls .explorer-view-toggle {
-    display: none !important;
-  }
-
-  #topbarControlsPanel #explorerTopbarControls .compact-field:nth-of-type(3) {
-    width: 100%;
-    display: grid !important;
-    grid-template-columns: 1fr;
-  }
-
-  #topbarControlsPanel #explorerTopbarControls .compact-field:nth-of-type(3) select {
-    width: 100%;
-  }
-
   body .page-topbar-actions .explorer-controls:not(.hidden),
   body .explorer-controls:not(.hidden) {
     width: 100% !important;
@@ -16205,7 +16136,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
 
   body.media-detail-active #mediaDetailActions {
     display: flex !important;
-    align-items: flex-start !important;
+    align-items: center !important;
     flex-direction: row !important;
     width: 100% !important;
     margin: 0.25rem 0 0 0 !important;
@@ -16215,6 +16146,19 @@ html.light-mode #timeline-view .part-watched-app-badge {
     box-shadow: none !important;
     gap: 0.15rem !important;
     flex-shrink: 0 !important;
+  }
+
+  body.media-detail-active #mediaDetailActions .actions-tools-dropdown {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 0 !important;
+  }
+
+  body.media-detail-active #mediaDetailActions .actions-tools-trigger {
+    width: 100% !important;
+    max-width: 100% !important;
+    justify-content: center !important;
   }
 
   body:not(.media-detail-active) #mediaDetailActions {
@@ -16322,7 +16266,9 @@ html.light-mode #timeline-view .part-watched-app-badge {
 
   body #mediaDetailActions.actions-collapsed .actions-tools-dropdown {
     position: relative !important;
-    display: inline-block !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
   }
 
   body #mediaDetailActions > *:not(.media-toggle-all-seasons-btn) {
@@ -16370,7 +16316,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
     position: absolute !important;
     right: 0 !important;
     top: calc(100% + 4px) !important;
-    background: var(--panel-3) !important;
+    background: var(--brand-menu) !important;
     border: 1px solid var(--line) !important;
     box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.25)) !important;
     border-radius: 6px !important;
@@ -17614,7 +17560,7 @@ img[data-rail-src] {
   }
 
   .person-profile-img {
-    width: min(100%, 350px) !important;
+    width: min(100%, 250px) !important;
   }
 
   .person-profile-meta .meta-item {
@@ -17724,6 +17670,31 @@ img[data-rail-src] {
   white-space: pre-line;
   margin: 0;
   max-width: 65ch;
+}
+
+.person-biography-toggle {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .person-biography-text:not(.is-expanded) {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+  }
+
+  .person-biography-toggle:not(.hidden) {
+    display: inline-flex;
+    margin-top: 0.45rem;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
 }
 
 .person-photos-section {
@@ -18149,6 +18120,25 @@ img[data-rail-src] {
   background-clip: padding-box;
 }
 
+@media (min-width: 921px) {
+  .person-profile-content {
+    overflow-y: auto;
+  }
+
+  .person-profile-content .person-credits-section,
+  .person-profile-content .person-credits-split {
+    flex: 0 0 auto;
+    min-height: auto;
+  }
+
+  .person-profile-content .person-credits-pane .person-credits-grid {
+    flex: 0 0 auto;
+    min-height: auto;
+    overflow: visible;
+    padding-right: 0;
+  }
+}
+
 .person-credits-count {
   color: var(--muted);
   font-size: 0.78rem;
@@ -18355,6 +18345,27 @@ html.light-mode .pill-toggle.active {
 }
 
 @media (max-width: 768px) {
+  .person-credits-pane-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .person-credits-pane-header h4 {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  .person-credits-pane-header .person-filter-menu {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .person-credits-pane-header .person-filter-options {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
   .person-media-filter-buttons {
     flex-wrap: wrap;
   }
@@ -19371,6 +19382,7 @@ html:not(.light-mode) .episode-progress-fill {
   }
 
   .season-accordion-panel .immersive-episode-row.is-watched .episode-watch-history-row {
+    flex-wrap: nowrap;
     width: 100%;
     min-width: 0;
   }
@@ -21418,8 +21430,11 @@ html.light-mode .watch-date-sub {
   color: var(--accent);
 }
 
+/* overflow: hidden drops the flex minimum height, so without flex-shrink: 0 a
+   short card squeezes this one line until its text is cut in half. */
 .shared-media-card-meta,
 .shared-media-card-status {
+  flex-shrink: 0;
   max-width: 100%;
   overflow: hidden;
   color: var(--muted);
@@ -24477,6 +24492,47 @@ html.light-mode .settings-pane .drop-zone:hover {
   border-color: var(--accent);
 }
 
+.upcoming-entry-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.upcoming-entry-overflow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.upcoming-entry-overflow[hidden] {
+  display: none !important;
+}
+
+.upcoming-view-more {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.4rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.upcoming-view-more:hover,
+.upcoming-view-more:focus-visible {
+  border-color: var(--accent);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
 .upcoming-entry-poster-wrap {
   display: block;
   flex: 0 0 2.35rem;
@@ -26551,7 +26607,7 @@ html.light-mode .settings-help-body code {
   /* Detail actions remain a single compact, horizontally scrollable row. */
   body #mediaDetailActions {
     min-height: 3.5rem !important;
-    align-items: stretch !important;
+    align-items: center !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
   }
@@ -29347,8 +29403,16 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
   to { transform: translateX(0); }
 }
 
+@keyframes mobile-actions-options-enter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  body .topnav.nav-open { animation-duration: 1ms; }
+  body .topnav.nav-open,
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-dropdown[open] > .actions-tools-panel {
+    animation-duration: 1ms !important;
+  }
 }
 
 /* The same full-card/poster control is available on library and media pages.
@@ -32071,6 +32135,53 @@ body #statsTopbarControls .stats-filter-field .field {
     max-width: 34ch;
     align-self: start;
     justify-self: stretch;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .media-detail-page.media-detail-show-page .immersive-sidebar .media-facts-details {
+    border-top: 0;
+    padding-top: 0;
+    margin-top: var(--space-3);
+  }
+
+  .media-detail-page.media-detail-show-page .immersive-sidebar .media-facts-summary {
+    display: none !important;
+  }
+
+  .media-detail-page.media-detail-show-page .immersive-sidebar .media-facts-details[open] > .media-facts-panel {
+    height: auto;
+    margin-top: 0 !important;
+    gap: var(--space-2);
+  }
+
+  .media-detail-page.media-detail-show-page .media-fact-table-value--rich,
+  .media-detail-page.media-detail-show-page .media-ratings-row {
+    min-width: 0;
+    gap: 0.35rem;
+  }
+
+  .media-detail-page.media-detail-show-page .media-fact-table-row--available .media-provider-list {
+    gap: 0.2rem;
+  }
+
+  .media-detail-page.media-detail-show-page .media-fact-table-row--available .media-provider-tile {
+    width: 1.85rem;
+    height: 1.85rem;
+  }
+
+  .media-detail-page.media-detail-show-page .media-fact-table-row--watch-now .media-app-links {
+    width: auto;
+  }
+
+  .media-detail-page.media-detail-show-page .media-fact-table-row--watch-now .media-app-link-row {
+    gap: 0.25rem;
+  }
+
+  .media-detail-page.media-detail-show-page .media-fact-table-row--watch-now .media-app-link,
+  .media-detail-page.media-detail-show-page .media-fact-table-row--ratings .rating-pill {
+    font-size: 0.76rem;
+    padding-block: 0;
   }
 }
 
@@ -32168,8 +32279,8 @@ body #statsTopbarControls .stats-filter-field .field {
 /* The Movies / TV poster view is already poster-only. Compact mode makes its
    tiles denser, while overview and list views fold down to the same gallery. */
 .page-shell [data-view-panel="explorer"].page-card-mode-compact .movie-grid:not(.explorer-list-view) {
-  grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), min(10rem, 100%)));
-  justify-content: space-between;
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+  justify-content: stretch;
 }
 
 .page-shell [data-view-panel="explorer"].page-card-mode-compact .movie-grid > :not(.page-card-open) .movie-card-body {
@@ -32269,8 +32380,8 @@ body #statsTopbarControls .stats-filter-field .field {
   }
 
   .page-shell [data-view-panel="explorer"].page-card-mode-compact .movie-grid:not(.explorer-list-view) {
-    grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), min(10rem, 100%)));
-    justify-content: space-between;
+    grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+    justify-content: stretch;
   }
 }
 
@@ -32341,6 +32452,19 @@ body #statsTopbarControls .stats-filter-field .field {
 
 .page-shell [data-view-panel="explorer"] #explorerPanel .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open):hover .history-card-poster-wrapper {
   transform: none;
+}
+
+/* In the Explorer's poster-only grid, preserve the clicked tile's poster size
+   while its card opens across three grid tracks. */
+.page-shell [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open {
+  height: auto;
+  min-height: 0;
+}
+
+.page-shell [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-poster-wrapper {
+  width: var(--page-card-open-poster-width, 10rem);
+  height: var(--page-card-open-poster-height, 15rem);
+  flex: 0 0 var(--page-card-open-poster-width, 10rem);
 }
 
 @media (max-width: 760px) {
@@ -32446,7 +32570,77 @@ body #statsTopbarControls .stats-filter-field .field {
 }
 
 .page-shell [data-view-panel="explorer"].page-card-mode-compact .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
-  grid-template-columns: repeat(auto-fill, minmax(min(10.041rem, 100%), min(10.041rem, 100%)));
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+}
+
+@media (min-width: 1800px) {
+  .page-shell [data-view-panel="explorer"].page-card-mode-compact .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .page-shell [data-view-panel="explorer"].page-card-mode-compact .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+    grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+  }
+}
+
+/* In the selected Poster grid mode, phones need portrait tiles even when the
+   richer card details are enabled. Keep List and Overview cards as their own
+   layouts, and leave the explicit Posters only control available. */
+@media (max-width: 760px) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+    grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
+    justify-content: stretch;
+    justify-items: center;
+    align-items: start;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 10rem;
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-poster-wrapper {
+    box-sizing: border-box;
+    width: 100%;
+    height: auto;
+    flex: 0 0 auto;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--poster-radius) var(--poster-radius) 0 0;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-page-poster {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-details {
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    padding: 0.45rem 0.25rem 0.2rem;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) :is(.history-card-summary, .history-card-meta, .history-card-footer) {
+    display: none;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-title {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    white-space: normal;
+  }
 }
 
 /* Poster mode hides the details, so the card's own rounded corners must clip
@@ -33841,7 +34035,7 @@ html:root .media-detail-page .season-poster-card:hover .season-poster-img {
 
 /* Fact labels recede like the card labels; their colours stay as the base
    rules set them, since they sit over the backdrop. */
-html:root .media-detail-page :is(.media-fact > span, .media-fact-table-label, .media-facts-group-label) {
+html:root .media-detail-page :is(.media-fact > span, .media-fact-table-label) {
   font-size: var(--fs-fact-label);
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -34073,4 +34267,1733 @@ html:root #timeline-view #nowPlayingGrid {
    it at a nested overflow boundary. */
 html:root #timeline-view #nowPlayingGrid .modern-idle-feature {
   overflow: visible;
+}
+
+/* On phone dashboards, each recently watched rail card is portrait-led. Keep
+   its title, episode, watch date, and app badge together under the poster so
+   short headers do not leave a tall blank gap before the metadata. */
+@media (max-width: 640px) {
+  #timeline-view :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card > .history-card-details {
+    justify-content: flex-start;
+    gap: 0.45rem;
+  }
+
+  #timeline-view :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card .history-card-header {
+    margin-bottom: 0;
+  }
+}
+
+/* Center the media-detail title within the phone topbar instead of letting
+   the Back button push it off the viewport center. Keep the title bounded so
+   long names ellipsize before reaching the navigation target. */
+@media (max-width: 980px) {
+  body.media-detail-active .page-topbar-title {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  body.media-detail-active .page-topbar-title > #explorerBackButton {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  body.media-detail-active .page-topbar-title > .page-topbar-copy {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    min-width: 0;
+    max-width: calc(100vw - 160px);
+  }
+
+  body.media-detail-active .page-topbar-copy h1 {
+    min-width: 0;
+  }
+}
+
+/* Keep the compact-tablet detail title from competing with its action row.
+   The full-width title row keeps the same centered alignment as phones, and
+   the action row can scroll when its controls need more room. */
+@media (min-width: 761px) and (max-width: 980px) {
+  body.media-detail-active .page-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-1);
+  }
+
+  body.media-detail-active .page-topbar-title {
+    width: 100%;
+    flex: 0 0 auto;
+  }
+
+  body.media-detail-active .page-topbar-actions {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  body.media-detail-active .page-topbar-actions::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* On phones, keep the title and Options trigger on one line. The actions
+   container is promoted into the title by syncMediaActionsMenuState(). */
+@media (max-width: 640px) {
+  body.media-detail-active #pageTopbarActions.media-actions-inline-source {
+    display: none !important;
+  }
+
+  body.media-detail-active .page-topbar-title > #mediaDetailActions {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center !important;
+    justify-self: end !important;
+    width: auto !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    gap: 0 !important;
+    overflow: visible !important;
+  }
+
+  body.media-detail-active #mediaDetailActions > .actions-tools-dropdown {
+    flex: 0 0 auto !important;
+    width: auto !important;
+    min-width: 0 !important;
+  }
+
+  body.media-detail-active #mediaDetailActions .actions-tools-trigger {
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    max-width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    gap: 0 !important;
+    padding: 0.5rem !important;
+    font-size: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  body.media-detail-active #mediaDetailActions .actions-tools-trigger svg {
+    width: 1.3rem !important;
+    height: 1.3rem !important;
+  }
+
+  body.media-detail-active #mediaDetailActions .actions-tools-trigger span {
+    display: none !important;
+  }
+
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel {
+    width: min(15rem, calc(100vw - 1rem)) !important;
+    min-width: min(14rem, calc(100vw - 1rem)) !important;
+    max-width: calc(100vw - 1rem) !important;
+    height: auto !important;
+    max-height: min(68vh, 28rem) !important;
+    max-height: min(68dvh, 28rem) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    white-space: nowrap !important;
+  }
+
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-dropdown[open] > .actions-tools-panel {
+    animation: mobile-actions-options-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel br {
+    display: none !important;
+  }
+
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel .action-pill,
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel .seerr-request-btn,
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel .rating-pill {
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+  }
+
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel .action-pill span,
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel .seerr-request-btn span,
+  body.media-detail-active #mediaDetailActions.actions-collapsed .actions-tools-panel .rating-pill span {
+    white-space: nowrap !important;
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+  }
+
+}
+
+/* Next Airing is a show-first list: give each series its own card and surface
+   the metadata labels that the standard list header normally provides. */
+html:root .page-shell .next-air-card-view {
+  gap: 0.7rem;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  padding: 0.55rem 0.3rem;
+}
+
+.page-shell .next-air-card-view > .explorer-list-header {
+  display: none;
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card {
+  grid-template-columns: 10rem minmax(7rem, 1.35fr) repeat(4, minmax(5.5rem, 1fr));
+  grid-template-rows: repeat(2, minmax(7.3rem, 1fr));
+  grid-template-areas:
+    "poster title airing watched season year"
+    "poster progress airing watched season year";
+  align-items: center;
+  gap: 0.4rem 0.9rem;
+  min-height: 15.3rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  padding: 0 0.9rem 0 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+html:root:not(.light-mode) .page-shell .next-air-card-view > .explorer-list-show-card {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(32, 39, 49, 0.94), rgba(15, 19, 25, 0.94));
+}
+
+html:root.light-mode .page-shell .next-air-card-view > .explorer-list-show-card {
+  border-color: rgba(15, 23, 42, 0.1);
+  background: linear-gradient(180deg, #fff, #f1f5f9);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+html:root:not(.light-mode) .page-shell .next-air-card-view > .explorer-list-show-card:hover {
+  position: relative;
+  z-index: 1;
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  background: linear-gradient(180deg, #262e39, #12171e);
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35);
+  transform: translateY(-1px);
+}
+
+html:root.light-mode .page-shell .next-air-card-view > .explorer-list-show-card:hover {
+  position: relative;
+  z-index: 1;
+  border-color: var(--accent);
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+  background: linear-gradient(180deg, #fff, #f8fafc);
+  box-shadow: 0 3px 6px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+html:root .page-shell .next-air-card-view .list-thumb-poster {
+  grid-area: poster;
+  align-self: stretch;
+  width: calc(100% + 1px);
+  height: calc(100% + 2px);
+  min-width: 0;
+  min-height: 0;
+  margin: -1px 0 -1px -1px;
+  border: 0;
+  border-radius: var(--poster-radius) 0 0 var(--poster-radius);
+  object-fit: cover;
+}
+
+.page-shell .next-air-card-view .list-card-title {
+  grid-area: title;
+  align-self: center;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-height: 1.25;
+  font-size: 1.2rem;
+}
+
+.page-shell .next-air-card-view [data-list-next-air] {
+  grid-area: airing;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.2rem;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.page-shell .next-air-card-view [data-list-next-air]::before,
+.page-shell .next-air-card-view [data-list-eps]::before,
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(5)::before,
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(6)::before,
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7)::before {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.page-shell .next-air-card-view [data-list-next-air]::before {
+  content: "Next airing";
+}
+
+.page-shell .next-air-card-view [data-list-eps] {
+  grid-area: progress;
+  align-self: start;
+  min-width: 0;
+  padding-right: 0;
+}
+
+.page-shell .next-air-card-view [data-list-eps]::before {
+  content: "Episodes watched";
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(5) {
+  grid-area: season;
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(5)::before {
+  content: "Seasons";
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(6) {
+  grid-area: watched;
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(6)::before {
+  content: "Last watched";
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7) {
+  grid-area: year;
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7)::before {
+  content: "Release year";
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7):empty::before {
+  content: none;
+}
+
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(5),
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(6),
+.page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7) {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  justify-content: center;
+  gap: 0.2rem;
+  overflow: hidden;
+  white-space: normal;
+  text-overflow: clip;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
+
+.page-shell .next-air-card-view .list-eps-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-width: 24rem;
+}
+
+.page-shell .next-air-card-view .list-eps-bar-track {
+  height: 6px;
+}
+
+.page-shell .next-air-card-view .list-eps-bar-fill {
+  background: var(--accent);
+}
+
+.page-shell .next-air-card-view [data-list-eps],
+.page-shell .next-air-card-view [data-list-eps]::before,
+.page-shell .next-air-card-view .list-eps-label {
+  color: var(--accent);
+}
+
+@media (max-width: 1100px) {
+  .page-shell .next-air-card-view > .explorer-list-show-card {
+    grid-template-columns: 8.5rem minmax(7rem, 1.25fr) repeat(2, minmax(4.8rem, 1fr));
+    grid-template-rows: repeat(2, minmax(6.2rem, 1fr));
+    grid-template-areas:
+      "poster title airing watched"
+      "poster progress season year";
+    min-height: 13rem;
+    gap: 0.35rem 0.7rem;
+  }
+
+  html:root .page-shell .next-air-card-view .list-thumb-poster {
+    width: calc(100% + 1px);
+  }
+}
+
+@media (max-width: 600px) {
+  .page-shell .next-air-card-view > .explorer-list-show-card {
+    grid-template-columns: 5rem minmax(4.1rem, 1fr) repeat(2, minmax(3.5rem, 0.9fr));
+    grid-template-rows: repeat(2, minmax(3.55rem, 1fr));
+    grid-template-areas:
+      "poster title airing watched"
+      "poster progress season year";
+    min-height: 7.8rem;
+    gap: 0.35rem 0.4rem;
+    padding-right: 0.5rem;
+  }
+
+  html:root .page-shell .next-air-card-view .list-thumb-poster {
+    width: calc(100% + 1px);
+  }
+
+  .page-shell .next-air-card-view .list-card-title { font-size: 1rem; }
+
+  .page-shell .next-air-card-view [data-list-next-air] {
+    font-size: 0.82rem;
+  }
+
+  .page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(5),
+  .page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(6),
+  .page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7) {
+    font-size: 0.76rem;
+  }
+
+  .page-shell .next-air-card-view [data-list-next-air]::before,
+  .page-shell .next-air-card-view [data-list-eps]::before,
+  .page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(5)::before,
+  .page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(6)::before,
+  .page-shell .next-air-card-view > .explorer-list-show-card > :nth-child(7)::before {
+    font-size: 0.62rem;
+  }
+}
+
+/* Topbar controls sit on the menu surface, so their boxed fields use the
+   alternate brand surface. Keep focus to a single clear border without the
+   extra glow that made the navbar search look doubled. */
+html:root .page-shell .page-topbar-actions :is(input.field, select.field, textarea.field) {
+  background: var(--brand-main);
+}
+
+html:root .page-shell .page-topbar-actions :is(input.field, select.field, textarea.field):focus {
+  border-color: var(--accent);
+  background: var(--brand-main);
+  box-shadow: none;
+  outline: none;
+}
+
+html:root .page-shell .page-topbar-actions .explorer-view-toggle {
+  background: var(--brand-main);
+}
+
+html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
+  background: var(--brand-menu);
+}
+
+/* Page-level controls collapse into one Options menu beside the title on
+   narrow screens. The panel uses the same menu surface as the sidebar and
+   media-detail Options menu while keeping every page control available. */
+@media (max-width: 760px) {
+  body.page-controls-options-active #pageTopbarActions {
+    display: none !important;
+  }
+
+  body.page-controls-options-active .page-topbar-title {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.5rem !important;
+    overflow: visible !important;
+  }
+
+  body.page-controls-options-active .page-topbar-title > .page-topbar-copy {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+  }
+
+  body.page-controls-options-active .page-topbar-copy h1 {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsMenu:not(.hidden) {
+    position: relative !important;
+    display: block !important;
+    flex: 0 0 2.75rem !important;
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  body.page-controls-options-active #topbarControlsMenu > .topbar-controls-trigger {
+    display: inline-flex !important;
+    width: 2.75rem !important;
+    min-width: 2.75rem !important;
+    height: 2.75rem !important;
+    min-height: 2.75rem !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    background: var(--bg-hover) !important;
+    color: var(--text) !important;
+    cursor: pointer !important;
+    list-style: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsMenu > .topbar-controls-trigger::-webkit-details-marker,
+  body.page-controls-options-active #topbarControlsMenu > .topbar-controls-trigger::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsMenu > .topbar-controls-trigger svg {
+    display: block !important;
+    width: 1.3rem !important;
+    height: 1.3rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.page-controls-options-active #topbarControlsMenu > .topbar-controls-trigger:hover,
+  body.page-controls-options-active #topbarControlsMenu[open] > .topbar-controls-trigger {
+    border-color: var(--accent) !important;
+    color: var(--accent) !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel {
+    position: absolute !important;
+    top: calc(100% + 0.4rem) !important;
+    right: 0 !important;
+    z-index: 120 !important;
+    display: none !important;
+    width: min(22rem, calc(100vw - 1.5rem)) !important;
+    min-width: min(17rem, calc(100vw - 1.5rem)) !important;
+    max-width: calc(100vw - 1.5rem) !important;
+    max-height: min(68vh, 28rem) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    margin: 0 !important;
+    padding: 0.5rem !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius) !important;
+    background: var(--brand-menu) !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  body.page-controls-options-active #topbarControlsMenu[open] > #topbarControlsPanel {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.55rem !important;
+    animation: page-options-menu-enter 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel > :not(.hidden) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel > #explorerTopbarControls:not(.hidden),
+  body.page-controls-options-active #topbarControlsPanel > #historyTopbarControls:not(.hidden),
+  body.page-controls-options-active #topbarControlsPanel > #statsTopbarControls:not(.hidden),
+  body.page-controls-options-active #topbarControlsPanel > #upcomingTopbarControls:not(.hidden),
+  body.page-controls-options-active #topbarControlsPanel > #discoverTopbarControls:not(.hidden),
+  body.page-controls-options-active #topbarControlsPanel > #searchTopbarControls:not(.hidden),
+  body.page-controls-options-active #topbarControlsPanel > #personalMediaTopbarControls:not(.hidden) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    justify-content: flex-start !important;
+    gap: 0.55rem !important;
+    overflow: visible !important;
+  }
+
+  /* Keep the library options panel compact instead of turning every control
+     into a full-width form row. The two view controls share the first row,
+     search and sort stay easy to reach, and show-only filters respect the
+     visibility set by explorer.js. */
+  body.page-controls-options-active #topbarControlsPanel:has(> #explorerTopbarControls:not(.hidden)) {
+    width: min(19rem, calc(100vw - 1.5rem)) !important;
+    min-width: min(16rem, calc(100vw - 1.5rem)) !important;
+    max-height: min(62vh, 24rem) !important;
+    padding: 0.45rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel > #explorerTopbarControls:not(.hidden) {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.45rem 0.55rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .page-action-primary {
+    grid-column: 1 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .page-card-mode-toggle {
+    width: 2.45rem !important;
+    min-width: 2.45rem !important;
+    height: 2.45rem !important;
+    min-height: 2.45rem !important;
+    padding: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .page-card-mode-toggle svg {
+    width: 1.25rem !important;
+    height: 1.25rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .mobile-controls-row {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-search-box {
+    grid-column: 1 / -1 !important;
+    grid-row: 2 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .compact-field:not(.explorer-search-box):not(.explorer-hide-toggle) {
+    grid-column: 1 / -1 !important;
+    grid-row: 3 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-search-box,
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .compact-field:not(.explorer-search-box):not(.explorer-hide-toggle) {
+    display: grid !important;
+    grid-template-columns: 3.25rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .compact-field:not(.explorer-search-box):not(.explorer-hide-toggle) > span,
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-search-box > span {
+    display: block !important;
+    overflow: hidden !important;
+    font-size: 0.68rem !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls :is(.explorer-search-box input, select) {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.4rem !important;
+    padding: 0.4rem 0.5rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-view-toggle {
+    grid-column: 2 !important;
+    grid-row: 1 !important;
+    display: flex !important;
+    width: max-content !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: nowrap !important;
+    justify-self: end !important;
+    gap: 0.15rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .explorer-view-btn {
+    width: 2.1rem !important;
+    min-width: 2.1rem !important;
+    height: 2.1rem !important;
+    min-height: 2.1rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .explorer-view-btn svg {
+    width: 1.1rem !important;
+    height: 1.1rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideWatchedLabel,
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideEndedLabel {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.25rem !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 0.3rem !important;
+    margin: 0 !important;
+    padding: 0.25rem 0.35rem !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 5px !important;
+    background: var(--brand-main) !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideWatchedLabel {
+    grid-column: 1 !important;
+    grid-row: 4 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideEndedLabel {
+    grid-column: 2 !important;
+    grid-row: 4 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > :is(#explorerHideWatchedLabel, #explorerHideEndedLabel)[style*="display: none"] {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-hide-toggle > span {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    font-size: 0.64rem !important;
+    line-height: 1.15 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .explorer-hide-checkbox {
+    width: 1rem !important;
+    min-width: 1rem !important;
+    height: 1rem !important;
+    min-height: 1rem !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel .page-action-primary,
+  body.page-controls-options-active #topbarControlsPanel .personal-media-toolbar-actions {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.45rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel .mobile-controls-row {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel .compact-field {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    justify-items: stretch !important;
+    gap: 0.3rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel .compact-field > span {
+    display: block !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(input.field, select.field, textarea.field) {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.75rem !important;
+    box-sizing: border-box !important;
+    background: var(--brand-main) !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel .explorer-view-toggle {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 0.3rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel .explorer-view-btn {
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+    flex: 1 1 auto !important;
+    justify-content: center !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(button, .action-pill, .button-primary, .button-ghost) {
+    min-height: 2.75rem !important;
+    flex: 0 0 auto !important;
+    white-space: nowrap !important;
+  }
+}
+
+@keyframes page-options-menu-enter {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.page-controls-options-active #topbarControlsMenu[open] > #topbarControlsPanel {
+    animation-duration: 1ms !important;
+  }
+}
+
+/* On phones, library cards follow Discover's poster-above-details layout;
+   desktop keeps its horizontal poster-and-details cards. */
+@media (max-width: 760px) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    justify-content: stretch !important;
+    justify-items: stretch !important;
+    align-items: stretch !important;
+    padding-block-start: var(--space-3) !important;
+    gap: 0.75rem !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) {
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius) !important;
+    background: var(--panel-2) !important;
+    scroll-margin-top: calc(var(--right-topbar-height) + var(--space-3)) !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-poster-wrapper {
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    flex: 0 0 auto !important;
+    aspect-ratio: 2 / 3 !important;
+    align-self: stretch !important;
+    border-radius: var(--poster-radius) var(--poster-radius) 0 0 !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-page-poster {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 2 / 3 !important;
+    object-fit: cover !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-details {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    gap: 0.45rem !important;
+    overflow: visible !important;
+    padding: 0.65rem !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-summary {
+    display: -webkit-box !important;
+    margin: 0.2rem 0 0 !important;
+    overflow: hidden !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 3 !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) :is(.history-card-meta, .history-card-footer) {
+    display: flex !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 0.25rem 0.45rem !important;
+    overflow: hidden !important;
+    font-size: 0.68rem !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-title {
+    display: -webkit-box !important;
+    overflow: hidden !important;
+    font-size: 0.95rem !important;
+    line-height: 1.2 !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+  }
+
+  /* Folded library posters open across the row on phones, with the details
+     beside the poster and clear of the sticky title. */
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+    padding-block-start: var(--space-3) !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
+    aspect-ratio: auto !important;
+    scroll-margin-top: calc(var(--right-topbar-height) + var(--space-3)) !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-poster-wrapper {
+    width: var(--page-card-open-poster-width, 10rem) !important;
+    height: var(--page-card-open-poster-height, 15rem) !important;
+    max-height: none !important;
+    flex: 0 0 var(--page-card-open-poster-width, 10rem) !important;
+    align-self: flex-start !important;
+    aspect-ratio: 2 / 3 !important;
+    border-radius: var(--poster-radius) 0 0 var(--poster-radius) !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open .history-page-poster {
+    width: 100% !important;
+    height: 100% !important;
+    aspect-ratio: 2 / 3 !important;
+    object-fit: cover !important;
+  }
+
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-details {
+    display: flex !important;
+    width: auto !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    gap: 0.45rem !important;
+    overflow: hidden !important;
+    padding: 0.65rem !important;
+  }
+}
+
+.page-card-mode-label {
+  display: none;
+}
+
+.mobile-card-mode-options {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .page-shell[data-active-view="explorer"] #explorerTopbarControls > .explorer-view-toggle {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .page-action-primary {
+    grid-column: 1 / -1 !important;
+    grid-row: 4 !important;
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .page-action-primary:has(.page-card-mode-toggle.hidden) {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .page-card-mode-toggle {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 2.4rem !important;
+    justify-content: flex-start !important;
+    gap: 0.55rem !important;
+    padding: 0.4rem 0.55rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .page-card-mode-toggle svg {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .page-card-mode-label {
+    display: inline !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideWatchedLabel {
+    grid-column: 1 / -1 !important;
+    grid-row: 5 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideEndedLabel {
+    grid-column: 1 / -1 !important;
+    grid-row: 6 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-view-toggle,
+  .page-shell[data-active-view="explorer"] #explorerTopbarControls > .explorer-view-toggle {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .page-card-mode-toggle {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .page-action-primary {
+    flex-direction: column !important;
+    gap: 0.35rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .mobile-card-mode-options:not(.hidden) {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .mobile-card-mode-option {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.45rem !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    box-sizing: border-box !important;
+    padding: 0.45rem 0.55rem !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    background: var(--brand-main) !important;
+    color: var(--text) !important;
+    cursor: pointer !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .mobile-card-mode-option > svg {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .mobile-card-mode-option > span {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls .mobile-card-mode-option > input[type="radio"] {
+    width: 1rem !important;
+    min-width: 1rem !important;
+    height: 1rem !important;
+    min-height: 1rem !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    accent-color: var(--accent) !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body.page-controls-options-active #topbarControlsPanel:has(> #discoverTopbarControls:not(.hidden)) {
+    width: min(19rem, calc(100vw - 1.5rem)) !important;
+    min-width: min(16rem, calc(100vw - 1.5rem)) !important;
+    max-height: min(62vh, 24rem) !important;
+    padding: 0.45rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel > #discoverTopbarControls:not(.hidden) {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.45rem !important;
+    overflow: visible !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls > .page-action-primary {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .page-card-mode-toggle {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .mobile-card-mode-options:not(.hidden) {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .mobile-card-mode-option {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.45rem !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    box-sizing: border-box !important;
+    padding: 0.45rem 0.55rem !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    background: var(--brand-main) !important;
+    color: var(--text) !important;
+    cursor: pointer !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .mobile-card-mode-option > svg {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .mobile-card-mode-option > span {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .mobile-card-mode-option > input[type="radio"] {
+    width: 1rem !important;
+    min-width: 1rem !important;
+    height: 1rem !important;
+    min-height: 1rem !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    accent-color: var(--accent) !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .discover-filter-field {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    grid-template-columns: 3.25rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .discover-filter-field > span {
+    display: block !important;
+    overflow: hidden !important;
+    font-size: 0.68rem !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .discover-filter-field select {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.4rem !important;
+    padding: 0.4rem 0.5rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #discoverTopbarControls .discover-refresh-action {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.4rem !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.45rem !important;
+    padding: 0.4rem 0.55rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+  body.page-controls-options-active #topbarControlsPanel:has(> #historyTopbarControls:not(.hidden)),
+  body.page-controls-options-active #topbarControlsPanel:has(> #personalMediaTopbarControls:not(.hidden)) {
+    width: min(19rem, calc(100vw - 1.5rem)) !important;
+    min-width: min(16rem, calc(100vw - 1.5rem)) !important;
+    max-height: min(62vh, 24rem) !important;
+    padding: 0.45rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(#historyTopbarControls, #personalMediaTopbarControls) .page-card-mode-toggle {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(#historyTopbarControls, #personalMediaTopbarControls) .mobile-card-mode-options:not(.hidden) {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    flex-direction: column !important;
+    gap: 0.4rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(#historyTopbarControls, #personalMediaTopbarControls) .mobile-card-mode-option {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.45rem !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    box-sizing: border-box !important;
+    padding: 0.45rem 0.55rem !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 6px !important;
+    background: var(--brand-main) !important;
+    color: var(--text) !important;
+    cursor: pointer !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(#historyTopbarControls, #personalMediaTopbarControls) .mobile-card-mode-option > svg {
+    width: 1.2rem !important;
+    height: 1.2rem !important;
+    flex: 0 0 auto !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(#historyTopbarControls, #personalMediaTopbarControls) .mobile-card-mode-option > span {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel :is(#historyTopbarControls, #personalMediaTopbarControls) .mobile-card-mode-option > input[type="radio"] {
+    width: 1rem !important;
+    min-width: 1rem !important;
+    height: 1rem !important;
+    min-height: 1rem !important;
+    flex: 0 0 auto !important;
+    margin: 0 !important;
+    accent-color: var(--accent) !important;
+  }
+}
+
+/* Keep mobile Watchlist and Ratings poster galleries aligned with the library's two-up grid. */
+@media (max-width: 760px) {
+  .page-shell:is([data-active-view="watchlist"], [data-active-view="ratings"]) [data-view-panel="personal-media"].page-card-mode-compact .personal-media-card-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    justify-content: stretch !important;
+    align-items: start !important;
+    gap: 0.75rem !important;
+  }
+
+  .page-shell:is([data-active-view="watchlist"], [data-active-view="ratings"]) [data-view-panel="personal-media"].page-card-mode-compact .personal-media-card-grid > .shared-media-card--personal:not(.page-card-open) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    justify-self: stretch !important;
+  }
+}
+
+/* Watch History poster mode uses the same balanced two-column gallery on phones. */
+@media (max-width: 760px) {
+  .page-shell[data-active-view="history"] [data-view-panel="history"].page-card-mode-compact :is(.history-list, .history-grid-view, .history-table-view) {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    justify-content: stretch !important;
+    align-items: start !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+
+  .page-shell[data-active-view="history"] [data-view-panel="history"].page-card-mode-compact :is(.history-list > .history-page-card, .history-grid-view > .history-grid-card, .history-table-view > .history-list-row):not(.page-card-open) {
+    box-sizing: border-box !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    aspect-ratio: 2 / 3 !important;
+  }
+}
+
+/* Keep Watch History's mobile options aligned with the Movies and TV library menu. */
+@media (max-width: 760px) {
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls {
+    height: auto !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    gap: 0.4rem !important;
+    justify-content: flex-start !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .page-action-primary {
+    flex: 0 0 auto !important;
+    justify-content: flex-start !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .explorer-search-box {
+    display: grid !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    grid-template-columns: 3.25rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .explorer-search-box > span {
+    display: block !important;
+    overflow: hidden !important;
+    font-size: 0.68rem !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .explorer-search-box input {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .explorer-view-toggle[aria-label="History view type"] {
+    display: none !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .history-filter-toggle {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    flex-wrap: nowrap !important;
+    gap: 0.3rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #historyTopbarControls > .history-filter-toggle .history-filter-btn {
+    min-width: 0 !important;
+    min-height: 2.45rem !important;
+    flex: 1 1 0 !important;
+    justify-content: center !important;
+    padding-inline: 0.35rem !important;
+    font-size: 0.76rem !important;
+  }
+}
+
+/* Watch History full cards use a two-column page-scrolling grid on phones. */
+@media (max-width: 760px) {
+  .page-shell[data-active-view="history"] [data-view-panel="history"]:not(.page-card-mode-compact) .history-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+    overflow: visible !important;
+    scroll-snap-type: none !important;
+  }
+
+  .page-shell[data-active-view="history"] [data-view-panel="history"]:not(.page-card-mode-compact) .history-list > .history-page-card:not(.page-card-open) {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: initial !important;
+    align-self: stretch !important;
+    scroll-snap-align: none !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-shell[data-active-view="dashboard"] .dashboard-history-heading {
+    align-items: center !important;
+  }
+
+  .page-shell[data-active-view="dashboard"] .dashboard-history-heading > .dashboard-compact-toggle {
+    box-sizing: border-box !important;
+    width: 1.85rem !important;
+    min-width: 1.85rem !important;
+    height: 1.85rem !important;
+    min-height: 1.85rem !important;
+    flex: 0 0 1.85rem !important;
+    align-self: center !important;
+    padding: 0 !important;
+  }
+}
+
+/* Stack Stats filters as compact, label-aligned rows in its mobile menu. */
+@media (max-width: 760px) {
+  body.page-controls-options-active #topbarControlsPanel:has(> #statsTopbarControls:not(.hidden)) {
+    width: min(19rem, calc(100vw - 1.5rem)) !important;
+    min-width: min(16rem, calc(100vw - 1.5rem)) !important;
+    max-height: min(62vh, 24rem) !important;
+    padding: 0.45rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel > #statsTopbarControls:not(.hidden) {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: auto !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    gap: 0.45rem !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #statsTopbarControls > .stats-action-primary {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #statsTopbarControls .stats-filter-field {
+    display: grid !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    flex: 0 0 auto !important;
+    grid-template-columns: 3.25rem minmax(0, 1fr) !important;
+    align-items: center !important;
+    gap: 0.45rem !important;
+    margin: 0 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #statsTopbarControls .stats-filter-field > span {
+    display: block !important;
+    overflow: hidden !important;
+    font-size: 0.68rem !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #statsTopbarControls .stats-filter-field select.field {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 2.75rem !important;
+    box-sizing: border-box !important;
+    background: var(--brand-main) !important;
+  }
+}
+
+/* Keep the Stats canvas on the documented main brand surface in both themes. */
+.page-shell[data-active-view="stats"] {
+  background: var(--brand-main);
+}
+
+/* Stats panels follow the Settings brand-surface hierarchy: first-level boxes
+   use the left-menu tone, their card contents use the main tone, then nested
+   detail pills return to the left-menu tone. */
+html #stats-view .stats-leaderboard-panel,
+html #stats-view .stats-insight-col > .glass-panel,
+html #stats-view .stats-kpi-strip > .stats-kpi-card {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+
+html #stats-view :is(.stats-lb-leader, .stats-lb-podium-card, .stats-lb-row) {
+  background: var(--brand-main) !important;
+  background-image: none !important;
+}
+
+html #stats-view :is(.stats-lb-leader-poster, .stats-lb-podium-poster, .stats-lb-row-poster) {
+  background: var(--brand-main) !important;
+}
+
+html #stats-view .stats-review-facts > b {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+
+/* Keep the leaderboard title and its selected scope on one readable line. */
+#stats-view #topMediaReport > .section-heading > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: nowrap;
+}
+
+#stats-view #topMediaReport > .section-heading > div > h2 {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+#stats-view #topMediaReport > .section-heading > div > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (min-width: 960px) {
+  .page-shell[data-active-view="stats"] #appShell {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: var(--right-topbar-height) minmax(0, 1fr);
+  }
+
+  #stats-view {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  #stats-view > .stats-toolbar {
+    display: none;
+  }
+
+  #stats-view > .stats-body-grid {
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+  }
+
+  #stats-view .stats-leaderboard-panel {
+    height: 100%;
+    min-height: 0;
+  }
+
+  #stats-view .stats-lb-content {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  #stats-view .stats-lb-rows {
+    display: grid;
+    flex: 1 1 0;
+    min-height: 0;
+    grid-auto-rows: minmax(0, 1fr);
+  }
+
+  #stats-view .stats-lb-row {
+    grid-template-columns: 4.5rem 1.8rem minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  #stats-view .stats-insight-col {
+    min-height: 0;
+  }
+
+  #stats-view .stats-insight-col > article:last-child {
+    display: flex;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+  }
+
+  #stats-view .stats-insight-col > article:last-child .month-chart {
+    height: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    align-items: stretch;
+  }
+
+  #stats-view .month-column {
+    display: grid;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-items: stretch;
+  }
+
+  #stats-view .month-column > :is(b, small) {
+    justify-self: center;
+  }
+
+  #stats-view .month-column > span {
+    height: var(--month-bar-height) !important;
+    max-height: none;
+    align-self: end;
+    justify-self: center;
+  }
+}
+
+/* Hide only the empty action row; keep the page title and navbar visible. */
+.page-topbar.page-topbar--empty .page-topbar-actions {
+  display: none !important;
+}
+
+/* Person pages keep the Back/title row but have no detail actions. Hiding the
+   separate actions row avoids reserving space for its empty media toolbar. */
+body.person-detail-active #pageTopbarActions {
+  display: none !important;
+}
+
+/* Cast filmography uses one media pane at a time, with the two key filters
+   grouped into clear, full-width fields below the media switch. */
+.person-credits-section .person-credits-header {
+  align-items: center;
+  padding-bottom: 0.7rem;
+}
+
+.person-credits-section .person-media-filter-buttons {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin-bottom: 0.7rem;
+}
+
+.person-credits-section .person-media-filter-buttons .person-filter-button {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.person-credits-section .person-media-filter-buttons .person-filter-button.active {
+  border-color: color-mix(in srgb, var(--blue), transparent 38%);
+  background: color-mix(in srgb, var(--blue), transparent 91%);
+}
+
+.person-media-filter-count {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.person-credits-section .person-credits-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  padding: 0;
+  margin-bottom: 0.9rem;
+}
+
+.person-credits-section .person-credit-filter {
+  display: grid;
+  min-width: 0;
+  gap: 0.25rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+
+.person-credits-section .person-credit-filter > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.person-credits-section .person-credit-filter select {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  color: var(--text);
+}
+
+.person-credits-section .person-credits-split {
+  display: block;
+}
+
+.person-credits-section .person-credits-pane[hidden] {
+  display: none !important;
+}
+
+.person-credits-section .person-credits-pane.is-active {
+  display: flex;
+  border-color: var(--line);
+  background: color-mix(in srgb, var(--panel-2), transparent 25%);
+}
+
+@media (max-width: 420px) {
+  .person-credits-section .person-media-filter-buttons,
+  .person-credits-section .person-credits-controls {
+    gap: 0.35rem;
+  }
+
+  .person-credits-section .person-media-filter-buttons .person-filter-button {
+    padding-inline: 0.4rem;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 760px) {
+  .person-profile-container {
+    padding-top: var(--space-4);
+  }
+
+  .person-profile-sidebar {
+    width: 100%;
+    max-width: none;
+    align-items: center;
+    text-align: center;
+  }
+
+  .person-profile-img {
+    margin-inline: auto;
+  }
+
+  .person-profile-sidebar .person-profile-name,
+  .person-profile-sidebar .person-biography-section,
+  .person-profile-sidebar > .muted-copy {
+    width: 100%;
+    text-align: center;
+  }
+
+  .person-profile-meta {
+    width: 100%;
+  }
+
+  .person-profile-meta-items {
+    align-items: center;
+  }
+
+  .person-profile-meta .meta-item {
+    justify-content: center;
+  }
+
+  .person-socials-links,
+  .person-socials-section .person-socials-links {
+    justify-content: center;
+  }
+
+  .person-biography-toggle:not(.hidden) {
+    display: flex;
+    margin-inline: auto;
+  }
 }

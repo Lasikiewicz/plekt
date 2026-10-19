@@ -8,24 +8,25 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.1.0.2.1" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.1.1.0.2" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.1.0.2.1"></script>
+    <script src="/theme-boot.js?v=2.1.1.0.2"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.1.0.2.1" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.1.0.2.1" />
-    <link rel="stylesheet" href="/styles.css?v=2.1.0.2.1" />
+    <link rel="modulepreload" href="/app.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.1.1.0.2" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.1.1.0.2" />
+    <link rel="stylesheet" href="/styles.css?v=2.1.1.0.2" />
   </head>
   <body class="auth-locked">
     <div class="app-chassis">
@@ -269,12 +270,17 @@
               <h1 id="explorerTitle">Dashboard</h1>
               <span id="explorerSubtitle">Overview</span>
             </div>
-          </div>
-          <div id="pageTopbarActions" class="page-topbar-actions">
             <details id="topbarControlsMenu" class="topbar-controls-menu hidden">
-              <summary class="action-pill topbar-controls-trigger">Controls</summary>
+              <summary class="action-pill topbar-controls-trigger" aria-label="Open page options" title="Options">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M4 7h9m4 0h3M4 17h3m4 0h9M13 4v6M7 14v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <span class="sr-only">Options</span>
+              </summary>
               <div id="topbarControlsPanel" class="topbar-controls-panel"></div>
             </details>
+          </div>
+          <div id="pageTopbarActions" class="page-topbar-actions">
             <a id="pageTopbarOnboardingButton" class="button-primary sync-action-btn sync-tool-button hidden" href="/setup">Reopen Onboarding</a>
             <div id="mediaDetailActions"></div>
           </div>
@@ -373,6 +379,18 @@
                   <svg class="dashboard-compact-icon-card" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
                   <svg class="dashboard-compact-icon-posters" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
                 </button>
+                <div class="mobile-card-mode-options" role="radiogroup" aria-label="Discover card display">
+                  <label class="mobile-card-mode-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
+                    <span>Card view</span>
+                    <input type="radio" name="discoverCardDisplay" value="full" data-card-mode-select="discover" data-card-mode="full" />
+                  </label>
+                  <label class="mobile-card-mode-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
+                    <span>Poster view</span>
+                    <input type="radio" name="discoverCardDisplay" value="posters" data-card-mode-select="discover" data-card-mode="posters" />
+                  </label>
+                </div>
                 <label class="compact-field discover-filter-field">
                   <span>Type</span>
                   <select id="discoverMediaType" class="field">
@@ -413,6 +431,18 @@
                   <svg class="dashboard-compact-icon-card" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
                   <svg class="dashboard-compact-icon-posters" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
                 </button>
+                <div class="mobile-card-mode-options" role="radiogroup" aria-label="History card display">
+                  <label class="mobile-card-mode-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
+                    <span>Card view</span>
+                    <input type="radio" name="historyCardDisplay" value="full" data-card-mode-select="history" data-card-mode="full" />
+                  </label>
+                  <label class="mobile-card-mode-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
+                    <span>Poster view</span>
+                    <input type="radio" name="historyCardDisplay" value="posters" data-card-mode-select="history" data-card-mode="posters" />
+                  </label>
+                </div>
                 <div class="mobile-controls-row">
                   <button class="mobile-control-tab" data-target="search" type="button" aria-pressed="false">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
@@ -421,10 +451,6 @@
                   <button class="mobile-control-tab" data-target="filter" type="button" aria-pressed="false">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.33L10 8.293V11.5a.5.5 0 0 1-.27.445l-3 1.5A.5.5 0 0 1 6 13V8.293L2.128 3.83a.5.5 0 0 1-.128-.33v-2z"/></svg>
                     <span>Filter</span>
-                  </button>
-                  <button class="mobile-control-tab" data-target="view" type="button" aria-pressed="false">
-                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1.5 2.5A1.5 1.5 0 0 1 3 1h10a1.5 1.5 0 0 1 1.5 1.5v10A1.5 1.5 0 0 1 13 15H3a1.5 1.5 0 0 1-1.5-1.5v-10zM3 2a.5.5 0 0 0-.5.5v10a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-10a.5.5 0 0 0-.5-.5H3z"/><path d="M4 4.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0 3.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0 3.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5z"/></svg>
-                    <span>View</span>
                   </button>
                 </div>
                 </div>
@@ -436,17 +462,6 @@
                   <button class="explorer-view-btn history-filter-btn active" type="button" data-history-filter="all" aria-pressed="true">All</button>
                   <button class="explorer-view-btn history-filter-btn" type="button" data-history-filter="movies" aria-pressed="false">Movies</button>
                   <button class="explorer-view-btn history-filter-btn" type="button" data-history-filter="shows" aria-pressed="false">TV Shows</button>
-                </div>
-                <div class="explorer-view-toggle" role="group" aria-label="History view type">
-                  <button class="explorer-view-btn" type="button" data-history-view="grid" title="Grid view" aria-label="Show history as a grid" aria-pressed="false">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="8.5" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="8.5" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" fill="currentColor"/></svg>
-                  </button>
-                  <button class="explorer-view-btn" type="button" data-history-view="list" title="List view" aria-label="Show history as a list" aria-pressed="false">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="2.5" width="13" height="1.5" rx="0.75" fill="currentColor"/><rect x="1" y="6.75" width="13" height="1.5" rx="0.75" fill="currentColor"/><rect x="1" y="11" width="13" height="1.5" rx="0.75" fill="currentColor"/></svg>
-                  </button>
-                  <button class="explorer-view-btn active" type="button" data-history-view="cards" title="Card view" aria-label="Show history as cards" aria-pressed="true">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="1" width="4" height="13" rx="1" fill="currentColor"/><rect x="6.5" y="1" width="7.5" height="2" rx="0.75" fill="currentColor"/><rect x="6.5" y="4.5" width="7.5" height="1.5" rx="0.75" fill="currentColor"/><rect x="6.5" y="7.5" width="5" height="1.5" rx="0.75" fill="currentColor"/></svg>
-                  </button>
                 </div>
               </div>
             </div>
@@ -634,10 +649,23 @@
             <div class="view-control-source">
               <div id="explorerTopbarControls" class="explorer-controls page-action-bar">
                 <div class="page-action-primary">
-                <button class="icon-button dashboard-compact-toggle page-card-mode-toggle" type="button" data-card-mode-toggle="explorer" aria-pressed="false" aria-label="Show library as posters only" title="Posters only">
+                <button class="icon-button dashboard-compact-toggle page-card-mode-toggle" type="button" data-card-mode-toggle="explorer" aria-pressed="false" aria-label="Show poster view" title="Show poster view">
                   <svg class="dashboard-compact-icon-card" viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
                   <svg class="dashboard-compact-icon-posters" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
+                  <span class="page-card-mode-label">Show poster view</span>
                 </button>
+                <div class="mobile-card-mode-options" role="radiogroup" aria-label="Library card display">
+                  <label class="mobile-card-mode-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="1.5" y="3" width="21" height="18" rx="2"/><rect x="4" y="5.5" width="8" height="13" rx="1" fill="currentColor" stroke="none"/><path d="M14.5 8h5.5M14.5 12h5.5M14.5 16h4"/></svg>
+                    <span>Card view</span>
+                    <input type="radio" name="explorerCardDisplay" value="full" data-card-mode-select="explorer" data-card-mode="full" />
+                  </label>
+                  <label class="mobile-card-mode-option">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="1" width="16" height="22" rx="2"/><circle cx="9" cy="7.5" r="1.5" fill="currentColor" stroke="none"/><path d="m6.5 17 3-4 2.5 2.25 3-3.75 2.5 5.5Z" fill="currentColor" stroke="none"/><path d="M6.5 19.5h11"/></svg>
+                    <span>Poster view</span>
+                    <input type="radio" name="explorerCardDisplay" value="posters" data-card-mode-select="explorer" data-card-mode="posters" />
+                  </label>
+                </div>
                 <div class="mobile-controls-row">
                   <button class="mobile-control-tab" data-target="search" type="button" aria-pressed="false">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>
@@ -650,10 +678,6 @@
                   <button class="mobile-control-tab" data-target="filter" type="button" aria-pressed="false">
                     <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1.5 1.5A.5.5 0 0 1 2 1h12a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-.128.33L10 8.293V11.5a.5.5 0 0 1-.27.445l-3 1.5A.5.5 0 0 1 6 13V8.293L2.128 3.83a.5.5 0 0 1-.128-.33v-2z"/></svg>
                     <span>Filter</span>
-                  </button>
-                  <button class="mobile-control-tab" data-target="view" type="button" aria-pressed="false">
-                    <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M1.5 2.5A1.5 1.5 0 0 1 3 1h10a1.5 1.5 0 0 1 1.5 1.5v10A1.5 1.5 0 0 1 13 15H3a1.5 1.5 0 0 1-1.5-1.5v-10zM3 2a.5.5 0 0 0-.5.5v10a.5.5 0 0 0 .5.5h10a.5.5 0 0 0 .5-.5v-10a.5.5 0 0 0-.5-.5H3z"/><path d="M4 4.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0 3.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5zm0 3.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5z"/></svg>
-                    <span>View</span>
                   </button>
                 </div>
                 </div>
@@ -671,17 +695,6 @@
                     <option value="next_air_asc">Next Airing</option>
                   </select>
                 </label>
-                <div class="explorer-view-toggle" role="group" aria-label="View type">
-                  <button class="explorer-view-btn active" type="button" data-explorer-view="posters" title="Poster grid" aria-label="Show library as a poster grid" aria-pressed="true">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="8.5" y="1" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="8.5" width="5.5" height="5.5" rx="1" fill="currentColor"/><rect x="8.5" y="8.5" width="5.5" height="5.5" rx="1" fill="currentColor"/></svg>
-                  </button>
-                  <button class="explorer-view-btn" type="button" data-explorer-view="list" title="List view" aria-label="Show library as a list" aria-pressed="false">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="2.5" width="13" height="1.5" rx="0.75" fill="currentColor"/><rect x="1" y="6.75" width="13" height="1.5" rx="0.75" fill="currentColor"/><rect x="1" y="11" width="13" height="1.5" rx="0.75" fill="currentColor"/></svg>
-                  </button>
-                  <button class="explorer-view-btn" type="button" data-explorer-view="overview" title="Overview cards" aria-label="Show library as overview cards" aria-pressed="false">
-                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true"><rect x="1" y="1" width="4" height="13" rx="1" fill="currentColor"/><rect x="6.5" y="1" width="7.5" height="2" rx="0.75" fill="currentColor"/><rect x="6.5" y="4.5" width="7.5" height="1.5" rx="0.75" fill="currentColor"/><rect x="6.5" y="7.5" width="5" height="1.5" rx="0.75" fill="currentColor"/></svg>
-                  </button>
-                </div>
                 <label id="explorerHideWatchedLabel" class="compact-field explorer-hide-toggle" style="display: none;">
                   <span>Hide Fully Watched</span>
                   <input id="explorerHideWatched" type="checkbox" class="explorer-hide-checkbox" />
@@ -2854,7 +2867,7 @@
                         </header>
 
                         <p class="about-build-line" aria-label="Build information">
-                          <span>Version <strong id="aboutCurrentVersion">v2.1.0</strong></span>
+                          <span>Version <strong id="aboutCurrentVersion">v2.1.1</strong></span>
                           <span class="about-build-separator" aria-hidden="true">·</span>
                           <span>Channel <strong id="aboutReleaseChannel">Latest</strong></span>
                         </p>
@@ -3103,7 +3116,7 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.1.0.2.1"></script>
-    <script type="module" src="/app.js?v=2.1.0.2.1"></script>
+    <script type="module" src="/modules/analytics.js?v=2.1.1.0.2"></script>
+    <script type="module" src="/app.js?v=2.1.1.0.2"></script>
   </body>
 </html>

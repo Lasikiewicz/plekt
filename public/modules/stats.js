@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.0.2.1";
-import { state, elements } from "./state.js?v=2.1.0.2.1";
-import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.1.0.2.1";
-import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.1.0.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.2";
+import { state, elements } from "./state.js?v=2.1.1.0.2";
+import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.1.1.0.2";
+import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.1.1.0.2";
 
 let _cb = {};
 
@@ -79,6 +79,17 @@ export function nextAiringDateValue(tmdb) {
   const raw = tmdb.next_airing_date || tmdb.next_episode_to_air?.air_date || "";
   const today = new Date().toISOString().slice(0, 10);
   return raw && raw >= today ? raw : "";
+}
+
+export function mergeShowAiringMetadata(show = {}, details = null) {
+  if (!details) return show;
+  return {
+    ...details,
+    status: details.status || show.status || "",
+    // The API's date comes from the server's next-airing cache. Keep it when
+    // TMDB detail metadata is already cached but has no corresponding date.
+    next_airing_date: show.next_airing_date || details.next_airing_date || "",
+  };
 }
 
 // Returns { text, isStatus } for the "Next Airing" column.
@@ -459,10 +470,11 @@ export function renderMonthChart() {
     const count = Number(row.count || 0);
     const isPeak = count === peakCount;
     const barH = Math.max(3, Math.round((count / peakCount) * BAR_MAX_PX));
+    const barFill = (count / peakCount) * 100;
     return `
       <article class="month-column">
         <b${isPeak ? ` style="color:var(--green)"` : ""}>${formatNumber(count)}</b>
-        <span style="height:${barH}px;${isPeak ? "background:var(--green);border-color:var(--green)" : ""}"></span>
+        <span style="height:${barH}px;--month-bar-height:${barFill}%;${isPeak ? "background:var(--green);border-color:var(--green)" : ""}"></span>
         <small>${escapeHtml(shortMonthLabel(row.month))}</small>
       </article>
     `;

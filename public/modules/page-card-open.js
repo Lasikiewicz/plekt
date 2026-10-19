@@ -52,7 +52,11 @@ function itemRef(item, panel) {
 }
 
 function clearOpenClasses() {
-  document.querySelectorAll(`.${OPEN_CLASS}`).forEach((item) => item.classList.remove(OPEN_CLASS, FULL_CLASS));
+  document.querySelectorAll(`.${OPEN_CLASS}`).forEach((item) => {
+    item.classList.remove(OPEN_CLASS, FULL_CLASS);
+    item.style?.removeProperty("--page-card-open-poster-width");
+    item.style?.removeProperty("--page-card-open-poster-height");
+  });
 }
 
 function closeOpenItems() {
@@ -62,18 +66,26 @@ function closeOpenItems() {
 
 // An open card in a grid takes three poster slots (styles.css); where fewer
 // than three posters fit, it takes the whole row instead of overflowing it.
-// Measured from a folded neighbour, since the open card itself changes the
-// grid's tracks.
+// Measured from a folded neighbour (or the item itself when it is alone),
+// since opening the card changes the grid's tracks.
 function fitOpenItem(item) {
   const grid = item.parentElement;
   const style = grid ? getComputedStyle(grid) : null;
   if (!style || !style.display.includes("grid")) return;
   const poster = [...grid.children].find((child) => child !== item && child.matches(ITEM_SELECTOR) && child.offsetWidth);
-  if (!poster) return;
+  const referenceItem = poster || item;
+  const posterFrame = referenceItem.querySelector?.(".history-card-poster-wrapper") || referenceItem;
+  const posterWidth = posterFrame.offsetWidth || referenceItem.offsetWidth;
+  const posterHeight = posterFrame.offsetHeight || referenceItem.offsetHeight || Math.round(posterWidth * 1.5);
+  if (!posterWidth) return;
   const gap = parseFloat(style.columnGap) || 0;
   const width = grid.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
-  const columns = Math.floor((width + gap) / (poster.offsetWidth + gap));
+  const columns = Math.floor((width + gap) / (referenceItem.offsetWidth + gap));
   item.classList.toggle(FULL_CLASS, columns < 3);
+  if (item.matches?.(".explorer-history-card")) {
+    item.style?.setProperty("--page-card-open-poster-width", `${posterWidth}px`);
+    item.style?.setProperty("--page-card-open-poster-height", `${posterHeight}px`);
+  }
 }
 
 // In a sideways-scrolling rail (Discover, Playlists) the opened card is wider
@@ -170,5 +182,17 @@ if (hasDocument) {
         });
       }
     }).observe(pageShell, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-active-view"] });
+  }
+
+  if (typeof window !== "undefined") {
+    let resizeFrame = 0;
+    window.addEventListener("resize", () => {
+      if (resizeFrame) return;
+      resizeFrame = requestAnimationFrame(() => {
+        resizeFrame = 0;
+        const item = document.querySelector(".page-card-open.explorer-history-card");
+        if (item) fitOpenItem(item);
+      });
+    }, { passive: true });
   }
 }

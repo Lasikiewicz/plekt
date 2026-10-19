@@ -22,6 +22,10 @@ draining promise, and the complete JSON file is atomically replaced only after a
 titles are current. Logs report calculation, serialization, and write timings separately.
 Persistence remains synchronous so an awaited flush is durable when it resolves.
 
+The library merges pages by show provider identity, with title fallback when ids are absent,
+so shared poster artwork never collapses distinct shows. Initial and later-page loads show an
+animated loading indicator.
+
 ## Data model
 
 A "show" is derived from `watch_history` rows with `media_type = "episode"`, grouped by
@@ -170,6 +174,16 @@ Next Airing moves mounted cards into their updated order as metadata or another 
 arrives, and refreshes the visible next-airing cells without rebuilding the list. TV page
 cache entries revalidate after 30 minutes even when watch history is unchanged, since
 the server's next-airing cache updates independently.
+If the saved first page has an older history version, it remains visible while the
+fresh `/api/shows` response loads, then the updated page replaces it.
+
+With Next Airing selected, each show is displayed in its own card. The poster meets the
+card's top, left, and bottom edges; the title and watched-episode progress sit to the left
+of equally sized airing, last-watched, seasons, and release-year fields. On narrower screens,
+the four metadata fields reflow into a two-by-two block. The progress bar and the
+“Episodes watched” label/count use the selected navigation text color in both themes.
+Each card links to that show's media page and supports keyboard and modified-click navigation.
+The Seasons value uses the full regular-season count from show metadata when available.
 
 TV-specific extras:
 
@@ -178,8 +192,9 @@ TV-specific extras:
 - **Hide watched / hide ended** toggles, persisted in `plembfin:hideWatched:shows` /
   `plembfin:hideEnded:shows`, passed through to `GET /api/shows`.
 - **Progress bars** on cards from the show progress cache.
-- **Next-airing chips** and the `next_air_asc` sort; `scheduleNextAirResort` re-sorts
-  the rendered grid when fresher airing data arrives.
+- **Next-airing chips** and the `next_air_asc` sort; that sort keeps the library in its full
+  list view so the upcoming dates remain visible, and `scheduleNextAirResort` re-sorts loaded
+  rows when fresher airing data arrives.
 - **Season/episode folders** - the list view can expand a show into seasons and
   episodes (`renderShowFolder` / `renderSeasonFolder`, expansion state in
   `state.expandedShows` / `state.expandedSeasons`).

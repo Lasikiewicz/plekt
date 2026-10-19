@@ -18,31 +18,11 @@ const {
   fetchpriority,
   optimized = true,
   lightboxSrc,
+  compact = false,
 } = Astro.props;
 
 const hasThemePair = Boolean(darkSrc && lightSrc && darkSrc !== lightSrc);
 const fallbackSource = src || darkSrc;
-
-// The Modern pair of app-captures/<name>-dark.png is <name>-modern-dark.png. It is used
-// only when both Modern files exist; otherwise the figure renders the Classic pair alone.
-const modernPartner = (value: string | undefined) =>
-  value && /^\/assets\/app-captures\//.test(value) && !/-modern-(?:dark|light)\.[a-z]+$/i.test(value)
-    ? value.replace(/-(dark|light)(\.[a-z]+)$/i, "-modern-$1$2")
-    : undefined;
-const publicFileExists = (value: string | undefined) =>
-  Boolean(value) && fs.existsSync(path.join(process.cwd(), "public", String(value).replace(/^\//, "")));
-const modernDarkCandidate = hasThemePair ? modernPartner(darkSrc) : undefined;
-const modernLightCandidate = hasThemePair ? modernPartner(lightSrc) : undefined;
-const hasModernPair = Boolean(
-  modernDarkCandidate
-  && modernLightCandidate
-  && modernDarkCandidate !== darkSrc
-  && modernLightCandidate !== lightSrc
-  && publicFileExists(modernDarkCandidate)
-  && publicFileExists(modernLightCandidate),
-);
-const modernDarkSrc = hasModernPair ? modernDarkCandidate : undefined;
-const modernLightSrc = hasModernPair ? modernLightCandidate : undefined;
 
 const dimensionsCache = new Map<string, { width: number; height: number } | null>();
 const manifestPath = (value: string | undefined) => value?.replace(/^\//, "public/");
@@ -133,8 +113,7 @@ const lightVariantWidths = variantWidths(lightSrc);
 const sourceVariantWidths = variantWidths(fallbackSource);
 const useOptimizedRaster = Boolean(optimized)
   && isOptimizableRasterPath(darkSrc)
-  && (!hasThemePair || isOptimizableRasterPath(lightSrc))
-  && (!hasModernPair || (isOptimizableRasterPath(modernDarkSrc) && isOptimizableRasterPath(modernLightSrc)));
+  && (!hasThemePair || isOptimizableRasterPath(lightSrc));
 const darkFallback = useOptimizedRaster
   ? variantUrl(darkSrc, darkVariantWidths.at(-1) || 1440, "webp")
   : withVersion(darkSrc);
@@ -143,12 +122,6 @@ const lightFallback = useOptimizedRaster
   : withVersion(lightSrc);
 const darkSrcset = useOptimizedRaster ? srcsetFor(darkSrc, "webp") : undefined;
 const lightSrcset = useOptimizedRaster ? srcsetFor(lightSrc, "webp") : undefined;
-const optimizedFallbackFor = (value: string | undefined) =>
-  value && useOptimizedRaster ? variantUrl(value, variantWidths(value).at(-1) || 1440, "webp") : withVersion(value);
-const modernDarkFallback = optimizedFallbackFor(modernDarkSrc);
-const modernLightFallback = optimizedFallbackFor(modernLightSrc);
-const modernDarkSrcset = hasModernPair && useOptimizedRaster ? srcsetFor(modernDarkSrc, "webp") : undefined;
-const modernLightSrcset = hasModernPair && useOptimizedRaster ? srcsetFor(modernLightSrc, "webp") : undefined;
 const useOptimizedSingleRaster = Boolean(optimized) && !hasThemePair && isOptimizableRasterPath(fallbackSource);
 const singleFallback = useOptimizedSingleRaster
   ? variantUrl(fallbackSource, sourceVariantWidths.at(-1) || 1440, "webp")
@@ -160,20 +133,17 @@ const optimizedLightboxSource = (value: string | undefined) => {
   return variantUrl(value, width, "webp");
 };
 const linkHref = optimizedLightboxSource(lightboxSrc)
-  || (hasModernPair ? optimizedLightboxSource(modernDarkSrc) : undefined)
   || (hasThemePair ? optimizedLightboxSource(darkSrc) : optimizedLightboxSource(fallbackSource));
 const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
 ---
 
-<figure class="screenshot-figure">
+<figure class:list={{ "screenshot-figure--compact": compact }} class="screenshot-figure">
   <a
     class="screenshot-link"
     href={linkHref}
     data-theme-image-link={hasThemePair ? "true" : undefined}
     data-dark-href={hasThemePair ? optimizedLightboxSource(darkSrc) : undefined}
     data-light-href={hasThemePair ? optimizedLightboxSource(lightSrc) : undefined}
-    data-modern-dark-href={hasModernPair && !lightboxSrc ? optimizedLightboxSource(modernDarkSrc) : undefined}
-    data-modern-light-href={hasModernPair && !lightboxSrc ? optimizedLightboxSource(modernLightSrc) : undefined}
     data-lightbox-trigger="true"
     data-lightbox-caption={caption || alt}
     aria-label={`Open image preview: ${alt}`}
@@ -181,42 +151,7 @@ const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
     <div class="screenshot-frame">
       {usePicture ? (
         <picture>
-          {hasModernPair ? (
-            <>
-              <source
-                type="image/webp"
-                media="(prefers-color-scheme: dark)"
-                data-theme-source="dark"
-                data-image-style="modern"
-                srcset={modernDarkSrcset}
-                sizes={sizes}
-              />
-              <source
-                type="image/webp"
-                media="(prefers-color-scheme: light)"
-                data-theme-source="light"
-                data-image-style="modern"
-                srcset={modernLightSrcset}
-                sizes={sizes}
-              />
-              <source
-                type="image/webp"
-                media="not all"
-                data-theme-source="dark"
-                data-image-style="classic"
-                srcset={darkSrcset}
-                sizes={sizes}
-              />
-              <source
-                type="image/webp"
-                media="not all"
-                data-theme-source="light"
-                data-image-style="classic"
-                srcset={lightSrcset}
-                sizes={sizes}
-              />
-            </>
-          ) : hasThemePair ? (
+          {hasThemePair ? (
             <>
               <source
                 type="image/webp"
@@ -237,7 +172,7 @@ const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
             <source type="image/webp" srcset={singleSrcset} sizes={sizes} />
           )}
           <img
-            src={hasModernPair ? modernDarkFallback : hasThemePair ? darkFallback : singleFallback}
+            src={hasThemePair ? darkFallback : singleFallback}
             alt={alt}
             width={resolvedWidth}
             height={resolvedHeight}
@@ -248,13 +183,11 @@ const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
             data-theme-image={hasThemePair ? "true" : undefined}
             data-dark-src={hasThemePair ? darkFallback : undefined}
             data-light-src={hasThemePair ? lightFallback : undefined}
-            data-modern-dark-src={hasModernPair ? modernDarkFallback : undefined}
-            data-modern-light-src={hasModernPair ? modernLightFallback : undefined}
           />
         </picture>
       ) : (
         <img
-          src={hasModernPair ? modernDarkFallback : hasThemePair ? darkFallback : singleFallback}
+          src={hasThemePair ? darkFallback : singleFallback}
           alt={alt}
           width={resolvedWidth}
           height={resolvedHeight}
@@ -265,8 +198,6 @@ const usePicture = useOptimizedRaster || useOptimizedSingleRaster;
           data-theme-image={hasThemePair ? "true" : undefined}
           data-dark-src={hasThemePair ? darkFallback : undefined}
           data-light-src={hasThemePair ? lightFallback : undefined}
-          data-modern-dark-src={hasModernPair ? modernDarkFallback : undefined}
-          data-modern-light-src={hasModernPair ? modernLightFallback : undefined}
         />
       )}
     </div>

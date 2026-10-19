@@ -44,7 +44,7 @@ show and episode page load, cached or not.
 
 | Data | Movies | TV shows |
 | --- | --- | --- |
-| Title, overview, status, genres, artwork | TMDB | **TheTVDB** |
+| Title, overview, status, genres, artwork | TMDB | **TheTVDB** (prefer its English series overview when available) |
 | Season/episode numbering, titles, overviews, air dates | - | **TheTVDB** |
 | Cast/credits, trailers, reviews, recommendations, watch providers, content ratings | TMDB | TMDB |
 | Extra artwork (posters/backdrops/logos gallery) | TMDB + Fanart.tv | TMDB + TVDB + Fanart.tv |
@@ -81,7 +81,7 @@ caches in SQLite:
 | `tmdb_metadata_cache` | Merged details per item, keyed by `movie_<id>` / `tv_<id>` with TVDB aliases (or `tv_tvdb_<id>` when no TMDB match), stamped with `DETAILS_SCHEMA_VERSION` | 1 day for airing/in-production shows; longer for ended/released |
 | `tmdb_search_cache` | Search responses, including negative results, Discover snapshots keyed by feed type/genre, and per-title recommendation responses | Searches: 15 min (1 day for misses); Discover: 15 min with stale-while-revalidate; recommendations: 6 hours (1 day for misses) |
 | `tmdb_person_cache` | Person details + credits, `PERSON_SCHEMA_VERSION` | 7 days |
-| `tvdb_metadata_cache` | Raw TVDB series/extended responses + title-search results | 14 days active / 180 days archived series; searches 180 days (1 hour for misses; the movie page's Recommended TV Shows lookup, sent with `relatedTvLookup`, reads a miss for 7 days) |
+| `tvdb_metadata_cache` | Raw TVDB series/extended responses, English series-overview translation state, and title-search results | Series: 14 days active / 180 days archived; English synopsis: 30 days for available/missing translations, 15 minutes after provider errors; searches 180 days (1 hour for misses; the movie page's Recommended TV Shows lookup, sent with `relatedTvLookup`, reads a miss for 7 days) |
 | `tvdb_season_cache` | TVDB season episode lists, built from the cached series payload's episodes (one TVDB call covers every season, stamped with the series fetch time; a series row older than the season TTL is refetched once first); seasons absent from that payload use `/v4/seasons/{id}/extended` | 2 days upcoming / 7 days active / 180 days archived |
 | `fanart_cache` | Raw fanart.tv responses per item, key `movies/<tmdbId>` / `tv/<tvdbId>`, including "no artwork" 404 misses | 7 days (1 day for misses) |
 | `omdb_cache` | IMDb rating/votes, including HTTP-error negatives (bad key / exhausted quota) | 7 days (6 hours for HTTP errors) |
@@ -90,6 +90,16 @@ caches in SQLite:
 Schema-version bumps (`DETAILS_SCHEMA_VERSION`, `PERSON_SCHEMA_VERSION`,
 `PROGRESS_CACHE_SCHEMA_VERSION` in `showProgressCache.js`) force refetches after a
 shape change - never hand-edit cache rows to migrate them.
+
+TV show pages prefer the English series synopsis from TheTVDB's
+`/series/{id}/translations/eng` endpoint when that translation has an overview.
+If it is missing, Plekt uses the overview from the regular extended-series
+response. A provider error also falls back to that overview and retries the
+translation lookup after 15 minutes; a previously cached English synopsis stays
+usable during the error. Translation cache state lives in the series row and
+does not extend the structural series cache TTL. The `Language` fact continues
+to show TMDB's original-language code, so an English synopsis can appear beside
+`JA` for a Japanese-language show.
 
 Discover snapshots use versioned keys (`discover:v2|<type>|<genre>`) in
 `tmdb_search_cache`. A normal `/api/discover` request returns the last successful

@@ -3,7 +3,7 @@ title: Dashboard
 description: Read live playback, the mixed Up Next queue, and durable watch history from one screen.
 category: Dashboard and libraries
 order: 3
-sourceVersion: "2.1.0"
+sourceVersion: "2.1.1"
 sourcePaths:
   - public/index.html
   - public/modules/dashboard.js
@@ -37,8 +37,8 @@ screenshots:
   - /assets/app-captures/global-search-light.png
   - /assets/app-captures/now-playing-dark.png
   - /assets/app-captures/now-playing-light.png
-  - /assets/app-captures/now-playing-options-modern-dark.png
-  - /assets/app-captures/now-playing-options-modern-light.png
+  - /assets/app-captures/now-playing-options-dark.png
+  - /assets/app-captures/now-playing-options-light.png
 ---
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
@@ -75,7 +75,7 @@ The sidebar opens the main pages.
 
 The Dashboard content is arranged in this order:
 
-1. **Now Playing** for active media-server sessions. In the Modern style the top panel
+1. **Now Playing** for active media-server sessions. The top panel
    holds up to three items: live sessions first, then part watched items, then other Up Next
    items in any slots left. While nothing is playing it features only those items and its
    heading reads **Up Next**; a featured item is hidden from the Up Next rail so it never
@@ -90,8 +90,8 @@ If there is no saved resume progress or next-up item, Up Next is omitted. The si
 **Sync** indicator is a shortcut to [Sync Activity](/docs/sync-tools/).
 
 Dashboard history uses **Card View** by default. The Dashboard has no separate Appearance
-layout control. In the Modern style (see [Appearance](/docs/appearance/#style)) the cards are
-drawn over each title's backdrop artwork, and the page takes the backdrop of the top item.
+layout control. The cards are drawn over each title's backdrop artwork (see
+[Appearance](/docs/appearance/#look)), and the page takes the backdrop of the top item.
 
 ## Global Search
 
@@ -145,12 +145,12 @@ so stale cards do not linger after playback stops.
 
 ### Now Playing panel options
 
-In the Modern style, the cog beside the panel heading opens its options. Every change saves at
+The cog beside the panel heading opens its options. Every change saves at
 once and applies to the whole server:
 
 <ScreenshotFigure
-  darkSrc="/assets/app-captures/now-playing-options-modern-dark.png"
-  lightSrc="/assets/app-captures/now-playing-options-modern-light.png"
+  darkSrc="/assets/app-captures/now-playing-options-dark.png"
+  lightSrc="/assets/app-captures/now-playing-options-light.png"
   alt="Plekt Now Playing panel with its options open, showing two allow checkboxes and an item count"
   caption="The cog beside the panel heading sets which items can fill Now Playing and how many it holds."
 />
@@ -161,7 +161,8 @@ once and applies to the whole server:
 
 The **Up Next** rail keeps one card per episode. When a resume record and a next-up
 record refer to the same episode, the resume card with its progress takes precedence.
-The currently playing episode or movie moves to the start of the rail while it plays.
+While an episode or movie plays, its own Up Next card is hidden from the rail and never
+featured in the panel, so the title shows once, as its live session.
 
 If a session never appears, follow
 [Now Playing is empty or stale](/docs/troubleshooting/#now-playing-is-empty-or-stale).
@@ -266,8 +267,8 @@ They are not a list of active files on a media server.
 
 A title appears after Plekt has recorded a watch event.
 
-- The **TV Shows** row shows one full card per episode. With **Posters only** on (Modern
-  style), consecutive watches of one show fold into a single poster with an "N episodes"
+- The **TV Shows** row shows one full card per episode. With **Posters only** on,
+  consecutive watches of one show fold into a single poster with an "N episodes"
   count badge and the older episodes' posters peeking out behind it; select it to expand the
   run into one card per episode, in place.
 - The **Movies** row lists recent movie watch activity.
