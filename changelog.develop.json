@@ -1,19 +1,21 @@
 {
-  "version": "2.1.1.0.2",
-  "build": 2,
+  "version": "2.1.1.0.3",
+  "build": 3,
   "resetCommit": "b132b470337687d02a21c6ec71c886debc493df7",
-  "updatedAt": "2026-10-19T20:56:17.813Z",
+  "updatedAt": "2026-10-19T21:19:02.599Z",
   "entries": [
     {
-      "build": 2,
-      "date": "2026-10-19T20:56:17.813Z",
-      "commit": "af8daa7fdbbc8154aed25af2262a18453eff8abe",
-      "message": "Fix - Restore page controls and polish mobile layouts",
+      "build": 3,
+      "date": "2026-10-19T21:19:02.599Z",
+      "commit": "80aa531706c0aad3c272edebfcd2c78a46a9f503",
+      "message": "Fix - Restore library loading and navigation behavior",
       "author": "Lasikiewicz",
       "details": [
         "Keep desktop navigation and library controls visible without empty action space.",
-        "Add clear Movies and TV Shows tabs with Year and Genre filters to cast filmographies.",
+        "Add Movies and TV Shows tabs with Year and Genre filters to cast filmographies.",
         "Center mobile cast profiles and open TV library cards with details beside their posters.",
+        "Show loading progress while library pages fetch and preserve distinct titles that share poster artwork.",
+        "Keep first-page library cache visible while it refreshes after history changes, and discard stale later pages.",
         "Harden server error responses and update undici to address upstream security advisories."
       ]
     }
