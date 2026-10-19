@@ -49,12 +49,17 @@ function check() {
   const todoMtime = fs.statSync(todoPath).mtimeMs;
 
   // Summaries are the top-level plan/*.md files; step files live under plan/active/.
+  // Only markdown counts there: tools also write run output into active folders (check logs,
+  // id chunks, run JSON, and the capture tool's captures/ folder with its own results.md),
+  // and those writes are not plan changes, so they must not make todo.md stale mid-run.
   const summaries = fs
     .readdirSync(planDir)
     .filter((f) => f.endsWith(".md") && !NOT_PLANS.has(f))
     .map((f) => `plan/${f}`);
   const activeFiles = fs.existsSync(path.join(planDir, "active"))
-    ? walk(path.join(planDir, "active")).map((f) => path.relative(root, f).split(path.sep).join("/"))
+    ? walk(path.join(planDir, "active"))
+      .map((f) => path.relative(root, f).split(path.sep).join("/"))
+      .filter((f) => f.endsWith(".md") && !f.split("/").includes("captures"))
     : [];
 
   // 1. The "Last edited" entry's date must not be older than the newest plan change.

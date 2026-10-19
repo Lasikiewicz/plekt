@@ -15,15 +15,15 @@ They query GitHub cleanup/security state and local Git/lock facts; they do not f
 acquire locks, promote, push or treat successful checks as approval. API/auth failures
 fail loudly; existing user-decision exceptions remain in the skills.
 
-The push precheck prints GitHub's open security alerts. As of 2026-10-17, CodeQL #64
+The push precheck prints GitHub's open security alerts. CodeQL #64
 (`website/scripts/recapture.mjs`) is the old `main` instance; its image-source allow-list
-is in `develop`. Dependabot #15 (`braces`) and #17 (`sprintf-js`) are the known Devvit
-tooling advisories in `reddit-app/package-lock.json`; Devvit is a development dependency
-and GitHub lists no patched version for either advisory. These three exact alert
-fingerprints are logged as notes while the fixes await the next main scan and the matching
-fix remains present in the worktree. The check does not dismiss them. Any other alert, or
-any changed fingerprint or missing fix, keeps the normal blocking rule for high/critical
-or changed-file findings. See [decision 49](decisions.md#49-known-main-alerts-stay-visible-as-push-notes-pending-rescan).
+is in `develop`. Dependabot #15 (`braces`) is auto-dismissed. Dependabot #17 (`sprintf-js`)
+still refers to the legacy Devvit lockfile on the default branch; the Devvit source and
+lockfile are retired from `develop`, and GitHub should close the alert after that removal
+reaches the default branch. The exact #17 fingerprint is logged as a temporary note only
+while the source is absent. The check does not dismiss alerts. Any other alert, changed
+fingerprint, or missing fix keeps the normal blocking rule for high/critical or changed-file
+findings. See [decision 50](decisions.md#50-retire-the-reddit-release-app-from-the-repository).
 
 `npm run release:candidate -- <record.json>` checks pinned refs, detached HEAD, port 5056
 ownership and release metadata. `node scripts/workflow-check.js staged` checks sensitive
@@ -72,7 +72,7 @@ this local preparation.
 npm install       # prebuilt binaries for better-sqlite3 + sharp; also installs git hooks (prepare)
 npm start         # serve the local checkout as a develop build
 npm run dev       # same, with --watch auto-reload
-npm test          # node:test suite in test/**/*.test.js (reddit-app tests run from reddit-app)
+npm test          # node:test suite in test/**/*.test.js
 npm run test:multiprocess # real isolated web/worker replica test
 npm run docs:check # verify README setup guidance matches package/runtime requirements
 npm run build     # syntax check + npm test + server boot gate
@@ -496,18 +496,10 @@ channel silent.
 
 ### Reddit release announcements
 
-r/plekt release announcements use a separate bot, not this repo's CI - Reddit's Data
-API now requires manual review to grant script-app access, and that path was declined
-for this use case with a recommendation to build on Reddit's own Devvit platform
-instead, which has no mechanism for an external system to push a trigger in. Instead,
-[`reddit-app/`](../reddit-app) configures the `plekt-app` Devvit app for r/plekt.
-It polls `https://plekt.net/release.json` every 15 minutes and posts and pins a new
-release after its initial baseline (un-pinning its previous announcement). The first
-successful check with no stored version records the current release without posting.
-HTTP domain approval and an explicit installation approval are required to activate
-an uploaded revision; uploading alone does not replace the installed bot.
-It has its own build/deploy/test tooling independent of this repo's CI (root `npm test` does not run its tests) - see
-[`reddit-app/README.md`](../reddit-app/README.md).
+The Devvit release app is retired from this repository. Its legacy installation was
+uninstalled from r/plembfin on 2026-10-19, and a follow-up CLI listing showed no apps
+installed there. This did not archive the Developer Platform listing or change other
+community installations. See [`reddit-app/README.md`](../reddit-app/README.md).
 
 ## Other CI
 

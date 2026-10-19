@@ -30,16 +30,6 @@ const KNOWN_SECURITY_ALERTS = {
       a.most_recent_instance?.commit_sha === '003c12e0467ec0c44f294cb8177976e50a1b5798',
     note: 'known: the rail image-source allow-list is in develop; this is the superseded main instance, pending the next main scan',
   },
-  'dependabot:15': {
-    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
-      a.dependency?.package?.name === 'braces' &&
-      a.dependency?.manifest_path === 'reddit-app/package-lock.json' &&
-      a.security_advisory?.ghsa_id === 'GHSA-vfj7-8cjw-p6xm' &&
-      a.security_advisory?.severity === 'high' &&
-      a.security_vulnerability?.vulnerable_version_range === '<= 3.0.3' &&
-      a.security_vulnerability?.first_patched_version === null,
-    note: 'known: braces <= 3.0.3 is in the Devvit tooling dependency tree; Devvit is now a development dependency, and GitHub lists no patched version',
-  },
   'dependabot:17': {
     matches: a => a.dependency?.package?.ecosystem === 'npm' &&
       a.dependency?.package?.name === 'sprintf-js' &&
@@ -48,7 +38,7 @@ const KNOWN_SECURITY_ALERTS = {
       a.security_advisory?.severity === 'medium' &&
       a.security_vulnerability?.vulnerable_version_range === '<= 1.1.3' &&
       a.security_vulnerability?.first_patched_version === null,
-    note: 'known: sprintf-js <= 1.1.3 is in the Devvit tooling dependency tree; Devvit is now a development dependency, and GitHub lists no patched version',
+    note: 'known: the vulnerable sprintf-js package is in the retired Devvit source removed from develop; GitHub still reports the default-branch alert until that removal reaches main',
   },
 };
 export function knownSecurityAlertNote(kind, alert) {
@@ -97,14 +87,20 @@ function railImageSourceFixPresent() {
     return helper.includes('export function isAllowedRailSrc') && capture.includes('isAllowedRailSrc') && capture.includes('allowed.includes(src)');
   } catch { return false; }
 }
-function devvitToolingIsDevelopmentOnly() {
-  try {
-    const manifest = json(path.join(root, 'reddit-app/package.json'));
-    const lock = json(path.join(root, 'reddit-app/package-lock.json'));
-    return !manifest.dependencies?.devvit && Boolean(manifest.devDependencies?.devvit) &&
-      !lock.packages?.['']?.dependencies?.devvit &&
-      lock.packages?.['']?.devDependencies?.devvit === manifest.devDependencies.devvit;
-  } catch { return false; }
+function redditAppSourceRetired() {
+  const appSource = [
+    'reddit-app/devvit.json',
+    'reddit-app/package.json',
+    'reddit-app/package-lock.json',
+    'reddit-app/scripts/bundle-release.mjs',
+    'reddit-app/src/core/release.ts',
+    'reddit-app/src/generated/release.json',
+    'reddit-app/src/index.ts',
+    'reddit-app/src/routes/scheduler.ts',
+    'reddit-app/tsconfig.json',
+    'reddit-app/vite.config.ts',
+  ];
+  return appSource.every(file => !fs.existsSync(path.join(root, file)));
 }
 function node(script, args = [], cwd = root) { console.log(command(process.execPath, [path.join(root, script), ...args], cwd)); }
 function cleanup() { assertCleanup(JSON.parse(command('gh', ['run', 'list', '--workflow', 'ghcr-cleanup.yml', '--limit', '1', '--json', 'status,conclusion,url']))); }
@@ -150,7 +146,8 @@ async function main() {
           const file = a.most_recent_instance?.location?.path || a.dependency?.manifest_path;
           console.log(`Open ${kind} alert ${a.number}: ${severity} ${file}`);
           const fingerprintNote = knownSecurityAlertNote(kind, a);
-          const remedyPresent = kind === 'code-scanning' ? railImageSourceFixPresent() : devvitToolingIsDevelopmentOnly();
+          const remedyPresent = kind === 'code-scanning' ? railImageSourceFixPresent() :
+            kind === 'dependabot' && a.number === 17 && redditAppSourceRetired();
           const note = fingerprintNote && remedyPresent ? fingerprintNote : null;
           if (note) {
             console.log(`Security alert note #${a.number}: ${note}`);

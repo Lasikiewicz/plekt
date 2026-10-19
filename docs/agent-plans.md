@@ -84,7 +84,10 @@ summary ("Where we are" and the step ticks), and in [`todo.md`](../todo.md) move
 Last edited with a rewritten brief summary and the current date and time.** Not optional, not waiting to be
 asked. "Where we are" and TODO summaries are rewritten to the current state, never appended to;
 dated detail goes only in the step file's Results. Work with no plan becomes a step in the loose-ends
-plan; if it is substantial, write its own plan.
+plan; if it is substantial, write its own plan. `npm run todo:check` (also the stop hook) compares
+todo.md against the summaries and the markdown step files only: run output a tool writes into a
+`plan/active/` folder (logs, id chunks, run JSON, the capture tool's `captures/` folder) does not
+make todo.md stale, so a background check or capture run never forces repeated TODO edits.
 
 - **Distinguish "implemented", "unit-tested", and "verified".** Compiling is not tested; tests
   that stub the network are not verified against the real service. Only make true claims.

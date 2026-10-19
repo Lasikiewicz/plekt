@@ -1414,7 +1414,7 @@ at an occupied target can change a date before preservation can be checked.
 ---
 
 ### 49. Known main security alerts stay visible as push notes pending rescan
-**Date:** 2026-10-17 | **Status:** Active
+**Date:** 2026-10-17 | **Status:** Superseded by #50
 
 **Context:** Three open alerts refer to exact findings already reviewed in the pending
 source: CodeQL #64 is the old `main` instance fixed by the rail image-source allow-list;
@@ -1433,3 +1433,27 @@ handling. Dismissing them loses the visible signal before GitHub's scan updates.
 
 **Enforced by:** `knownSecurityAlertNote()` in `scripts/workflow-check.js`, its fingerprint
 tests, and the push precheck.
+
+---
+
+### 50. Retire the Reddit release app from the repository
+**Date:** 2026-10-19 | **Status:** Active
+
+**Context:** The legacy Devvit installation continued posting stale legacy-branded release
+announcements. The app also brought unpatched tooling advisories; #15 is now auto-dismissed
+while #17 remains open against the default branch's old lockfile.
+
+**Decision (user, 19 October 2026):** Remove the Devvit implementation and dependency
+lock from the repository. Keep the README, privacy policy and terms at their existing paths
+for possible external listing links. Do not dismiss #17; keep its exact fingerprint as a
+temporary push note only while the source is absent and GitHub still reports the default-
+branch finding. Retain the independent CodeQL #64 note until the next main scan. The r/plembfin
+installation was removed on 19 October 2026; a CLI recheck confirmed no apps remained installed
+there. The app listing was not archived and other community installations were not changed.
+
+**Rejected:** Continuing to ship a bot that posts with outdated branding leaves the current
+failure in place. Dismissing the dependency alert hides the signal before GitHub processes
+the default-branch source removal.
+
+**Enforced by:** `reddit-app/README.md`, `knownSecurityAlertNote()` and the push precheck in
+`scripts/workflow-check.js`.
