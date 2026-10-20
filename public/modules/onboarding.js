@@ -4,7 +4,7 @@
 // flow, and the webhook-guide functions - so setup and Settings never diverge
 // in behavior, only in presentation.
 import { state, elements } from "./state.js?v=2.1.1.0.5";
-import { escapeHtml, escapeAttribute, isDemoMode } from "./utils.js?v=2.1.1.0.5";
+import { escapeHtml, escapeAttribute, isDemoMode, platformIconMarkup } from "./utils.js?v=2.1.1.0.5";
 import { openServiceEditModal, SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.1.1.0.5";
 import { renderFieldRow } from "./settings-ui.js?v=2.1.1.0.5";
 import { embyWebhookSetup, jellyfinWebhookSetup, buildWebhookUrl } from "./help-content.js?v=2.1.1.0.5";
@@ -703,7 +703,7 @@ function renderClaim() {
     const address = currentInstanceAddress();
     return `
       <div class="setup-claim-step setup-claim-claimed">
-        <p class="muted-copy setup-step-intro">Your administrator account is ready. Use these details to sign in to this Plekt instance.</p>
+        <p class="muted-copy setup-step-intro" style="max-width: none; white-space: nowrap; margin-bottom: calc(var(--space-4) - var(--space-5));">Your administrator account is ready. Use these details to sign in to this Plekt instance.</p>
         <section class="setup-claim-panel setup-claim-summary" aria-labelledby="setupClaimSummaryTitle">
           <div class="setup-claim-panel-heading">
             <div>
@@ -755,7 +755,7 @@ const OVERVIEW_STEPS = [
   },
   {
     title: "Webhooks", tag: "Recommended",
-    detail: "Plex updates instantly; Emby and Jellyfin need a quick webhook for the same.",
+    detail: "Plex updates instantly; Emby needs a quick webhook and Jellyfin needs the Plekt plugin for the same.",
   },
   {
     title: "Backup", tag: "Optional",
@@ -827,7 +827,7 @@ function traktSyncStatusBanner() {
     return `<div class="guide-callout setup-trakt-sync-note">Trakt is still importing your watch history${traktImport.itemCount != null ? ` (${traktImport.itemCount} items so far)` : ""}. Continuing will queue these server imports until Trakt finishes, so its watch dates take priority over the servers' own.</div>`;
   }
   if (traktImport?.enabled !== false && traktImport?.status === "complete") {
-    return `<div class="guide-callout setup-trakt-sync-note">Trakt sync is complete - these server imports will start right away and use Trakt's watch dates wherever they're earlier.</div>`;
+    return `<div class="guide-callout setup-trakt-sync-note is-complete">Trakt sync is complete - these server imports will start right away and use Trakt's watch dates wherever they're earlier.</div>`;
   }
   return `<div class="guide-callout setup-trakt-sync-note">Trakt is connected but its watch history import was skipped, so these imports will use each server's own watched dates as-is.</div>`;
 }
@@ -842,15 +842,13 @@ function renderServers() {
         <div class="setup-server-row-main">
           <div>
             <div class="setup-server-row-title">
-              <b class="setup-server-name">${escapeHtml(server.serverName || provider)}</b>
+              <span class="setup-server-name-group">
+                ${platformIconMarkup(provider, "setup-server-type-icon", "setup-server-type-icon-set")}
+                <b class="setup-server-name">${escapeHtml(server.serverName || provider)}</b>
+              </span>
               ${serverStatusBadge(server)}
             </div>
-            ${server.baseUrl ? `
-              <p class="muted-copy setup-server-detail">Server - ${escapeHtml(server.baseUrl)}</p>
-              ${server.remoteUsername ? `<p class="muted-copy setup-server-detail">User - ${escapeHtml(server.remoteUsername)}</p>` : ""}
-            ` : `<p class="muted-copy setup-server-detail">${SERVER_BLURBS[provider]}</p>`}
           </div>
-          <button type="button" class="button-primary" data-setup-connect="${provider}">${server.connected ? "Edit connection" : "Set up"}</button>
         </div>
         ${provider === "plex" ? `
           <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
@@ -858,26 +856,39 @@ function renderServers() {
               Turn off "Refresh library metadata periodically"
             </b>
             <p style="margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-              In Plex, under Settings &rarr; Scheduled Tasks, disable "Refresh library metadata periodically". This task can occasionally re-match and re-identify library items during its nightly maintenance window, which resets their viewed state to unwatched on Plex itself - and Plekt will propagate that as a real unwatch to Emby, Jellyfin, and Trakt. Turning it off removes the most common trigger for a mass false-unwatch event.
+              In Plex, under Settings &rarr; Scheduled Tasks. Its nightly run can reset watched items to unwatched, and Plekt would sync that to Emby, Jellyfin, and Trakt.
             </p>
           </div>
-          <label class="field-label setup-import-toggle-label">
+          <label class="settings-choice-option setup-toggle-box">
             <input type="checkbox" data-setup-watchlist-toggle ${watchlistSyncPending() ? "checked" : ""} />
-            Sync Watchlist with Plekt
+            <span class="settings-choice-option-body">
+              <span class="settings-choice-option-title">Sync Watchlist with Plekt</span>
+              <span class="settings-choice-option-description settings-choice-option-description--block">Keeps your Plex watchlist and Plekt's watchlist aligned in both directions.</span>
+            </span>
           </label>
-          <p class="muted-copy setup-server-detail">Keeps your Plex watchlist and Plekt's watchlist aligned in both directions.</p>
         ` : ""}
         ${server.tested ? `
-          <label class="field-label setup-import-toggle-label">
+          <label class="settings-choice-option setup-toggle-box">
             <input type="checkbox" data-setup-import-toggle="${provider}" ${checked ? "checked" : ""} />
-            Import watched status from ${escapeHtml(server.serverName || provider)}
+            <span class="settings-choice-option-body">
+              <span class="settings-choice-option-title">Import watched status from ${escapeHtml(server.serverName || provider)}</span>
+            </span>
           </label>
-          ${importStatusLine(importInfo)}
         ` : ""}
+        <div class="setup-server-row-actions">
+          <div class="setup-server-row-meta">
+            ${server.baseUrl ? `
+              <p class="muted-copy setup-server-detail">Server - ${escapeHtml(server.baseUrl)}</p>
+              ${server.remoteUsername ? `<p class="muted-copy setup-server-detail">User - ${escapeHtml(server.remoteUsername)}</p>` : ""}
+            ` : `<p class="muted-copy setup-server-detail">${SERVER_BLURBS[provider]}</p>`}
+          </div>
+          ${server.tested ? importStatusLine(importInfo) : ""}
+          <button type="button" class="button-primary" data-setup-connect="${provider}">${server.connected ? "Edit connection" : "Set up"}</button>
+        </div>
       </div>`;
   }).join("");
   return `
-    <p class="muted-copy">Connect and test at least one server to continue. You can connect more than one.</p>
+    <p class="muted-copy setup-step-intro">Connect and test at least one server to continue. You can connect more than one.</p>
     ${traktSyncStatusBanner()}
     <div class="setup-server-rows">${rows}</div>`;
 }
@@ -886,35 +897,27 @@ function renderMetadata() {
   const tmdbConfigured = cachedStatus.metadata.tmdbConfigured;
   const built = cachedStatus.metadata.builtInAvailable;
   return `
-    <p class="muted-copy">TMDB powers posters, backdrops, episode details, and search.</p>
-    <div class="settings-card setup-metadata-card">
-      <div class="setup-metadata-heading">
-        <b>TMDB</b>
-        <span class="setup-metadata-badges">
-          <span class="badge badge-warning">Required</span>
-          ${tmdbConfigured ? `<span class="badge badge-success">Configured</span>` : `<span class="badge">Not configured</span>`}
-        </span>
+    <div class="setup-season-source" data-setup-season-source>${renderFieldRow({ ...SEASON_SOURCE_FIELD, label: "Choose your default metadata provider", help: "Chooses where season and episode numbers come from.", id: "setup-season-source", value: seasonSourcePending() })}</div>
+    <div class="settings-card-grid setup-metadata-core-grid">
+      <div class="settings-card setup-metadata-card">
+        <div class="setup-metadata-titlerow"><b>TMDB</b><span class="setup-metadata-provider-status${tmdbConfigured ? " is-ok" : ""}">${tmdbConfigured ? "Configured" : "Not configured"}</span></div>
+        <p class="muted-copy setup-metadata-provider-desc">Required. Posters, backdrops, episode details, and search.</p>
+        <div class="setup-metadata-actions">
+          <button type="button" class="button-ghost" data-setup-connect="tmdb">${tmdbConfigured ? "Edit" : "Add TMDB key"}</button>
+          <a class="button-ghost" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">Get a free TMDB key</a>
+        </div>
       </div>
-      <div class="setup-metadata-actions">
-        <button type="button" class="button-ghost" data-setup-connect="tmdb">${tmdbConfigured ? "Edit" : "Add TMDB key"}</button>
-        <a class="button-ghost" href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener noreferrer">Get a free TMDB key</a>
+      <div class="settings-card">
+        <div class="setup-metadata-titlerow"><b>TheTVDB</b><span class="setup-metadata-provider-status${built.tvdb ? " is-ok" : ""}">${built.tvdb ? "Using built-in access" : "Not configured"}</span></div>
+        <p class="muted-copy setup-metadata-provider-desc">Episode ordering and air dates - more accurate season/episode numbering than TMDB alone.</p>
+        <button type="button" class="button-ghost" data-setup-connect="tvdb">Add personal key</button>
       </div>
     </div>
-    <div class="setup-season-source" data-setup-season-source>${renderFieldRow({ ...SEASON_SOURCE_FIELD, id: "setup-season-source", value: seasonSourcePending() })}</div>
-    <details class="setup-metadata-optional" open>
-      <summary>Optional metadata providers</summary>
-      <p class="muted-copy setup-metadata-optional-intro">TheTVDB and Fanart.tv already work out of the box with a shared key - add a personal key for higher rate limits. OMDb and YouTube are off until you add a free key.</p>
+    <div class="setup-metadata-optional">
       <div class="settings-card-grid setup-metadata-optional-grid">
         <div class="settings-card">
-          <b>TheTVDB</b>
-          <p class="muted-copy setup-metadata-provider-desc">Episode ordering and air dates - more accurate season/episode numbering than TMDB alone.</p>
-          <p class="muted-copy setup-metadata-provider-status">${built.tvdb ? "Using built-in access" : "Not configured"}</p>
-          <button type="button" class="button-ghost" data-setup-connect="tvdb">Add personal key</button>
-        </div>
-        <div class="settings-card">
-          <b>Fanart.tv</b>
+          <div class="setup-metadata-titlerow"><b>Fanart.tv</b><span class="setup-metadata-provider-status${built.fanart ? " is-ok" : ""}">${built.fanart ? "Using built-in access" : "Not configured"}</span></div>
           <p class="muted-copy setup-metadata-provider-desc">Fallback posters, backdrops, and logos when TMDB has no artwork for a title.</p>
-          <p class="muted-copy setup-metadata-provider-status">${built.fanart ? "Using built-in access" : "Not configured"}</p>
           <button type="button" class="button-ghost" data-setup-connect="fanart">Add personal key</button>
         </div>
         <div class="settings-card">
@@ -928,7 +931,7 @@ function renderMetadata() {
           <button type="button" class="button-ghost" data-setup-connect="youtube">Add key</button>
         </div>
       </div>
-    </details>`;
+    </div>`;
 }
 
 function webhookGuideFor(provider) {
@@ -964,15 +967,15 @@ function renderWebhooks() {
         <section class="settings-card setup-webhook-row setup-webhook-row--automatic" data-setup-webhook-provider="${escapeHtml(server.provider)}">
           <div class="setup-webhook-row-heading">
             ${title}
+            <p class="setup-webhook-automatic-copy"><b>No webhook setup required.</b> Plekt checks Plex every minute.</p>
             <span class="badge badge-success">Automatic</span>
           </div>
-          <p class="setup-webhook-automatic-copy"><b>No webhook setup required.</b> Plekt receives Plex watch-state changes directly and checks playback progress every minute.</p>
-          <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
+          <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: 0;">
             <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
               Turn off "Refresh library metadata periodically"
             </b>
             <p style="margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-              In Plex, under Settings &rarr; Scheduled Tasks, disable "Refresh library metadata periodically". This task can occasionally re-match and re-identify library items during its nightly maintenance window, which resets their viewed state to unwatched on Plex itself - and Plekt will propagate that as a real unwatch to Emby, Jellyfin, and Trakt. Turning it off removes the most common trigger for a mass false-unwatch event.
+              In Plex, under Settings &rarr; Scheduled Tasks. Its nightly run can reset watched items to unwatched, and Plekt would sync that to Emby, Jellyfin, and Trakt.
             </p>
           </div>
         </section>`;
@@ -996,7 +999,7 @@ function renderWebhooks() {
       </details>`;
   }).join("");
   return `
-    <p class="muted-copy setup-step-intro">Plex updates are automatic. Emby and Jellyfin need a webhook to send playback changes instantly; scheduled polling still runs every minute as a backstop. See <a href="/#help/webhooks">the webhook guide</a> for more detail.</p>
+    <p class="muted-copy setup-step-intro">Plex is automatic. Emby needs a webhook and Jellyfin needs the Plekt plugin for instant updates. See <a href="/#help/webhooks">the webhook guide</a>.</p>
     <div class="setup-webhook-rows">${cards}</div>`;
 }
 
@@ -1252,7 +1255,7 @@ function renderBackblazeCard({ destination, config, showScheduleToggle = true, m
         </section>
       </div>`;
   return `
-    <details class="settings-card setup-backup-card setup-backup-remote" ${destination ? "open" : ""}>
+    <details class="settings-card setup-backup-card setup-backup-remote">
       <summary class="setup-backup-heading"><b>Backblaze B2</b>${destination ? `<span class="badge ${destination.enabled ? "badge-success" : ""}">${destination.enabled ? "Configured" : "Disabled"}</span>` : `<span class="badge">Not configured</span>`}</summary>
       <div class="setup-backup-remote-body">
         ${body}
@@ -1273,24 +1276,28 @@ function renderBackup() {
   const config = backupSetupData.plembfin?.config || {};
   const destination = backblazeDestination();
   return `
-    <p class="muted-copy setup-step-intro">Schedule encrypted local backups so Plekt's settings, connections, and watch data can be recovered. Remote storage is optional.</p>
-    <section class="settings-card setup-backup-card setup-backup-section">
-      <div class="setup-backup-heading">
-        <div><b>Local encrypted backup</b><p class="muted-copy">Stored on this Plekt server.</p></div>
-        ${config.enabled ? `<span class="badge badge-success">Scheduled</span>` : `<span class="badge">Not scheduled</span>`}
-      </div>
-      <label class="checkbox-label"><input type="checkbox" data-setup-backup-field="enabled" ${config.enabled ? "checked" : ""} /><span>Enable daily local backups</span></label>
-      <div class="setup-backup-fields">
-        <label class="field-label">Backup time<input class="field" type="time" data-setup-backup-field="time" value="${escapeAttribute(config.time || "03:00")}" /></label>
-        <label class="field-label">Backups to retain<input class="field" type="number" min="1" max="365" data-setup-backup-field="retention" value="${escapeAttribute(String(config.retention || 7))}" /></label>
-        <div class="setup-backup-security">
-          <label class="field-label setup-backup-passphrase"><span class="setup-backup-label-line">Encryption passphrase <span class="muted-copy">(at least 12 characters)</span></span><input class="field" type="password" autocomplete="new-password" data-setup-backup-field="passphrase" placeholder="${config.passphraseStored ? "Saved - leave blank to keep" : ""}" /></label>
-          <label class="checkbox-label setup-backup-remember"><input type="checkbox" data-setup-backup-field="rememberPassphrase" ${config.rememberPassphrase || config.passphraseStored ? "checked" : ""} /><span>Remember the passphrase for scheduled backups</span></label>
-          <p class="muted-copy setup-backup-passphrase-help">This passphrase encrypts every backup, local or remote. It has to be entered and "remembered" here before daily or remote backups can be scheduled, since a scheduled backup runs unattended with nobody there to type it in.</p>
+    <p class="muted-copy setup-step-intro setup-step-intro--nowrap">Schedule encrypted local backups. Remote storage is optional.</p>
+    <details class="settings-card setup-backup-card setup-backup-remote setup-backup-section">
+      <summary class="setup-backup-heading"><div><b>Local encrypted backup</b><p class="muted-copy">Stored on this Plekt server.</p></div>${config.enabled ? `<span class="badge badge-success">Scheduled</span>` : `<span class="badge">Not scheduled</span>`}</summary>
+      <div class="setup-backup-remote-body">
+        <label class="checkbox-label"><input type="checkbox" data-setup-backup-field="enabled" ${config.enabled ? "checked" : ""} /><span>Enable daily local backups</span></label>
+        <div class="setup-backup-fields">
+          <label class="field-label">Backup time<input class="field" type="time" data-setup-backup-field="time" value="${escapeAttribute(config.time || "03:00")}" /></label>
+          <label class="field-label">Backups to retain<input class="field" type="number" min="1" max="365" data-setup-backup-field="retention" value="${escapeAttribute(String(config.retention || 7))}" /></label>
+          <div class="setup-backup-security">
+            <label class="field-label setup-backup-passphrase"><span class="setup-backup-label-line">Encryption passphrase <span class="muted-copy">(at least 12 characters)</span></span><input class="field" type="password" autocomplete="new-password" data-setup-backup-field="passphrase" placeholder="${config.passphraseStored ? "Saved - leave blank to keep" : ""}" /></label>
+            <label class="checkbox-label setup-backup-remember"><input type="checkbox" data-setup-backup-field="rememberPassphrase" ${config.rememberPassphrase || config.passphraseStored ? "checked" : ""} /><span>Remember the passphrase for scheduled backups</span></label>
+            <p class="muted-copy setup-backup-passphrase-help">This passphrase encrypts every backup, local or remote. It has to be entered and "remembered" here before daily or remote backups can be scheduled, since a scheduled backup runs unattended with nobody there to type it in.</p>
+          </div>
         </div>
       </div>
-    </section>
-    ${renderBackblazeCard({ destination, config, showScheduleToggle: true })}`;
+    </details>
+    <details class="settings-card setup-backup-card setup-backup-remote setup-backup-section">
+      <summary class="setup-backup-heading"><div><b>Remote backups</b><p class="muted-copy">Mirrored to remote storage.</p></div>${destination ? `<span class="badge ${destination.enabled ? "badge-success" : ""}">${destination.enabled ? "Configured" : "Disabled"}</span>` : `<span class="badge">Not configured</span>`}</summary>
+      <div class="setup-backup-remote-body">
+        ${renderBackblazeCard({ destination, config, showScheduleToggle: true })}
+      </div>
+    </details>`;
 }
 
 function updateBackupContinueAction() {

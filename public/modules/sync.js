@@ -955,7 +955,7 @@ export function renderActiveSessions() {
           <div class="now-card-details">
             <div class="now-card-header">
               <div class="now-card-head">
-                <span class="stream-indicator${isPaused ? " is-paused" : ""}">${isPaused ? "Paused" : "Live"}</span>
+                <span class="stream-indicator${isPaused ? " is-paused" : ""}">${isPaused ? "Paused" : "Now playing"}</span>
               </div>
               <b class="now-card-title" title="${escapeAttribute(showTitle)}">${escapeHtml(showTitle)}</b>
               ${epLabel ? `<span class="now-card-episode">${escapeHtml(epLabel)}</span>` : ""}

@@ -44,8 +44,9 @@ setup-only configuration path.
 - **Metadata** - TMDB save/test, plus a note on which providers (TheTVDB, Fanart.tv) are
   already available through Plekt's built-in project keys.
 - **Webhooks** - the same per-provider setup instructions and webhook URL shown in
-  Settings, with a self-attestation checkbox per connected server. See
-  [`docs/webhooks.md`](webhooks.md) for the full guide.
+  Settings, with a self-attestation checkbox per connected server. Emby uses a webhook;
+  Jellyfin's guide leads with the expanded Plekt Jellyfin plugin box and keeps the Webhooks
+  plugin in its own collapsed box, the same as Settings. See [`docs/webhooks.md`](webhooks.md) for the full guide.
 - **Trakt** (optional) - the same device-authorization flow as Settings → Import. Skipping
   it carries a reminder onto the dashboard checklist.
 - **Background imports** - once a server passes its connection test, Plekt

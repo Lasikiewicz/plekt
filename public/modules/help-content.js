@@ -206,14 +206,61 @@ export function jellyfinWebhookSetup() {
   const url = buildWebhookUrl();
   return `
     <div class="webhook-guide-content" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
-      <div class="copy-block">
-        <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL">Copy</button>
-        <pre><code>${escapeHtml(url)}</code></pre>
-      </div>
-      <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">Automation clients can also call <code>/api/webhook</code> with an <code>X-Plekt-Webhook-Secret</code> or <code>Authorization: Bearer</code> header.</p>
-      <ul class="webhook-instruction-list">
-        <li>Install the <b>Webhooks</b> plugin in the Jellyfin Dashboard (Plugins → Catalog).</li>
-        <li>Add a new <b>Generic Webhook</b> named <code>plekt</code> pointing to the URL above. Check <b>Enable</b>.</li>
+      <details class="sync-tool-details" open>
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Official Plekt Jellyfin Plugin (Recommended)</b>
+          </div>
+        </summary>
+        <div class="tool-item-row">
+        <div class="webhook-plugin-setup" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
+        <ol class="webhook-instruction-list" style="display: grid; gap: var(--space-2);">
+          <li>
+            In the Jellyfin Dashboard, open <b>Plugins → Repositories</b>.
+            <div style="display: grid; gap: var(--space-1); margin-top: var(--space-1);">
+              <span>Add a repository named</span>
+              <div class="copy-block" style="overflow: visible; align-self: start;">
+                <button class="copy-button" type="button" data-copy="Plekt" aria-label="Copy repository name" style="top: 50%; transform: translateY(-50%);">Copy</button>
+                <pre style="overflow-x: auto; overflow-y: hidden;"><code>Plekt</code></pre>
+              </div>
+              <span>Add the URL</span>
+              <div class="copy-block" style="overflow: visible; align-self: start;">
+                <button class="copy-button" type="button" data-copy="https://raw.githubusercontent.com/Lasikiewicz/jellyfin-plugin-plekt/main/manifest.json" aria-label="Copy repository URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
+                <pre style="overflow-x: auto; overflow-y: hidden;"><code>https://raw.githubusercontent.com/Lasikiewicz/jellyfin-plugin-plekt/main/manifest.json</code></pre>
+              </div>
+            </div>
+          </li>
+          <li>Open <b>Plugins → Catalog</b>, install <b>Plekt</b>, then restart Jellyfin.</li>
+          <li>
+            Open <b>Dashboard → Plugins → Plekt</b>, paste the webhook address below into the <b>Plekt webhook address</b> field, and save.
+            <div class="copy-block" style="overflow: visible; align-self: start; margin-top: var(--space-1);">
+              <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
+              <pre style="overflow-x: auto; overflow-y: hidden;"><code>${escapeHtml(url)}</code></pre>
+            </div>
+          </li>
+        </ol>
+        </div>
+        </div>
+      </details>
+      <details class="sync-tool-details">
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Jellyfin Webhooks</b>
+          </div>
+        </summary>
+        <div class="tool-item-row">
+        <div class="webhook-plugin-setup" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
+        <ol class="webhook-instruction-list" style="display: grid; gap: var(--space-2);">
+          <li>Install the <b>Webhooks</b> plugin in the Jellyfin Dashboard (Plugins → Catalog).</li>
+          <li>
+            Add a new <b>Generic Webhook</b> named <code>plekt</code> pointing to the address below. Check <b>Enable</b>.
+            <div class="copy-block" style="overflow: visible; align-self: start; margin-top: var(--space-1);">
+              <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
+              <pre style="overflow-x: auto; overflow-y: hidden;"><code>${escapeHtml(url)}</code></pre>
+            </div>
+          </li>
         <li>Under <b>Notification Type</b>, check:
           <ul class="webhook-option-list">
             <li><code>Playback Start</code> <span>Required to detect when media starts playing.</span></li>
@@ -232,7 +279,10 @@ export function jellyfinWebhookSetup() {
         <li>Leave every other notification type and item type unticked. Plekt ignores them.</li>
         <li>Check <b>Send All Properties (ignores template)</b> so resume position fields are included.</li>
         <li>The body has to be JSON, but the content type does not matter - Jellyfin labels its payloads <code>text/plain</code> and Plekt reads them anyway. A body that is not JSON is logged in Sync History as <code>Unsupported webhook content type</code>, along with the sender that posted it.</li>
-      </ul>
+        </ol>
+        </div>
+        </div>
+      </details>
     </div>
   `;
 }
@@ -277,30 +327,39 @@ export function webhookWarning() {
       <div style="display: grid; gap: var(--space-2); margin-top: var(--space-2); border-top: 1px solid var(--line); padding-top: var(--space-2);">
         <h3 style="margin: 0; color: var(--text); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
           <span style="display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #4b96e6;"></span>
-          3. Jellyfin Webhook Setup
+          3. Jellyfin Plugin Setup (recommended)
         </h3>
         <ul style="padding-left: 1.2rem; margin: 0; display: grid; gap: 4px;">
-          <li>Install the <b>Webhooks</b> plugin in the Jellyfin Dashboard (under Plugins).</li>
-          <li>Add a new Generic Webhook named <code>plekt</code> pointing to your Plekt webhook URL.</li>
-          <li>Check <b>Enable</b>.</li>
-          <li>Under <b>Notification Type</b>, check the following boxes:
-            <ul style="padding-left: 1.2rem; margin-top: 2px;">
-              <li><code>Playback Start</code></li>
-              <li><code>Playback Progress</code></li>
-              <li><code>Playback Stop</code></li>
-              <li><code>User Data Saved</code> <i>(Crucial: sends events when items are marked watched or unwatched)</i></li>
-              <li><code>Item Added</code> <i>(Marks newly added media watched only when its current Plekt state is watched; a newer unwatch wins)</i></li>
-            </ul>
-          </li>
-          <li>Under <b>Item Type</b>, select:
-            <ul style="padding-left: 1.2rem; margin-top: 2px;">
-              <li><code>Movies</code></li>
-              <li><code>Episodes</code></li>
-            </ul>
-          </li>
-          <li>Check <b>Send All Properties (ignores template)</b>.</li>
-          <li>Resume sync depends on Jellyfin sending <code>PlaybackPositionTicks</code>, <code>PositionTicks</code>, or item <code>UserData</code> playback position fields.</li>
+          <li>In the Jellyfin Dashboard, open <b>Plugins → Repositories</b> and add a repository named <code>Plekt</code> with the URL <code>https://raw.githubusercontent.com/Lasikiewicz/jellyfin-plugin-plekt/main/manifest.json</code>.</li>
+          <li>Open <b>Plugins → Catalog</b>, install <b>Plekt</b>, then restart Jellyfin.</li>
+          <li>Open <b>Dashboard → Plugins → Plekt</b>, paste the complete webhook address from Plekt's <b>Settings → Media Servers → Webhooks</b> into the <b>Plekt webhook address</b> field, and save.</li>
+          <li>The plugin sends playback, playback position, and explicit watched or unwatched events straight to Plekt. It doesn't need the Webhooks plugin.</li>
         </ul>
+        <details style="font-size: 0.85rem;">
+          <summary style="cursor: pointer; color: var(--text);">Alternative: use the Jellyfin Webhooks plugin instead</summary>
+          <ul style="padding-left: 1.2rem; margin: var(--space-2) 0 0; display: grid; gap: 4px;">
+            <li>Install the <b>Webhooks</b> plugin in the Jellyfin Dashboard (under Plugins).</li>
+            <li>Add a new Generic Webhook named <code>plekt</code> pointing to your Plekt webhook URL.</li>
+            <li>Check <b>Enable</b>.</li>
+            <li>Under <b>Notification Type</b>, check the following boxes:
+              <ul style="padding-left: 1.2rem; margin-top: 2px;">
+                <li><code>Playback Start</code></li>
+                <li><code>Playback Progress</code></li>
+                <li><code>Playback Stop</code></li>
+                <li><code>User Data Saved</code> <i>(Crucial: sends events when items are marked watched or unwatched)</i></li>
+                <li><code>Item Added</code> <i>(Marks newly added media watched only when its current Plekt state is watched; a newer unwatch wins)</i></li>
+              </ul>
+            </li>
+            <li>Under <b>Item Type</b>, select:
+              <ul style="padding-left: 1.2rem; margin-top: 2px;">
+                <li><code>Movies</code></li>
+                <li><code>Episodes</code></li>
+              </ul>
+            </li>
+            <li>Check <b>Send All Properties (ignores template)</b>.</li>
+            <li>Resume sync depends on Jellyfin sending <code>PlaybackPositionTicks</code>, <code>PositionTicks</code>, or item <code>UserData</code> playback position fields.</li>
+          </ul>
+        </details>
       </div>
     </div>
   `;
@@ -513,9 +572,9 @@ export function renderSettingsInlineHelp() {
         <summary class="accordion-header">
           <div class="sync-tool-summary-title">
             <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-            <b>Jellyfin Webhook Setup Guide</b>
+            <b>Jellyfin Plugin Setup Guide</b>
           </div>
-          <span>Instructions for adding webhooks in Jellyfin Media Server</span>
+          <span>Instructions for the Plekt plugin and Jellyfin Webhooks in Jellyfin Media Server</span>
         </summary>
         <div class="tool-item-row">${jellyfinWebhookSetup()}</div>
       </details>

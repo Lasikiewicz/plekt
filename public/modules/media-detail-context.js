@@ -809,7 +809,7 @@ function syncMediaInfoOverlayBounds() {
   if (!rect.width) return;
   _mediaInfoOverlay.classList.add("media-info-overlay--detail-page");
   _mediaInfoOverlay.style.setProperty("--media-info-page-left", `${rect.left}px`);
-  _mediaInfoOverlay.style.setProperty("--media-info-page-top", `${rect.top}px`);
+  _mediaInfoOverlay.style.setProperty("--media-info-page-top", `${Math.max(rect.top, 0)}px`);
   _mediaInfoOverlay.style.setProperty("--media-info-page-width", `${rect.width}px`);
   _mediaInfoOverlay.style.setProperty("--media-info-page-right", `${Math.max(window.innerWidth - rect.right, 0)}px`);
 }
@@ -1110,7 +1110,7 @@ export function setMediaDetailActions(html) {
   el?.querySelector("[data-media-info]")?.addEventListener("click", (event) => {
     event.preventDefault();
     event.stopPropagation();
-    openMediaInfoModal();
+    el.querySelectorAll(".actions-tools-dropdown[open]").forEach((dropdown) => dropdown.removeAttribute("open")); openMediaInfoModal();
   });
   normalizeMediaDetailActions(el);
   syncMediaActionsMenuState();

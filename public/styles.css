@@ -25475,7 +25475,8 @@ html.light-mode .settings-group-section:focus-visible {
 /* Onboarding's footer toggle shows only the Light and Dark words, no icons. */
 #setupFooterBar .theme-toggle-label svg,
 #authFooterBar .theme-toggle-label svg { display: none; }
-#authFooterBar .setup-footer-bar-card { background: var(--brand-menu); }
+#authFooterBar .setup-footer-bar-card,
+#setupFooterBar .setup-footer-bar-card { background: var(--brand-menu); }
 .setup-footer-bar .app-version { white-space: nowrap; }
 .setup-footer-bar .app-version:disabled { cursor: default; }
 .setup-footer-bar .app-version:disabled:hover { color: var(--muted); text-decoration: none; }
@@ -25618,12 +25619,43 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-server-row-main { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
 .setup-server-row-main .button-primary { flex-shrink: 0; font-size: 0.92rem; }
 .setup-server-row-title { display: flex; align-items: center; gap: var(--space-2); }
+.setup-step-body .setup-step-intro.setup-step-intro--nowrap { max-width: none; width: 100%; white-space: nowrap; }
+.setup-server-name-group {display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; }
+.setup-server-type-icon { width: 1.25rem; height: 1.25rem; object-fit: contain; flex: 0 0 auto; }
+.setup-step-body .setup-server-rows { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+.setup-step-body .setup-server-row { padding: var(--space-3) !important; gap: var(--space-3) !important; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html .setup-step-body .setup-server-row > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+html .setup-step-body .setup-server-row > .setup-server-row-actions { margin-top: var(--space-1) !important; }
+.setup-step-body .setup-server-row > * { grid-column: 1 / -1; }
+.setup-step-body .setup-server-row .setup-server-row-main > div:first-child { flex: 1 1 auto; min-width: 0; }
+.setup-step-body .setup-server-row .setup-server-row-title { justify-content: space-between; }
+.setup-step-body .setup-server-row .setup-server-row-main > div:first-child { text-align: center; }
+.setup-step-body .setup-server-row .setup-server-row-title { text-align: left; }
+.setup-step-body .setup-server-row .setup-server-detail { display: inline; }
+.setup-step-body .setup-server-row .setup-server-detail + .setup-server-detail { margin-left: var(--space-3); }
+.setup-step-body .setup-server-row .guide-callout { margin: 0 !important; padding: var(--space-2) !important; }
+.setup-step-body .setup-server-row .setup-server-row-title .badge-success { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--green); }
+.setup-step-body .setup-server-row .setup-import-status-line { justify-self: end; }
+.setup-step-body .setup-server-row > .setup-toggle-box { grid-column: auto; }
+.setup-step-body .setup-server-row :is(p, label, span:not(.badge), b:not(.setup-server-name)) { font-size: 0.9rem !important; line-height: 1.35 !important; }
+.setup-step-body .setup-server-row .guide-callout { margin-top: var(--space-2) !important; padding: var(--space-2) var(--space-3) !important; }
+.setup-step-body .setup-server-row .guide-callout b { margin-bottom: 0 !important; }
+.setup-step-body .setup-server-row .setup-import-toggle-label { margin: 0; }
+.setup-server-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
+.setup-step-body .setup-server-row .settings-choice-option:has(input:checked) { border: 1px solid color-mix(in srgb, var(--blue), transparent 45%) !important; box-shadow: none !important; }
+.setup-trakt-sync-note { text-align: center; }
+.setup-trakt-sync-note.is-complete { color: var(--green); }
+.setup-server-row-meta { margin-right: auto; }
+.setup-step-body .setup-server-row .setup-toggle-box { min-height: 0; padding: var(--space-1) var(--space-2); align-items: flex-start; gap: var(--space-1); }
+.setup-step-body .setup-server-row .setup-toggle-box .settings-choice-option-description { margin: 0; }
+.setup-server-row-actions .setup-import-status-line { margin: 0; }
 .setup-server-name { text-transform: capitalize; font-size: 1.15rem; }
 .setup-server-detail { font-size: 0.95rem; overflow-wrap: anywhere; }
 .setup-import-toggle-label { display: flex; flex-direction: row; align-items: center; gap: var(--space-2); margin-top: var(--space-2); }
 .setup-import-status-line { margin: 0; font-size: 0.92rem; }
 .setup-import-status-line.is-error { color: var(--red, #ef4444); }
-.setup-step-intro { max-width: 75ch; }
+.setup-step-intro { max-width: 75ch; margin: 0 auto; text-align: center; }
+.setup-step-intro:has(+ .setup-webhook-rows) { max-width: none; }
 .setup-claim-step { display: grid; gap: var(--space-5); width: 100%; max-width: 48rem; margin: 0 auto; }
 .setup-claim-step > .setup-step-intro { max-width: 58ch; margin: 0 auto; text-align: center; }
 .setup-claim-form-host { width: 100%; max-width: none; margin: 0; }
@@ -25675,23 +25707,87 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-webhook-chevron { color: var(--muted); font-size: 1.4rem; line-height: 1; transition: transform 150ms ease; }
 .setup-webhook-accordion[open] .setup-webhook-chevron { transform: rotate(90deg); }
 .setup-webhook-accordion-body { display: grid; gap: var(--space-3); padding-top: var(--space-3); border-top: 1px solid var(--line-subtle); }
-.setup-webhook-confirmation { display: flex; flex-direction: row; align-items: center; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--line-subtle); }
+.setup-webhook-confirmation { display: flex; flex-direction: row; align-items: center; justify-content: flex-end; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--line-subtle); font-size: 0.95rem; font-weight: 600; }
 .setup-webhook-row .webhook-guide-content { gap: var(--space-3) !important; padding-top: 0 !important; }
 .setup-webhook-row .copy-block { width: 100%; }
 .setup-webhook-row .copy-block pre { overflow-x: auto; }
+.setup-webhook-accordion-body .webhook-plugin-setup,
+.setup-webhook-accordion-body .webhook-plugin-setup li { font-size: 0.95rem; font-weight: 600; }
+.setup-webhook-accordion-body .webhook-plugin-setup b,
+.setup-webhook-accordion-body .webhook-instruction-list,
+.setup-webhook-accordion-body .webhook-plugin-setup code { font-size: 0.95rem; }
+.setup-webhook-accordion-body .webhook-plugin-setup .copy-block pre,
+.setup-webhook-accordion-body .webhook-plugin-setup .copy-block pre code { font-size: 0.78rem; }
+.setup-webhook-accordion-body details.sync-tool-details > summary b { font-size: 0.92rem; }
+.setup-webhook-accordion-body .webhook-instruction-list,
+.setup-webhook-accordion-body .webhook-instruction-list li,
+.setup-webhook-accordion-body .webhook-instruction-list b,
+.setup-webhook-accordion-body .webhook-instruction-list code { font-size: 0.95rem; }
+/* Onboarding canvas matches the left menu; the Webhooks cards follow the Settings card shell (docs/frontend.md). */
+.setup-shell { background: var(--brand-menu) !important; }
+/* Setup follows the Settings surface depth: the wizard shell is the parent (left-menu tone),
+   its cards are children (main tone), and fields inside those cards flip back to the left-menu tone. */
+html .setup-shell :is(.settings-card, .settings-modal-field, .setup-claim-panel, .setup-import-list, .setup-import-row, .setup-review-list, .setup-review-lead) {
+  background: var(--brand-main) !important;
+  background-image: none !important;
+}
+html .setup-shell :is(.settings-choice-option, .settings-segmented-control, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+.setup-webhook-row.setup-webhook-accordion {
+  background: var(--brand-main) !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: var(--radius) !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden;
+}
+.setup-webhook-accordion > summary { padding: var(--space-3) !important; }
+.setup-webhook-accordion[open] > summary { border-bottom: 1px solid var(--line) !important; }
+.setup-webhook-accordion-body { padding: var(--space-3) !important; border-top: none !important; gap: var(--space-3); }
+.setup-webhook-accordion .sync-tool-details {
+  background: var(--brand-menu) !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius) !important;
+}
+.setup-webhook-accordion .sync-tool-details > summary { padding: var(--space-3) !important; }
+.setup-webhook-accordion .sync-tool-details[open] > summary { border-bottom: 1px solid var(--line); }
+.setup-webhook-accordion .sync-tool-details:is(:hover, :focus-within) { border-color: var(--blue) !important; background: var(--panel-3) !important; }
+.setup-webhook-accordion .tool-item-row { gap: var(--space-2) !important; }
+/* No divider under the open headers of the Emby, Jellyfin plugin and Webhooks boxes (Settings and onboarding). */
+details.sync-tool-details:has(.webhook-guide-content)[open] > summary,
+.webhook-guide-content details.sync-tool-details[open] > summary,
+.setup-webhook-accordion .sync-tool-details[open] > summary { border-bottom: none !important; }
 .webhook-instruction-list { display: grid; gap: var(--space-3); margin: 0; padding-left: 1.25rem; color: var(--text); font-size: 0.88rem; line-height: 1.5; }
 .webhook-option-list { display: grid; gap: var(--space-2); margin-top: var(--space-2); padding-left: 1.25rem; }
 .webhook-option-list li { padding-left: var(--space-1); }
 .webhook-option-list code { font-weight: 700; }
-.setup-metadata-card { display: grid; gap: var(--space-2); }
+.setup-metadata-card { display: grid; gap: var(--space-3); padding: var(--space-3) var(--space-4); }
+.setup-metadata-actions a.button-ghost { text-decoration: none; font-weight: 700; }
 .setup-metadata-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
 .setup-metadata-badges { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
-.setup-metadata-actions { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.setup-metadata-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 0; }
 .setup-metadata-optional { margin-top: var(--space-3); }
 .setup-metadata-optional-intro { margin-top: var(--space-2); max-width: 75ch; font-size: 0.92rem; }
 .setup-metadata-optional-grid { margin-top: var(--space-2); }
 .setup-metadata-provider-desc { font-size: 0.88rem; }
 .setup-metadata-provider-status { font-size: 0.95rem; }
+.setup-metadata-titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.setup-metadata-provider-status { color: var(--muted); }
+.setup-metadata-provider-status.is-ok { color: var(--green); }
+.setup-step-body .setup-metadata-core-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+html .setup-shell .settings-choice-option:has(input:checked) {
+  border-color: color-mix(in srgb, var(--blue), transparent 40%);
+  box-shadow: none;
+}
+.setup-step-body .setup-metadata-core-grid .setup-metadata-card { grid-template-columns: minmax(0, 1fr); }
+.setup-step-body .setup-metadata-core-grid .setup-metadata-card .setup-metadata-actions { align-self: end; }
+.setup-step-body .setup-metadata-core-grid .setup-metadata-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; width: 100%; justify-self: stretch; }
+.setup-step-body .setup-metadata-core-grid .setup-metadata-actions > * { width: 100%; box-sizing: border-box; justify-content: center; text-align: center; }
+@media (max-width: 760px) {
+  .setup-step-body .setup-metadata-core-grid { grid-template-columns: minmax(0, 1fr); }
+}
 .setup-trakt-card { display: grid; gap: var(--space-2); }
 .setup-trakt-heading { display: flex; justify-content: space-between; align-items: center; }
 .setup-trakt-flow { text-align: center; }
@@ -25701,7 +25797,7 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-trakt-date-pref-help { font-size: 0.88rem; }
 .setup-trakt-sync-note { font-size: 0.92rem; }
 .webhook-option-list span { color: var(--muted); }
-.setup-import-note { font-size: 0.92rem; }
+.setup-import-note { font-size: 0.92rem; text-align: center; }
 .setup-import-list { display: grid; border: 1px solid var(--line-subtle); border-radius: var(--radius); overflow: hidden; }
 .setup-import-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3); background: var(--panel-2); }
 .setup-import-row + .setup-import-row { border-top: 1px solid var(--line-subtle); }
@@ -25732,6 +25828,9 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-backup-remember { min-height: 1.25rem; }
 .setup-step-body details.settings-card.setup-backup-remote { display: block; min-height: 0; padding: var(--space-4) !important; }
 .setup-backup-remote > summary { padding: 0 !important; cursor: pointer; list-style: none; }
+html .setup-shell .setup-backup-remote .setup-backup-remote { background: var(--brand-menu) !important; background-image: none !important; }
+html .setup-shell .setup-backup-remote .setup-backup-remote :is(.field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) { background: var(--brand-main) !important; background-image: none !important; }
+.setup-backup-heading .badge-success { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--green); }
 .setup-backup-remote > summary::-webkit-details-marker { display: none; }
 .setup-backup-remote-body { display: grid; gap: var(--space-3); padding-top: 0; margin-top: var(--space-3); }
 .setup-backblaze-signup { margin: 0; font-size: 0.88rem; }
@@ -33423,6 +33522,68 @@ html:root #nowPlayingGrid .live-now-card .now-card-progress-bar {
   height: 4px;
 }
 
+/* A session that is playing (not paused) has an accent outline, and its "Now
+   playing" label is a solid accent tab in the card's top right corner. The title keeps
+   clear of the pill. Paused cards keep the plain look. */
+html:root #nowPlayingGrid .live-now-card:has(.stream-indicator:not(.is-paused)) {
+  border-color: color-mix(in srgb, var(--accent), transparent 55%);
+}
+
+html:root #nowPlayingGrid .live-now-card:has(.stream-indicator:not(.is-paused)) .now-card-header {
+  padding-right: 9rem;
+}
+
+/* A corner tab: flush with the card's top and right edges, rounded only on its
+   bottom left, so it joins the card's own border. A sheen sweeps across it. */
+html:root #nowPlayingGrid .live-now-card .stream-indicator:not(.is-paused) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  display: inline-block;
+  overflow: hidden;
+  padding: 0.25rem 1.1rem;
+  border-radius: 0 0 0 10px;
+  border: 1px solid color-mix(in srgb, var(--accent), transparent 60%);
+  border-top: 0;
+  border-right: 0;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent), transparent 84%) 0%, color-mix(in srgb, var(--accent), transparent 97%) 100%), var(--panel-2);
+  color: var(--blue);
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0.1em;
+}
+
+html:root #nowPlayingGrid .live-now-card .stream-indicator:not(.is-paused)::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.55) 50%, transparent 65%);
+  transform: translateX(-100%);
+  animation: now-playing-live-sheen 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes now-playing-live-sheen {
+  0%,
+  35% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:root #nowPlayingGrid .live-now-card .stream-indicator:not(.is-paused)::after {
+    animation: none;
+    transform: none;
+    opacity: 0;
+  }
+}
+
 @media (max-width: 760px) {
   html:root #nowPlayingGrid .live-now-card {
     height: auto;
@@ -34289,8 +34450,9 @@ html:root.light-mode .settings-pane .settings-row-main :is(details.sync-tool-det
 }
 
 html:root .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):is(:hover, :focus-within) {
-  border-color: var(--accent) !important;
-  outline-color: var(--accent);
+  border-width: 1px !important;
+  border-color: rgba(229, 160, 13, 0.4) !important;
+  outline-color: transparent;
 }
 
 html:root .settings-pane .settings-row-main details:is(.sync-tool-details, .sync-match-report, .issue-category)[open] > summary .accordion-chevron {

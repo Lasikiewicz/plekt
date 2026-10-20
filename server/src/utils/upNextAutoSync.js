@@ -185,7 +185,19 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
   // still pushed rather than reported unchanged.
   if (settled && !pushedStale) await rememberUpNextSync(items, { unreachable: complete ? [] : unreachable });
 
-  const rerun = getDataVersion() !== beforeDataVersion || getUpNextVersion() !== beforeUpNextVersion;
+  // The push's own rail restamps (unplay, then play) bump the versions, so a
+  // version change alone is not a changed queue. Rebuild the queue and request
+  // a follow-up only when its fingerprint differs from the one just pushed.
+  let rerun = getDataVersion() !== beforeDataVersion || getUpNextVersion() !== beforeUpNextVersion;
+  if (rerun) {
+    const afterProjection = await buildUpNextProjection({ mediaConfig: config, limit: 100 });
+    const afterItems = Array.isArray(afterProjection?.items) ? afterProjection.items.slice(0, 100) : [];
+    const afterFingerprint = fingerprintWithOutages(
+      upNextQueueFingerprint(afterItems),
+      unreachableProviders(providers, summary?.feeds),
+    );
+    if (afterFingerprint === fingerprint) rerun = false;
+  }
   return {
     status: complete ? "succeeded" : "partial",
     itemCount: items.length,

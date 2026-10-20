@@ -16,6 +16,15 @@ fork and keeps most of the API surface) with a few differences noted below. Read
 | `server/src/utils/liveSessions.js` | Polls `/Sessions` for Now Playing |
 | `public/modules/help-content.js` | `jellyfinCredentialGuide()`, `jellyfinWebhookSetup()` - in-app setup guides |
 
+## Related project: Jellyfin plugin
+
+The Plekt Jellyfin server plugin lives in its own repository at
+`C:\Github\jellyfin-plugin-plekt` (GPL-3.0-or-later). It posts playback and explicit
+watched or unwatched events straight to Plekt's webhook address, so it does not use the
+Jellyfin Webhook plugin. All work on the plugin is done from the plekt project; its files are
+outside this repo and are not covered by the checks here. See the plugin README for build and
+configuration details.
+
 ## Configuration
 
 Settings → Media Servers → Jellyfin uses Quick Connect by default: enter the server URL,
@@ -49,9 +58,11 @@ and personal-rating integrations remain independent of that feature; see
 
 ## Inbound: webhooks
 
-Jellyfin needs the **Webhook plugin** installed; it posts JSON to
-`/api/webhook?token=<webhookSecret>`. `parseJellyfinWebhook` (`parsers.js`) derives the
-phase:
+The recommended sender is the **Plekt Jellyfin plugin** (see
+[Related project](#related-project-jellyfin-plugin)); it posts JSON to the complete webhook
+address from Plekt's Settings → Media Servers → Webhooks. The Jellyfin **Webhook plugin** still
+works as an alternative and posts JSON to the same `/api/webhook?token=<webhookSecret>`.
+`parseJellyfinWebhook` (`parsers.js`) derives the phase:
 
 - `PlaybackStart` / `PlaybackProgress` / `PlaybackPause` → `active`
 - Mark-played events, or userdata saved with `Played=true` → `completed`
@@ -63,8 +74,11 @@ phase:
 - `PlaybackStop` → `completed` at the watched threshold (90% by default), else `ended`
 
 Jellyfin sends mark-unplayed events, so unwatch propagation works purely through the
-webhook. The in-app guide (`jellyfinWebhookSetup()` in `help-content.js`) documents
-which notification types to enable in the plugin.
+webhook. The in-app guide (`jellyfinWebhookSetup()` in `help-content.js`) has two boxes: the
+expanded **Official Plekt Jellyfin Plugin (Recommended)** box, with the repository name and
+manifest URL in copy blocks and the webhook address in its last step, and a collapsed
+**Jellyfin Webhooks** box, which holds the webhook address and the Webhook plugin's notification
+types.
 
 ## Inbound: scheduler polling
 

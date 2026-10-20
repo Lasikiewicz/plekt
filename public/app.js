@@ -2221,6 +2221,9 @@ function syncPageTopbar() {
   const hasVisibleTopbarAction = Boolean(
     usePageOptionsMenu
     || (activeControls && !activeControls.classList.contains("hidden"))
+    // The row is hidden while empty, so a control inside it has no client rects and the
+    // check below would never see it. Read the toggle state directly instead.
+    || Boolean(elements.pageTopbarOnboardingButton && !elements.pageTopbarOnboardingButton.classList.contains("hidden"))
     || Array.from(elements.pageTopbarActions?.querySelectorAll("button, a, input, select, [role='button']") || [])
       .some((control) => (
         !control.closest(".hidden") && getComputedStyle(control).display !== "none" && control.getClientRects().length > 0

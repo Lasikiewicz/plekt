@@ -481,7 +481,9 @@ async function resolveWebhookFlagWatchDate(media = {}) {
 }
 
 function normalizedIdentity(value = "") {
-  return String(value || "").trim().toLowerCase();
+  const text = String(value || "").trim().toLowerCase();
+  // Jellyfin's webhook sends user GUIDs with dashes, but the stored id has none.
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(text) ? text.replace(/-/g, "") : text;
 }
 
 function looksLikeServerUserId(value = "") {

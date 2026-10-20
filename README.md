@@ -517,10 +517,14 @@ playing, backing off to every 45 seconds while idle.
 **Playback**: `Start`/`Pause`/`Unpause`/`Stop` and **Users**: `Mark Played`/`Mark
 Unplayed`. Leave everything else unticked, and enable **Send All Properties**.
 
-**Jellyfin** - Install the **Webhooks** plugin → add a **Generic Webhook** named
-`plekt` (a display label; existing webhook names can stay unchanged) → paste the URL → enable `Playback Start/Progress/Stop` and `User Data
-Saved` under Notification Type, `Movies`/`Episodes` under Item Type → check **Send All
-Properties**.
+**Jellyfin** - Recommended: install the **Plekt** plugin from the Plekt repository (add
+`https://raw.githubusercontent.com/Lasikiewicz/jellyfin-plugin-plekt/main/manifest.json` under
+Plugins → Repositories, then install it from Plugins → Catalog) → open Dashboard → Plugins →
+Plekt → paste the complete webhook address from Plekt's Settings → Media Servers → Webhooks.
+The plugin needs no Webhooks plugin. Alternatively, install the **Webhooks** plugin → add a
+**Generic Webhook** named `plekt` (a display label; existing webhook names can stay unchanged)
+→ paste the URL → enable `Playback Start/Progress/Stop` and `User Data Saved` under
+Notification Type, `Movies`/`Episodes` under Item Type → check **Send All Properties**.
 
 ---
 
