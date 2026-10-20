@@ -44,3 +44,6 @@ website/src/generated/release.json
 
 # Console and page dumps written by the Playwright MCP browser tool.
 .playwright-mcp/
+
+# Local work-in-progress folder (Jellyfin plugin), kept out of develop until it is ready.
+/integrations/
