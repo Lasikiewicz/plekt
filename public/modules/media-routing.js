@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.1.1.0.4";
-import { slug, movieSlug, movieHref, showName, tvShowTmdbHref, tvShowTvdbHref, movieTmdbHref } from "./utils.js?v=2.1.1.0.4";
+import { state } from "./state.js?v=2.1.1.0.5";
+import { slug, movieSlug, movieHref, showName, tvShowTmdbHref, tvShowTvdbHref, movieTmdbHref } from "./utils.js?v=2.1.1.0.5";
 
 // These small lookups are used by the shell and Now Playing navigation. Keep
 // them separate from the detail renderer so its metadata graph stays route-only.

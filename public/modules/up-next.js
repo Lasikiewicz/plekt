@@ -1,15 +1,15 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.4";
-import { state, elements } from "./state.js?v=2.1.1.0.4";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.1.1.0.4";
-import { hydratePosters } from "./images.js?v=2.1.1.0.4";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.1.1.0.4";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.1.1.0.4";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.5";
+import { state, elements } from "./state.js?v=2.1.1.0.5";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.1.1.0.5";
+import { hydratePosters } from "./images.js?v=2.1.1.0.5";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.1.1.0.5";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.1.1.0.5";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
-} from "./up-next-shared.js?v=2.1.1.0.4";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.1.1.0.4";
-import { renderMediaCard } from "./media-card.js?v=2.1.1.0.4";
+} from "./up-next-shared.js?v=2.1.1.0.5";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.1.1.0.5";
+import { renderMediaCard } from "./media-card.js?v=2.1.1.0.5";
 
 const UP_NEXT_TIMEOUT_MS = 20000;
 const UP_NEXT_DISMISSED_KEY = "plembfin:upNextDismissed:v1";

@@ -1,14 +1,14 @@
 {
-  "version": "2.1.1.0.4",
-  "build": 4,
+  "version": "2.1.1.0.5",
+  "build": 5,
   "resetCommit": "b132b470337687d02a21c6ec71c886debc493df7",
-  "updatedAt": "2026-10-20T09:57:31.064Z",
+  "updatedAt": "2026-10-20T10:51:58.297Z",
   "entries": [
     {
-      "build": 4,
-      "date": "2026-10-20T09:57:31.064Z",
-      "commit": "21aac8bd4cfc5a2abe18b9d97e5c9ea1321de964",
-      "message": "This update includes restore library loading and navigation behavior and keep dashboard live across browsers and polish mobile Up Next.",
+      "build": 5,
+      "date": "2026-10-20T10:51:58.297Z",
+      "commit": "ef559d7020419c2f0010adb91971593abe0b087f",
+      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, and match opened poster width to the folded poster on phones.",
       "author": "Lasikiewicz",
       "details": [
         "Keep desktop navigation and library controls visible without empty action space.",
@@ -22,11 +22,14 @@
         "Clearing progress or removing an item from Up Next updates other devices and open dashboards.",
         "Open dashboard windows in the same browser share one live stream, so queue changes appear in all of them.",
         "Phone featured Up Next cards are taller and wider with larger posters, and their scrollbar stays visible.",
-        "The duplicate Up Next title on phones becomes a compact toolbar for queue actions."
+        "The duplicate Up Next title on phones becomes a compact toolbar for queue actions.",
+        "Opened posters on Watchlist and Ratings keep the folded poster's width on phones instead of shrinking by about 10px, and opened Watch history cards keep the folded poster's size too.",
+        "Discover and Playlists phone rows and the timeline live panel get the related phone layout tweaks in the same stylesheet."
       ],
       "messageFragments": [
         "Fix - Restore library loading and navigation behavior",
-        "Fix - Keep dashboard live across browsers and polish mobile Up Next"
+        "Fix - Keep dashboard live across browsers and polish mobile Up Next",
+        "Fix - Match opened poster width to the folded poster on phones"
       ]
     }
   ]
