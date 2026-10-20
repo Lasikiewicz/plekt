@@ -84,7 +84,7 @@ Read [shared workflow rules](docs/agent-workflow-rules.md) when running any rele
 procedure. Never bypass hooks/changelog rebuilding. Refresh plan/updates.md for push/main
 review. GHCR Cleanup must not overlap publication. Force commands require their stated
 changelog/build approvals; neither pushes develop. Start-server requests follow the local
-stack skill in AGENTS.md. Check requests is read-only: draft replies, never post; stop at
+stack skill (`.claude/skills/plekt-local-stack/SKILL.md`). Check requests is read-only: draft replies, never post; stop at
 any provider requiring login.
 
 ## Plans, documentation and backlog

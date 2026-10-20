@@ -650,7 +650,7 @@ For the full picture - file map, subsystem map, and per-feature references - sta
 
 ## Development Workflow
 
-Agents start with `AGENTS.md` and `CLAUDE.md`. Release procedures keep their explicit
+Agents start with `CLAUDE.md`. Release procedures keep their explicit
 changelog and running-build approvals; read-only workflow prechecks are described in
 [Development](docs/development.md#workflow-checks).
 

@@ -7,7 +7,7 @@ GitHub Actions, Docker, and the changelog/versioning machinery.
 
 Repository-local skills give the ordered release procedures and explicit approval stops.
 Detailed candidate, website and publication operations are linked by phase, rather than
-loaded for every step. Non-Claude agents start with AGENTS.md and CLAUDE.md.
+loaded for every step. Agents start with CLAUDE.md.
 
 Read-only entry points: `npm run push:precheck`, `npm run alpha:precheck`, and
 `npm run release:precheck` (each accepts `-- --dry-run`; prechecks never mutate anything).
@@ -122,7 +122,7 @@ For read-only status checks there, pass a repository-local excludes file per com
 change global or repository Git config to work around it:
 
 ```powershell
-git -c core.excludesFile=C:\path\to\plembfin\.git\info\exclude status --short --branch
+git -c core.excludesFile=C:\path\to\plekt\.git\info\exclude status --short --branch
 ```
 
 There is no separate linter configured. A local `.env` at the repo root is loaded by
