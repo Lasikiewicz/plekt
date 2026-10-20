@@ -3,6 +3,12 @@
 How to run, check, ship, and release the app: npm scripts, the build check, git hooks,
 GitHub Actions, Docker, and the changelog/versioning machinery.
 
+## Related projects
+
+- **Jellyfin plugin** - `C:\Github\jellyfin-plugin-plekt`, a separate repository for the
+  Plekt Jellyfin server plugin. All work on the plugin is done from this plekt project; the
+  plugin's own build and release steps are in its README. See [jellyfin.md](jellyfin.md#related-project-jellyfin-plugin).
+
 ## Workflow checks
 
 Repository-local skills give the ordered release procedures and explicit approval stops.

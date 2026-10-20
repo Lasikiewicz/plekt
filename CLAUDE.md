@@ -98,6 +98,11 @@ Do not put website work in feature plans; it belongs to Force to main unless use
 User-visible changes also update relevant docs and README. Review decisions.md before
 changing cautious guards; record decisions only under its documented three-part criteria.
 
+## Related projects
+
+- **Jellyfin plugin** (the Plekt Jellyfin server plugin, separate repo): `C:\Github\jellyfin-plugin-plekt`.
+  All work on the plugin is done from this project. Details: [docs/jellyfin.md](docs/jellyfin.md#related-project-jellyfin-plugin).
+
 ## Commands
 
 `npm start` (UI + API + scheduler on `http://localhost:5056`), `npm run dev` (auto-reload),
