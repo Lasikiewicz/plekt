@@ -7,6 +7,7 @@ let lastUpNextVersion = null;
 let visibilityHandler = null;
 let resumeHandler = null;
 let lockAbortController = null;
+let liveChannel = null;
 
 const RECONNECT_MS = 1_000;
 // The server writes at least a heartbeat every 15 s. A stream that has been
@@ -53,6 +54,8 @@ export function stopLiveUpdates() {
   activeController = null;
   lockAbortController?.abort();
   lockAbortController = null;
+  liveChannel?.close();
+  liveChannel = null;
   if (reconnectTimer) window.clearTimeout(reconnectTimer);
   reconnectTimer = null;
   if (visibilityHandler) document.removeEventListener("visibilitychange", visibilityHandler);
@@ -98,7 +101,8 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
     }, RECONNECT_MS);
   };
 
-  const consumeEvent = (block) => {
+  let latestSnapshot = null;
+  const consumeEvent = (block, { shared = false } = {}) => {
     const data = block
       .split("\n")
       .filter((line) => line.startsWith("data:"))
@@ -106,6 +110,17 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
       .join("\n");
     if (!data) return;
     const event = JSON.parse(data);
+    if (!shared) {
+      latestSnapshot = { ...latestSnapshot, ...event };
+      if (event.type === "sync-progress") {
+        const progress = progressFromEvent(event, { standalone: true });
+        latestSnapshot.syncTotal = progress.total;
+        latestSnapshot.syncCompleted = progress.completed;
+        for (const field of ["active", "label", "currentItemLabel", "startupScanActive"]) {
+          if (field in progress) latestSnapshot[`sync${field[0].toUpperCase()}${field.slice(1)}`] = progress[field];
+        }
+      }
+    }
 
     const attention = attentionFromEvent(event);
     if (attention) onSyncAttention?.(attention);
@@ -114,7 +129,7 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
     let upNextVersionChanged = false;
     let upNextVersionInitial = false;
     if (Number.isFinite(upNextVersion)) {
-      upNextVersionInitial = lastUpNextVersion === null;
+      upNextVersionInitial = lastUpNextVersion === null && (!shared || event.type === "ready");
       upNextVersionChanged = !upNextVersionInitial && upNextVersion !== lastUpNextVersion;
     }
 
@@ -142,7 +157,8 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
     }
 
     const version = Number(event.version);
-    const historyVersionChanged = Number.isFinite(version) && lastVersion !== null && version !== lastVersion;
+    const historyVersionChanged = Number.isFinite(version) && version !== lastVersion
+      && (lastVersion !== null || (shared && event.type !== "ready"));
     if (Number.isFinite(version) && lastVersion === null) {
       lastVersion = version;
     } else if (historyVersionChanged) {
@@ -174,6 +190,23 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
     onHistoryVersion?.(version, { changes, initial: false, reconnect: event.type === "ready", event });
   };
 
+  // Only the lock owner holds an HTTP stream. Relay its public version/status
+  // events so other visible windows update without consuming more connections.
+  if (typeof globalThis.BroadcastChannel === "function") {
+    liveChannel = new BroadcastChannel("plekt-live-updates");
+    liveChannel.onmessage = ({ data }) => {
+      if (generation !== connectionGeneration || !isVisible()) return;
+      if (data?.type === "snapshot-request") {
+        if (activeController && latestSnapshot) {
+          liveChannel.postMessage({ type: "event", block: `data: ${JSON.stringify({ ...latestSnapshot, type: "ready" })}` });
+        }
+      } else if (data?.type === "event" && typeof data.block === "string" && !activeController) {
+        try { consumeEvent(data.block, { shared: true }); } catch (error) { onError?.(error); }
+      }
+    };
+    liveChannel.postMessage({ type: "snapshot-request" });
+  }
+
   const connect = async () => {
     if (generation !== connectionGeneration || !isVisible() || activeController) return;
     const controller = new AbortController();
@@ -202,7 +235,10 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
         while (boundary >= 0) {
           const block = buffer.slice(0, boundary);
           buffer = buffer.slice(boundary + 2);
-          try { consumeEvent(block); } catch (error) { onError?.(error); }
+          try {
+            consumeEvent(block);
+            liveChannel?.postMessage({ type: "event", block });
+          } catch (error) { onError?.(error); }
           boundary = buffer.indexOf("\n\n");
         }
       }
@@ -217,7 +253,7 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
 
   const requestConnection = () => {
     if (generation !== connectionGeneration || !isVisible() || activeController || lockAbortController) return;
-    if (!globalThis.navigator?.locks?.request) {
+    if (!liveChannel || !globalThis.navigator?.locks?.request) {
       connect();
       return;
     }
@@ -249,6 +285,7 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
       return;
     }
     notifyResume("visibilitychange");
+    liveChannel?.postMessage({ type: "snapshot-request" });
     requestConnection();
   };
   document.addEventListener("visibilitychange", visibilityHandler);

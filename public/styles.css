@@ -33434,7 +33434,59 @@ html:root #nowPlayingGrid .live-now-card .now-card-progress-bar {
    row like the live cards and the second peeks in from the right. */
 @media (max-width: 640px) {
   #timeline-view #nowPlayingGrid .modern-idle-feature {
-    min-width: min(22rem, 88vw);
+    min-width: min(24rem, calc(100% - 1.75rem));
+    min-height: 14rem;
+  }
+
+  #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card {
+    min-height: 14rem;
+  }
+
+  #timeline-view #nowPlayingGrid .modern-idle-feature > .dashboard-history-page-card > .history-card-poster-wrapper {
+    flex-basis: clamp(7.5rem, 34vw, 9rem);
+    width: clamp(7.5rem, 34vw, 9rem);
+  }
+
+  /* Bring the featured card closer to its title on phones. */
+  #timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) .live-panel > .section-heading {
+    min-height: 2.75rem;
+    margin-bottom: 0;
+    padding-block: 0;
+  }
+
+  #timeline-view #nowPlayingGrid {
+    scrollbar-width: thin;
+  }
+
+  #timeline-view #nowPlayingGrid::-webkit-scrollbar {
+    display: block;
+    height: 0.5rem;
+  }
+
+  #timeline-view #nowPlayingGrid::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #timeline-view #nowPlayingGrid::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: var(--line-strong);
+  }
+
+  /* The lower title repeats the featured rail's "Up Next" label, so keep its
+     actions as a compact, right-aligned toolbar instead of a blank title band. */
+  #timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) #upNextDashboardSection > .up-next-section-heading {
+    min-height: 2.75rem;
+    margin-bottom: 0;
+    padding-block: 0;
+  }
+
+  #timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) #upNextDashboardSection .up-next-heading-copy {
+    justify-content: flex-end;
+    margin-left: auto;
+  }
+
+  #timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) #upNextSyncButton {
+    min-width: 2.75rem;
   }
 }
 
@@ -34260,6 +34312,13 @@ html:root #timeline-view #nowPlayingGrid .live-now-card:hover {
    card and its shadow remain inside the scrollport. */
 html:root #timeline-view #nowPlayingGrid {
   padding: 0.55rem 0.2rem 0;
+}
+
+@media (max-width: 640px) {
+  /* The phone featured rail sits directly below its compact title band. */
+  html:root #timeline-view #nowPlayingGrid {
+    padding-top: 0.2rem;
+  }
 }
 
 /* The idle-feature wrapper is a single featured card, not a scrolling rail.

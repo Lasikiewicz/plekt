@@ -147,12 +147,26 @@ test("a route waits for its own modules and is replayed once, not the whole grap
   assert.doesNotMatch(appSource, /import\("\.\/modules\//, "route modules are loaded through route-modules.js only");
 });
 
-test("the dashboard paints saved Up Next cards with a per-title check status while revalidating", () => {
-  assert.match(appSource, /loadUpNext\(\{ force: true \}\)/);
+test("the dashboard reads the server snapshot without forcing provider refresh and marks stale server cards while revalidating", () => {
+  assert.match(appSource, /scheduleDeferredStartupWork\(\(\) => loadUpNext\(\), 0\)/);
   assert.match(upNextSource, /const params = force \? "refresh=1" : "revalidate=1";/);
   assert.match(upNextSource, /const checkingCachedItems = state\.upNextFromCache\s+&& \(state\.upNextLoading \|\| \(!state\.upNextLoadedAt && !state\.upNextError\)\)/);
   assert.match(upNextSource, /checking: checkingCachedItems/);
   assert.match(fs.readFileSync(path.resolve(import.meta.dirname, "../public/modules/dashboard.js"), "utf8"), /up-next-checking-status.*Checking/);
   assert.doesNotMatch(upNextSource, /state\.upNextFromCache && \(state\.upNextLoading/);
   assert.doesNotMatch(upNextSource, /allowStale|UP_NEXT_STALE_FOLLOW_UP_MS/);
+});
+
+test("a history-paired queue version refreshes the open dashboard immediately", () => {
+  const callback = appSource.match(/onUpNextVersion: ([\s\S]*?),\s*onDiscoverVersion:/)?.[1];
+  assert.ok(callback);
+  const state = { upNextVersion: 10, activeView: "dashboard" };
+  const requests = [];
+  const handle = new Function("state", "loadUpNext", "logDebug", `return (${callback});`)(
+    state, (options) => { requests.push(options); return Promise.resolve(); }, () => {},
+  );
+  handle(11, { initial: false, pairedWithHistory: true });
+  assert.deepEqual(requests, [{ fromSse: true }]);
+  handle(11, { initial: false, pairedWithHistory: false });
+  assert.equal(requests.length, 1, "duplicate versions do not fetch twice");
 });

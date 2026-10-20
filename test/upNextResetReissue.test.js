@@ -74,3 +74,27 @@ test("a full reset (sign-out, view change) does not reissue", async () => {
   assert.equal(railRequests(calls).length, 1);
   assert.equal(state.upNextLoading, false);
 });
+
+test("dashboard entry ignores another device's old browser snapshot and always reads the server", async () => {
+  resetUpNext();
+  state.token = "token";
+  state.activeView = "dashboard";
+  localStorage.setItem("plembfin:upNextCache:v6", JSON.stringify({
+    savedAt: Date.now(), version: 1, items: [{ id: "cleared-on-phone" }],
+  }));
+  let finish;
+  let requests = 0;
+  globalThis.fetch = (url) => {
+    if (String(url).startsWith("/api/up-next?")) {
+      requests += 1;
+      if (requests === 1) return new Promise((resolve) => { finish = resolve; });
+    }
+    return Promise.resolve({ ok: true, json: async () => ({ items: [], upNextVersion: 2 }) });
+  };
+  const loading = loadUpNext();
+  assert.deepEqual(state.upNextItems, [], "old local cards must never paint");
+  finish({ ok: true, json: async () => ({ items: [], upNextVersion: 2 }) });
+  await loading;
+  await loadUpNext();
+  assert.equal(requests, 2, "a recent load must not suppress the next server read");
+});

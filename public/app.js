@@ -22,7 +22,7 @@ const lazyNoopAsync = () => Promise.resolve();
 let initOnboarding = lazyNoop, loadSetupStatus = lazyNoopAsync, renderSetupPage = lazyNoop, setClaimRequired = lazyNoop;
 let initSettingsServices = lazyNoop, applyConfigToSettingsUi = lazyNoop, refreshSeerrCapabilities = lazyNoopAsync, refreshTautulliImport = lazyNoop, renderMediaServerCards = lazyNoop, renderMetadataCards = lazyNoop, setTautulliImportModule = lazyNoop;
 let initTools = lazyNoop, loadCacheStats = lazyNoopAsync, renderCachePanel = lazyNoop, parseSelectedFiles = lazyNoop, renderImportPreview = lazyNoop, renderImportActivity = lazyNoop, startImport = lazyNoopAsync, runRepairWorkflow = lazyNoopAsync, runPhantomWatchAudit = lazyNoopAsync, runPhantomWatchRepair = lazyNoopAsync, runTraktBackfill = lazyNoopAsync, runSystemIntegrityCheck = lazyNoopAsync, triggerClearMissingTelemetry = lazyNoopAsync, triggerRetryAllCategory = lazyNoopAsync, runDuplicateWatchCleanup = lazyNoopAsync, loadWipeDataPreview = lazyNoopAsync, runWipeData = lazyNoopAsync;
-let initDashboard = lazyNoop, renderDashboard = lazyNoop, refreshDashboardHistoryInPlace = lazyNoop, updateDashboardSplitState = lazyNoop, resetPartWatchedView = lazyNoop, renderPartWatched = lazyNoop;
+let initDashboard = lazyNoop, renderDashboard = lazyNoop, refreshDashboardHistoryInPlace = lazyNoop, refreshDashboardHistoryFromLive = lazyNoopAsync, updateDashboardSplitState = lazyNoop, resetPartWatchedView = lazyNoop, renderPartWatched = lazyNoop;
 let initUpNext = lazyNoop, renderUpNext = lazyNoop, loadUpNext = lazyNoopAsync, resetUpNext = lazyNoop, removeWatchedUpNextItems = lazyNoop, removeDismissedUpNextItems = lazyNoop, setUpNextWatchSavingState = lazyNoop, setUpNextUnwatchSavingState = lazyNoop;
 let renderWatchBackups = lazyNoop, renderPlektBackups = lazyNoop, loadRemoteBackupsForRestoreTab = lazyNoopAsync, loadRemotePlektBackupsForRestoreTab = lazyNoopAsync, loadWatchBackups = lazyNoopAsync, loadPlektBackups = lazyNoopAsync;
 let renderSyncActivity = lazyNoop, renderSyncActivityStatus = renderCoreSyncActivityStatus, setSyncActivityProgress = setCoreSyncActivityProgress, setSyncAttentionSummary = setCoreSyncAttentionSummary, loadSyncAttention = lazyNoopAsync, renderSyncAttention = lazyNoop, skipSyncAttention = lazyNoopAsync, skipSyncAttentionItem = lazyNoopAsync, retrySyncAttentionItem = lazyNoopAsync, skipSyncAttentionShow = lazyNoopAsync, retrySyncAttentionShow = lazyNoopAsync, recordClientAttention = lazyNoop, clearClientAttention = lazyNoop, clearClientAttentionForRoute = lazyNoop, retryClientAttention = lazyNoopAsync, setSyncActivitySearch = lazyNoop, resetSyncActivity = lazyNoop, loadSyncActivity = lazyNoopAsync, queueSyncActivityRefresh = lazyNoop, downloadSyncActivityLog = lazyNoop, retrySyncActivity = lazyNoopAsync, dismissSyncActivity = lazyNoopAsync, dismissSyncActivityGroup = lazyNoopAsync, retrySyncActivityGroup = lazyNoopAsync, startRetryAllSyncActivity = lazyNoopAsync, resumeRetryAllSyncActivityIfRunning = lazyNoop, fetchAllRetryableSyncActivityIds = lazyNoopAsync, toggleSyncActivityRowLog = lazyNoop, setSyncActivityGroupView = lazyNoop, loadOlderSyncActivityGroup = lazyNoopAsync, toggleSyncActivityFailedOnly = lazyNoop, toggleSyncActivityPaused = lazyNoop, startSyncActivityRefresh = lazyNoop, stopSyncActivityRefresh = lazyNoop, initSyncPreview = lazyNoop;
@@ -71,9 +71,9 @@ const ROUTE_MODULE_INITIALIZERS = {
     initOnboarding({ authHeaders, navigateTo, setMessage, setUnlocked, loadHistory, loadSavedConfig, startHistoryPolling, openConfirmDialog });
   },
   dashboard(module) {
-    ({ initDashboard, renderDashboard, refreshDashboardHistoryInPlace, updateDashboardSplitState, resetPartWatchedView, renderPartWatched } = module);
+    ({ initDashboard, renderDashboard, refreshDashboardHistoryInPlace, refreshDashboardHistoryFromLive, updateDashboardSplitState, resetPartWatchedView, renderPartWatched } = module);
     initDashboard({
-      setMessage,
+      setMessage, loadHistory,
       resolveEpisodeTitleFromTmdb: viaModule("tmdb", () => resolveEpisodeTitleFromTmdb),
     });
   },
@@ -2335,9 +2335,9 @@ function applyActiveViewNow() {
     }
     renderDashboard();
     renderUpNext();
-    // Reconcile the provider-backed projection after the shell paints. The
+    // Read the shared server projection after the shell paints. The
     // dashboard shows a loading state until this authoritative snapshot arrives.
-    scheduleDeferredStartupWork(() => loadUpNext({ force: true }), 0);
+    scheduleDeferredStartupWork(() => loadUpNext(), 0);
     // The route replays once its modules load; reuse a fetch that just finished
     // rather than requesting history twice. Mutations use loadHistory({ force }).
     if (refreshHistory) {
@@ -2818,11 +2818,11 @@ function queueLiveHistoryRefresh({ immediate = false, changes = [], fullRefresh 
   // second time after the affected episode had already patched.
   if (fullRefresh) liveHistoryFullRefreshQueued = true;
   queueActiveDetailLivePatch(incomingChanges);
+  if (incomingChanges.length || fullRefresh) refreshDashboardHistoryFromLive().catch((error) => logDebug(`Live dashboard history refresh failed: ${error.message}`));
   if (!pendingLiveHistoryChanges.size && !liveHistoryFullRefreshQueued) return;
   liveHistoryRefreshQueued = true;
 
-  // While a sync job is actively writing rows in the background (force sync, cron repair, full sync,
-  // or background dispatch), do NOT reload or refresh the dashboard until the sync finishes.
+  // Broader views wait for sync; dashboard history refreshes independently.
   if (!immediate && isAnySyncRunning()) {
     return;
   }
@@ -2957,7 +2957,7 @@ async function refreshLiveHistoryView({ changes = [], detailChangesAlreadyApplie
       await loadStats({ force: true }).catch((error) => logDebug(`Background Stats refresh failed: ${error.message}`));
     }
     const upNextRefresh = state.activeView === "dashboard"
-      ? loadUpNext({ force: true }).catch((error) => {
+      ? loadUpNext({ fromSse: true }).catch((error) => {
         logDebug(`Background Up Next refresh failed: ${error.message}`);
       })
       : null;
@@ -3469,14 +3469,14 @@ function initialize() {
             queueLiveHistoryRefresh({ changes, fullRefresh: reconnect });
             if (state.activeView === "syncActivity") queueSyncActivityRefresh();
           },
-          onUpNextVersion: (version, { initial = false, pairedWithHistory = false } = {}) => {
+          onUpNextVersion: (version, { initial = false } = {}) => {
             const normalized = Number(version);
             if (!Number.isFinite(normalized)) return;
             const previous = Number(state.upNextVersion || 0);
             state.upNextVersion = normalized;
             // The deferred dashboard load handles the first snapshot. Only a
-            // later, standalone version change needs another request.
-            if (!initial && previous !== normalized && !pairedWithHistory && state.activeView === "dashboard") {
+            // later queue change refreshes even when paired with history.
+            if (!initial && previous !== normalized && state.activeView === "dashboard") {
               loadUpNext({ fromSse: true }).catch((error) => logDebug(`Live Up Next refresh failed: ${error.message}`));
             }
           },

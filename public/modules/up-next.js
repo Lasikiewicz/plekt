@@ -11,13 +11,10 @@ import {
 export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.1.1.0.3";
 import { renderMediaCard } from "./media-card.js?v=2.1.1.0.3";
 
-const UP_NEXT_TTL_MS = 2 * 60 * 1000;
 const UP_NEXT_TIMEOUT_MS = 20000;
 const UP_NEXT_DISMISSED_KEY = "plembfin:upNextDismissed:v1";
 // v6 invalidates snapshots created before canonical episode identity and
 // scheduled Part Watched artwork repair were applied.
-const UP_NEXT_CACHE_KEY = "plembfin:upNextCache:v6";
-const UP_NEXT_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const UP_NEXT_SYNC_TIMEOUT_MS = 60_000;
 const UP_NEXT_PROVIDERS = new Set(["plex", "emby", "jellyfin"]);
 const UP_NEXT_CONNECTION_HELP_URL = "https://plekt.net/docs/troubleshooting/#media-server-connection-failures";
@@ -29,7 +26,6 @@ const UP_NEXT_EXIT_MS = 200;
 
 let _cb = {};
 let actionsBound = false;
-let cacheHydrated = false;
 let dismissedUpNext = readDismissedUpNext();
 let upNextExitDeferred = false;
 let upNextExitRepaintTimer = null;
@@ -313,7 +309,6 @@ export function removeUpNextItem(itemId, details = {}, { showScope = false, seas
   if (!removedItems.length) state.upNextExitIds = [id || mediaKey].filter(Boolean);
   for (const item of [removedItem, ...removedItems]) clearUpNextRemovalPending(item);
   state.upNextItems = state.upNextItems.filter((item) => !matchesRemoval(item));
-  persistUpNextCache(visibleUpNextItems());
   renderUpNext();
   return { item: removedItem, items: removedItems.length ? removedItems : [removedItem], index: Math.max(0, removedIndex) };
 }
@@ -339,7 +334,6 @@ export function restoreUpNextItem(removal = {}) {
     ...state.upNextItems.slice(index),
   ];
   state.upNextExitIds = [];
-  persistUpNextCache(visibleUpNextItems());
   renderUpNext();
 }
 
@@ -577,7 +571,6 @@ export function removeWatchedUpNextItems(action = {}) {
     .map((item) => String(item?.id || item?.media_key || "").trim())
     .filter(Boolean);
   state.upNextItems = state.upNextItems.filter((item) => !isUpNextWatchedRemovalPending(item));
-  persistUpNextCache(visibleUpNextItems());
   renderUpNext();
   return removedItems.length;
 }
@@ -1005,61 +998,6 @@ export async function retryUpNextConnection(provider) {
   }
 }
 
-function readUpNextCache() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(UP_NEXT_CACHE_KEY) || "null");
-    if (!stored || !Array.isArray(stored.items)) return null;
-    const savedAt = Number(stored.savedAt || 0);
-    if (!savedAt || Date.now() - savedAt > UP_NEXT_CACHE_TTL_MS) return null;
-    return {
-      savedAt,
-      version: Number(stored.version || 0),
-      items: stored.items.slice(0, 100),
-      sourceVersion: String(stored.sourceVersion || ""),
-      sourceStatus: Array.isArray(stored.sourceStatus) ? stored.sourceStatus : [],
-    };
-  } catch {
-    return null;
-  }
-}
-
-function persistUpNextCache(items = state.upNextItems, {
-  savedAt = Date.now(),
-  version = state.upNextVersion,
-  sourceVersion = state.upNextSourceVersion,
-  sourceStatus = state.upNextSourceStatus,
-} = {}) {
-  try {
-    localStorage.setItem(UP_NEXT_CACHE_KEY, JSON.stringify({
-      savedAt,
-      version,
-      items: (Array.isArray(items) ? items : []).slice(0, 100),
-      sourceVersion,
-      sourceStatus: Array.isArray(sourceStatus) ? sourceStatus : [],
-    }));
-  } catch {
-    // A full/private browser storage area should not make the dashboard fail.
-  }
-}
-
-function hydrateUpNextCache() {
-  if (cacheHydrated || state.upNextItems.length) return;
-  cacheHydrated = true;
-  const cachedItems = readUpNextCache();
-  if (!cachedItems) return;
-  if (Number.isFinite(cachedItems.version) && cachedItems.version > 0) {
-    state.upNextVersion = cachedItems.version;
-  }
-  state.upNextSourceVersion = cachedItems.sourceVersion || "";
-  state.upNextSourceStatus = cachedItems.sourceStatus || [];
-  if (!cachedItems.items.length) return;
-  // Leave loadedAt at zero so the network still reconciles the cache; the
-  // cached cards simply get a head start while that request is in flight.
-  state.upNextItems = cachedItems.items;
-  state.upNextLoadedAt = 0;
-  state.upNextFromCache = true;
-}
-
 function upNextItemKey(item) {
   return String(item?.id || item?.media_key || item?.mediaKey || "").trim();
 }
@@ -1266,7 +1204,6 @@ export async function syncUpNextToProviders() {
 
 export function initUpNext(callbacks = {}) {
   _cb = callbacks;
-  hydrateUpNextCache();
   if (actionsBound) return;
   actionsBound = true;
   elements.upNextPanel?.addEventListener("click", (event) => {
@@ -1315,7 +1252,6 @@ export function resetUpNext({ preserveItems = false } = {}) {
     state.upNextSourceVersion = "";
     state.upNextSourceStatus = [];
     state.upNextFromCache = false;
-    cacheHydrated = false;
   }
   state.upNextLoading = false;
   state.upNextSyncing = false;
@@ -1356,7 +1292,6 @@ export function renderUpNext({ exitIds = [] } = {}) {
   renderUpNextControls();
   if (!panel) return;
 
-  hydrateUpNextCache();
   renderUpNextSourceStatus();
 
   panel.classList.add("dashboard-history-card-row");
@@ -1431,11 +1366,6 @@ export async function loadUpNext({ force = false, fromSse = false } = {}) {
     if (force) state.upNextForceRefreshQueued = true;
     return;
   }
-  hydrateUpNextCache();
-  if (!force && !fromSse && state.upNextLoadedAt && Date.now() - state.upNextLoadedAt < UP_NEXT_TTL_MS) {
-    renderUpNext();
-    return;
-  }
 
   const requestVersion = state.upNextRequestVersion + 1;
   state.upNextRequestVersion = requestVersion;
@@ -1448,10 +1378,8 @@ export async function loadUpNext({ force = false, fromSse = false } = {}) {
   const timeout = setTimeout(() => controller.abort(), UP_NEXT_TIMEOUT_MS);
 
   try {
-    // First dashboard entry must reconcile against provider and watch state
-    // before painting the cached rail. This also runs when no browser was open:
-    // the server maintains its own projection in the background, and this
-    // request confirms it before any browser-side copy is shown.
+    // Read the shared server snapshot on every dashboard entry. Browser storage
+    // cannot know about progress cleared on another device.
     const params = force ? "refresh=1" : "revalidate=1";
     const response = await fetch(`/api/up-next?${params}`, {
       headers: buildAuthHeaders(state.token),
@@ -1482,12 +1410,6 @@ export async function loadUpNext({ force = false, fromSse = false } = {}) {
     state.upNextSourceStatus = Array.isArray(body.sourceStatus) ? body.sourceStatus : [];
     state.upNextFromCache = body.cacheStale === true;
     state.upNextLoadedAt = state.upNextFromCache ? 0 : Date.now();
-    persistUpNextCache(visibleUpNextItems(), {
-      savedAt: state.upNextFromCache ? Number(body.builtAt || 0) || Date.now() : Date.now(),
-      version: state.upNextVersion,
-      sourceVersion: state.upNextSourceVersion,
-      sourceStatus: state.upNextSourceStatus,
-    });
     if (await migrateLocalDismissals()) {
       await loadDismissedUpNext();
       Promise.resolve().then(() => loadUpNext({ force: true })).catch(() => { });

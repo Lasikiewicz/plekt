@@ -10,6 +10,29 @@ import "./page-card-open.js?v=2.1.1.0.3";
 // now the only style: compact rows, collapsed TV runs, the featured Up Next cards
 // and backdrop artwork.
 
+// Refresh the small Recently Watched preview independently of provider sync
+// and detail-page modules, retaining painted rows until current data arrives.
+export function createDashboardHistoryLiveRefresh(loadHistory, renderHistory) {
+  let active = null;
+  let queued = false;
+  return function refresh() {
+    if (!state.token || state.activeView !== "dashboard") return Promise.resolve();
+    queued = true;
+    if (active) return active;
+    active = Promise.resolve().then(async () => {
+      do {
+        queued = false;
+        // An earlier initial load may predate the event. Fetch again after it.
+        await state.historyLoadPromise?.catch(() => {});
+        if (!state.token || state.activeView !== "dashboard") break;
+        await loadHistory({ force: true, silent: true });
+        if (state.activeView === "dashboard") renderHistory();
+      } while (queued);
+    }).finally(() => { active = null; });
+    return active;
+  };
+}
+
 // --- Compact rows --------------------------------------------------------
 // The toggle beside each "Recently watched" title folds every card in that
 // row into its poster (the details slide closed behind it). Clicking a

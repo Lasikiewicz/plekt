@@ -181,6 +181,15 @@ function buildAndStore(build) {
   return buildInFlight;
 }
 
+// Complete an explicit queue mutation before acknowledging it to another device.
+// Provider feed refreshes remain background work; this projects canonical state.
+export async function refreshUpNextAfterMutation(mediaConfig, reason) {
+  const { invalidateHistoryDerivedCaches } = await import("./dataRepo.js");
+  const { buildUpNextProjection } = await import("./upNextService.js");
+  await invalidateHistoryDerivedCaches(reason);
+  return buildAndStore(() => buildUpNextProjection({ mediaConfig }));
+}
+
 function publicSnapshot(cache, stale = false, sourceStatus = cache.sourceStatus) {
   return {
     items: cache.items,

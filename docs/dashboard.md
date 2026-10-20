@@ -4,11 +4,20 @@ The home view (`/`): Now Playing, one mixed Up Next rail, and Watch History with
 TV-show and movie rows. Part Watched ("continue watching") belongs in Up Next; the recent
 history rows contain completed watches only.
 
+Recently Watched refreshes its small history preview on live history events, independently
+of provider sync and detail-page modules. Concurrent events coalesce into one active request
+with a follow-up when needed; existing rows stay visible until the fresh preview arrives.
+Marking episodes watched also explicitly refreshes the acting browser's history preview
+after success, alongside Up Next, without depending on a live event reaching that window.
+
 At desktop widths, the four sections split the available height evenly and use matching
 title bands. The three lower rails show a scrollbar when their content overflows; Up Next
 can use the slider space for cards when its content fits. Now Playing has no scrollbar and
 its cards use the space below the title. At mobile widths, the dashboard returns to
-vertically scrolling sections.
+vertically scrolling sections. The featured Up Next cards at the top stay horizontally
+scrollable with a visible scrollbar, a taller near-full-width card, and a larger poster
+on phones for easier scanning. The duplicate lower title collapses into a compact
+toolbar for queue actions.
 
 ## Files
 
@@ -105,13 +114,20 @@ the browser as a visible failure:
   normal poster resolution (`/api/poster`, then cached artwork). Cached `/media/...`, `/api/...`
   and absolute `http(s)` URLs are kept as they are.
 
-The browser hydrates the rail from the 24-hour `plembfin:upNextCache:v6` localStorage
-snapshot before requesting the network. The server also keeps the completed mixed snapshot
+The browser reads the shared server snapshot on every dashboard entry, without painting a
+browser-local snapshot or skipping the request for two minutes. Clear progress and Remove
+from Up Next invalidate and rebuild that snapshot before returning success, so another device
+can read the completed result without doing the rebuild itself. Provider feed refreshes remain
+separate. The server keeps the completed mixed snapshot
 in `data/up-next-cache.json`, so a restart can serve warm data immediately. Dashboard loads
 request `/api/up-next?revalidate=1`: a stale snapshot is returned while one background
-rebuild runs, and a changed projection advances the `up_next` cache generation. The
+rebuild runs for provider-only staleness; changed canonical watch/progress state waits for a
+current projection. A changed projection advances the `up_next` cache generation. The
 `/api/live-updates` stream announces that generation with `up-next-version`; history-version
-events also refresh Up Next after watched/progress changes. When the page becomes visible, regains
+events also refresh Up Next after watched/progress changes. Visible windows in the same browser
+share one stream and forward its events through BroadcastChannel, so queue removals update all
+open dashboards. Queue-version changes refresh even when paired with history changes.
+When the page becomes visible, regains
 focus, returns from the back/forward cache, or comes back online, the active history-derived view
 revalidates even if its shared version did not change; the dashboard also refreshes Up Next.
 Existing cards remain painted while a refresh is in flight, then the refreshed snapshot is

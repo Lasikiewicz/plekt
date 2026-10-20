@@ -332,19 +332,22 @@ stays set to the slug throughout, so the address bar keeps the `/tvshow/:key` fo
   by a month as the user scrolls toward either end; server-side month results persist
   locally across restarts, while search can prefetch the next 12 months to list matches
   outside the visible range - see [upcoming.md](upcoming.md).
-- Up Next loads through `/api/up-next` only while the dashboard is visible, hydrates a
-24-hour `plembfin:upNextCache:v6` localStorage snapshot for instant first paint, and
+- Up Next loads through `/api/up-next` on every dashboard entry without a browser-local
+  first-paint snapshot or a client freshness window, and
   uses a durable mixed movie/episode server snapshot with stale-while-revalidate. Resume
   cards are ordered by canonical progress updates and released provider/local `next_up`
   cards follow a stable order; a matching resume/next-up observation renders once. A
   changed Up Next snapshot announces its generation on `/api/live-updates`, and feed
+  events are forwarded to other visible windows through BroadcastChannel while one tab owns
+  the stream lock (browsers without forwarding support use separate streams). Queue-version
+  changes refresh the dashboard even when included in a history event. Feed
   failures/partial refreshes expose source status while retaining the last good rows.
   Watch-state history events refresh the rail after the authoritative history snapshot
-  arrives. Only the dashboard's first paint of a page load sends `allowStale=1`, which may
-  return a snapshot built before the latest watch history. The server always queues a
-  rebuild in that case (bypassing its 10-minute provider-feed throttle), and the client asks
-  once more about 2.5 s later without `allowStale`, so a stale first paint is always replaced
-  by the authoritative rail. Discover loads cached TMDB feeds and a bounded rolling-12-month watch-history recommendation rail
+  arrives. Clear progress and Remove from Up Next rebuild the shared snapshot before
+  returning success. Dashboard requests wait for current canonical state when invalidated.
+  Recently Watched separately refreshes the small history preview on live history events,
+  without waiting for provider sync or loading detail-page patching modules.
+  Provider-only staleness can revalidate in the background. Discover loads cached TMDB feeds and a bounded rolling-12-month watch-history recommendation rail
   through `/api/discover` with type/genre filters and a longer TTL, hydrates the selected rail
   set from a bounded localStorage cache for the first paint, then reconciles it with the server
   cache. Watched titles are removed from every rail using provider identity and title fallback.
@@ -679,7 +682,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Sync status, sync history, now-playing polling | `modules/sync.js`, `modules/sync-preview.js` |
 | Sync Activity page (`/sync-activity`), including its route-scoped action/event handlers | `modules/sync-activity.js` |
 | Dashboard rendering | `modules/dashboard.js` |
-| Dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout, the page backdrop) and the compact Recently watched rows | `modules/dashboard-modern.js` |
+| Dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout, the page backdrop), compact Recently watched rows and coalesced live history preview refresh | `modules/dashboard-modern.js` |
 | Backdrop artwork behind cards on every page (Card Art) | `modules/card-art.js` |
 | Posters only on the library and media pages: a clicked poster opens its card in place | `modules/page-card-open.js` |
 | History, Posters only: episode, date and app overlaid on each poster | `modules/history-poster-overlay.js` |

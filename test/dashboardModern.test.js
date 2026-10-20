@@ -6,7 +6,50 @@ globalThis.history ??= { state: null, pushState() {}, replaceState() {} };
 globalThis.window ??= { addEventListener() {}, location: { origin: "http://localhost:5055", pathname: "/" } };
 globalThis.document = { addEventListener() {}, querySelector: () => null };
 
-const { bindDashboardRuns, dashboardTvRowUnits, isDashboardRowCompact, sessionMatchesCardArt, setDashboardRowCompact, setDashboardRunExpanded } = await import("../public/modules/dashboard-modern.js");
+const { bindDashboardRuns, dashboardTvRowUnits, isDashboardRowCompact, sessionMatchesCardArt, setDashboardRowCompact, setDashboardRunExpanded, createDashboardHistoryLiveRefresh } = await import("../public/modules/dashboard-modern.js");
+const { state } = await import("../public/modules/state.js");
+
+test("Recently Watched refreshes during provider sync and coalesces overlapping live events", async () => {
+  state.token = "token";
+  state.activeView = "dashboard";
+  state.syncProgressActive = true;
+  let finish;
+  let loads = 0;
+  let renders = 0;
+  const refresh = createDashboardHistoryLiveRefresh(async (options) => {
+    assert.deepEqual(options, { force: true, silent: true });
+    loads += 1;
+    if (loads === 1) await new Promise((resolve) => { finish = resolve; });
+    state.history = [{ id: `watch-${loads}` }];
+  }, () => { renders += 1; });
+  const loading = refresh();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(loads, 1, "provider sync must not hold back the preview");
+  assert.equal(refresh(), loading);
+  assert.equal(refresh(), loading);
+  finish();
+  await loading;
+  assert.equal(loads, 2, "events during a request trigger one fresh follow-up");
+  assert.equal(renders, 2);
+  assert.equal(state.history[0].id, "watch-2");
+});
+
+test("a live history event waits out an older initial request then reads fresh data", async () => {
+  state.token = "token";
+  state.activeView = "dashboard";
+  let finishInitial;
+  state.historyLoadPromise = new Promise((resolve) => { finishInitial = resolve; });
+  let loads = 0;
+  const refresh = createDashboardHistoryLiveRefresh(async () => { loads += 1; }, () => {});
+  const loading = refresh();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(loads, 0);
+  finishInitial();
+  await loading;
+  assert.equal(loads, 1);
+  state.historyLoadPromise = null;
+  state.syncProgressActive = false;
+});
 const { renderDashboardUpNextCard } = await import("../public/modules/dashboard.js");
 
 const episode = (id, show, season, number) => ({ id, media_type: "episode", show_tmdb_id: show, show_title: `Show ${show}`, season, episode: number });

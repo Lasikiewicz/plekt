@@ -321,6 +321,7 @@ test("watch-date selection renders the active show as Saving before sync resolve
   const savingPatchCalls = [];
   const episodePatchCalls = [];
   const upNextSavingCalls = [];
+  const historyRefreshCalls = [];
   let controlSyncCalls = 0;
   const overlays = [{ remove: () => { removed += 1; } }];
   const action = {
@@ -360,6 +361,7 @@ test("watch-date selection renders the active show as Saving before sync resolve
       return true;
     },
     setUpNextWatchSavingState: (currentAction, saving) => upNextSavingCalls.push({ currentAction, saving }),
+    loadHistory: async (options) => { historyRefreshCalls.push(options); },
   });
   state.activeShowModalKey = "the-office";
   state.activeShowModalSeason = 4;
@@ -388,6 +390,7 @@ test("watch-date selection renders the active show as Saving before sync resolve
     await update;
     assert.equal(state.savingWatchActions.size, 0);
     assert.equal(episodePatchCalls.length, 1, "the saved episode should be patched through the live-row path");
+    assert.deepEqual(historyRefreshCalls, [{ force: true }], "the acting browser refreshes Recently Watched even without an SSE event");
     assert.ok(controlSyncCalls >= 2, "the action controls should be synced before and after the save without a modal render");
   } finally {
     document.querySelectorAll = previousQuerySelectorAll;

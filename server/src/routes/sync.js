@@ -2519,6 +2519,7 @@ export async function handlePlaybackProgressUnwatch(req, res) {
     // the other providers can retain the item in Continue Watching/Resume
     // until their separate rail-dismissal action is applied.
     const providerDismissals = await hideUpNextAcrossProviders(config, media, body, { lane: "interactive" });
+    await import("../utils/upNextCache.js").then(({ refreshUpNextAfterMutation }) => refreshUpNextAfterMutation(config, "handlePlaybackProgressUnwatch"));
     return sendJson(res, {
       ok: true,
       id: unwatchedId,
@@ -2531,8 +2532,6 @@ export async function handlePlaybackProgressUnwatch(req, res) {
   } catch (error) {
     console.error("Playback progress unwatch failed", error);
     return sendJson(res, { error: "Playback progress unwatch failed" }, 500);
-  } finally {
-    await invalidateHistoryDerivedCaches("handlePlaybackProgressUnwatch").catch(() => null);
   }
 }
 
@@ -2609,7 +2608,7 @@ export async function handleUpNextRemove(req, res) {
     // earlier lets that echo look like a genuinely newer playback event and
     // briefly resurrect the card during the next projection.
     recordUpNextDismissal({ ...body, media_key: mediaKey || body.media_key });
-
+    await import("../utils/upNextCache.js").then(({ refreshUpNextAfterMutation }) => refreshUpNextAfterMutation(config, "handleUpNextRemove"));
     return sendJson(res, {
       ok: true,
       id: unwatchedId,
@@ -2622,8 +2621,6 @@ export async function handleUpNextRemove(req, res) {
   } catch (error) {
     console.error("Up Next clear failed", error);
     return sendJson(res, { error: "Up Next clear failed" }, 500);
-  } finally {
-    await invalidateHistoryDerivedCaches("handleUpNextRemove").catch(() => null);
   }
 }
 

@@ -1577,7 +1577,7 @@ export async function applyWatchDateChoice(choice) {
     });
     state.savingWatchActions.delete(action);
     _removeWatchedUpNextItems(action);
-    await refreshUpNextAfterWatchSync();
+    await Promise.all([refreshUpNextAfterWatchSync(), _loadHistory({ force: true }).catch(() => null)]);
     const watchedRows = watchedEntries.map(({ episode, watchedAt }, index) => (
       localWatchRowFromEpisode(episode, watchedAt, resultForInputIndex(result, index)?.id || "")
     ));

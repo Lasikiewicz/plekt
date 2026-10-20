@@ -6,6 +6,12 @@
     "website": "Exact website/deployment references deferred to the separately authorized website release; this guard still rejects new old-name lines here."
   },
   "files": {
+    "test/upNextResetReissue.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        ["localStorage.setItem(\"plembfin:upNextCache:v6\", JSON.stringify({", 1]
+      ]
+    },
     "test/analyticsConfig.test.js": {
       "reason": "compatibility",
       "lines": [
