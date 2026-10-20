@@ -32731,8 +32731,9 @@ body #statsTopbarControls .stats-filter-field .field {
     grid-column: 1 / -1;
   }
 
-  /* Playlists on phones: an opened poster opens across the rail, poster on
+  /* Playlists and Discover on phones: an opened poster opens across the rail, poster on
      the left and details beside it, instead of the narrow poster-first stack. */
+  .page-shell[data-active-view="discover"] .page-card-mode-compact .discover-feed-row > .shared-media-card--discover.page-card-open,
   .page-shell[data-active-view="playlists"] .page-card-mode-compact .personal-media-list-row > .shared-media-card--personal.page-card-open {
     flex-direction: row;
     width: min(92vw, 24rem);
@@ -32740,6 +32741,15 @@ body #statsTopbarControls .stats-filter-field .field {
   }
 
   /* The poster keeps the folded poster's size (9.707rem wide at 2:3). */
+  .page-shell[data-active-view="discover"] .page-card-mode-compact .discover-feed-row > .shared-media-card--discover.page-card-open .shared-media-card-poster-wrap {
+    width: 10.041rem;
+    height: auto;
+    flex: 0 0 10.041rem;
+    align-self: flex-start;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--poster-radius) 0 0 var(--poster-radius);
+  }
+
   .page-shell[data-active-view="playlists"] .page-card-mode-compact .personal-media-list-row > .shared-media-card--personal.page-card-open .shared-media-card-poster-wrap {
     width: 9.707rem;
     height: auto;
@@ -32749,11 +32759,59 @@ body #statsTopbarControls .stats-filter-field .field {
     border-radius: var(--poster-radius) 0 0 var(--poster-radius);
   }
 
+  .page-shell[data-active-view="discover"] .page-card-mode-compact .discover-feed-row > .shared-media-card--discover.page-card-open .shared-media-card-poster,
   .page-shell[data-active-view="playlists"] .page-card-mode-compact .personal-media-list-row > .shared-media-card--personal.page-card-open .shared-media-card-poster {
     border-radius: var(--poster-radius) 0 0 var(--poster-radius);
   }
 
+  .page-shell[data-active-view="discover"] .page-card-mode-compact .discover-feed-row > .shared-media-card--discover.page-card-open .shared-media-card-body,
   .page-shell[data-active-view="playlists"] .page-card-mode-compact .personal-media-list-row > .shared-media-card--personal.page-card-open .shared-media-card-body {
+    width: auto;
+    min-width: 0;
+  }
+
+  /* Watchlist on phones: the grid already gives an opened poster the full
+     width; inside it, the poster sits on the left with details beside it. */
+  .page-shell:is([data-active-view="watchlist"], [data-active-view="ratings"]) .page-card-mode-compact .personal-media-card-grid > .shared-media-card--personal.page-card-open {
+    flex-direction: row;
+    width: 100%;
+  }
+
+  .page-shell:is([data-active-view="watchlist"], [data-active-view="ratings"]) .page-card-mode-compact .personal-media-card-grid > .shared-media-card--personal.page-card-open .shared-media-card-poster-wrap {
+    box-sizing: border-box;
+    width: var(--page-card-open-poster-width, 10.125rem);
+    height: auto;
+    flex: 0 0 var(--page-card-open-poster-width, 10.125rem);
+    align-self: flex-start;
+    aspect-ratio: 2 / 3;
+    border-radius: var(--poster-radius) 0 0 var(--poster-radius);
+  }
+
+  .page-shell:is([data-active-view="watchlist"], [data-active-view="ratings"]) .page-card-mode-compact .personal-media-card-grid > .shared-media-card--personal.page-card-open .shared-media-card-poster {
+    border-radius: var(--poster-radius) 0 0 var(--poster-radius);
+  }
+
+  .page-shell:is([data-active-view="watchlist"], [data-active-view="ratings"]) .page-card-mode-compact .personal-media-card-grid > .shared-media-card--personal.page-card-open .shared-media-card-body {
+    width: auto;
+    min-width: 0;
+  }
+
+  /* Watch history on phones: an opened card keeps the poster on the left and
+     details beside it. The open card is 15rem tall, so its poster is 10rem wide at 2:3. */
+  .page-shell[data-active-view="history"] [data-view-panel="history"].page-card-mode-compact .history-list > .history-page-card.page-card-open {
+    flex-direction: row;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .page-shell[data-active-view="history"] [data-view-panel="history"].page-card-mode-compact .history-list > .history-page-card.page-card-open > .history-card-poster-wrapper {
+    width: var(--page-card-open-poster-width, 10rem);
+    height: var(--page-card-open-poster-height, 15rem);
+    flex: 0 0 var(--page-card-open-poster-width, 10rem);
+    border-radius: var(--poster-radius) 0 0 var(--poster-radius);
+  }
+
+  .page-shell[data-active-view="history"] [data-view-panel="history"].page-card-mode-compact .history-list > .history-page-card.page-card-open > .history-card-details {
     width: auto;
     min-width: 0;
   }
@@ -33448,6 +33506,10 @@ html:root #nowPlayingGrid .live-now-card .now-card-progress-bar {
   }
 
   /* Bring the featured card closer to its title on phones. */
+  #timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) .live-panel {
+    padding-top: 0;
+  }
+
   #timeline-view:not(:has(#nowPlayingGrid > [data-now-playing-card-id])):has(.modern-idle-feature) .live-panel > .section-heading {
     min-height: 2.75rem;
     margin-bottom: 0;

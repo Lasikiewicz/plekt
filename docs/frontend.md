@@ -177,7 +177,9 @@ Rules that keep this correct:
   table view, its caption under its poster in History's grid view, and its full width in the
   Discover and Playlists rails. In the Movies and TV Shows poster grid, an open card keeps the
   clicked tile's poster dimensions while its details expand; on phones it spans the grid row
-  with the details beside the poster.
+  with the details beside the poster. On phones, an open Watchlist, Ratings or Watch history
+  card keeps the folded poster's measured size too (`--page-card-open-poster-width` and
+  `--page-card-open-poster-height`, set by `fitOpenItem` in `page-card-open.js`).
 - On History, `modules/history-poster-overlay.js` (imported by `explorer.js`) adds an overlay
   to every poster in all three views: episode name (TV only), watched date, and app badge.
   `styles.css` hides it except on folded posters with Posters only on, where it sits along

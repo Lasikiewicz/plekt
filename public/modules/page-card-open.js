@@ -8,6 +8,7 @@
 // only is switched off. CSS (.page-card-open in styles.css) shows it as it
 // looks with Posters only off: wider in a grid, a full-width row in a list.
 
+const POSTER_FRAME_SELECTOR = ".history-card-poster-wrapper, .shared-media-card-poster-wrap";
 const OPEN_CLASS = "page-card-open";
 const FULL_CLASS = "page-card-open-full";
 const PANEL_SELECTOR = '[data-view-panel="explorer"], [data-view-panel="discover"], [data-view-panel="personal-media"], [data-view-panel="history"]';
@@ -71,21 +72,20 @@ function closeOpenItems() {
 function fitOpenItem(item) {
   const grid = item.parentElement;
   const style = grid ? getComputedStyle(grid) : null;
-  if (!style || !style.display.includes("grid")) return;
-  const poster = [...grid.children].find((child) => child !== item && child.matches(ITEM_SELECTOR) && child.offsetWidth);
+  const poster = [...(grid?.children || [])].find((child) => child !== item && child.matches(ITEM_SELECTOR) && child.offsetWidth);
   const referenceItem = poster || item;
-  const posterFrame = referenceItem.querySelector?.(".history-card-poster-wrapper") || referenceItem;
+  const posterFrame = referenceItem.querySelector?.(POSTER_FRAME_SELECTOR) || referenceItem;
   const posterWidth = posterFrame.offsetWidth || referenceItem.offsetWidth;
   const posterHeight = posterFrame.offsetHeight || referenceItem.offsetHeight || Math.round(posterWidth * 1.5);
-  if (!posterWidth) return;
+  if (posterWidth) {
+    item.style?.setProperty("--page-card-open-poster-width", `${posterWidth}px`);
+    item.style?.setProperty("--page-card-open-poster-height", `${posterHeight}px`);
+  }
+  if (!style || !style.display.includes("grid")) return;
   const gap = parseFloat(style.columnGap) || 0;
   const width = grid.clientWidth - (parseFloat(style.paddingLeft) || 0) - (parseFloat(style.paddingRight) || 0);
   const columns = Math.floor((width + gap) / (referenceItem.offsetWidth + gap));
   item.classList.toggle(FULL_CLASS, columns < 3);
-  if (item.matches?.(".explorer-history-card")) {
-    item.style?.setProperty("--page-card-open-poster-width", `${posterWidth}px`);
-    item.style?.setProperty("--page-card-open-poster-height", `${posterHeight}px`);
-  }
 }
 
 // In a sideways-scrolling rail (Discover, Playlists) the opened card is wider
