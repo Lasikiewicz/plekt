@@ -1,5 +1,5 @@
-import { getWebhookToken } from "./auth.js?v=2.1.1.0.5";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.1.1.0.5";
+import { getWebhookToken } from "./auth.js?v=2.1.1.0.6";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.1.1.0.6";
 
 function snippet(code, language = "text") {
   const trimmed = String(code).trim();

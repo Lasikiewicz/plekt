@@ -1,14 +1,14 @@
 {
-  "version": "2.1.1.0.5",
-  "build": 5,
+  "version": "2.1.1.0.6",
+  "build": 6,
   "resetCommit": "b132b470337687d02a21c6ec71c886debc493df7",
-  "updatedAt": "2026-10-20T10:51:58.297Z",
+  "updatedAt": "2026-10-20T18:03:12.836Z",
   "entries": [
     {
-      "build": 5,
-      "date": "2026-10-20T10:51:58.297Z",
-      "commit": "ef559d7020419c2f0010adb91971593abe0b087f",
-      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, and match opened poster width to the folded poster on phones.",
+      "build": 6,
+      "date": "2026-10-20T18:03:12.836Z",
+      "commit": "7b5513105e8ca4e3ac3ffcbb34386957387dffdd",
+      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, match opened poster width to the folded poster on phones, and polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues.",
       "author": "Lasikiewicz",
       "details": [
         "Keep desktop navigation and library controls visible without empty action space.",
@@ -24,12 +24,23 @@
         "Phone featured Up Next cards are taller and wider with larger posters, and their scrollbar stays visible.",
         "The duplicate Up Next title on phones becomes a compact toolbar for queue actions.",
         "Opened posters on Watchlist and Ratings keep the folded poster's width on phones instead of shrinking by about 10px, and opened Watch history cards keep the folded poster's size too.",
-        "Discover and Playlists phone rows and the timeline live panel get the related phone layout tweaks in the same stylesheet."
+        "Discover and Playlists phone rows and the timeline live panel get the related phone layout tweaks in the same stylesheet.",
+        "Playing sessions on the dashboard show a \"Now playing\" corner tab in the top right of the card; paused sessions keep the plain \"Paused\" label.",
+        "Opening Info from a scrolled media page keeps the panel header on screen, and opening it from the Options menu closes that menu.",
+        "The Jellyfin setup guide has an Official Plekt Jellyfin Plugin box (recommended) and a Jellyfin Webhooks box, collapsed by default except the plugin box; the repository name and manifest URL copy from their own code blocks.",
+        "README, the Jellyfin docs and onboarding lead with the Plekt Jellyfin plugin, with the Webhook plugin as an alternative; onboarding's webhook step uses the same guide.",
+        "Media server cards in the setup wizard show the server's logo next to its name.",
+        "The setup wizard's backup step groups local encrypted backups and remote backups into collapsible boxes, with Backblaze B2 inside Remote backups.",
+        "Setup cards and nested boxes follow the Settings colours in both themes; Plex and metadata setup copy is tidied and import notes are centred.",
+        "Up Next no longer re-runs just because a queue push bumped the data version; it re-runs only when the rebuilt queue differs.",
+        "Jellyfin webhook user IDs that contain dashes now match the stored IDs, so their watch events are recognised.",
+        "Webhook rate limit raised to 300 per minute, so media server bursts are less likely to be rejected."
       ],
       "messageFragments": [
         "Fix - Restore library loading and navigation behavior",
         "Fix - Keep dashboard live across browsers and polish mobile Up Next",
-        "Fix - Match opened poster width to the folded poster on phones"
+        "Fix - Match opened poster width to the folded poster on phones",
+        "Feature - Polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues"
       ]
     }
   ]
