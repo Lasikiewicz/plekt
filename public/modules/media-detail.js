@@ -1,27 +1,27 @@
-import { state, elements } from "./state.js?v=2.1.1.0.3";
-import { slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, showName, showTitleFrom } from "./utils.js?v=2.1.1.0.3";
-import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.3";
-import { isWatchedHistoryAction } from "./sync.js?v=2.1.1.0.3";
+import { state, elements } from "./state.js?v=2.1.1.0.4";
+import { slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, showName, showTitleFrom } from "./utils.js?v=2.1.1.0.4";
+import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.4";
+import { isWatchedHistoryAction } from "./sync.js?v=2.1.1.0.4";
 import {
   initMediaDetail, authHeaders, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions,
   prepareInlineMediaDetail, syncMediaActionsMenuState, syncTopbarControlsMenuState,
   openDebugModal, closeDebugModal, clearMediaDetailState, closeMediaDetail,
   openMediaInfoModal, closeMediaInfoModal,
   bumpMediaRenderToken, currentMediaRenderToken,
-} from "./media-detail-context.js?v=2.1.1.0.3";
+} from "./media-detail-context.js?v=2.1.1.0.4";
 import {
   openShowImmersiveModalByTitle, openShowImmersiveModalByTmdbId, openShowImmersiveModalByTvdbId, openShowInlineDetail,
   renderImmersiveShowModal, renderShowModalContent, ensureAllShowEpisodeDetailsForWatch, patchShowModalEpisodeFromLive, patchShowModalEpisodesSavingState, syncShowModalWatchActionControls, scrollSeasonAccordionIntoView,
-} from "./media-detail-show.js?v=2.1.1.0.3";
+} from "./media-detail-show.js?v=2.1.1.0.4";
 import {
   renderMovieImmersiveModalContent, openMovieImmersiveModalByTmdbId, patchMovieWatchedState, syncMovieWatchActionControls,
-} from "./media-detail-movie.js?v=2.1.1.0.3";
-import { fetchSeerrMediaStatus, refreshActiveMediaDetailAfterSeerrStatus } from "./media-detail-shared.js?v=2.1.1.0.3";
-import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.1.1.0.3";
+} from "./media-detail-movie.js?v=2.1.1.0.4";
+import { fetchSeerrMediaStatus, refreshActiveMediaDetailAfterSeerrStatus } from "./media-detail-shared.js?v=2.1.1.0.4";
+import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.1.1.0.4";
 // Lookup helpers live in the core graph so the dashboard (Now Playing links)
 // can use them without loading media detail; re-exported for existing importers.
 export { movieById, movieBySlugOrId, nowPlayingHref };
-import { fetchTmdbDetails } from "./tmdb.js?v=2.1.1.0.3";
+import { fetchTmdbDetails } from "./tmdb.js?v=2.1.1.0.4";
 
 export {
   initMediaDetail,

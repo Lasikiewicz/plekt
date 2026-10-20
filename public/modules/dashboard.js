@@ -1,12 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.3";
-import { state, elements } from "./state.js?v=2.1.1.0.3";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.1.1.0.3";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.1.1.0.3";
-import { ifLoaded } from "./route-modules.js?v=2.1.1.0.3";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.1.1.0.3";
-import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.3";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.1.1.0.3";
-import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.3";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.4";
+import { state, elements } from "./state.js?v=2.1.1.0.4";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.1.1.0.4";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.1.1.0.4";
+import { ifLoaded } from "./route-modules.js?v=2.1.1.0.4";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.1.1.0.4";
+import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.4";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.1.1.0.4";
+import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.4";
 
 // The setup wizard loads only when unfinished or its checklist has items.
 const renderDashboardChecklist = ifLoaded("onboarding", "renderDashboardChecklist");
