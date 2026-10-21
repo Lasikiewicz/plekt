@@ -29,6 +29,15 @@ const KNOWN_SECURITY_ALERTS = {
       a.most_recent_instance?.ref === 'refs/heads/main' &&
       a.most_recent_instance?.commit_sha === '003c12e0467ec0c44f294cb8177976e50a1b5798',
     note: 'known: the rail image-source allow-list is in develop; this is the superseded main instance, pending the next main scan',
+    remedy: () => railImageSourceFixPresent(),
+  },
+  'code-scanning:49': {
+    matches: a => a.rule?.id === 'js/stack-trace-exposure' &&
+      a.most_recent_instance?.location?.path === 'server/src/utils/http.js' &&
+      a.most_recent_instance?.ref === 'refs/heads/main' &&
+      a.most_recent_instance?.commit_sha === '3a45f9fc2d48fc7477092cd3e2652d79f6b8dbf0',
+    note: 'known: the Trakt replace route no longer returns a thrown error message in develop; this is the main instance, pending the next main scan',
+    remedy: () => traktReplaceErrorHidden(),
   },
   'dependabot:17': {
     matches: a => a.dependency?.package?.ecosystem === 'npm' &&
@@ -39,11 +48,35 @@ const KNOWN_SECURITY_ALERTS = {
       a.security_vulnerability?.vulnerable_version_range === '<= 1.1.3' &&
       a.security_vulnerability?.first_patched_version === null,
     note: 'known: the vulnerable sprintf-js package is in the retired Devvit source removed from develop; GitHub still reports the default-branch alert until that removal reaches main',
+    remedy: () => redditAppSourceRetired(),
   },
+  ...Object.fromEntries([
+    [18, 'GHSA-698v-4r3x-3vcv', 'medium'],
+    [19, 'GHSA-587h-7wmj-h5pm', 'high'],
+    [20, 'GHSA-r825-w8mm-5pxw', 'medium'],
+  ].map(([number, ghsa, severity]) => [`dependabot:${number}`, {
+    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
+      a.dependency?.package?.name === 'vite' &&
+      a.dependency?.manifest_path === 'website/package-lock.json' &&
+      a.security_advisory?.ghsa_id === ghsa &&
+      a.security_advisory?.severity === severity &&
+      a.security_vulnerability?.vulnerable_version_range === '>= 8.3.0, <= 8.3.2' &&
+      a.security_vulnerability?.first_patched_version?.identifier === '8.3.3',
+    note: 'known: the website lockfile pins a patched vite in develop; GitHub still reports the default-branch alert until that lockfile reaches main',
+    remedy: () => websiteVitePatched(),
+  }])),
 };
 export function knownSecurityAlertNote(kind, alert) {
   const entry = KNOWN_SECURITY_ALERTS[`${kind}:${alert.number}`];
   return entry?.matches(alert) ? entry.note : null;
+}
+function knownSecurityAlertRemedyPresent(kind, alert) {
+  return Boolean(KNOWN_SECURITY_ALERTS[`${kind}:${alert.number}`]?.remedy());
+}
+export function vitePatched(version) {
+  const [major, minor, patch] = String(version || '').split('.').map(Number);
+  if (![major, minor, patch].every(Number.isInteger)) return false;
+  return major > 8 || (major === 8 && (minor > 3 || (minor === 3 && patch >= 3)));
 }
 export function assertBuild(version, changelog, expected, channel = 'release') {
   const normalize = s => String(s || '').replace(/^v/, '');
@@ -102,6 +135,17 @@ function redditAppSourceRetired() {
   ];
   return appSource.every(file => !fs.existsSync(path.join(root, file)));
 }
+function websiteVitePatched() {
+  try {
+    return vitePatched(json(path.join(root, 'website/package-lock.json')).packages?.['node_modules/vite']?.version);
+  } catch { return false; }
+}
+function traktReplaceErrorHidden() {
+  try {
+    const route = fs.readFileSync(path.join(root, 'server/src/routes/showSeasonSource.js'), 'utf8');
+    return route.includes('Trakt replace failed. Check the server log for details.') && !route.includes('error: error?.message');
+  } catch { return false; }
+}
 function node(script, args = [], cwd = root) { console.log(command(process.execPath, [path.join(root, script), ...args], cwd)); }
 function cleanup() { assertCleanup(JSON.parse(command('gh', ['run', 'list', '--workflow', 'ghcr-cleanup.yml', '--limit', '1', '--json', 'status,conclusion,url']))); }
 function availableLock() {
@@ -146,9 +190,7 @@ async function main() {
           const file = a.most_recent_instance?.location?.path || a.dependency?.manifest_path;
           console.log(`Open ${kind} alert ${a.number}: ${severity} ${file}`);
           const fingerprintNote = knownSecurityAlertNote(kind, a);
-          const remedyPresent = kind === 'code-scanning' ? railImageSourceFixPresent() :
-            kind === 'dependabot' && a.number === 17 && redditAppSourceRetired();
-          const note = fingerprintNote && remedyPresent ? fingerprintNote : null;
+          const note = fingerprintNote && knownSecurityAlertRemedyPresent(kind, a) ? fingerprintNote : null;
           if (note) {
             console.log(`Security alert note #${a.number}: ${note}`);
             continue;

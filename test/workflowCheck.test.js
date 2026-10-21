@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote } from '../scripts/workflow-check.js';
+import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, vitePatched } from '../scripts/workflow-check.js';
 
 test('cleanup refuses running and queued jobs, accepts no run or completed', () => {
   for (const status of ['queued', 'in_progress', 'waiting']) assert.throws(() => assertCleanup([{ status }]));
@@ -50,6 +50,35 @@ test('only the exact documented security alert fingerprints become notes', () =>
   assert.equal(knownSecurityAlertNote('code-scanning', { ...codeAlert, number: 65 }), null);
   assert.equal(knownSecurityAlertNote('code-scanning', { ...codeAlert, most_recent_instance: { ...codeAlert.most_recent_instance, commit_sha: 'new-main-commit' } }), null);
   assert.equal(knownSecurityAlertNote('dependabot', { ...sprintfAlert, security_vulnerability: { vulnerable_version_range: '<= 1.1.4', first_patched_version: null } }), null);
+
+  const stackAlert = {
+    number: 49,
+    rule: { id: 'js/stack-trace-exposure' },
+    most_recent_instance: {
+      location: { path: 'server/src/utils/http.js' },
+      ref: 'refs/heads/main',
+      commit_sha: '3a45f9fc2d48fc7477092cd3e2652d79f6b8dbf0',
+    },
+  };
+  const viteAlert = {
+    number: 19,
+    dependency: { package: { ecosystem: 'npm', name: 'vite' }, manifest_path: 'website/package-lock.json' },
+    security_advisory: { ghsa_id: 'GHSA-587h-7wmj-h5pm', severity: 'high' },
+    security_vulnerability: { vulnerable_version_range: '>= 8.3.0, <= 8.3.2', first_patched_version: { identifier: '8.3.3' } },
+  };
+  assert.match(knownSecurityAlertNote('code-scanning', stackAlert), /Trakt replace/);
+  assert.equal(knownSecurityAlertNote('code-scanning', { ...stackAlert, most_recent_instance: { ...stackAlert.most_recent_instance, commit_sha: 'new-main-commit' } }), null);
+  assert.match(knownSecurityAlertNote('dependabot', viteAlert), /patched vite/);
+  assert.equal(knownSecurityAlertNote('dependabot', { ...viteAlert, security_advisory: { ghsa_id: 'GHSA-698v-4r3x-3vcv', severity: 'high' } }), null);
+  assert.equal(knownSecurityAlertNote('dependabot', { ...viteAlert, security_vulnerability: { vulnerable_version_range: '>= 8.3.0, <= 8.3.4', first_patched_version: { identifier: '8.3.5' } } }), null);
+});
+test('the vite remedy check accepts only patched versions', () => {
+  assert.equal(vitePatched('8.3.2'), false);
+  assert.equal(vitePatched('8.3.3'), true);
+  assert.equal(vitePatched('8.4.0'), true);
+  assert.equal(vitePatched('9.0.0'), true);
+  assert.equal(vitePatched('8.2.9'), false);
+  assert.equal(vitePatched(''), false);
 });
 test('reconcile accepts source/asset restamping but refuses missing product changes', () => {
   assertRestampOnly('sourceVersion: 2.0.0\na.js?v=old', 'sourceVersion: 2.1.0\na.js?v=new');

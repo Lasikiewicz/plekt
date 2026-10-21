@@ -28,6 +28,7 @@ AGENTS.md
 .codex/
 website/.impeccable.md
 .reasonix/
+.agents/
 .Jules/
 reasonix.toml
 
