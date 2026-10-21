@@ -645,6 +645,9 @@ failure on the versions the 404 fallback was written for.
 **Note:** this repairs what Plembfin reads. Emby's own Continue Watching row appears to use the
 same empty endpoint, so a seeded item can be correctly stored and still not appear in Emby's UI;
 that part is server-side and outside Plembfin's control.
+Update 2026-10-21: one proven cause is a sticky Hide from Resume flag (see entry 36), which a
+UserData write does not clear; `setEmbyProgress` now lifts it after storing a resume position
+(entry 51).
 
 **Enforced by:** `fetchEmbyResumableItems` in `server/src/utils/embyClient.js`;
 `test/upNextProviderSync.test.js`.
@@ -1455,5 +1458,40 @@ there. The app listing was not archived and other community installations were n
 failure in place. Dismissing the dependency alert hides the signal before GitHub processes
 the default-branch source removal.
 
+**Update (user, 21 October 2026):** the same rule now covers fixes that are on develop and
+waiting for Force to main. Dependabot #18, #19 and #20 (vite in `website/package-lock.json`) and
+CodeQL #49 (stack trace exposure through the Trakt replace route) are push notes only while their
+exact fingerprints match and each fix is still present (vite 8.3.3 or later in the website lockfile;
+the route's generic failure message). None of them is dismissed.
+
 **Enforced by:** `reddit-app/README.md`, `knownSecurityAlertNote()` and the push precheck in
 `scripts/workflow-check.js`.
+
+---
+
+### 51. A stored Emby resume position lifts Emby's Hide from Resume flag
+**Date:** 2026-10-21 | **Status:** Active
+
+**Context:** Emby keeps its Hide from Resume flag through UserData position writes. An item hidden
+by the pre-23-September push (entry 36) took every later Plekt resume write, stayed resumable, and
+never came back to Continue Watching. The Up Next push guard reads Emby's native Resume rail, so it
+never saw the position as held and rewrote the item to Emby on every run (step 61, proven live on
+Emby 4.10.1).
+
+**Decision:** `setEmbyProgress` sends `HideFromResume?Hide=false` after every successful write with
+a position above zero. A known resume position comes from a play, and entry 36 says a hide lasts
+only until a new play. The unhide is best effort: a failure is logged as "Emby resume unhide failed"
+and the position write still counts as done. Position clears never unhide.
+
+**Rejected:** Leaving the flag alone and waiting for the next play inside Emby. Items hidden by old
+builds would stay off the rail while Plekt kept rewriting them, and the user has no visible way to
+tell why. Unhiding only from a dedicated repair pass was also rejected: it would need its own
+trigger and would miss items hidden later by any other client. Failing the write when the unhide
+fails would turn a cosmetic problem into a sync failure on servers without the endpoint.
+
+**Consequence to know:** a user's own Remove from up next on Emby lasts until Plekt next stores a
+resume position for that item from any provider, which is the same "until a new play" rule.
+
+**Enforced by:** `showEmbyInResume` and `setEmbyProgress` in `server/src/utils/embyClient.js`;
+`test/embyProgress.test.js` (write unhides after storing; clear does not; failed unhide keeps the
+write).

@@ -28,9 +28,10 @@ const config = {
   userId: "test-user",
 };
 
-async function captureProgressRequest(media) {
+async function captureProgressRequest(media, { unhideStatus = 204 } = {}) {
   const originalFetch = globalThis.fetch;
   let progressRequest = null;
+  const requests = [];
 
   globalThis.fetch = async (url, options = {}) => {
     const requestUrl = new URL(String(url));
@@ -41,7 +42,12 @@ async function captureProgressRequest(media) {
     }
     if (requestUrl.pathname === "/Users/test-user/Items/movie-1/UserData" && options.method === "POST") {
       progressRequest = { url: requestUrl, options };
+      requests.push("userdata");
       return new Response(null, { status: 200 });
+    }
+    if (requestUrl.pathname === "/Users/test-user/Items/movie-1/HideFromResume" && options.method === "POST") {
+      requests.push(`hide=${requestUrl.searchParams.get("Hide")}`);
+      return new Response(null, { status: unhideStatus });
     }
     throw new Error(`Unexpected Emby request: ${options.method || "GET"} ${requestUrl}`);
   };
@@ -54,7 +60,7 @@ async function captureProgressRequest(media) {
       isValid: true,
       ...media,
     });
-    return { result, request: progressRequest };
+    return { result, request: progressRequest, requests };
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -71,6 +77,35 @@ test("Emby resume updates include the source progress date for Continue Watching
     Played: false,
     LastPlayedDate: "2026-08-23T10:15:30.000Z",
   });
+});
+
+// A Hide from Resume flag survives UserData writes, so without the unhide the
+// item kept its position but never returned to Continue Watching, and the Up
+// Next push rewrote it on every run.
+test("an Emby resume write lifts a stale Hide from Resume flag after the position is stored", async () => {
+  const { result, requests } = await captureProgressRequest({ positionMs: 970_000, updatedAt: Date.now() });
+
+  assert.equal(result.status, "fulfilled");
+  assert.deepEqual(requests, ["userdata", "hide=false"]);
+});
+
+test("clearing Emby resume state never unhides the item", async () => {
+  const { requests } = await captureProgressRequest({ positionMs: 0 });
+
+  assert.deepEqual(requests, ["userdata"]);
+});
+
+test("a failed Emby unhide does not fail the stored resume position", async () => {
+  const originalError = console.error;
+  console.error = () => {};
+  try {
+    const { result, requests } = await captureProgressRequest({ positionMs: 970_000 }, { unhideStatus: 404 });
+    assert.equal(result.status, "fulfilled");
+    assert.equal(result.positionMs, 970_000);
+    assert.deepEqual(requests, ["userdata", "hide=false"]);
+  } finally {
+    console.error = originalError;
+  }
 });
 
 test("Emby resume date falls back to the dispatch time when the source has no timestamp", () => {

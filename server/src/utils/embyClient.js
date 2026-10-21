@@ -554,6 +554,23 @@ export async function markEmbyUnplayed(config, media) {
   }
 }
 
+// Emby keeps a Hide from Resume flag through UserData writes, so a hidden item
+// takes the position, stays resumable, and never returns to Continue Watching.
+// The Up Next push then saw it missing from the Resume feed and rewrote it on
+// every run. Hides are meant to last only until a new play (decisions.md entry
+// 36), and a known resume position comes from one, so lift the flag. Best
+// effort: a server without the endpoint keeps the plain position write.
+async function showEmbyInResume(config, itemId, lane) {
+  const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${encodeURIComponent(config.userId)}/Items/${encodeURIComponent(itemId)}/HideFromResume`);
+  url.searchParams.set("Hide", "false");
+  try {
+    const response = await fetchWithTimeout(url, { method: "POST", headers: authHeaders(config), lane });
+    if (!response.ok) console.error("Emby resume unhide failed", { itemId, status: response.status });
+  } catch (error) {
+    console.error("Emby resume unhide failed", { itemId, error: error?.message || error });
+  }
+}
+
 export async function setEmbyProgress(config, media) {
   try {
     requireEmbyConfig(config);
@@ -602,6 +619,7 @@ export async function setEmbyProgress(config, media) {
         throw error;
       }
       console.log("Emby item resume progress updated", { itemId: item.Id, positionMs });
+      if (positionMs > 0) await showEmbyInResume(config, item.Id, media?.lane || "sync");
       lastHttpStatus = response.status;
       return response.status;
     });

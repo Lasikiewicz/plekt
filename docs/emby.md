@@ -14,6 +14,41 @@ polling. Read [architecture.md](architecture.md) first for the big picture.
 | `server/src/utils/liveSessions.js` | Polls `/Sessions` for Now Playing |
 | `public/modules/help-content.js` | `embyCredentialGuide()`, `embyWebhookSetup()` - in-app setup guides |
 
+## Emby plugin
+
+The Plekt Emby server plugin (`Emby.Plugin.Plekt.dll`) is the recommended way to send
+playback events. It is currently a local beta: the public repository and release are awaiting
+approval. The planned source is <https://github.com/Lasikiewicz/emby-plugin-plekt> and
+the planned [Releases page](https://github.com/Lasikiewicz/emby-plugin-plekt/releases) is not available yet.
+It posts to Plekt's existing webhook address, so there is no new Plekt endpoint, and it does
+not need the built-in Emby webhook or Emby Premiere. It requires Emby Server 4.9.1 or newer
+(tested on 4.10.1).
+
+- **Install after release:** it is not in Emby's plugin catalog yet, so install is manual. Download
+  `Emby.Plugin.Plekt.dll` from the latest release, copy it into Emby's `plugins` folder
+  (`/config/plugins` on the linuxserver.io Docker image; otherwise the `plugins` folder inside
+  Emby's program data folder), then restart Emby. There is no zip and no manifest.
+- **Configure:** in Emby open Settings → Plugins → Plekt, paste the complete webhook address
+  from Plekt's Settings → Media Servers → Webhooks (the same address, with its token, that the
+  built-in webhook uses) into **Plekt webhook address**, and save.
+- **Localhost pitfall:** Emby must be able to reach the host in that address. In Docker,
+  `localhost` or `127.0.0.1` means Emby's own container, not Plekt, so use Plekt's LAN address
+  or hostname. A webhook set to `127.0.0.1` silently delivers nothing.
+- **Duplicate events:** turn off any built-in Emby webhook (Settings → Notifications) that
+  posts to the same Plekt server while the plugin is installed, otherwise every event arrives
+  twice.
+- **What it sends:** playback start, pause, unpause and stop every time; progress at most every
+  30 seconds per play; and explicit mark played and mark unplayed changes. Emby's own
+  played-flag saves during playback are not sent.
+- **Delivery:** best effort, with a 5-second timeout and no retry. If Plekt is unreachable, Emby
+  playback is unaffected; the plugin logs one warning and stays quiet until delivery recovers,
+  and Plekt's scheduled Emby sync catches up anything missed.
+- **Settings and removal:** settings survive an Emby restart and a reinstall. To uninstall, use
+  Settings → Plugins → Plekt → uninstall (or delete the DLL) and restart Emby.
+
+The built-in Emby webhook remains a supported alternative and needs no plugin (see
+[Inbound: webhooks](#inbound-webhooks)).
+
 ## Configuration
 
 Settings → Media Servers → Emby uses account setup by default. Plekt sends the server
@@ -43,8 +78,16 @@ watched-state and personal-rating integrations remain independent of that featur
 
 ## Inbound: webhooks
 
-Emby posts JSON to `/api/webhook?token=<webhookSecret>`. **Enable "Send All
-Properties" on the Emby webhook** - without the full item payload, events can arrive
+The recommended sender is the [Plekt Emby plugin](#emby-plugin); the built-in Emby webhook
+(Settings → Notifications → Webhooks, events playback start/pause/unpause/stop, mark played
+and mark unplayed) still works as an alternative. Either posts JSON to
+`/api/webhook?token=<webhookSecret>`; do not run both against the same Plekt server. The
+in-app guide (`embyWebhookSetup()` in `help-content.js`) has two boxes: the expanded
+**Official Plekt Emby Plugin (Recommended)** box, with the releases link and the webhook
+address in copy blocks, and a collapsed **Emby Webhooks** box for the built-in webhook.
+
+**Enable "Send All
+Properties" on the built-in Emby webhook** - without the full item payload, events can arrive
 without enough title/type/progress data to record a watch.
 
 `parseEmbyWebhook` (`parsers.js`) derives the phase:

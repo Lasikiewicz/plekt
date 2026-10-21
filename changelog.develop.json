@@ -1,14 +1,14 @@
 {
-  "version": "2.1.1.0.6",
-  "build": 6,
+  "version": "2.1.1.0.7",
+  "build": 7,
   "resetCommit": "b132b470337687d02a21c6ec71c886debc493df7",
-  "updatedAt": "2026-10-20T18:03:12.836Z",
+  "updatedAt": "2026-10-21T08:06:08.387Z",
   "entries": [
     {
-      "build": 6,
-      "date": "2026-10-20T18:03:12.836Z",
-      "commit": "7b5513105e8ca4e3ac3ffcbb34386957387dffdd",
-      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, match opened poster width to the folded poster on phones, and polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues.",
+      "build": 7,
+      "date": "2026-10-21T08:06:08.387Z",
+      "commit": "4825edb0cb0edc72f5f508146f0aa25317eb28fa",
+      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, match opened poster width to the folded poster on phones, polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues, keep Up Next cards on screen while the dashboard reloads, add Emby plugin beta setup guide, stop stale resume rewrites between Emby, Jellyfin and Plex, and hide error details from Trakt replace and patch website vite.",
       "author": "Lasikiewicz",
       "details": [
         "Keep desktop navigation and library controls visible without empty action space.",
@@ -34,13 +34,25 @@
         "Setup cards and nested boxes follow the Settings colours in both themes; Plex and metadata setup copy is tidied and import notes are centred.",
         "Up Next no longer re-runs just because a queue push bumped the data version; it re-runs only when the rebuilt queue differs.",
         "Jellyfin webhook user IDs that contain dashes now match the stored IDs, so their watch events are recognised.",
-        "Webhook rate limit raised to 300 per minute, so media server bursts are less likely to be rejected."
+        "Webhook rate limit raised to 300 per minute, so media server bursts are less likely to be rejected.",
+        "Returning to the dashboard shows the last Up Next cards straight away and replaces them when the fresh list loads, instead of a blank Loading state.",
+        "Add plugin-first Emby setup instructions with local beta availability and the built-in webhook alternative.",
+        "Keep numbered installation steps readable on mobile in both themes.",
+        "A stopped Emby or Jellyfin session no longer moves a resume point backwards when a newer stop position is already stored",
+        "The Up Next push skips a provider whose resume feed already holds the position, which ends the repeating Plex resume loop",
+        "Emby items hidden from Continue Watching by older builds come back once Plekt stores a resume position for them",
+        "A failed Trakt replace on a translated show now shows a generic message and keeps the error detail in the server log",
+        "The website build uses vite 8.3.5, which fixes three launch-editor advisories on Windows"
       ],
       "messageFragments": [
         "Fix - Restore library loading and navigation behavior",
         "Fix - Keep dashboard live across browsers and polish mobile Up Next",
         "Fix - Match opened poster width to the folded poster on phones",
-        "Feature - Polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues"
+        "Feature - Polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues",
+        "Fix - Keep Up Next cards on screen while the dashboard reloads",
+        "Docs - Add Emby plugin beta setup guide",
+        "Fix - Stop stale resume rewrites between Emby, Jellyfin and Plex",
+        "Security - Hide error details from Trakt replace and patch website vite"
       ]
     }
   ]

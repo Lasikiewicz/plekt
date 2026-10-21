@@ -515,10 +515,40 @@ export async function refreshUpNextProviderFeeds({ config = {}, providers = null
   return Promise.all(configuredDefinitions.map((definition) => fetchAndRecordFeed(definition, { triggerOnRecovery: true })));
 }
 
-async function propagateKnownProgress(items, config, { isStale = null } = {}) {
+// A provider whose resume feed, read moments earlier in this push, already
+// shows the position needs no write. Rewriting it anyway made Plex stamp a new
+// lastViewedAt, which the next resume pass read as fresh playback and sent back
+// to every server while queueing this push again: a 15-minute loop.
+const RESUME_POSITION_MATCH_TOLERANCE_MS = 2_000;
+
+function providersAlreadyAtPosition(item, media, feeds = []) {
+  const aliases = candidateAliases(normalizeUpNextCandidate(item));
+  const current = new Set();
+  for (const feed of Array.isArray(feeds) ? feeds : []) {
+    if (feed?.status !== "succeeded" || feed.feed_kind !== "resume") continue;
+    const holdsPosition = (feed.items || []).some((candidate) => (
+      candidate.playback_position_known === true
+      && Math.abs(Number(candidate.position_ms || 0) - media.positionMs) <= RESUME_POSITION_MATCH_TOLERANCE_MS
+      && upNextIdentityAliases(candidate).some((alias) => aliases.has(alias))
+    ));
+    if (holdsPosition) current.add(feed.provider);
+  }
+  return current;
+}
+
+async function propagateKnownProgress(items, config, { isStale = null, feeds = [] } = {}) {
   const progressItems = (Array.isArray(items) ? items : [])
     .slice(0, MAX_REQUEST_ITEMS)
-    .map(actionableProgressItem)
+    .map((item) => {
+      const media = actionableProgressItem(item);
+      if (!media) return null;
+      const current = providersAlreadyAtPosition(item, media, feeds);
+      if (!current.size) return media;
+      return {
+        ...media,
+        syncTargets: media.syncTargets.filter((provider) => configuredProvider(config, provider) && !current.has(provider)),
+      };
+    })
     .filter(Boolean);
   if (!progressItems.length) return [];
   // The automatic sync builds its projection seconds before this point. A
@@ -535,6 +565,15 @@ async function propagateKnownProgress(items, config, { isStale = null } = {}) {
   }
   const loopStore = createLoopStore();
   return Promise.all(progressItems.map(async (media) => {
+    if (!media.syncTargets.length) {
+      return {
+        id: media.media_key || media.title,
+        title: media.title,
+        status: "skipped",
+        targetStates: [],
+        details: "Every provider already holds this resume position",
+      };
+    }
     try {
       const summary = await syncMediaProgress(media, config, loopStore, { lane: "interactive" });
       return {
@@ -877,7 +916,7 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
     }));
   const feeds = await Promise.all(configuredDefinitions.map(fetchAndRecordFeed));
   const plan = planUpNextProviderSync({ desiredItems, feeds });
-  const progress = await propagateKnownProgress(desiredItems, config, { isStale });
+  const progress = await propagateKnownProgress(desiredItems, config, { isStale, feeds });
   const pushProviders = PUSH_PROVIDERS.filter((provider) => (
     configuredDefinitions.some((definition) => definition.provider === provider)
   ));

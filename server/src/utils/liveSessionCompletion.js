@@ -267,6 +267,20 @@ async function processStoppedSessionProgress(row, config, loopStore) {
     });
     return null;
   }
+  // A webhook stop can land between the last poll that saw this session and the poll that
+  // finds it gone. Its position is newer than this cached one, so writing the cache would
+  // move every target's resume point backwards.
+  const existingProgressUpdatedAt = Number(existingProgress?.updated_at || 0);
+  if (existingProgressUpdatedAt > Number(row.updated_at || 0)) {
+    console.log("Live tracking resume skipped because newer progress is stored", {
+      title: media.title,
+      source: media.source,
+      storedSource: existingProgress.source,
+      storedUpdatedAt: existingProgressUpdatedAt,
+      liveUpdatedAt: row.updated_at,
+    });
+    return null;
+  }
 
   recordWatchAuditEvent({
     eventType: "playback_ended",

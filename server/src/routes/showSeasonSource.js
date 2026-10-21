@@ -106,8 +106,10 @@ export async function handleShowSeasonSourceTraktReplace(req, res) {
     tmdbId: tmdbId || show.tmdb_id || "",
     logger: (line) => console.log(`[ShowSeasonSource] ${show.title}: ${line}`),
   }).catch((error) => {
+    // Refusals come back as result objects with their own text. A thrown error is
+    // unexpected and can carry stack or upstream detail, so it stays in the log.
     console.error("[ShowSeasonSource] Trakt replace failed", error);
-    return { ok: false, error: error?.message || "Trakt replace failed" };
+    return { ok: false, error: "Trakt replace failed. Check the server log for details." };
   });
   writeAuditLog("show.season_source.trakt_replace", { ip: req.ip || req.socket?.remoteAddress, detail: { tvdbId, ...result } });
   return sendJson(res, result, result.ok ? 200 : 409);

@@ -394,6 +394,67 @@ test("a stale automatic sync does not push resume positions built before a canon
   assert.equal(calls.some(({ url }) => /0f292f2c/.test(url.pathname) && /UserData|Playing/.test(url.pathname)), false);
 });
 
+// Verified live in the Emby plugin step 3 audit: rewriting Plex's unchanged
+// Evil S02E03 position every push restamped lastViewedAt, and the next resume
+// pass pushed it back to Emby and Jellyfin every 15 minutes.
+async function pushResumeAgainstJellyfinFeed(t, feedPositionMs) {
+  const originalFetch = globalThis.fetch;
+  const writes = [];
+  globalThis.fetch = async (input, options = {}) => {
+    const url = new URL(String(input));
+    const method = String(options.method || "GET").toUpperCase();
+    if (method !== "GET") {
+      writes.push(url);
+      return new Response(null, { status: 204 });
+    }
+    const items = /resume/i.test(url.pathname) ? [{
+      Id: "0f292f2c",
+      Type: "Episode",
+      Name: "My First Kill",
+      SeriesName: "Scrubs",
+      ParentIndexNumber: 1,
+      IndexNumber: 4,
+      RunTimeTicks: 1_331_349 * 10_000,
+      UserData: { PlaybackPositionTicks: feedPositionMs * 10_000 },
+    }] : [];
+    return new Response(JSON.stringify({ Items: items }), { status: 200, headers: { "content-type": "application/json" } });
+  };
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const summary = await syncUpNextToProviders({
+    desiredItems: [{
+      id: "scrubs-s01e04",
+      media_key: "episode:1:4:imdb:tt0285403",
+      media_type: "episode",
+      queue_kind: "resume",
+      title: "Scrubs - S01E04",
+      show_title: "Scrubs",
+      season: 1,
+      episode: 4,
+      position_ms: 245_000,
+      duration_ms: 1_331_349,
+      progress: 18.4,
+      provider_items: { jellyfin: ["0f292f2c"] },
+    }],
+    config: { jellyfin: { baseUrl: "http://jellyfin.test", apiKey: "jellyfin-key", userId: "jelly-user" } },
+  });
+  return { summary, progressWrites: writes.filter((url) => /0f292f2c/.test(url.pathname) && /UserData|Playing/.test(url.pathname)) };
+}
+
+test("the push does not rewrite a resume position the provider already holds", async (t) => {
+  const { summary, progressWrites } = await pushResumeAgainstJellyfinFeed(t, 245_400);
+  assert.equal(summary.progress.length, 1);
+  assert.equal(summary.progress[0].status, "skipped");
+  assert.match(summary.progress[0].details, /already holds this resume position/);
+  assert.deepEqual(progressWrites, []);
+});
+
+test("the push still writes a resume position the provider does not hold", async (t) => {
+  const { summary, progressWrites } = await pushResumeAgainstJellyfinFeed(t, 120_000);
+  assert.equal(summary.progress.length, 1);
+  assert.doesNotMatch(summary.progress[0].details, /already holds/);
+  assert.ok(progressWrites.length > 0, "the differing position is written to Jellyfin");
+});
+
 test("a legacy Jellyfin rail seed is cleared while the watched predecessor refreshes Next Up", async (t) => {
   const originalFetch = globalThis.fetch;
   const calls = [];

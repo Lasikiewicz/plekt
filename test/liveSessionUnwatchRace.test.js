@@ -197,6 +197,33 @@ test("a resume-progress write that keeps failing drops the row at the staleness 
   assert.ok(lines.some((line) => line.includes("too old to infer a stop") && line.includes(sessionId)));
 });
 
+test("a stopped session does not overwrite a newer webhook stop position", async () => {
+  const tmdb = "910010";
+  const lastSeen = Date.now() - 20_000;
+  await seedSession({ sessionId: "live-older-than-webhook", tmdb, progress: 10, updatedAt: lastSeen });
+  await repo.upsertPlaybackProgress({
+    ...repo.mediaToPlaybackProgressRecord({ ...movieMedia(tmdb), offsetMs: 83 * 60_000, durationMs: 100 * 60_000, progress: 83 }, "jellyfin"),
+    updated_at: lastSeen + 5_000,
+  });
+  await pollUntilConfirmedGone();
+  const stored = await repo.getPlaybackProgressForMedia(movieMedia(tmdb));
+  assert.equal(stored?.position_ms, 83 * 60_000, "the newer webhook position is kept");
+  assert.equal((await cachedSessionIds()).includes("live-older-than-webhook"), false, "the cached session is cleared");
+});
+
+test("a stopped session still replaces older stored progress", async () => {
+  const tmdb = "910011";
+  const lastSeen = Date.now() - 2_000;
+  await repo.upsertPlaybackProgress({
+    ...repo.mediaToPlaybackProgressRecord({ ...movieMedia(tmdb), offsetMs: 5 * 60_000, durationMs: 100 * 60_000, progress: 5 }, "jellyfin"),
+    updated_at: lastSeen - 60_000,
+  });
+  await seedSession({ sessionId: "live-newer-than-stored", tmdb, progress: 40, updatedAt: lastSeen });
+  await pollUntilConfirmedGone();
+  const stored = await repo.getPlaybackProgressForMedia(movieMedia(tmdb));
+  assert.equal(stored?.position_ms, 40 * 60_000, "the poller's newer position is stored");
+});
+
 async function freshWatchRows(tmdb) {
   bumpDataVersion("restart test read");
   return watchRows(tmdb);

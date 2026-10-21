@@ -1,5 +1,5 @@
-import { getWebhookToken } from "./auth.js?v=2.1.1.0.6";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.1.1.0.6";
+import { getWebhookToken } from "./auth.js?v=2.1.1.0.7";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.1.1.0.7";
 
 function snippet(code, language = "text") {
   const trimmed = String(code).trim();
@@ -174,13 +174,54 @@ export function embyWebhookSetup() {
   const url = buildWebhookUrl();
   return `
     <div class="webhook-guide-content" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
+      <details class="sync-tool-details" open>
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Official Plekt Emby Plugin (Recommended)</b>
+          </div>
+        </summary>
+        <div class="tool-item-row">
+        <div class="webhook-plugin-setup" style="display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--space-2); padding-top: var(--space-1);">
+        <ol class="webhook-instruction-list" style="display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--space-2);">
+          <li>
+            The plugin is currently a local beta; its public repository and release are awaiting approval. Once released, download <code>Emby.Plugin.Plekt.dll</code> from the planned GitHub Releases page below. Until then, use the built-in Emby webhook alternative.
+            <div class="copy-block" style="overflow: visible; align-self: start; margin-top: var(--space-1);">
+              <button class="copy-button" type="button" data-copy="https://github.com/Lasikiewicz/emby-plugin-plekt/releases" aria-label="Copy releases URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
+              <pre style="overflow-x: auto; overflow-y: hidden;"><code>https://github.com/Lasikiewicz/emby-plugin-plekt/releases</code></pre>
+            </div>
+          </li>
+          <li>Copy the file into Emby's <code>plugins</code> folder (on the linuxserver.io Docker image this is <code>/config/plugins</code>; on other installs it is the <code>plugins</code> folder inside Emby's program data folder), then restart Emby. The plugin is not in Emby's plugin catalog yet, so this install is manual. It needs Emby Server 4.9.1 or newer.</li>
+          <li>
+            In Emby, open <b>Settings → Plugins → Plekt</b>, paste the webhook address below into the <b>Plekt webhook address</b> field, and save.
+            <div class="copy-block" style="overflow: visible; align-self: start; margin-top: var(--space-1);">
+              <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
+              <pre style="overflow-x: auto; overflow-y: hidden;"><code>${escapeHtml(url)}</code></pre>
+            </div>
+          </li>
+          <li>Emby must be able to reach the host in that address. In Docker, <code>localhost</code> or <code>127.0.0.1</code> means Emby's own container, not Plekt, so use Plekt's LAN address or hostname instead.</li>
+          <li>Turn off any built-in Emby webhook (<b>Settings → Notifications</b>) that posts to this Plekt server, otherwise every event arrives twice.</li>
+        </ol>
+        <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">The plugin sends playback start, pause, unpause and stop, progress at most every 30 seconds, and explicit mark played or unplayed changes. It needs no Emby Premiere and no built-in webhook. If Plekt is unreachable, Emby playback is unaffected and Plekt's scheduled Emby sync catches up.</p>
+        </div>
+        </div>
+      </details>
+      <details class="sync-tool-details">
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Emby Webhooks</b>
+          </div>
+        </summary>
+        <div class="tool-item-row">
+        <div class="webhook-plugin-setup" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
       <div class="copy-block">
         <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL">Copy</button>
         <pre><code>${escapeHtml(url)}</code></pre>
       </div>
       <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">Automation clients can also call <code>/api/webhook</code> with an <code>X-Plekt-Webhook-Secret</code> or <code>Authorization: Bearer</code> header.</p>
       <ul class="webhook-instruction-list">
-        <li>Go to Emby Preferences ➔ <b>Notifications</b> ➔ <b>Webhooks</b> and add a new webhook pointing to the URL above.</li>
+        <li>Go to Emby Preferences ➔ <b>Notifications</b> ➔ <b>Webhooks</b> and add a new webhook pointing to the URL above. Do not use this together with the Plekt plugin.</li>
         <li>Under <b>Events → Playback</b>, check:
           <ul class="webhook-option-list">
             <li><code>Start</code> <span>Detects when playback begins.</span></li>
@@ -198,6 +239,9 @@ export function embyWebhookSetup() {
         <li>Leave every other event category unticked. Plekt ignores library, system, and activity events, and they only add rejected entries to Sync History.</li>
         <li>Enable <b>Send All Properties</b> so payloads include <code>PlaybackPositionTicks</code> for resume sync.</li>
       </ul>
+        </div>
+        </div>
+      </details>
     </div>
   `;
 }
@@ -310,18 +354,26 @@ export function webhookWarning() {
       <div style="display: grid; gap: var(--space-2); margin-top: var(--space-2); border-top: 1px solid var(--line); padding-top: var(--space-2);">
         <h3 style="margin: 0; color: var(--text); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
           <span style="display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #10b981;"></span>
-          2. Emby Webhook Setup
+          2. Emby Plugin Setup (recommended)
         </h3>
         <ul style="padding-left: 1.2rem; margin: 0; display: grid; gap: 4px;">
-          <li>In Emby Server Settings ➔ <b>Webhooks</b>, add a new webhook pointing to your Plekt webhook URL.</li>
-          <li>Under <b>Events</b>, check the following boxes:
-            <ul style="padding-left: 1.2rem; margin-top: 2px;">
-              <li><b>Playback</b>: Check <code>Start</code>, <code>Pause</code>, <code>Unpause</code>, and <code>Stop</code></li>
-              <li><b>Users</b>: Check <code>Mark Played</code> and <code>Mark Unplayed</code></li>
-            </ul>
-          </li>
-          <li>Resume sync uses Emby's <code>Pause</code> and <code>Stop</code> events. Those payloads need to include <code>PlaybackPositionTicks</code> or <code>PositionTicks</code>.</li>
+          <li>The plugin is currently a local beta awaiting publication approval. Until it is released, use the built-in webhook alternative below. After release, download <code>Emby.Plugin.Plekt.dll</code> from <a href="https://github.com/Lasikiewicz/emby-plugin-plekt/releases" target="_blank" rel="noopener noreferrer" style="color: #4b96e6; text-decoration: underline;">github.com/Lasikiewicz/emby-plugin-plekt/releases</a>, copy it into Emby's <code>plugins</code> folder (<code>/config/plugins</code> on the linuxserver.io Docker image), and restart Emby. It needs Emby Server 4.9.1 or newer.</li>
+          <li>Open <b>Settings → Plugins → Plekt</b> in Emby, paste the complete webhook address from Plekt's <b>Settings → Media Servers → Webhooks</b> into the <b>Plekt webhook address</b> field, and save. If Emby runs in Docker, use Plekt's LAN address or hostname, not <code>localhost</code>.</li>
+          <li>The plugin sends playback, playback position, and explicit watched or unwatched events straight to Plekt. It doesn't need Emby Premiere or the built-in webhook. Turn off any built-in Emby webhook that posts to Plekt, or every event arrives twice.</li>
         </ul>
+        <details style="font-size: 0.85rem;">
+          <summary style="cursor: pointer; color: var(--text);">Alternative: use the built-in Emby webhook instead</summary>
+          <ul style="padding-left: 1.2rem; margin: var(--space-2) 0 0; display: grid; gap: 4px;">
+            <li>In Emby Server Settings ➔ <b>Webhooks</b>, add a new webhook pointing to your Plekt webhook URL.</li>
+            <li>Under <b>Events</b>, check the following boxes:
+              <ul style="padding-left: 1.2rem; margin-top: 2px;">
+                <li><b>Playback</b>: Check <code>Start</code>, <code>Pause</code>, <code>Unpause</code>, and <code>Stop</code></li>
+                <li><b>Users</b>: Check <code>Mark Played</code> and <code>Mark Unplayed</code></li>
+              </ul>
+            </li>
+            <li>Resume sync uses Emby's <code>Pause</code> and <code>Stop</code> events. Those payloads need to include <code>PlaybackPositionTicks</code> or <code>PositionTicks</code>.</li>
+          </ul>
+        </details>
       </div>
 
       <div style="display: grid; gap: var(--space-2); margin-top: var(--space-2); border-top: 1px solid var(--line); padding-top: var(--space-2);">

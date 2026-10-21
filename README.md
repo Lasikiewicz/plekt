@@ -513,7 +513,16 @@ notification channel automatically to capture watched and unwatched changes in r
 time, and polls playback progress as a backstop - every 10 seconds while something's
 playing, backing off to every 45 seconds while idle.
 
-**Emby** - Preferences → Notifications → Webhooks → add one, paste the URL, enable
+**Emby** - The **Plekt** plugin is currently a local beta; its public repository and release
+are awaiting approval. Once released, install it manually:
+download `Emby.Plugin.Plekt.dll` from the
+[releases page](https://github.com/Lasikiewicz/emby-plugin-plekt/releases), copy it into
+Emby's `plugins` folder (`/config/plugins` on the linuxserver.io Docker image), and restart
+Emby (Emby Server 4.9.1 or newer) → open Settings → Plugins → Plekt → paste the complete
+webhook address from Plekt's Settings → Media Servers → Webhooks. In Docker, use Plekt's LAN
+address or hostname, not `localhost`, and turn off any built-in Emby webhook that posts to
+Plekt. The plugin needs no Premiere and no built-in webhook. Alternatively, use the built-in
+webhook: Preferences → Notifications → Webhooks → add one, paste the URL, enable
 **Playback**: `Start`/`Pause`/`Unpause`/`Stop` and **Users**: `Mark Played`/`Mark
 Unplayed`. Leave everything else unticked, and enable **Send All Properties**.
 
