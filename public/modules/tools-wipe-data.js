@@ -1,6 +1,6 @@
-import { buildAuthHeaders, signOutAdmin } from "./auth.js?v=2.1.1.0.7";
-import { state } from "./state.js?v=2.1.1.0.7";
-import { formatNumber } from "./utils.js?v=2.1.1.0.7";
+import { buildAuthHeaders, signOutAdmin } from "./auth.js?v=2.1.1.0.8";
+import { state } from "./state.js?v=2.1.1.0.8";
+import { formatNumber } from "./utils.js?v=2.1.1.0.8";
 
 // ── Wipe data ────────────────────────────────────────────────────────────
 // Deliberately separate from tools-maintenance.js (repairs/backfills), which

@@ -1,14 +1,14 @@
 {
-  "version": "2.1.1.0.7",
-  "build": 7,
+  "version": "2.1.1.0.8",
+  "build": 8,
   "resetCommit": "b132b470337687d02a21c6ec71c886debc493df7",
-  "updatedAt": "2026-10-21T08:06:08.387Z",
+  "updatedAt": "2026-10-21T08:07:44.034Z",
   "entries": [
     {
-      "build": 7,
-      "date": "2026-10-21T08:06:08.387Z",
-      "commit": "4825edb0cb0edc72f5f508146f0aa25317eb28fa",
-      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, match opened poster width to the folded poster on phones, polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues, keep Up Next cards on screen while the dashboard reloads, add Emby plugin beta setup guide, stop stale resume rewrites between Emby, Jellyfin and Plex, and hide error details from Trakt replace and patch website vite.",
+      "build": 8,
+      "date": "2026-10-21T08:07:44.034Z",
+      "commit": "e909003bf50c5679d82f2eacb4da218aa09b10c6",
+      "message": "This update includes restore library loading and navigation behavior, keep dashboard live across browsers and polish mobile Up Next, match opened poster width to the folded poster on phones, polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues, and steadier resume sync, faster Up Next return and Emby plugin setup guide.",
       "author": "Lasikiewicz",
       "details": [
         "Keep desktop navigation and library controls visible without empty action space.",
@@ -49,10 +49,7 @@
         "Fix - Keep dashboard live across browsers and polish mobile Up Next",
         "Fix - Match opened poster width to the folded poster on phones",
         "Feature - Polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues",
-        "Fix - Keep Up Next cards on screen while the dashboard reloads",
-        "Docs - Add Emby plugin beta setup guide",
-        "Fix - Stop stale resume rewrites between Emby, Jellyfin and Plex",
-        "Security - Hide error details from Trakt replace and patch website vite"
+        "Fix - Steadier resume sync, faster Up Next return and Emby plugin setup guide"
       ]
     }
   ]
