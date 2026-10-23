@@ -1,0 +1,41 @@
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: Please check the documentation and search existing discussions before posting. Do not include tokens, private URLs or usernames.
+  - type: input
+    id: plekt-version
+    attributes:
+      label: Plekt version
+      placeholder: e.g. 1.2.3 or develop-123
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Install method
+      options:
+        - Windows installer
+        - Docker or Docker Compose
+        - Unraid
+        - Node.js
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: services
+    attributes:
+      label: Services involved
+      options:
+        - label: Plex
+        - label: Jellyfin
+        - label: Emby
+        - label: Trakt
+        - label: Simkl
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you need help with?
+      description: Include what you tried and any relevant error message. Redact tokens, private URLs and usernames.
+    validations:
+      required: true

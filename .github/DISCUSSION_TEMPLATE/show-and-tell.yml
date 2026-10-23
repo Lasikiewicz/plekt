@@ -1,0 +1,22 @@
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: Share your Plekt setup, workflow, or project with the community. Redact tokens, private URLs and usernames from screenshots or logs.
+  - type: textarea
+    id: showcase
+    attributes:
+      label: What are you sharing?
+      description: Tell us about your setup, workflow, or project.
+    validations:
+      required: true
+  - type: textarea
+    id: services
+    attributes:
+      label: Services involved
+      description: Which media servers, trackers, or other services are part of it?
+  - type: textarea
+    id: links
+    attributes:
+      label: Links or screenshots
+      description: Add relevant links or attach images. Check them for private information first.

@@ -1,0 +1,27 @@
+title: ""
+body:
+  - type: markdown
+    attributes:
+      value: Use this space for open-ended ideas and discussion. For a specific, actionable feature request, use the Feature request issue form.
+  - type: textarea
+    id: idea
+    attributes:
+      label: What is your idea?
+      description: Describe the opportunity, question, or direction you would like to discuss.
+    validations:
+      required: true
+  - type: textarea
+    id: motivation
+    attributes:
+      label: Why would this be useful?
+      description: Share the problem, use case, or experience behind the idea.
+  - type: checkboxes
+    id: services
+    attributes:
+      label: Services related to this idea
+      options:
+        - label: Plex
+        - label: Jellyfin
+        - label: Emby
+        - label: Trakt
+        - label: Simkl

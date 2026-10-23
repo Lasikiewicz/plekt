@@ -1,0 +1,40 @@
+name: Sync problem
+description: Report incorrect or missing watched state, progress, or ratings.
+title: "[Sync]: "
+labels: [bug, sync, needs-triage]
+body:
+  - type: input
+    id: plekt-version
+    attributes:
+      label: Plekt version
+      placeholder: e.g. 1.2.3 or develop-123
+    validations:
+      required: true
+  - type: textarea
+    id: services
+    attributes:
+      label: Source and target services
+      description: Name the source and target media server or tracker (for example, Plex → Trakt).
+      placeholder: Source: ...; Target: ...
+    validations:
+      required: true
+  - type: textarea
+    id: affected-items
+    attributes:
+      label: Which items are affected?
+      description: Include titles and episode or season details where relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: comparison
+    attributes:
+      label: What did Plekt show compared with the server or tracker?
+      description: Include the watched state, progress, or rating Plekt showed and what the source/target service showed.
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste relevant logs or attach a log file. Redact tokens, URLs and usernames before sharing.
+      render: text
