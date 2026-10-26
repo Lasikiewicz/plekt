@@ -45,8 +45,20 @@ Only for exactly one urgent fix commit/detail: --hotfix.
 Read exceptional-mode conditions in the reference before selecting either; normal
 three-bullet quality/process checks remain. Failure is fixed on develop, never bypassed.
 
+If the generated develop entry fails changelog quality checks, fix it automatically
+on develop before retrying. Review the queued changes and consolidate duplicates and
+related details into accurate, user-facing bullets; remove internal paths and
+process-only text. Keep all unique user-visible tweaks without a count limit, but
+fold fixes to features newly introduced in this release into their feature descriptions.
+Preserve meaningful product changes and avoid
+inventing behavior. Edit the develop entry locally, rerun the promotion and its quality
+checks, and resolve any remaining reported issues. Do not switch modes or bypass checks
+to make it pass. The complete resulting alpha entry still requires the approval below.
+
 ## 3. Changelog approval — STOP before commit
 
+Review the whole entry for duplicate tweaks and fixes to features introduced in this
+release; retain all other distinct user-visible tweaks without a count limit.
 Show the WHOLE new alpha entry: version, headline and every feature/fix/tweak bullet.
 Tooling-only: show toolingOnly true, no product bullets, exclusion from stable.
 Check for a joined/run-on headline, offer one clean sentence; edit only approved wording.

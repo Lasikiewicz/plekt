@@ -172,15 +172,15 @@ test("a publishable entry passes the quality gate", () => {
   }), []);
 });
 
-// Alpha keeps a finite runaway ceiling for one rolling build, while the main
-// release keeps every reviewed change from the completed cycle.
-test("alpha limits runaway entries while a release keeps the reviewed cycle", () => {
+test("alpha permits unlimited tweaks while limiting runaway feature and fix entries", () => {
   const entry = (n) => ({ details: Array.from({ length: n }, (_, i) => `Real user-visible bullet number ${i}`) });
   const alpha = { maxBullets: CHANGELOG_ALPHA_MAX_BULLETS, boundary: "alpha" };
 
   assert.deepEqual(changelogEntryQualityViolations(entry(12), alpha), [], "three normal pushes must promote to alpha");
   assert.deepEqual(changelogEntryQualityViolations(entry(12)), [], "a release keeps all reviewed user-visible changes");
   assert.ok(changelogEntryQualityViolations(entry(CHANGELOG_ALPHA_MAX_BULLETS + 1), alpha).length > 0, "a runaway entry is still refused at alpha");
+  const tweaks = { sections: { newFeatures: ["First feature", "Second feature", "Third feature"], majorBugFixes: [], tweaks: Array.from({ length: 40 }, (_, i) => `Distinct tweak ${i}`) } };
+  assert.deepEqual(changelogEntryQualityViolations(tweaks, alpha), []);
 
   // Jargon is wrong at either boundary and must be caught at both.
   const jargon = { details: ["One real bullet", "Two real bullet", "Record every seed in up_next_rail_seeds"] };

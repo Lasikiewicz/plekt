@@ -1,12 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.10";
-import { state, elements } from "./state.js?v=2.1.1.0.10";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.1.1.0.10";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.1.1.0.10";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.1.1.0.10";
-import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.10";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.1.1.0.10";
-import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.10";
-import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.1.1.0.10";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.1.0";
+import { state, elements } from "./state.js?v=2.1.1.1.0";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.1.1.1.0";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.1.1.1.0";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.1.1.1.0";
+import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.1.0";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.1.1.1.0";
+import { cardArtAttribute } from "./card-art.js?v=2.1.1.1.0";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.1.1.1.0";
 
 const PART_WATCHED_DASHBOARD_LIMIT = 30;
 const EXPLORER_PAGE_SIZE = 240;

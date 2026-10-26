@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.10";
-import { state } from "./state.js?v=2.1.1.0.10";
-import { escapeHtml, isDemoMode } from "./utils.js?v=2.1.1.0.10";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.1.0";
+import { state } from "./state.js?v=2.1.1.1.0";
+import { escapeHtml, isDemoMode } from "./utils.js?v=2.1.1.1.0";
 
 const VISIBLE_STATUSES = new Set(["waiting", "planning", "running", "waiting_quota", "interrupted", "partial", "failed"]);
 const ACTIVE_STATUSES = new Set(["waiting", "planning", "running", "waiting_quota"]);

@@ -1,10 +1,99 @@
 {
   "baseVersion": "2.1.1",
-  "build": 0,
-  "version": "2.1.1.0.0",
-  "updatedAt": "2026-10-18T20:37:39.660Z",
+  "build": 1,
+  "version": "2.1.1.1.0",
+  "updatedAt": "2026-10-26T20:31:20.258Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 1,
+      "version": "2.1.1.1.0",
+      "shortVersion": "2.1.1.1.0",
+      "date": "2026-10-26T20:31:20.258Z",
+      "commit": "ae24777830ad860979ad98a3b050c88044a34a94",
+      "message": "This update adds Simkl, Netflix imports and multi-user accounts, while improving sync, navigation and mobile layouts.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Feature: Connect Simkl without a personal Client ID to sync watch history and ratings alongside Trakt, with a reviewable first sync and on-demand checks.",
+        "Feature: Create multiple user accounts with administrator-managed access, keeping each person's data and sessions separate.",
+        "Feature: Use the Plekt Emby and Jellyfin plugins for media-server events, with setup guides for each plugin and the webhook alternative.",
+        "Feature: Import Netflix viewing history from a CSV or personal-information ZIP, choose a profile, review matches and import selected watches with their original dates.",
+        "Feature: Browse cast filmographies with Movies and TV Shows tabs and year and genre filters.",
+        "Feature: Watch History offers a Days view, grouping watches by date, alongside the existing Cards view.",
+        "Feature: Drop and restore titles from Up Next or their detail pages; filter dropped titles and see their count in Stats.",
+        "Feature: Enable AniDB titles and descriptions for anime, review matches, and safely match titles with a single supported link.",
+        "Feature: Subscribe to upcoming movie and TV releases using a private calendar feed; regenerate the URL to revoke the old one.",
+        "Fix: Up Next and Recently Watched refresh across open dashboards and devices, and returning to the dashboard shows cached cards while fresh results load.",
+        "Fix: Resume sync preserves newer stop positions, avoids repeated Plex resume updates and restores eligible Emby Continue Watching items.",
+        "Fix: Jellyfin webhook events recognize dashed user IDs, and the higher webhook rate limit accommodates bursts.",
+        "Tweak: Add sidebar links to Discord and Reddit, with an option to hide project links.",
+        "Tweak: Review confirmed TV episode numbering conflicts in Manual Watch, with a count and dismiss action that leaves watch state unchanged.",
+        "Tweak: Setup guides explain the Plekt Emby and Jellyfin plugins and their webhook alternatives, and warn against enabling both.",
+        "Tweak: Media server cards in the setup wizard show their logos, and backup options are grouped into local and remote sections.",
+        "Tweak: Setup cards and status indicators follow Settings styling in both themes, with clearer tracker and import progress.",
+        "Tweak: Library pages show loading progress, retain the first page while refreshing and preserve distinct titles sharing artwork.",
+        "Tweak: Desktop navigation and library controls remain visible without empty action space.",
+        "Tweak: Opening Info from a scrolled media page keeps the header visible and closes the Options menu.",
+        "Tweak: On phones, featured Up Next and Now Playing cards have larger posters, and Up Next actions use a compact toolbar.",
+        "Tweak: Opened Watchlist, Ratings and Watch History posters retain their folded size on phones.",
+        "Tweak: Phone layouts improve cast profiles, TV library cards, Discover and Playlists rows, and the timeline live panel.",
+        "Tweak: Playing sessions show a Now playing label, while paused sessions retain their Paused label.",
+        "Tweak: Settings shows plain connection statuses and keeps Help cards compact until expanded.",
+        "Tweak: First-run tracker imports can run in parallel and start an add-only outward sync with progress and held-item counts.",
+        "Tweak: Tautulli and Netflix imports are grouped under One Time Imports in Settings.",
+        "Tweak: Opening Settings no longer automatically requests Seerr capabilities.",
+        "Tweak: Webhook rate limits allow larger media-server event bursts.",
+        "Tweak: Installation steps remain readable on phones in both themes.",
+        "Tweak: Trakt errors and restore conflicts show safe messages, and security-related dependencies have been updated."
+      ],
+      "sections": {
+        "newFeatures": [
+          "Connect Simkl without a personal Client ID to sync watch history and ratings alongside Trakt, with a reviewable first sync and on-demand checks.",
+          "Create multiple user accounts with administrator-managed access, keeping each person's data and sessions separate.",
+          "Use the Plekt Emby and Jellyfin plugins for media-server events, with setup guides for each plugin and the webhook alternative.",
+          "Import Netflix viewing history from a CSV or personal-information ZIP, choose a profile, review matches and import selected watches with their original dates.",
+          "Browse cast filmographies with Movies and TV Shows tabs and year and genre filters.",
+          "Watch History offers a Days view, grouping watches by date, alongside the existing Cards view.",
+          "Drop and restore titles from Up Next or their detail pages; filter dropped titles and see their count in Stats.",
+          "Enable AniDB titles and descriptions for anime, review matches, and safely match titles with a single supported link.",
+          "Subscribe to upcoming movie and TV releases using a private calendar feed; regenerate the URL to revoke the old one."
+        ],
+        "majorBugFixes": [
+          "Up Next and Recently Watched refresh across open dashboards and devices, and returning to the dashboard shows cached cards while fresh results load.",
+          "Resume sync preserves newer stop positions, avoids repeated Plex resume updates and restores eligible Emby Continue Watching items.",
+          "Jellyfin webhook events recognize dashed user IDs, and the higher webhook rate limit accommodates bursts."
+        ],
+        "tweaks": [
+          "Add sidebar links to Discord and Reddit, with an option to hide project links.",
+          "Review confirmed TV episode numbering conflicts in Manual Watch, with a count and dismiss action that leaves watch state unchanged.",
+          "Setup guides explain the Plekt Emby and Jellyfin plugins and their webhook alternatives, and warn against enabling both.",
+          "Media server cards in the setup wizard show their logos, and backup options are grouped into local and remote sections.",
+          "Setup cards and status indicators follow Settings styling in both themes, with clearer tracker and import progress.",
+          "Library pages show loading progress, retain the first page while refreshing and preserve distinct titles sharing artwork.",
+          "Desktop navigation and library controls remain visible without empty action space.",
+          "Opening Info from a scrolled media page keeps the header visible and closes the Options menu.",
+          "On phones, featured Up Next and Now Playing cards have larger posters, and Up Next actions use a compact toolbar.",
+          "Opened Watchlist, Ratings and Watch History posters retain their folded size on phones.",
+          "Phone layouts improve cast profiles, TV library cards, Discover and Playlists rows, and the timeline live panel.",
+          "Playing sessions show a Now playing label, while paused sessions retain their Paused label.",
+          "Settings shows plain connection statuses and keeps Help cards compact until expanded.",
+          "First-run tracker imports can run in parallel and start an add-only outward sync with progress and held-item counts.",
+          "Tautulli and Netflix imports are grouped under One Time Imports in Settings.",
+          "Opening Settings no longer automatically requests Seerr capabilities.",
+          "Webhook rate limits allow larger media-server event bursts.",
+          "Installation steps remain readable on phones in both themes.",
+          "Trakt errors and restore conflicts show safe messages, and security-related dependencies have been updated."
+        ]
+      },
+      "messageFragments": [
+        "Fix - Restore library loading and navigation behavior",
+        "Fix - Keep dashboard live across browsers and polish mobile Up Next",
+        "Fix - Match opened poster width to the folded poster on phones",
+        "Feature - Polish the setup wizard, dashboard and Jellyfin setup, and fix webhook and Up Next issues",
+        "Fix - Steadier resume sync, faster Up Next return and Emby plugin setup guide",
+        "Feature - Consolidate the pending Plekt develop updates"
+      ]
+    },
     {
       "build": 2,
       "version": "2.1.0.2.0",
@@ -172,5 +261,5 @@
       ]
     }
   ],
-  "shortVersion": "2.1.0.2.0"
+  "shortVersion": "2.1.1.1.0"
 }
