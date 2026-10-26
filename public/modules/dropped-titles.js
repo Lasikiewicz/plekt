@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
-import { state, elements } from "./state.js?v=2.1.1.0.9";
-import { escapeAttribute } from "./utils.js?v=2.1.1.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.10";
+import { state, elements } from "./state.js?v=2.1.1.0.10";
+import { escapeAttribute } from "./utils.js?v=2.1.1.0.10";
 
 const API = "/api/dropped-titles";
 let unDropInProgress = false;

@@ -1,4 +1,4 @@
-import { escapeHtml } from "./utils.js?v=2.1.1.0.9";
+import { escapeHtml } from "./utils.js?v=2.1.1.0.10";
 
 // Watch history grouped by local calendar day: one box per day, newest day first,
 // newest entry first inside each box. Cards come from the caller so the explorer

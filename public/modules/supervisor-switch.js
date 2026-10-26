@@ -2,10 +2,10 @@
 // Lists accounts from the current-user control and at the foot of the setup page,
 // and calls POST /api/users/manage { action: "open", name } to switch context.
 
-import { ifLoaded } from "./route-modules.js?v=2.1.1.0.9";
-import { escapeAttribute, escapeHtml, isDemoMode } from "./utils.js?v=2.1.1.0.9";
-import { currentUser } from "./auth.js?v=2.1.1.0.9";
-import { sidebarUserPresentation } from "./sidebar-navigation.js?v=2.1.1.0.9";
+import { ifLoaded } from "./route-modules.js?v=2.1.1.0.10";
+import { escapeAttribute, escapeHtml, isDemoMode } from "./utils.js?v=2.1.1.0.10";
+import { currentUser } from "./auth.js?v=2.1.1.0.10";
+import { sidebarUserPresentation } from "./sidebar-navigation.js?v=2.1.1.0.10";
 
 const renderSetupPage = ifLoaded("onboarding", "renderSetupPage");
 
