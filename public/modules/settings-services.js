@@ -4,17 +4,18 @@
 // echoes credentials, only a `configured` flag per section, and a blank secret
 // on save means "keep the stored credential" (except Seerr, whose key is only
 // sent when non-empty).
-import { state } from "./state.js?v=2.1.1.0.8";
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=2.1.1.0.8";
-import { prepareHelpReadMore } from "./settings-shell.js?v=2.1.1.0.8";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.1.1.0.8";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=2.1.1.0.9";
+import { prepareHelpReadMore } from "./settings-shell.js?v=2.1.1.0.9";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.1.1.0.9";
+import { renderAnidbSettings } from "./anidb-settings.js?v=2.1.1.0.9";
 import {
   plexCredentialGuide,
   embyCredentialGuide,
   jellyfinCredentialGuide,
   savedCredentialNote,
-} from "./help-content.js?v=2.1.1.0.8";
+} from "./help-content.js?v=2.1.1.0.9";
 import {
   PLEX_HISTORICAL_SYNC_HELP_HTML,
   PLEX_HISTORICAL_SYNC_CHOICES,
@@ -22,7 +23,7 @@ import {
   PROVIDER_DATE_NOTE_HTML,
   plexHistoricalSyncEnabled,
   plexHistoricalSyncOffWarningHtml,
-} from "./plex-history-policy.js?v=2.1.1.0.8";
+} from "./plex-history-policy.js?v=2.1.1.0.9";
 
 let _cb = {};
 let _tautulliImport = {
@@ -906,6 +907,7 @@ export function renderSeasonSourceCard() {
 }
 
 export function renderMetadataCards() {
+  renderAnidbSettings();
   const container = document.querySelector("#metadataProviderCards");
   if (!container) return;
   const config = state.savedConfig || {};
@@ -923,8 +925,8 @@ export function renderMetadataCards() {
           <div class="sync-tool-summary-title">
             <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
             <b>${escapeHtml(def.name)}</b>
-            ${badgeMarkup(metadataBadges(id, config[id]))}
           </div>
+          ${badgeMarkup(metadataBadges(id, config[id]))}
           <span>${escapeHtml(def.description)}</span>
         </summary>
         <div id="metadata-${escapeAttribute(id)}-panel" class="tool-item-row"></div>

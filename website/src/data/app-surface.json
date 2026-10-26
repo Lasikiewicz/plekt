@@ -163,6 +163,12 @@
     "sourcePaths": ["docs/plex.md", "docs/emby.md", "docs/jellyfin.md", "docs/metadata.md"]
   },
   {
+    "id": "sync-plex-with-trakt",
+    "label": "Sync Plex with Trakt",
+    "docSlug": "sync-plex-with-trakt",
+    "sourcePaths": ["docs/plex.md", "docs/settings.md", "docs/scheduled-sync.md", "docs/troubleshooting.md", "docs/auth.md"]
+  },
+  {
     "id": "settings",
     "label": "Settings",
     "docSlug": "settings",

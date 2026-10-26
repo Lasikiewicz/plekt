@@ -1,0 +1,59 @@
+---
+import { quickstartCompose, quickstartHostPort } from "../generated/quickstart.js";
+---
+
+<section class="simple-home-quickstart" aria-labelledby="quickstart-title">
+  <div class="quickstart-heading">
+    <div>
+      <p class="simple-eyebrow">DOCKER QUICK START</p>
+      <h2 id="quickstart-title">Running in five minutes</h2>
+    </div>
+    <p>Start Plekt with Docker Compose, then finish connecting your media servers in Guided Setup.</p>
+  </div>
+
+  <div class="quickstart-layout">
+    <div class="quickstart-compose" data-quickstart-copy>
+      <div class="quickstart-code-toolbar">
+        <span>docker-compose.yml</span>
+        <button class="quickstart-copy-button" type="button" data-copy-quickstart>Copy Compose file</button>
+      </div>
+      <pre><code data-quickstart-code>{quickstartCompose}</code></pre>
+      <span class="quickstart-copy-status" data-copy-status role="status" aria-live="polite"></span>
+    </div>
+
+    <div class="quickstart-steps">
+      <p class="simple-eyebrow">START PLEKT</p>
+      <ol>
+        <li><code>echo "ADMIN_PASSWORD=change-me" &gt; .env</code></li>
+        <li><code>docker compose up -d</code></li>
+      </ol>
+      <p>Then open <a href={`http://localhost:${quickstartHostPort}`}>http://localhost:{quickstartHostPort}</a>.</p>
+      <a class="simple-text-link" href="/docs/getting-started/#install-with-docker-compose">Read the setup guide <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</section>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-copy-quickstart]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const panel = button.closest<HTMLElement>("[data-quickstart-copy]");
+      const code = panel?.querySelector<HTMLElement>("[data-quickstart-code]");
+      const status = panel?.querySelector<HTMLElement>("[data-copy-status]");
+      if (!code || !status) return;
+
+      try {
+        await navigator.clipboard.writeText(code.textContent || "");
+        button.textContent = "Copied";
+        status.textContent = "Compose file copied to clipboard.";
+      } catch {
+        button.textContent = "Copy failed";
+        status.textContent = "Clipboard access is unavailable. Select and copy the Compose text instead.";
+      }
+
+      window.setTimeout(() => {
+        button.textContent = "Copy Compose file";
+        status.textContent = "";
+      }, 2200);
+    });
+  });
+</script>

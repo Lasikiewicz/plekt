@@ -1,23 +1,28 @@
-import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
+import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js"; import { correlateTrackerObservation } from "./trackerWriteIntents.js";
 import {
-  findExistingWatch, getCanonicalWatchState, getPlaystateForMedia, getPlaystateForMediaSync, insertWatchRecord,
+  findExistingWatch, getCanonicalWatchState, getPlaystateForMedia, getPlaystateForMediaSync, insertWatchRecordSync, prefetchWatchRecordAssets,
   invalidateHistoryDerivedCaches, mediaKeyFor, mediaToWatchRecord, signalHistoryDataChanged, upsertPlaystateForMedia,
 } from "./dataRepo.js";
 import { createLoopStore } from "./loopStore.js";
-import { fetchTraktPlayHistory, fetchTraktWatchedSnapshot, trackerMediaIdentityKeys, trackerMediaKey } from "./traktClient.js";
+import { trackerMediaIdentityKeys, trackerMediaKey } from "./traktClient.js";
 import {
-  findLatestTrackerOutboundSince, getTrackerConnection, listTrackerItemStates, listUnrecordedTrackerPlayIds,
+  findLatestTrackerOutboundSince, getTrackerConnection, listTrackerConnections, listTrackerItemStates, listUnrecordedTrackerPlayIds,
   recordTrackerPlay, replaceTrackerSnapshot, updateTrackerConnectionStatus,
 } from "./trackerConnectionRepo.js";
-import { withFreshTraktConnection } from "./trackerDispatcher.js";
 import { buildTraktInboundTranslator } from "./traktInboundNumbering.js";
 import { applyUnwatchedTransition, applyWatchedTransition } from "./watchStateTransitions.js";
 import { completeDispatchTracking, dispatchProgressKey, finishDispatchTracking, markReservedDispatchStarted, reserveDispatchBatch } from "./syncOrchestrator.js";
+import { settledTrackerHistoryTelemetry } from "./trackers/telemetry.js";
+import { assertTrackerEnabled, getTrackerAdapter, runTrackerOperation, trackerImportSource, trackerSupportsTrigger } from "./trackers/registry.js";
+import { createTrackerPoller } from "./trackers/polling.js";
+import { assertTrackerGeneration, trackerGenerationCurrent } from "./trackers/generation.js";
+import { db } from "../db.js";
+import { readTrackerSnapshot } from "./trackers/connections.js";
+import { syncSimklObservations } from "./trackers/simklSync.js";
+import { syncDroppedTitleTracker } from "./droppedTitleTrackerSync.js";
 
 const OUTBOUND_ECHO_WINDOW_MS = 30 * 60_000;
 const TRACKER_TRANSITION_CONCURRENCY = 8;
-let pollInFlight = null;
-let pollInFlightReconcile = false;
 
 function isOutboundEcho(item, state, now = Date.now()) {
   return item?.lastOutboundState === state && Number(item.lastOutboundAt || 0) > 0 && now - Number(item.lastOutboundAt) <= OUTBOUND_ECHO_WINDOW_MS;
@@ -93,7 +98,7 @@ function latestOutboundFromIndex(index, item) {
 // this also protects single movies and small episode drops, not just whole
 // seasons. If an item reappears, its pending removal is cancelled.
 export const TRAKT_UNWATCH_CONFIRMATION_MS = 10 * 60_000;
-const pendingTraktUnwatches = new Map(); // mediaKey -> first-detected timestamp
+const pendingTrackerUnwatches = new Map(); // provider -> mediaKey -> first-detected timestamp
 
 export function showIdentityFromMediaKey(mediaKey = "") {
   const match = /^episode:(.*):s-?\d+e-?\d+$/.exec(mediaKey);
@@ -104,6 +109,12 @@ export function showIdentityFromMediaKey(mediaKey = "") {
 // their grace period. `now` is injectable so truncation/recovery cases can be
 // tested without waiting in real time.
 export function partitionPendingTraktUnwatches(unwatchedCandidates, currentByKey, now = Date.now()) {
+  return partitionPendingTrackerUnwatches("trakt", unwatchedCandidates, currentByKey, now);
+}
+
+export function partitionPendingTrackerUnwatches(provider, unwatchedCandidates, currentByKey, now = Date.now()) {
+  if (!pendingTrackerUnwatches.has(provider)) pendingTrackerUnwatches.set(provider, new Map());
+  const pendingTraktUnwatches = pendingTrackerUnwatches.get(provider);
   for (const mediaKey of pendingTraktUnwatches.keys()) {
     if (currentByKey.has(mediaKey)) pendingTraktUnwatches.delete(mediaKey);
   }
@@ -124,16 +135,8 @@ export function partitionPendingTraktUnwatches(unwatchedCandidates, currentByKey
   return { unwatched, heldBack };
 }
 
-async function readSnapshot() {
-  let connection = await withFreshTraktConnection();
-  if (!connection) return { connection: null, snapshot: [] };
-  try {
-    return { connection, snapshot: await fetchTraktWatchedSnapshot(connection) };
-  } catch (error) {
-    if (error.status !== 401) throw error;
-    connection = await withFreshTraktConnection(true);
-    return { connection, snapshot: await fetchTraktWatchedSnapshot(connection) };
-  }
+async function readSnapshot(provider, reconcile) {
+  return readTrackerSnapshot(provider, { trigger: reconcile ? "user" : "scheduled" });
 }
 
 async function runTransitionBatch(items, handler, concurrency = TRACKER_TRANSITION_CONCURRENCY) {
@@ -163,16 +166,21 @@ async function runTransitionBatch(items, handler, concurrency = TRACKER_TRANSITI
 // (via tracker_play_history) and nudges playstate's timestamp forward when
 // a newer rewatch is found. It never propagates to sync targets itself -
 // these are historical facts, not new events for Plex/Emby/Jellyfin to act on.
-async function importTraktPlayHistory(connection, publicConnection, previousStates, watchlistConfig = null) {
+async function importTrackerPlayHistory(provider, connection, publicConnection, previousStates, watchlistConfig = null, trigger = "scheduled") {
   if (isAuthoritativeRestoreActive()) return;
-  const watermarkMs = publicConnection.baselineComplete ? Number(publicConnection.historySyncedAt || 0) : 0;
+  const watermarkMs = Math.max(Number(publicConnection.historySyncedAt || 0),Number(publicConnection.connectedAt||0));
+  if(!publicConnection.baselineComplete) {updateTrackerConnectionStatus(provider,{historySyncedAt:watermarkMs});return;}
   // A minute of overlap tolerates clock skew; tracker_play_history dedup
   // means re-seeing already-imported plays here is a harmless no-op.
   const startAt = watermarkMs > 0 ? new Date(watermarkMs - 60_000).toISOString() : undefined;
-  const entries = await fetchTraktPlayHistory(connection, { startAt });
+  const adapter = getTrackerAdapter(provider);
+  if (!adapter.capabilities.playHistory?.supported) return;
+  const entries = await runTrackerOperation(provider, "playHistory", {
+    mediaType: "movie", trigger, satisfiedPreconditions: ["authenticated_connection", "complete_pagination"],
+  }, connection, { startAt });
   if (!entries.length) return;
 
-  const pendingIds = listUnrecordedTrackerPlayIds("trakt", entries.map((entry) => entry.historyId));
+  const pendingIds = listUnrecordedTrackerPlayIds(provider, entries.map((entry) => entry.historyId));
   // Advance past every entry this fetch saw, not just the newly-inserted
   // ones, or an already-imported entry would keep it re-fetching the same
   // window forever instead of narrowing to genuinely new plays next time.
@@ -181,11 +189,11 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
   const recentOutbound = buildRecentOutboundIndex(previousStates, Date.now() - OUTBOUND_ECHO_WINDOW_MS);
   // A Fix Match translated show's Trakt plays use the display numbering; local
   // lookups and inserts use the stored numbering.
-  const toStoredNumbering = await buildTraktInboundTranslator();
+  const toStoredNumbering = await inboundTranslators.get(provider)();
 
-  for (const entry of entries.filter((entry) => pendingIds.has(entry.historyId)).sort((a, b) => a.watchedAt - b.watchedAt)) {
+  for (const entry of entries.filter((entry) => pendingIds.has(entry.historyId)&&entry.watchedAt>=watermarkMs-60_000).sort((a, b) => a.watchedAt - b.watchedAt)) {
     if (isAuthoritativeRestoreActive()) return;
-    const watchedAtIso = new Date(entry.watchedAt).toISOString();
+    const watchedAtIso = new Date(entry.watchedAt).toISOString(); if (correlateTrackerObservation(provider, connection, entry).status !== "unmatched") continue;
 
     // A play that looks like it just happened, right after Plembfin itself
     // last pushed a "watched" mark for this item to Trakt, is almost
@@ -210,7 +218,7 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
       && Number(outboundState.lastOutboundAt || 0) > 0
       && Math.abs(entry.watchedAt - Number(outboundState.lastOutboundAt)) <= OUTBOUND_ECHO_WINDOW_MS
     ) {
-      recordTrackerPlay("trakt", { historyId: entry.historyId, mediaKey: trackerMediaKey(entry.media), watchedAt: watchedAtIso, watchRecordId: "" });
+      recordTrackerPlay(provider, { historyId: entry.historyId, mediaKey: trackerMediaKey(entry.media), watchedAt: watchedAtIso, watchRecordId: "" });
       continue;
     }
 
@@ -234,13 +242,13 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
       // creates a second row for an episode Plembfin already has recorded.
       const canonicalState = await getCanonicalWatchState(localMedia).catch(() => null);
       if (canonicalState === "watched") {
-        recordTrackerPlay("trakt", { historyId: entry.historyId, mediaKey: trackerMediaKey(entry.media), watchedAt: watchedAtIso, watchRecordId: "" });
+        recordTrackerPlay(provider, { historyId: entry.historyId, mediaKey: trackerMediaKey(entry.media), watchedAt: watchedAtIso, watchRecordId: "" });
         continue;
       }
     }
     let watchRecordId = existing?.id || "";
     if (!existing) {
-      const record = mediaToWatchRecord({ ...localMedia, watched_at: watchedAtIso, syncAction: "watched" }, "trakt_import");
+      const record = mediaToWatchRecord({ ...localMedia, watched_at: watchedAtIso, syncAction: "watched" }, trackerImportSource(provider));
       record.sync_action = "watched";
       // Without telemetry that looks "done", the scheduler's manual-dispatch
       // retry sweep (server/src/scheduled.js syncPendingManualDispatches)
@@ -249,19 +257,17 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
       // in trackerDispatcher.js) created a new Trakt play every poll for
       // every backfilled play. Mark these as already-settled so nothing ever
       // re-dispatches them to Plex/Emby/Jellyfin or Trakt.
-      record.sync_dispatch_telemetry = [
-        "Origin: trakt_import",
-        "Loop-check: Skipped propagation",
-        "Dispatch status: skipped",
-        "Details: Historical play imported from Trakt history; current watch state is tracked separately and was not re-propagated.",
-        "Target plex status: skipped - Historical import; not re-propagated",
-        "Target emby status: skipped - Historical import; not re-propagated",
-        "Target jellyfin status: skipped - Historical import; not re-propagated",
-      ].join("\n");
-      const result = await insertWatchRecord(record, { skipInvalidate: true, watchlistConfig });
+      record.sync_dispatch_telemetry = settledTrackerHistoryTelemetry(trackerImportSource(provider),
+        `Historical play imported from ${adapter.label} history; current watch state is tracked separately and was not re-propagated.`);
+      // Commit only while the poll's connection generation is still current.
+      const result = db.transaction(() => {
+        assertTrackerGeneration(provider);
+        return insertWatchRecordSync(record, { watchlistConfig });
+      }).immediate();
+      void prefetchWatchRecordAssets(result);
       watchRecordId = result.id;
     }
-    recordTrackerPlay("trakt", { historyId: entry.historyId, mediaKey: canonicalMediaKey, watchedAt: watchedAtIso, watchRecordId });
+    recordTrackerPlay(provider, { historyId: entry.historyId, mediaKey: canonicalMediaKey, watchedAt: watchedAtIso, watchRecordId });
     const previous = touchedKeys.get(canonicalMediaKey);
     if (!previous || entry.watchedAt > previous.watchedAtMs) {
       touchedKeys.set(canonicalMediaKey, { media: localMedia, watchedAtMs: entry.watchedAt, watchedAtIso });
@@ -279,10 +285,10 @@ async function importTraktPlayHistory(connection, publicConnection, previousStat
   }
 
   if (touchedKeys.size) await invalidateHistoryDerivedCaches("importTraktPlayHistory");
-  updateTrackerConnectionStatus("trakt", { historySyncedAt: latestWatchedAt });
+  updateTrackerConnectionStatus(provider, { historySyncedAt: latestWatchedAt });
 }
 
-export function selectTraktWatchedTransitions({ snapshot = [], previous = [], baseline = false, initialSyncMode = "baseline", reconcileKeys = new Set() } = {}) {
+export function selectTrackerWatchedTransitions({ snapshot = [], previous = [], baseline = false, initialSyncMode = "baseline", reconcileKeys = new Set() } = {}) {
   const previousByKey = new Map(previous.map((item) => [item.mediaKey, item]));
   return baseline
     ? snapshot.filter((item) => {
@@ -290,17 +296,52 @@ export function selectTraktWatchedTransitions({ snapshot = [], previous = [], ba
       const newlyWatched = !prior || Number(item.watchedAt || 0) !== Number(prior.remoteWatchedAt || 0);
       return (newlyWatched || reconcileKeys.has(item.mediaKey)) && !isOutboundEcho(prior, "watched");
     })
-    : initialSyncMode === "import" ? snapshot : [];
+    : [];
 }
 
-async function pollTrakt({ reconcile = false } = {}) {
+export const selectTraktWatchedTransitions = selectTrackerWatchedTransitions;
+
+// The first pass of a connection (its baseline or initial import) records
+// durable progress on the connection, independent of onboarding state, so a
+// tracker added later from Settings can show how its import is going.
+function initialSyncRecorder(provider) {
+  const before = getTrackerConnection(provider);
+  if (before?.status !== "connected" || before.baselineComplete) return null;
+  let current = { mode: 'baseline', requiresPreview:before.initialSyncMode==='import', startedAt: Date.now() };
+  return (patch) => {
+    current = { ...current, ...patch };
+    updateTrackerConnectionStatus(provider, { initialSync: current, connectionId: before.id });
+  };
+}
+
+async function pollTracker(provider, options = {}) {
+  const progress = initialSyncRecorder(provider);
+  if (!progress) return pollTrackerPass(provider, options);
+  progress({ status: "running" });
+  try {
+    const result = await pollTrackerPass(provider, options, progress);
+    progress(result.skipped
+      ? { status: "waiting", reason: result.reason || "" }
+      : { status: "completed", finishedAt: Date.now(), imported: Number(result.watched || 0), remoteItems: Number(result.remoteItems || 0) });
+    return result;
+  } catch (error) {
+    if (!error.stale) progress({ status: "failed", finishedAt: Date.now(), error: String(error.message || error).slice(0, 300) });
+    throw error;
+  }
+}
+
+async function pollTrackerPass(provider, { reconcile = false, trigger = "scheduled" } = {}, progress = null) {
+  if(reconcile)throw Object.assign(new Error('Historical imports require an approved full-sync preview'),{code:'FULL_SYNC_PREVIEW_REQUIRED',status:409});
+  const adapter = assertTrackerEnabled(provider);
+  if (provider === "simkl") return syncSimklObservations({ trigger: reconcile ? "user" : trigger, reconcile });
   const pollStartedAt = Date.now();
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active", watched: 0, unwatched: 0 };
-  const publicConnection = getTrackerConnection("trakt");
+  const publicConnection = getTrackerConnection(provider);
   if (!publicConnection || publicConnection.status !== "connected") return { skipped: true, reason: "not-connected", watched: 0, unwatched: 0 };
-  const { connection, snapshot } = await readSnapshot();
+  if (!trackerGenerationCurrent(provider)) return { skipped: true, reason: "connection-changed", watched: 0, unwatched: 0 };
+  const { connection, snapshot } = await readSnapshot(provider, reconcile);
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active", watched: 0, unwatched: 0 };
-  const previous = listTrackerItemStates("trakt");
+  const previous = listTrackerItemStates(provider);
   const previousForDiff = dedupeTrackerItemsByIdentity(previous);
   const currentByKey = new Map(snapshot.map((item) => [item.mediaKey, item]));
   const currentIdentityKeys = new Set(snapshot.flatMap((item) => [item.mediaKey, ...trackerMediaIdentityKeys(item.media)]));
@@ -308,14 +349,14 @@ async function pollTrakt({ reconcile = false } = {}) {
   const reconcileKeys = new Set();
   // Snapshot and ledger keys stay in Trakt's numbering; local reads and
   // transitions use the stored numbering of a Fix Match translated show.
-  const toStoredNumbering = await buildTraktInboundTranslator();
+  const toStoredNumbering = await inboundTranslators.get(provider)();
   if (baseline && reconcile) {
     await runTransitionBatch(snapshot, async (item) => {
       const state = await getCanonicalWatchState(toStoredNumbering(item.media)).catch(() => null);
       if (state !== "watched") reconcileKeys.add(item.mediaKey);
     });
   }
-  const watched = selectTraktWatchedTransitions({
+  const watched = selectTrackerWatchedTransitions({
     snapshot,
     previous,
     baseline,
@@ -332,7 +373,7 @@ async function pollTrakt({ reconcile = false } = {}) {
   // way. That is a deliberate trade: the pass exists to project history, and
   // mislabelling one minute's activity is far cheaper than letting a whole
   // account's backfill through a policy the user turned off.
-  const historicalTraktImport = reconcile || (!baseline && publicConnection.initialSyncMode === "import");
+  const historicalTrackerImport = reconcile || (!baseline && publicConnection.initialSyncMode === "import");
   // A "watched" mark just pushed to Trakt does not always show up in the
   // very next watched-snapshot fetch - Trakt's API can lag behind its own
   // write for several seconds. Without this guard, that stale snapshot looks
@@ -367,9 +408,9 @@ async function pollTrakt({ reconcile = false } = {}) {
       unwatchedCandidates.push(item);
     }
   }
-  const { unwatched, heldBack } = partitionPendingTraktUnwatches(unwatchedCandidates, currentByKey);
+  const { unwatched, heldBack } = partitionPendingTrackerUnwatches(provider, unwatchedCandidates, currentByKey);
   if (heldBack.length) {
-    console.error(`[trackerSync] Held back ${heldBack.length} suspiciously large Trakt unwatch(es) from propagating - will re-check on the next poll instead of trusting a possibly incomplete response.`);
+    console.error(`[trackerSync] Held back ${heldBack.length} suspiciously large ${adapter.label} unwatch(es) from propagating - will re-check on the next poll instead of trusting a possibly incomplete response.`);
   }
 
   const config = await loadMediaConfig();
@@ -385,6 +426,8 @@ async function pollTrakt({ reconcile = false } = {}) {
   const deferredWatchedKeys = new Set();
   let deferredWatched = 0;
   let appliedUnwatched = 0;
+  let processed = 0;
+  progress?.({ total: watched.length, done: 0 });
   try {
     if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active", watched: 0, unwatched: 0 };
     await runTransitionBatch(watched, async (item) => {
@@ -392,18 +435,19 @@ async function pollTrakt({ reconcile = false } = {}) {
         markReservedDispatchStarted(trackingReservation, item.media);
         const media = {
           ...toStoredNumbering(item.media),
-          source: "trakt",
+          source: provider,
           watched_at: new Date(item.watchedAt || Date.now()).toISOString(),
           // Every later poll reports genuine new activity, but the very first
           // poll of an "Import all existing Trakt watched state" connection is
           // a bulk historical import. The provider matrix needs that stated
           // explicitly (see watchSyncPolicy.js) - an entry's timestamp alone
           // proves nothing, since a freshly imported play can be from today.
-          ...(historicalTraktImport ? { syncIntent: "import" } : {}),
+          ...(historicalTrackerImport ? { syncIntent: "import" } : {}),
         };
         const shouldDefer = () => {
+          if (!trackerGenerationCurrent(provider)) return true;
           const latestOutbound = findLatestTrackerOutboundSince(
-            "trakt",
+            provider,
             item,
             Date.now() - OUTBOUND_ECHO_WINDOW_MS,
           );
@@ -420,6 +464,8 @@ async function pollTrakt({ reconcile = false } = {}) {
         signalHistoryDataChanged();
       } finally {
         completeDispatchTracking(trackingReservation, item.media);
+        processed += 1;
+        if (progress && (processed % 25 === 0 || processed === watched.length)) progress({ done: processed });
       }
     });
     await runTransitionBatch(unwatched, async (item) => {
@@ -430,8 +476,9 @@ async function pollTrakt({ reconcile = false } = {}) {
         // canonical replay may have primed its watched intent after this poll
         // fetched its snapshot but before this worker reached the item.
         const shouldDefer = () => {
+          if (!trackerGenerationCurrent(provider)) return true;
           const latestOutbound = findLatestTrackerOutboundSince(
-            "trakt",
+            provider,
             item,
             Date.now() - OUTBOUND_ECHO_WINDOW_MS,
           );
@@ -439,7 +486,7 @@ async function pollTrakt({ reconcile = false } = {}) {
           const latestPlaystate = getPlaystateForMediaSync(toStoredNumbering(item.media));
           return latestPlaystate?.state === "watched" && Number(latestPlaystate.updated_at || 0) >= pollStartedAt;
         };
-        const media = { ...toStoredNumbering(item.media), source: "trakt", isValid: true };
+        const media = { ...toStoredNumbering(item.media), source: provider, isValid: true };
         const transition = await applyUnwatchedTransition(media, config, loopStore, { trackDispatch: false, shouldDefer });
         if (transition.deferred || transition.heldBackSuspiciousBurst) {
           protectedMissing.set(item.mediaKey, item);
@@ -457,7 +504,7 @@ async function pollTrakt({ reconcile = false } = {}) {
 
   if (deferredWatched || protectedMissing.size) {
     console.log(
-      `[trackerSync] Held ${deferredWatched} watched and ${protectedMissing.size} unwatched Trakt change(s) for re-check because a newer local/outbound intent or safety guard took precedence.`,
+      `[trackerSync] Held ${deferredWatched} watched and ${protectedMissing.size} unwatched ${adapter.label} change(s) for re-check because a newer local/outbound intent or safety guard took precedence.`,
     );
   }
 
@@ -499,13 +546,13 @@ async function pollTrakt({ reconcile = false } = {}) {
   const dedupedSnapshotItems = [...new Map(
     [...snapshotForStorage, ...heldBackAsSnapshotItems, ...protectedAsSnapshotItems].map((item) => [item.mediaKey, item]),
   ).values()];
-  replaceTrackerSnapshot("trakt", dedupedSnapshotItems);
-  updateTrackerConnectionStatus("trakt", { baselineComplete: true, lastPolledAt: Date.now(), lastValidatedAt: Date.now(), lastError: null });
+  replaceTrackerSnapshot(provider, dedupedSnapshotItems);
+  updateTrackerConnectionStatus(provider, { baselineComplete: true, lastPolledAt: Date.now(), lastValidatedAt: Date.now(), lastError: null });
 
   try {
-    await importTraktPlayHistory(connection, publicConnection, previous, config);
+    await importTrackerPlayHistory(provider, connection, publicConnection, previous, config, reconcile ? "user" : "scheduled");
   } catch (error) {
-    console.error("[trackerSync] Trakt play-history import failed (non-fatal)", error);
+    console.error(`[trackerSync] ${provider} play-history import failed (non-fatal)`, error);
   }
 
   return {
@@ -520,23 +567,60 @@ async function pollTrakt({ reconcile = false } = {}) {
   };
 }
 
+const pollTrackers = createTrackerPoller({
+  connections: listTrackerConnections,
+  poll: (provider, options) => {
+    assertTrackerEnabled(provider);
+    return pollTracker(provider, options);
+  },
+  onError: (provider, error) => {
+    updateTrackerConnectionStatus(provider, { lastPolledAt: Date.now(), lastError: error.message || String(error) });
+  },
+  eligible: (provider, { reconcile = false, trigger = "scheduled" } = {}) => trackerSupportsTrigger(provider, reconcile ? "user" : trigger),
+});
+const inboundTranslators = new Map([["trakt", buildTraktInboundTranslator]]);
+
 export async function pollConnectedTrackers(options = {}) {
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active", watched: 0, unwatched: 0 };
-  const reconcile = Boolean(options.reconcile);
-  if (pollInFlight) {
-    if (!reconcile || pollInFlightReconcile) return pollInFlight;
-    await pollInFlight.catch(() => null);
-    return pollConnectedTrackers(options);
-  }
-  pollInFlightReconcile = reconcile;
-  pollInFlight = pollTrakt(options)
-    .catch((error) => {
-      updateTrackerConnectionStatus("trakt", { lastPolledAt: Date.now(), lastError: error.message || String(error) });
-      throw error;
-    })
-    .finally(() => {
-      pollInFlight = null;
-      pollInFlightReconcile = false;
-    });
-  return pollInFlight;
+  if (options.provider) assertTrackerEnabled(options.provider);
+  const result = await pollTrackers(options);
+  const trigger = options.reconcile ? "user" : options.trigger || "scheduled";
+  const providers = listTrackerConnections()
+    .filter((connection) => connection.status === "connected" && (!options.provider || connection.provider === options.provider)
+      && trackerSupportsTrigger(connection.provider, trigger))
+    .map((connection) => connection.provider);
+  await Promise.all(providers.map((provider) => syncDroppedTitleTracker(provider, { trigger })
+    .catch((error) => console.error(`[trackerSync] ${provider} dropped-title sync failed`, error.message || error))));
+  return result;
+}
+
+// Trackers that do not poll on the scheduler (Simkl) check for remote changes
+// after a media-server webhook instead, at most once per throttle window.
+// Simkl has no scheduled poll; inbound checks after media-server events share this
+// window so webhook storms (for example Up Next rewriting playstates) cannot burn
+// daily quota. User Check now stays immediate and does not use this throttle.
+export const TRACKER_EVENT_CHECK_THROTTLE_MS = 30 * 60_000;
+// 0 means "never ran"; do not treat that as a recent check or the first event
+// after reset is blocked for the whole throttle window.
+let lastEventCheckAt = 0;
+
+export function checkTrackersAfterMediaEvent({ now = Date.now(), poll = pollConnectedTrackers, logger = console.error } = {}) {
+  if (lastEventCheckAt > 0 && now - lastEventCheckAt < TRACKER_EVENT_CHECK_THROTTLE_MS) return null;
+  const providers = listTrackerConnections()
+    .filter((connection) => connection.status === "connected" && !trackerSupportsTrigger(connection.provider, "scheduled")
+      && trackerSupportsTrigger(connection.provider, "event"))
+    .map((connection) => connection.provider);
+  if (!providers.length) return null;
+  lastEventCheckAt = now;
+  return Promise.all(providers.map((provider) => poll({ provider, trigger: "event" })
+    .catch((error) => logger(`[trackerSync] ${provider} event check failed`, error.message || error))));
+}
+
+export function resetTrackerEventCheckThrottle() {
+  lastEventCheckAt = 0;
+}
+
+// Test helper: 0 means no armed event check since the last reset.
+export function peekTrackerEventCheckAt() {
+  return lastEventCheckAt;
 }

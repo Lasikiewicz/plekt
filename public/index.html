@@ -8,25 +8,29 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.1.1.0.8" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.1.1.0.9" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.1.1.0.8"></script>
+    <script src="/theme-boot.js?v=2.1.1.0.9"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.1.1.0.8" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.1.1.0.8" />
-    <link rel="stylesheet" href="/styles.css?v=2.1.1.0.8" />
+    <link rel="modulepreload" href="/app.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.1.1.0.9" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.1.1.0.9" />
+    <link rel="stylesheet" href="/styles.css?v=2.1.1.0.9" />
+    <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
     <div class="app-chassis">
@@ -94,6 +98,13 @@
                       <path d="M3.2 14.4 L7.4 8.6 L10.2 11.8 L12.2 9.6 L14.8 14.4 Z" fill="currentColor" opacity="0.8" />
                     </svg>
                     <span>Background Art</span>
+                  </label>
+                  <label class="sidebar-appearance-list-item" title="Hide all links at the bottom of the sidebar">
+                    <input id="appearHideLinks" type="checkbox" />
+                    <svg viewBox="0 0 18 18" aria-hidden="true">
+                      <path d="M7.1 11.7 5.9 13a2.6 2.6 0 0 1-3.7-3.7l2.4-2.4a2.6 2.6 0 0 1 3.7 0 .7.7 0 0 1-1 1 1.2 1.2 0 0 0-1.7 0l-2.4 2.4a1.2 1.2 0 0 0 1.7 1.7l1.3-1.3a.7.7 0 0 1 1 1Zm3.8-5.4L12.1 5a2.6 2.6 0 0 1 3.7 3.7l-2.4 2.4a2.6 2.6 0 0 1-3.7 0 .7.7 0 1 1 1-1 1.2 1.2 0 0 0 1.7 0l2.4-2.4a1.2 1.2 0 0 0-1.7-1.7l-1.3 1.3a.7.7 0 0 1-1-1ZM6.2 11.8l5.6-5.6 1 1-5.6 5.6-1-1Z" fill="currentColor" />
+                    </svg>
+                    <span>Hide Links</span>
                   </label>
                 </div>
                 <div id="sidebarAppearanceMediaGroup" class="sidebar-appearance-list hidden">
@@ -163,8 +174,8 @@
 
         <div class="sidebar-footer">
             <div id="sidebarOnboardingCta" class="sidebar-onboarding-cta hidden">
-              <button id="sidebarOnboardingButton" type="button" class="sidebar-onboarding-cta-button">Complete onboarding</button>
-              <button id="sidebarOnboardingDismiss" type="button" class="sidebar-onboarding-cta-dismiss" title="Dismiss permanently" aria-label="Dismiss onboarding reminder permanently">&times;</button>
+              <button id="sidebarOnboardingButton" type="button" class="sidebar-onboarding-cta-button">Finish Setup</button>
+              <button id="sidebarOnboardingDismiss" type="button" class="sidebar-onboarding-cta-dismiss" title="Dismiss setup reminder" aria-label="Dismiss Finish Setup reminder">&times;</button>
             </div>
             <div id="sidebarSyncAttention" class="sidebar-sync-attention hidden" aria-live="polite">
               <button id="sidebarSyncAttentionButton" class="sidebar-sync-attention-button" type="button" aria-controls="sync-activity-view" aria-label="Attention - Issue. Open Sync Activity for details.">
@@ -184,11 +195,49 @@
             <div id="startupScanNotice" class="startup-scan-notice hidden" role="status" aria-live="polite">
               Startup scan running. The app may feel slow until the initial scan completes. Please wait.
             </div>
+            <button id="initialSyncChip" class="initial-sync-chip hidden" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="initialSyncDialog" aria-label="Open Initial sync screen">
+              <span class="initial-sync-chip-dot" aria-hidden="true"></span>
+              <span id="initialSyncChipText">Initial sync</span>
+            </button>
             <button id="syncProgressIndicator" class="sync-progress-indicator" type="button" data-sync-state="idle" title="Open sync activity">
               <span class="sync-progress-dot" aria-hidden="true"></span>
               <span id="syncProgressText" class="sync-progress-text" role="status">Sync - Idle</span>
             </button>
-            <button id="appVersion" class="app-version" type="button" title="Open Changelog">v0.0.0</button>
+            <div class="sidebar-build-row">
+              <div id="sidebarCurrentUserWrap" class="sidebar-current-user-wrap hidden">
+                <button id="sidebarCurrentUserButton" class="sidebar-current-user-button hidden" type="button" aria-expanded="false" aria-controls="sidebarCurrentUserList">
+                  <span id="sidebarCurrentUserButtonName"></span>
+                </button>
+                <span id="sidebarCurrentUserStatic" class="sidebar-current-user-static hidden"></span>
+                <div id="sidebarCurrentUserList" class="sidebar-appearance-panel sidebar-switch-user-list sidebar-current-user-list hidden" aria-label="Switch user"></div>
+              </div>
+              <button id="appVersion" class="app-version" type="button" title="Open Changelog">v0.0.0</button>
+              <div class="sidebar-project-links">
+              <a class="sidebar-project-link" href="https://github.com/Lasikiewicz/plekt" target="_blank" rel="noopener noreferrer" aria-label="Plekt on GitHub" title="Plekt on GitHub">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 .75a11.25 11.25 0 0 0-3.558 21.923c.563.105.77-.244.77-.542v-2.09c-3.13.68-3.79-1.33-3.79-1.33-.512-1.3-1.25-1.646-1.25-1.646-1.022-.7.078-.686.078-.686 1.13.08 1.725 1.16 1.725 1.16 1.005 1.723 2.636 1.225 3.28.937.102-.728.393-1.225.715-1.507-2.498-.284-5.124-1.249-5.124-5.563 0-1.23.44-2.234 1.16-3.022-.116-.285-.503-1.43.11-2.98 0 0 .945-.302 3.094 1.155A10.79 10.79 0 0 1 12 6.18c.956.004 1.919.13 2.817.379 2.147-1.457 3.09-1.155 3.09-1.155.615 1.55.228 2.695.112 2.98.722.788 1.158 1.792 1.158 3.022 0 4.325-2.63 5.276-5.136 5.555.404.35.766 1.04.766 2.096v3.074c0 .3.204.652.774.541A11.25 11.25 0 0 0 12 .75Z"/></svg>
+              </a>
+              <a class="sidebar-project-link" href="https://plekt.net" target="_blank" rel="noopener noreferrer" aria-label="Visit plekt.net" title="Visit plekt.net">
+                <svg class="sidebar-website-icon" viewBox="0 0 64 64" width="16" height="16" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="sidebarLogoLeft" x1="0" x2="1"><stop offset="0" stop-color="#19E3C0"/><stop offset="1" stop-color="#0FB89A"/></linearGradient>
+                    <linearGradient id="sidebarLogoRight" x1="0" x2="1"><stop offset="0" stop-color="#3B9BFF"/><stop offset="1" stop-color="#1565D8"/></linearGradient>
+                    <mask id="sidebarLogoMask" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64"><rect width="64" height="64" fill="#fff"/><path transform="translate(17 17) scale(0.5)" d="M0 0H46a14 14 0 0 1 14 14V25a14 14 0 0 1-14 14H19V60H0Z" fill="#000" stroke="#000" stroke-width="7" stroke-linejoin="round"/></mask>
+                  </defs>
+                  <g mask="url(#sidebarLogoMask)"><path d="M2 32L21 17L18 26H32V38H18L21 47Z" fill="url(#sidebarLogoLeft)"/><path d="M2 32L21 17L18 26H32V38H18L21 47Z" fill="url(#sidebarLogoRight)" transform="translate(64 0) scale(-1 1)"/></g>
+                  <path class="sidebar-website-letter" transform="translate(17 17) scale(0.5)" d="M0 0H46a14 14 0 0 1 14 14V25a14 14 0 0 1-14 14H19V60H0ZM19 16V23H43a3.5 3.5 0 0 0 0-7Z" fill-rule="evenodd"/>
+                </svg>
+              </a>
+              <a class="sidebar-project-link sidebar-sponsor" href="https://github.com/sponsors/Lasikiewicz" target="_blank" rel="noopener noreferrer" aria-label="Support Plekt on GitHub Sponsors" title="Support Plekt on GitHub Sponsors">
+                <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="m8 14.25-.345-.2C5.538 12.82 0 9.146 0 5.25 0 2.69 1.99 1 4.25 1 5.8 1 7.151 1.815 8 3.05 8.849 1.815 10.2 1 11.75 1 14.01 1 16 2.69 16 5.25c0 3.896-5.538 7.57-7.655 8.8L8 14.25Z"/></svg>
+              </a>
+              <a class="sidebar-project-link" href="https://discord.gg/7ZmEGKcRC5" target="_blank" rel="noopener noreferrer" aria-label="Join Plekt on Discord" title="Join Plekt on Discord">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M19.7 5.3a19 19 0 0 0-4.7-1.45l-.58 1.18a17.4 17.4 0 0 0-4.84 0L9 3.85A19 19 0 0 0 4.3 5.3C1.33 9.7.52 14 .93 18.24a19 19 0 0 0 5.77 2.92l1.25-2.03a12.4 12.4 0 0 1-1.97-.95l.48-.37a13.6 13.6 0 0 0 11.08 0l.49.37c-.63.38-1.29.7-1.98.95l1.25 2.03a19 19 0 0 0 5.77-2.92c.49-4.92-.83-9.18-3.37-12.94ZM8.73 15.2c-1.1 0-2-.99-2-2.2s.88-2.2 2-2.2c1.13 0 2.02 1 2 2.2 0 1.21-.88 2.2-2 2.2Zm6.54 0c-1.1 0-2-.99-2-2.2s.88-2.2 2-2.2c1.13 0 2.02 1 2 2.2 0 1.21-.87 2.2-2 2.2Z"/></svg>
+              </a>
+              <a class="sidebar-project-link" href="https://www.reddit.com/r/plekt/" target="_blank" rel="noopener noreferrer" aria-label="Visit r/plekt on Reddit" title="Visit r/plekt on Reddit">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12c0 3.314 1.343 6.314 3.515 8.485l-2.286 2.286C.775 23.225 1.097 24 1.738 24H12c6.627 0 12-5.373 12-12S18.627 0 12 0Zm4.388 3.199c1.104 0 1.999.895 1.999 1.999 0 1.105-.895 2-1.999 2-.946 0-1.739-.657-1.947-1.539v.002c-1.147.162-2.032 1.15-2.032 2.341v.007c1.776.067 3.4.567 4.686 1.363.473-.363 1.064-.58 1.707-.58 1.547 0 2.802 1.254 2.802 2.802 0 1.117-.655 2.081-1.601 2.531-.088 3.256-3.637 5.876-7.997 5.876-4.361 0-7.905-2.617-7.998-5.87-.954-.447-1.614-1.415-1.614-2.538 0-1.548 1.255-2.802 2.803-2.802.645 0 1.239.218 1.712.585 1.275-.79 2.881-1.291 4.64-1.365v-.01c0-1.663 1.263-3.034 2.88-3.207.188-.911.993-1.595 1.959-1.595Zm-8.085 8.376c-.784 0-1.459.78-1.506 1.797-.047 1.016.64 1.429 1.426 1.429.786 0 1.371-.369 1.418-1.385.047-1.017-.553-1.841-1.338-1.841Zm7.406 0c-.786 0-1.385.824-1.338 1.841.047 1.017.634 1.385 1.418 1.385.785 0 1.473-.413 1.426-1.429-.046-1.017-.721-1.797-1.506-1.797Zm-3.703 4.013c-.974 0-1.907.048-2.77.135-.147.015-.241.168-.183.305.483 1.154 1.622 1.964 2.953 1.964 1.33 0 2.47-.81 2.953-1.964.057-.137-.037-.29-.184-.305-.863-.087-1.795-.135-2.769-.135Z"/></svg>
+              </a>
+              </div>
+            </div>
           </div>
       </nav>
 
@@ -288,7 +337,6 @@
 
         <section id="timeline-view" class="view-panel" data-view-panel="dashboard">
           <h1 class="sr-only">Dashboard</h1>
-          <div id="dashboardChecklist" class="hidden"></div>
     <section class="glass-panel p-section live-panel">
             <div class="section-heading now-playing-section-heading">
               <div class="up-next-heading-copy">
@@ -463,6 +511,10 @@
                   <button class="explorer-view-btn history-filter-btn" type="button" data-history-filter="movies" aria-pressed="false">Movies</button>
                   <button class="explorer-view-btn history-filter-btn" type="button" data-history-filter="shows" aria-pressed="false">TV Shows</button>
                 </div>
+                <div class="explorer-view-toggle history-view-toggle" role="group" aria-label="History layout">
+                  <button class="explorer-view-btn" type="button" data-history-view="cards" title="Card view" aria-label="Show history as cards" aria-pressed="false">List</button>
+                  <button class="explorer-view-btn" type="button" data-history-view="days" title="Day view" aria-label="Show history grouped by day" aria-pressed="false">Days</button>
+                </div>
               </div>
             </div>
             <div class="explorer-with-alpha">
@@ -572,12 +624,58 @@
                   <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><rect x="2" y="3.5" width="12" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4.5 1.5v4M11.5 1.5v4M2.5 6.5h11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M5 9h1v1H5zm2.5 0h1v1h-1zm2.5 0h1v1h-1z"/></svg>
                   <span class="upcoming-today-label">Today</span>
                 </button>
+                <button id="upcomingCalendarFeedButton" class="action-pill page-action-pill upcoming-feed-button" type="button" aria-label="Subscribe to calendar" aria-haspopup="dialog" aria-controls="upcomingCalendarFeedDialog" title="Subscribe to upcoming releases in a calendar app">
+                  <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M3 1a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3Zm0 2h10v2H3V3Zm0 4h2v2H3V7Zm4 0h2v2H7V7Zm4 0h2v2h-2V7ZM3 11h2v2H3v-2Zm4 0h2v2H7v-2Zm4 0h2v2h-2v-2Z"/></svg>
+                  <span class="upcoming-feed-label">Subscribe</span>
+                </button>
               </div>
             </div>
             </div>
             <div id="upcomingCalendar" class="upcoming-calendar"></div>
           </section>
         </section>
+
+        <div id="upcomingCalendarFeedDialog" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="upcomingCalendarFeedTitle" tabindex="-1">
+          <article class="modal-panel glass-panel upcoming-feed-modal">
+            <div class="modal-head">
+              <div>
+                <h2 id="upcomingCalendarFeedTitle">Subscribe to calendar</h2>
+                <p class="upcoming-feed-description">Subscribe to upcoming episode and movie releases from your library.</p>
+              </div>
+              <button id="upcomingCalendarFeedClose" class="button-ghost" type="button">Close</button>
+            </div>
+            <fieldset class="upcoming-feed-type-fieldset">
+              <legend>Include in calendar</legend>
+              <div class="settings-choice-grid upcoming-feed-type-grid">
+                <label class="settings-choice-option">
+                  <input id="upcomingCalendarFeedIncludeTv" type="checkbox" value="tv" checked />
+                  <span class="settings-choice-option-body">
+                    <span class="settings-choice-option-title">TV shows</span>
+                    <span class="settings-choice-option-description">Upcoming episodes from shows in your library.</span>
+                  </span>
+                </label>
+                <label class="settings-choice-option">
+                  <input id="upcomingCalendarFeedIncludeMovies" type="checkbox" value="movies" checked />
+                  <span class="settings-choice-option-body">
+                    <span class="settings-choice-option-title">Movies</span>
+                    <span class="settings-choice-option-description">Release dates for movies in your library.</span>
+                  </span>
+                </label>
+              </div>
+            </fieldset>
+            <div class="modal-body confirm-modal-body">
+              <div id="upcomingCalendarFeedUrlFields" class="upcoming-feed-url-fields hidden">
+                <label for="upcomingCalendarFeedUrl">Private subscribe URL</label>
+                <input id="upcomingCalendarFeedUrl" class="field upcoming-feed-url" type="text" readonly autocomplete="off" spellcheck="false" aria-label="Private calendar subscription URL" />
+              </div>
+              <p id="upcomingCalendarFeedStatus" class="muted-copy confirm-modal-message upcoming-feed-status" role="status" aria-live="polite">Set PLEKT_PUBLIC_URL to an internet-reachable public address before creating a subscription link.</p>
+              <div id="upcomingCalendarFeedActions" class="modal-actions confirm-modal-actions hidden">
+                <button id="upcomingCalendarFeedCopy" class="button-ghost hidden" type="button" disabled>Copy URL</button>
+                <button id="upcomingCalendarFeedRegenerate" class="button-primary" type="button">Generate URL</button>
+              </div>
+            </div>
+          </article>
+        </div>
 
         <section id="sync-activity-view" class="view-panel hidden" data-view-panel="syncActivity">
           <section class="glass-panel p-section">
@@ -737,9 +835,11 @@
                     <article class="glass-panel p-section settings-card tool-section-card">
                       <div class="section-heading sync-heading sync-static-heading">
                         <div class="sync-heading-title">
-                          <p style="margin: 0;">Account</p>
+                          <p class="account-admin-only" style="margin: 0;">Account</p>
+                          <p class="account-user-only" style="margin: 0;">Password</p>
                         </div>
-                        <span>Change your local username and password</span>
+                        <span class="account-admin-only">Change your local username and password</span>
+                        <span class="account-user-only">Change the password for your account</span>
                       </div>
                       <div id="accountContent">
                         <form id="adminCredentialsForm" class="admin-credentials-form" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
@@ -788,19 +888,39 @@
                             <button id="saveAdminCredentialsButton" class="button-primary sync-action-btn sync-tool-button" type="submit">Save Login</button>
                           </div>
                         </form>
+                        <form id="userPasswordForm" class="account-user-only user-password-form" autocomplete="off" data-lpignore="true" data-1p-ignore="true" hidden>
+                          <div class="admin-credentials-grid">
+                            <label class="field-label" for="userCurrentPassword">
+                              Current password
+                              <input id="userCurrentPassword" class="field" type="password" autocomplete="current-password" required />
+                            </label>
+                            <label class="field-label" for="userNewPassword">
+                              New password
+                              <input id="userNewPassword" class="field" type="password" autocomplete="new-password" minlength="8" maxlength="256" required />
+                            </label>
+                            <label class="field-label" for="userConfirmPassword">
+                              Confirm new password
+                              <input id="userConfirmPassword" class="field" type="password" autocomplete="new-password" minlength="8" maxlength="256" required />
+                            </label>
+                          </div>
+                          <div class="settings-actions" style="display: flex; align-items: center; justify-content: flex-end; width: 100%;">
+                            <p id="userPasswordStatus" class="message" role="status" aria-live="polite" style="margin: 0; font-size: 0.8rem; color: var(--muted);">Changing your password signs out your other sessions.</p>
+                            <button id="saveUserPasswordButton" class="button-primary sync-action-btn sync-tool-button" type="submit">Save Password</button>
+                          </div>
+                        </form>
                       </div>
                     </article>
                   </div>
 
                   <div class="settings-row-help">
-                    <article class="glass-panel p-section settings-card" data-help-static="true">
+                    <article class="glass-panel p-section settings-card">
                       <div class="section-heading">
                         <p>Account - Help</p>
                         <a class="settings-help-link" href="https://plekt.net/docs/settings/general/#account" target="_blank" rel="noopener noreferrer">Website guide</a>
                       </div>
                       <div class="settings-help-content">
                         <div>
-                          <ul>
+                          <ul class="account-admin-only">
                             <li>
                               <b>User name</b>
                               <span>Change the name used to sign in.</span>
@@ -813,6 +933,9 @@
                               <span>Leave the new password blank if you only want to change the user name.</span>
                             </li>
                           </ul>
+                        </div>
+                        <div class="settings-help-content account-user-only">
+                          <p>Enter your current password, then choose and confirm a new password of at least 8 characters. The administrator can also reset your password in Settings &rarr; Users.</p>
                         </div>
                       </div>
                     </article>
@@ -972,8 +1095,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Plex</b>
-                              <span id="plexServerStatus" class="status-pill status-muted">Not configured</span>
                             </div>
+                            <span id="plexServerStatus" class="status-pill status-muted">Not configured</span>
                             <span>Sync watch history with a Plex server</span>
                           </summary>
                           <div id="plexServerPanel" class="tool-item-row"></div>
@@ -1017,8 +1140,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Emby</b>
-                              <span id="embyServerStatus" class="status-pill status-muted">Not configured</span>
                             </div>
+                            <span id="embyServerStatus" class="status-pill status-muted">Not configured</span>
                             <span>Sync watch history with an Emby server</span>
                           </summary>
                           <div id="embyServerPanel" class="tool-item-row"></div>
@@ -1062,8 +1185,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Jellyfin</b>
-                              <span id="jellyfinServerStatus" class="status-pill status-muted">Not configured</span>
                             </div>
+                            <span id="jellyfinServerStatus" class="status-pill status-muted">Not configured</span>
                             <span>Sync watch history with a Jellyfin server</span>
                           </summary>
                           <div id="jellyfinServerPanel" class="tool-item-row"></div>
@@ -1218,6 +1341,7 @@
                       </div>
                       <div id="metadataProviderContent">
                         <div id="metadataProviderCards" class="metadata-provider-disclosures"></div>
+                        <div id="anidbSettings" class="metadata-provider-disclosures"></div>
                       </div>
                       <form id="seasonSourceForm" class="sync-tuning-form">
                         <div id="seasonSourceFields" class="sync-tuning-fields sync-tools-content"></div>
@@ -1282,8 +1406,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Refresh All TMDB Metadata</b>
-                              <span id="refreshMetadataStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="refreshMetadataStatus" class="status-pill status-muted">Idle</span>
                             <span>Pre-cache trailers, posters, cast, and summaries locally</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1300,8 +1424,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Refresh All TVDB Metadata</b>
-                              <span id="refreshTvdbStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="refreshTvdbStatus" class="status-pill status-muted">Idle</span>
                             <span>Fetch episode schedules, series details, and artwork from TVDB</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1347,20 +1471,63 @@
                     <article class="glass-panel p-section settings-card tool-section-card">
                       <div class="section-heading sync-heading sync-static-heading">
                         <div class="sync-heading-title">
-                          <p style="margin: 0;">Trakt - Live Sync</p>
+                          <p style="margin: 0;">External trackers</p>
                         </div>
-                        <span>Bulk import watch history from Trakt.tv CSV or JSON exports</span>
+                        <span>Manage Trakt and Simkl connections, or import Trakt watch history</span>
                       </div>
 
                       <div id="migrationContent" style="display: flex; flex-direction: column; gap: var(--space-3);">
+                        <details class="sync-tool-details" id="simklConnectionPanel">
+                          <summary class="accordion-header">
+                            <div class="sync-tool-summary-title">
+                              <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                              <b>Simkl</b>
+                            </div>
+                            <span id="simklConnectionStatus" class="status-pill status-muted">Checking</span>
+                            <span>Connect your account; sync is not enabled yet</span>
+                          </summary>
+                          <div class="tool-item-row trakt-connection-panel">
+                            <form id="simklConnectForm" class="sync-tuning-form">
+                              <p id="simklSafetyNote" class="muted-copy">Simkl checks run on demand and after media-server events. Missing items never clear local watches. Paid rewatches, unwatches and unattended polling are disabled. Personal Rating Sync holds writes that could change watched history or lists.</p>
+                              <div class="sync-tuning-fields media-force-sync-options sync-tools-content">
+                                <label class="field-label">First connection
+                                  <select id="simklInitialSyncMode" class="field" aria-describedby="simklInitialSyncModeHelp">
+                                    <option value="baseline">Start from current state (recommended)</option>
+                                    <option value="import">Review existing Simkl watches for import after connecting</option>
+                                  </select>
+                                </label>
+                                <p id="simklInitialSyncModeHelp" class="muted-copy">The first library check records a starting point. Review and approve a full-sync preview before importing existing watches.</p>
+                              </div>
+                              <div id="simklConnectedSummary" class="plex-account-summary trakt-connected-summary hidden"></div>
+                              <div id="simklTrackerExtras" class="tracker-extras hidden"></div>
+                              <div id="simklDeviceCode" class="trakt-device-code hidden"></div>
+                              <div id="simklConnectMessage" class="message muted hidden" role="status" aria-live="polite"></div>
+                              <div class="settings-actions">
+                                <button id="simklConnectButton" class="button-primary sync-action-btn sync-tool-button" type="submit">Connect Simkl</button>
+                                <button id="simklDisconnectButton" class="button-danger sync-tools-cancel-button hidden" type="button">Disconnect Simkl</button>
+                                <button id="simklCheckNowButton" class="button-ghost sync-action-btn sync-tool-button hidden" type="button">Check now</button>
+                              </div>
+                            </form>
+                          </div>
+                        </details>
+                        <details class="sync-tool-details" id="traktConnectionPanel">
+                          <summary class="accordion-header">
+                            <div class="sync-tool-summary-title">
+                              <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                              <b>Trakt</b>
+                            </div>
+                            <span id="traktConnectionStatus" class="status-pill status-muted">Checking</span>
+                            <span>Live connection, manual connection and history import</span>
+                          </summary>
+                          <div class="tool-item-row" style="display: flex; flex-direction: column; gap: var(--space-3);">
                         <details class="sync-tool-details">
                           <summary class="accordion-header">
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Live Trakt Connection</b>
-                              <span id="traktConnectionStatus" class="status-pill status-muted">Checking</span>
                             </div>
                             <span>Keep watched and unwatched state synchronized in both directions</span>
+                            <span id="traktConnectedSummary" class="trakt-connected-summary hidden"></span>
                           </summary>
                           <div class="tool-item-row trakt-connection-panel">
                             <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-bottom: var(--space-3);">
@@ -1376,14 +1543,14 @@
                                 <label class="field-label">First connection
                                   <select id="traktInitialSyncMode" class="field">
                                     <option value="baseline">Start from current state (recommended)</option>
-                                    <option value="import">Import all existing Trakt watched state</option>
+                                    <option value="import">Review existing Trakt watches for import after connecting</option>
                                   </select>
                                 </label>
                                 <p id="traktFirstConnectionPlexNote" class="trakt-first-connection-plex-note"></p>
                                 <p id="traktAppStatus" class="muted-copy" style="margin: 0;">Checking the Plekt Trakt app…</p>
                               </div>
                               <div id="traktDeviceCode" class="plex-account-summary hidden"></div>
-                              <div id="traktConnectedSummary" class="plex-account-summary trakt-connected-summary hidden"></div>
+                              <div id="traktTrackerExtras" class="tracker-extras hidden"></div>
                               <p id="traktConnectMessage" class="message" role="status" aria-live="polite" style="display:none;"></p>
                               <div id="traktSyncProgress" class="trakt-sync-progress hidden" role="status" aria-live="polite">
                                 <div class="trakt-sync-progress-copy">
@@ -1432,8 +1599,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Trakt History Importer</b>
-                              <span id="importProgress" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="importProgress" class="status-pill status-muted">Idle</span>
                             <span>Bulk import records from a Trakt.tv export</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1454,6 +1621,8 @@
                               <button id="clearImportButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Clear</button>
                               <button id="startImportButton" class="button-primary sync-action-btn sync-tool-button" type="button" disabled>Start Import</button>
                             </div>
+                          </div>
+                        </details>
                           </div>
                         </details>
                       </div>
@@ -1494,24 +1663,25 @@
                   </div>
                 </div>
 
-                <!-- Tautulli Import Tab -->
-                <div class="settings-row hidden" data-sub-panel="tools-tautulli">
+                <!-- One Time Imports -->
+                <div class="settings-row one-time-imports-row hidden" data-sub-panel="tools-one-time-imports">
                   <div class="settings-row-main">
                     <article class="glass-panel p-section settings-card tool-section-card">
                       <div class="section-heading sync-heading sync-static-heading">
                         <div class="sync-heading-title">
-                          <p style="margin: 0;">Tautulli - One time import</p>
+                          <p style="margin: 0;">One Time Imports</p>
                         </div>
-                        <span>Import completed movies and episodes without changing Tautulli</span>
+                        <span>Import watch history from Tautulli and Netflix</span>
                       </div>
-                      <div id="tautulliImportContent">
+                      <div id="oneTimeImportsHome">
+                      <div id="oneTimeImportsContent">
                       <details id="tautulliImportDetails" class="sync-tool-details">
                         <summary class="accordion-header">
                           <div class="sync-tool-summary-title">
                             <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                             <b>Tautulli</b>
-                            <span id="tautulliStatus" class="status-pill status-muted">Not configured</span>
                           </div>
+                          <span id="tautulliStatus" class="status-pill status-muted">Not configured</span>
                           <span>Import completed movies and episodes without changing Tautulli</span>
                         </summary>
                         <div class="tool-item-row tautulli-import-panel">
@@ -1634,13 +1804,61 @@
                         <div class="tautulli-import-note">Only completed Tautulli plays are imported. Abandoned or incomplete sessions stay out of your watch history.</div>
                         </div>
                       </details>
+                    <details id="netflixImportDetails" class="sync-tool-details">
+                      <summary class="accordion-header">
+                        <div class="sync-tool-summary-title">
+                          <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                          <b>Netflix</b>
+                        </div>
+                        <span id="netflixImportFileStatus" class="status-pill status-muted">Choose CSV</span>
+                        <span>Import your Netflix Viewing Activity CSV into Plekt and connected services</span>
+                      </summary>
+                      <div class="tool-item-row netflix-import-panel">
+                        <div class="tautulli-step-note netflix-obtain-steps">
+                          <p><b>How to get your Viewing Activity CSV</b></p>
+                          <ol>
+                            <li>On a computer, sign in at <a href="https://www.netflix.com/" target="_blank" rel="noopener noreferrer">netflix.com</a> and open <b>Account</b>, then <b>Security &amp; privacy</b>, then <b>Download your personal information</b>.</li>
+                            <li>Request the download. Netflix emails a link when the ZIP is ready, which can take a few days.</li>
+                            <li>Unzip it and upload <b>CONTENT_INTERACTION/ViewingActivity.csv</b> below. It lists every profile on the account, so you choose which profiles are yours before the preview.</li>
+                          </ol>
+                        </div>
+                        <div class="netflix-file-field">
+                          <span class="field-label">Viewing Activity CSV</span>
+                          <div class="netflix-file-picker">
+                            <input id="netflixCsvFile" type="file" accept=".csv,text/csv" aria-label="Choose Netflix Viewing Activity CSV" />
+                            <label class="button-ghost" for="netflixCsvFile">Choose file</label>
+                            <span id="netflixCsvFileName" aria-live="polite">No file selected</span>
+                          </div>
+                        </div>
+                        <fieldset id="netflixProfileChoice" class="netflix-profile-choice" hidden>
+                          <legend>Netflix profiles to import</legend>
+                          <p class="tautulli-step-note">This file holds every profile on the account. Tick only the profiles you used. Trailers, previews and views under 5 minutes are left out.</p>
+                          <div id="netflixProfileList" class="netflix-profile-list"></div>
+                        </fieldset>
+                        <p class="tautulli-step-note">Plekt matches movies and episodes by title and keeps the watch dates from the file.</p>
+                        <p class="tautulli-step-note">Large histories may take several minutes to preview (around 20 minutes for large libraries). Time varies with the size of your export and TMDB response speed.</p>
+                        <div class="tautulli-operation-actions">
+                          <button id="netflixPreviewButton" class="button-primary sync-action-btn sync-tool-button" type="button" disabled>Preview import</button>
+                        </div>
+                        <div id="netflixImportProgress" class="tautulli-operation-progress" role="progressbar" aria-label="Netflix preview progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
+                          <span id="netflixImportProgressBar" class="tautulli-operation-progress-bar"></span>
+                        </div>
+                        <p id="netflixImportStatus" class="message tautulli-import-status" role="status" aria-live="polite" hidden></p>
+                        <div id="netflixImportSummary" aria-live="polite" hidden></div>
+                        <div id="netflixReviewList" class="netflix-review-list" aria-live="polite"></div>
+                        <div class="netflix-import-actions">
+                          <button id="netflixImportButton" class="button-primary sync-action-btn sync-tool-button" type="button" disabled>Import matched history</button>
+                        </div>
                       </div>
+                    </details>
+                    </div>
+                    </div>
                     </article>
                   </div>
                   <div class="settings-row-help">
                     <article class="glass-panel p-section settings-card">
                       <div class="section-heading">
-                        <p>Tautulli - Help</p>
+                        <p>One Time Imports - Help</p>
                         <a class="settings-help-link" href="https://plekt.net/docs/settings/connections/" target="_blank" rel="noopener noreferrer">Website guide</a>
                       </div>
                       <div class="settings-help-content">
@@ -1648,13 +1866,20 @@
                           <ul>
                             <li>
                               <b>Tautulli</b>
-                              <span>Tautulli is the source for this one-time import. Plekt reads one user's completed movie and episode plays, then sends imported history to the media servers you select.</span>
+                              <span>Import one user's completed movie and episode plays without changing Tautulli.</span>
                               <ul>
-                                <li><b>Connect Tautulli</b> with its address and API key, test the connection, and choose the user to import. A browser address ending in <code>/home</code> can be used as the base address.</li>
-                                <li><b>Choose and preview</b> with an optional date. Leave it blank for all available history, or import plays from that date onward. Preview requires a selected user and shows the record count before reading the history.</li>
-                                <li><b>Back up, then import</b> after reviewing the preview. A local watch-history backup is recommended and can be skipped, followed by a separate import step. Plekt merges by identity and watch date so rewatches remain separate, then queues the selected targets for background syncing.</li>
+                                <li><b>Connect</b> with the Tautulli address and API key, test the connection, and choose the user to import.</li>
+                                <li><b>Preview and import</b> the available history, with an optional start date. Plekt creates a local watch-history backup before importing.</li>
                               </ul>
-                              <span>Tautulli is read-only during the process, and existing Plekt watches are not deleted.</span>
+                            </li>
+                            <li>
+                              <b>Netflix</b>
+                              <span>On netflix.com, open Account → Security &amp; privacy → Download your personal information, then upload CONTENT_INTERACTION/ViewingActivity.csv from the ZIP and tick the profiles you used.</span>
+                              <ul>
+                                <li><b>Choose profiles</b> when the file covers the whole account. Trailers and views under 5 minutes are left out.</li>
+                                <li><b>Preview and review matches</b> with TMDB. Match and skip choices appear as cards, with Skip selected by default; each match links to TMDB and TVDB. Unmatched episodes are grouped under their show.</li>
+                                <li><b>Import matched history</b> after reviewing. Plekt creates a local watch-history backup, avoids duplicate plays, and queues connected services. Plex follows the Sync historical watched items to Plex setting. Trakt and Simkl use the configured queue spacing.</li>
+                              </ul>
                             </li>
                           </ul>
                         </div>
@@ -1662,7 +1887,6 @@
                     </article>
                   </div>
                 </div>
-
                 <div class="settings-row hidden" id="seerr" data-sub-panel="seerr">
                   <div class="settings-row-main">
                     <article class="glass-panel p-section settings-card tool-section-card">
@@ -1678,8 +1902,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Seerr</b>
-                              <span id="seerrStatus" class="status-pill status-muted">Not configured</span>
                             </div>
+                            <span id="seerrStatus" class="status-pill status-muted">Not configured</span>
                             <span>Optional request integration for movie and TV detail pages</span>
                           </summary>
                           <div id="seerrPanel" class="tool-item-row"></div>
@@ -1726,8 +1950,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Repair History Rows</b>
-                              <span id="repairStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="repairStatus" class="status-pill status-muted">Idle</span>
                             <span>Fill in missing media types and backfill missing posters on recent history rows</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1744,8 +1968,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Audit Phantom Watches</b>
-                              <span id="phantomAuditStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="phantomAuditStatus" class="status-pill status-muted">Idle</span>
                             <span>Finds suspicious duplicates and malformed imported episode rows</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1763,8 +1987,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Remove Duplicate Watches</b>
-                              <span id="duplicateWatchStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="duplicateWatchStatus" class="status-pill status-muted">Idle</span>
                             <span>Keeps only the oldest watch date for each movie or episode across the whole library</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1782,8 +2006,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Restore Missing Episode Names</b>
-                              <span id="episodeTitleStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="episodeTitleStatus" class="status-pill status-muted">Idle</span>
                             <span>Backfill real episode names onto watch rows that only stored a coordinate like &ldquo;8&rdquo;</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1801,8 +2025,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Watch-State Aliases</b>
-                              <span id="playstateAliasStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="playstateAliasStatus" class="status-pill status-muted">Idle</span>
                             <span>Decide which show the episode watch states the automatic repair could not place belong to</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1856,8 +2080,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Rematch All TV Shows</b>
-                              <span id="rematchTvStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="rematchTvStatus" class="status-pill status-muted">Idle</span>
                             <span>Resolve each show title against TVDB (primary) and update episode IDs</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1874,8 +2098,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Backfill Trakt Imports</b>
-                              <span id="traktBackfillStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="traktBackfillStatus" class="status-pill status-muted">Idle</span>
                             <span>Fetch missing posters for imported Trakt events</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1940,8 +2164,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Watch History</b>
-                              <span id="wipeHistoryStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="wipeHistoryStatus" class="status-pill status-muted">Idle</span>
                             <span>Watch history, playstate, resume progress, and live sessions</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1959,8 +2183,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Personal Watchlist</b>
-                              <span id="wipeWatchlistStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="wipeWatchlistStatus" class="status-pill status-muted">Idle</span>
                             <span>Canonical rows, provider ledger, queue, runs, and activity</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1978,8 +2202,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Sync History &amp; Logs</b>
-                              <span id="wipeLogsStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="wipeLogsStatus" class="status-pill status-muted">Idle</span>
                             <span>Sync history, watch audit events, and diagnostic logs</span>
                           </summary>
                           <div class="tool-item-row">
@@ -1997,8 +2221,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Everything Tracked</b>
-                              <span id="wipeAllStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="wipeAllStatus" class="status-pill status-muted">Idle</span>
                             <span>Watch history and sync history/logs together</span>
                           </summary>
                           <div class="tool-item-row">
@@ -2016,8 +2240,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Wipe All / Fresh Start</b>
-                              <span id="wipeFactoryStatus" class="status-pill status-muted">Idle</span>
                             </div>
+                            <span id="wipeFactoryStatus" class="status-pill status-muted">Idle</span>
                             <span>Resets Plekt to a brand-new install</span>
                           </summary>
                           <div class="tool-item-row">
@@ -2075,8 +2299,8 @@
                               <div class="sync-tool-summary-title">
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Local Watch History Backups</b>
-                                <span id="watchBackupSummary" class="status-pill status-muted">Checking</span>
-                              </div>
+                            </div>
+                            <span id="watchBackupSummary" class="status-pill status-muted">Checking</span>
                               <span>Enable scheduled local snapshots of watched state, playstate, and resume progress</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
@@ -2112,8 +2336,8 @@
                               <div class="sync-tool-summary-title">
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Local Plekt Backups</b>
-                                <span id="plektBackupSummary" class="status-pill status-muted">Checking</span>
-                              </div>
+                            </div>
+                            <span id="plektBackupSummary" class="status-pill status-muted">Checking</span>
                               <span>Create an encrypted full Plekt backup and download it to your computer</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
@@ -2173,8 +2397,8 @@
                               <div class="sync-tool-summary-title">
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Remote Destinations</b>
-                                <span id="backupDestinationSummary" class="status-pill status-muted">Checking</span>
-                              </div>
+                            </div>
+                            <span id="backupDestinationSummary" class="status-pill status-muted">Checking</span>
                               <span>Configure cloud destinations for remote backups</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
@@ -2187,8 +2411,8 @@
                               <div class="sync-tool-summary-title">
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Remote Watch History Backups</b>
-                                <span id="remoteWatchBackupSummary" class="status-pill status-muted">Checking</span>
-                              </div>
+                            </div>
+                            <span id="remoteWatchBackupSummary" class="status-pill status-muted">Checking</span>
                               <span>Upload daily watch history backups to remote destinations</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
@@ -2224,8 +2448,8 @@
                               <div class="sync-tool-summary-title">
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Remote Plekt Backups</b>
-                                <span id="plektBackupRemoteSummary" class="status-pill status-muted">Checking</span>
-                              </div>
+                            </div>
+                            <span id="plektBackupRemoteSummary" class="status-pill status-muted">Checking</span>
                               <span>Store encrypted Plekt backup files off-server automatically</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
@@ -2328,8 +2552,8 @@
                               <div class="sync-tool-summary-title">
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Local Plekt Restore</b>
-                                <span id="backupRestoreStatus" class="status-pill status-muted" style="margin-left: var(--space-2);">Idle</span>
-                              </div>
+                            </div>
+                            <span id="backupRestoreStatus" class="status-pill status-muted" style="margin-left: var(--space-2);">Idle</span>
                               <span>Restore an encrypted full Plekt backup</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
@@ -2724,8 +2948,8 @@
                             <div class="sync-tool-summary-title">
                               <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                               <b>Sync History</b>
-                              <span id="syncHistorySummary" class="status-pill status-muted">Loading...</span>
                             </div>
+                            <span id="syncHistorySummary" class="status-pill status-muted">Loading...</span>
                             <span>View recent webhook, cron, and resume propagation attempts</span>
                           </summary>
                           <div class="tool-item-row">
@@ -2746,6 +2970,80 @@
                         <div>
                           <ul>
                             <li><b>Sync History</b><span>Shows recent watched-state propagation attempts with their source, action, timestamp, and target results. It is a log only; it does not control or change sync.</span><span>Watched state and resume positions normally propagate to configured servers on the scheduled cycle. Use Sync Tools when you need a deliberate library-wide operation.</span></li>
+                          </ul>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+              </section>
+
+              <section class="settings-pane hidden" data-settings-panel="users">
+                <article class="glass-panel p-section settings-card tool-section-card users-stats-panel">
+                  <div class="section-heading sync-heading sync-static-heading">
+                    <div class="sync-heading-title"><p style="margin: 0;">Multi-user stats</p></div>
+                    <span class="users-stats-note">All accounts share this Node process. Memory is the process total, not per-user usage.</span>
+                  </div>
+                  <dl id="usersStats" class="users-stats-grid">
+                    <div class="users-stat"><dt>Accounts</dt><dd data-user-stat="total">—</dd></div>
+                    <div class="users-stat"><dt>Running</dt><dd data-user-stat="running">—</dd></div>
+                    <div class="users-stat"><dt>Stopped</dt><dd data-user-stat="stopped">—</dd></div>
+                    <div class="users-stat"><dt>Sign-in disabled</dt><dd data-user-stat="disabled">—</dd></div>
+                    <div class="users-stat"><dt>Open account</dt><dd data-user-stat="active">—</dd></div>
+                    <div class="users-stat"><dt>Process memory</dt><dd data-user-stat="memory">—</dd></div>
+                    <div class="users-stat"><dt>Process uptime</dt><dd data-user-stat="uptime">—</dd></div>
+                  </dl>
+                </article>
+
+                <div id="usersList" class="users-list" aria-live="polite"></div>
+                <div class="settings-row users-add-user-row">
+                  <div class="settings-row-main">
+                    <article class="glass-panel p-section settings-card tool-section-card">
+                      <div class="section-heading sync-heading sync-static-heading">
+                        <div class="sync-heading-title"><p style="margin: 0;">Add user</p></div>
+                        <span>Each user gets their own Plekt instance on this server</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                        <details class="sync-tool-details">
+                          <summary class="accordion-header">
+                            <div class="sync-tool-summary-title">
+                              <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                              <b>New user</b>
+                            </div>
+                            <span>Choose a user name and a starting password</span>
+                          </summary>
+                          <div class="tool-item-row">
+                            <form id="addUserForm" class="admin-credentials-form" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+                              <div class="admin-credentials-grid users-add-user-grid">
+                                <label class="field-label" for="newUserName">
+                                  User name
+                                  <input id="newUserName" class="field" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" maxlength="32" required />
+                                </label>
+                                <label class="field-label" for="newUserPassword">
+                                  Starting password
+                                  <input id="newUserPassword" class="field" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" minlength="8" maxlength="256" required />
+                                </label>
+                              </div>
+                              <div class="settings-actions" style="display: flex; align-items: center; justify-content: flex-end; width: 100%;">
+                                <p id="addUserStatus" class="message" role="status" aria-live="polite" style="margin: 0; font-size: 0.8rem; color: var(--muted);">The user can change this password in Settings &rarr; General &rarr; Account.</p>
+                                <button id="addUserButton" class="button-primary sync-action-btn sync-tool-button" type="submit">Add user</button>
+                              </div>
+                            </form>
+                          </div>
+                        </details>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div class="settings-row-help">
+                    <article class="glass-panel p-section settings-card">
+                      <div class="section-heading"><p>Add user - Help</p></div>
+                      <div class="settings-help-content">
+                        <div>
+                          <ul>
+                            <li><b>User name</b><span>Letters, numbers, dashes, or underscores, 2 to 32 characters, starting with a letter or number.</span></li>
+                            <li><b>Starting password</b><span>At least 8 characters. Give it to the user, who can change it in Settings &rarr; General &rarr; Account.</span></li>
+                            <li><b>Folder</b><span>Adding a user creates their folder under data/users and makes their instance ready immediately in this server process.</span></li>
                           </ul>
                         </div>
                       </div>
@@ -2824,7 +3122,7 @@
                   </div>
 
                   <div class="settings-row-help">
-                    <article class="glass-panel p-section settings-card" data-help-static="true">
+                    <article class="glass-panel p-section settings-card">
                       <div class="section-heading">
                         <p>Plembfin is now Plekt</p>
                       </div>
@@ -2928,6 +3226,15 @@
       </main>
     </div>
 
+    <div id="initialSyncDialog" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="initialSyncDialogTitle" tabindex="-1">
+      <article class="modal-panel glass-panel initial-sync-modal">
+        <div class="modal-head">
+          <h2 id="initialSyncDialogTitle">Initial sync</h2>
+          <button id="closeInitialSyncDialog" class="button-ghost" type="button" aria-label="Close Initial sync screen">Close</button>
+        </div>
+        <div id="initialSyncDialogBody" class="modal-body initial-sync-dialog-body"></div>
+      </article>
+    </div>
     <div id="aboutShareModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="aboutShareModalTitle">
       <article class="modal-panel glass-panel about-share-modal">
         <div class="modal-head">
@@ -3116,7 +3423,7 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.1.1.0.8"></script>
-    <script type="module" src="/app.js?v=2.1.1.0.8"></script>
+    <script type="module" src="/modules/analytics.js?v=2.1.1.0.9"></script>
+    <script type="module" src="/app.js?v=2.1.1.0.9"></script>
   </body>
 </html>

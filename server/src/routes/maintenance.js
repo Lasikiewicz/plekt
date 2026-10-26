@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import nodePath from "node:path";
-import { requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
+import { requireInstallAdmin, resolveAdminPrincipal } from "../utils/auth.js";
 import { readFormData, readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout, assertSafeOutboundUrl } from "../utils/outbound.js";
@@ -34,6 +34,7 @@ import { outboundGovernorTelemetry } from "../utils/outboundGovernor.js";
 import { isVerboseLogging, setVerboseLogging } from "../utils/logVerbose.js";
 import capacityRanges from "../capacityRanges.json" with { type: "json" };
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
+import { getUserContext, ownsArtworkFiles } from "../utils/userContext.js";
 import {
   auditStaleTraktImportRows,
   repairStaleTraktImportRows,
@@ -175,7 +176,7 @@ function isCachedStorageUrl(value = "") {
 
 export async function handleBackfillStatus(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   if (req.method !== "GET") return methodNotAllowed(res);
 
   try {
@@ -189,7 +190,7 @@ export async function handleBackfillStatus(req, res) {
 
 export async function handleBackfillTrakt(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   if (req.method !== "POST") return methodNotAllowed(res);
 
   try {
@@ -243,7 +244,7 @@ export async function handleBackfillTrakt(req, res) {
 export async function handleAdminFixHistory(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   try {
     const config = await loadMediaConfig().catch(() => ({}));
@@ -368,7 +369,7 @@ export async function handleAdminFixHistory(req, res) {
 
 export async function handleMaintenanceStub(req, res, name) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed(res);
   if (name === "admin-backfill-status") return sendJson(res, { remaining: 0, missing: 0 });
   return sendJson(res, {
@@ -384,7 +385,7 @@ export async function handleMaintenanceStub(req, res, name) {
 export async function handlePhantomWatchAudit(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const result = auditPhantomWatchHistory(db);
   const malformed = findMalformedScheduledEpisodeRows(db);
   return sendJson(res, {
@@ -398,7 +399,7 @@ export async function handlePhantomWatchAudit(req, res) {
 export async function handlePhantomWatchRepair(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const config = await loadMediaConfig().catch(() => ({}));
     const activeTargets = getActiveTargetsForConfig(config);
@@ -431,7 +432,7 @@ export async function handlePhantomWatchRepair(req, res) {
 export async function handleEpisodeTitleAudit(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const limit = Number(new URL(req.url, "http://localhost").searchParams.get("limit")) || 100;
     const result = auditEpisodeTitleGaps({ limit });
@@ -451,7 +452,7 @@ export async function handleEpisodeTitleAudit(req, res) {
 export async function handleEpisodeTitleBackfill(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const body = await readJson(req).catch(() => ({}));
     const limit = Number(body.limit) || 200;
@@ -475,7 +476,7 @@ export async function handleEpisodeTitleBackfill(req, res) {
 export async function handleStaleTraktImportAudit(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const result = auditStaleTraktImportRows();
   return sendJson(res, { ok: true, ...result }, 200, { "Cache-Control": "no-store" });
 }
@@ -483,7 +484,7 @@ export async function handleStaleTraktImportAudit(req, res) {
 export async function handleStaleTraktImportRepair(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const result = repairStaleTraktImportRows();
     writeAuditLog("history.stale_trakt_import_repair", {
@@ -506,7 +507,7 @@ export async function handleStaleTraktImportRepair(req, res) {
 export async function handleStalePendingWatchAudit(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const result = auditStalePendingWatchRows();
   return sendJson(res, { ok: true, ...result }, 200, { "Cache-Control": "no-store" });
 }
@@ -514,7 +515,7 @@ export async function handleStalePendingWatchAudit(req, res) {
 export async function handleStalePendingWatchRepair(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const result = repairStalePendingWatchRows();
     writeAuditLog("history.stale_pending_watch_repair", {
@@ -535,7 +536,7 @@ export async function handleStalePendingWatchRepair(req, res) {
 export async function handleSplitIdentityUnwatchAudit(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const result = auditSplitIdentityUnwatches();
   return sendJson(res, { ok: true, ...result }, 200, { "Cache-Control": "no-store" });
 }
@@ -553,7 +554,7 @@ const SPLIT_IDENTITY_UNWATCH_REPAIR_CONCURRENCY = 6;
 export async function handleSplitIdentityUnwatchRepair(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const result = await repairSplitIdentityUnwatches();
     const config = await loadMediaConfig();
@@ -586,7 +587,7 @@ export async function handleSplitIdentityUnwatchRepair(req, res) {
 export async function handleLikelyFalseUnwatchAudit(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const result = auditLikelyFalseUnwatches();
   return sendJson(res, { ok: true, ...result }, 200, { "Cache-Control": "no-store" });
 }
@@ -600,7 +601,7 @@ const LIKELY_FALSE_UNWATCH_REPAIR_CONCURRENCY = 6;
 export async function handleLikelyFalseUnwatchRepair(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const result = await repairLikelyFalseUnwatches();
     const config = await loadMediaConfig();
@@ -627,13 +628,18 @@ export async function handleLikelyFalseUnwatchRepair(req, res) {
 export function handlePing(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET" && req.method !== "HEAD") return methodNotAllowed(res);
-  return sendJson(res, { ok: true, ts: Date.now() }, 200, { "Cache-Control": "no-store" });
+  const payload = { ok: true, ts: Date.now() };
+  // When /u/<name>/api/ping is used, include the active tenant so callers can
+  // prove in-process routing selected that user (single-process multi-user).
+  const context = getUserContext();
+  if (context?.name) payload.user = context.name;
+  return sendJson(res, payload, 200, { "Cache-Control": "no-store" });
 }
 
 export async function handleSyncMatchReport(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const rows = await getCachedHistory();
   return sendJson(res, { report: buildSyncMatchReport(rows) }, 200, { "Cache-Control": "no-store" });
 }
@@ -648,7 +654,7 @@ function healthBand(value, range = {}) {
 export async function handleSyncHealth(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   const history = await getCachedHistory();
   const progressRows = await countPlaybackProgressRows();
   const playstateRows = await countWatchedPlaystateRows();
@@ -686,12 +692,12 @@ export async function handleSyncHealth(req, res) {
 export async function handleDiagnosticLogs(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method === "DELETE") {
-    if (!(await requireAdmin(req, res))) return;
+    if (!(await requireInstallAdmin(req, res))) return;
     clearDiagnosticLogs();
     return sendJson(res, { ok: true }, 200, { "Cache-Control": "no-store" });
   }
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   const limit = Math.min(Number(req.query?.limit || 500), 1000);
   const category = req.query?.category || "all";
@@ -713,7 +719,7 @@ export async function handleDiagnosticLogs(req, res) {
 export async function handleDebugPlexMatch(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   const body = await readJson(req).catch(() => ({}));
   const id = String(body.id || "").trim();
@@ -806,7 +812,7 @@ export async function runTmdbMetadataRefreshJob(log, { isCancelled } = {}) {
 export async function handleRefreshTmdbMetadata(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (!["GET", "POST"].includes(req.method)) return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   // GET: poll for current status and log lines, same shape as /api/force-sync.
   if (req.method === "GET") {
@@ -889,7 +895,7 @@ export async function runTvdbMetadataRefreshJob(log, { isCancelled } = {}) {
 export async function handleRefreshTvdbMetadata(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (!["GET", "POST"].includes(req.method)) return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   if (req.method === "GET") {
     const job = getLatestBackgroundJob("refresh_tvdb_metadata");
@@ -931,7 +937,7 @@ export async function handleRefreshTvdbMetadata(req, res) {
 export async function handleRematchTvShows(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   const body = await readJson(req).catch(() => ({}));
   const offset = Math.max(Number(body.offset || 0), 0);
@@ -1027,7 +1033,7 @@ export async function handleRematchTvShows(req, res) {
 export async function handleCacheStats(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   const dirs = [
     { key: "posters", dir: POSTERS_DIR },
@@ -1061,7 +1067,7 @@ export async function handleCacheStats(req, res) {
 export async function handleClearCache(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   const body = await readJson(req);
   const type = body?.type || "all";
@@ -1072,20 +1078,23 @@ export async function handleClearCache(req, res) {
     profiles: { dir: PROFILES_DIR, variants: ["profile"] },
   };
   const targets = type === "all" ? Object.values(typeMap) : typeMap[type] ? [typeMap[type]] : [];
+  const canDeleteFiles = ownsArtworkFiles();
 
   let deleted = 0;
   let freed = 0;
-  for (const { dir } of targets) {
-    try {
-      const files = await fs.promises.readdir(dir);
-      for (const file of files) {
-        const filePath = nodePath.join(dir, file);
-        try {
-          const stat = await fs.promises.stat(filePath);
-          if (stat.isFile()) { freed += stat.size; await fs.promises.unlink(filePath); deleted++; }
-        } catch {}
-      }
-    } catch {}
+  if (canDeleteFiles) {
+    for (const { dir } of targets) {
+      try {
+        const files = await fs.promises.readdir(dir);
+        for (const file of files) {
+          const filePath = nodePath.join(dir, file);
+          try {
+            const stat = await fs.promises.stat(filePath);
+            if (stat.isFile()) { freed += stat.size; await fs.promises.unlink(filePath); deleted++; }
+          } catch {}
+        }
+      } catch {}
+    }
   }
 
   if (type === "all") {
@@ -1096,7 +1105,7 @@ export async function handleClearCache(req, res) {
     }
   }
 
-  return sendJson(res, { ok: true, deleted, freed });
+  return sendJson(res, { ok: true, deleted, freed, filesKept: !canDeleteFiles });
 }
 
 // ---------------------------------------------------------------------------

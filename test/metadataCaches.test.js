@@ -10,7 +10,7 @@ process.env.DATA_DIR = dataDir;
 
 const { db, toJson } = await import("../server/src/db.js");
 const { getFanartTvArt, getFanartMovieArt } = await import("../server/src/utils/fanartGateway.js");
-const { getTmdbDetails, getTmdbSeason } = await import("../server/src/utils/tmdbGateway.js");
+const { getTmdbDetails, getTmdbSeason, getTmdbShowSeasonLists } = await import("../server/src/utils/tmdbGateway.js");
 
 // No TMDB API key is configured in this environment and fanart.tv is not
 // reachable synchronously, so any code path that misses the SQLite caches and
@@ -186,4 +186,17 @@ test("TMDB-id season requests find TVDB-keyed show metadata", async () => {
 
   const season = await getTmdbSeason({ tmdbId: "777", seasonNumber: 1 });
   assert.deepEqual(season.episodes.map((episode) => episode.name), ["Pilot", "Second"]);
+});
+
+test("TMDB show season lists preserve episode IDs for Netflix review choices", async () => {
+  db.prepare(
+    `INSERT INTO tmdb_season_cache (id, tmdb_id, season_number, show_status, details, updated_at_ms)
+     VALUES (?, ?, ?, ?, ?, ?)`
+  ).run("778_1", "778", 1, null, toJson({
+    episodes: [{ id: 98765, episode_number: 1, name: "Pilot", air_date: "2020-01-01" }],
+  }), Date.now());
+
+  const seasons = await getTmdbShowSeasonLists({ tmdbId: "778", cachedOnly: true });
+  assert.equal(seasons[0].episodes[0].id, 98765);
+  assert.equal(seasons[0].episodes[0].episode_number, 1);
 });

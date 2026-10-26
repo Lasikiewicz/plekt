@@ -1,12 +1,12 @@
 export const site = {
   name: "Plekt",
-  title: "Plekt - The local brain for your media stack.",
+  title: "Plekt – Sync watch history across Plex, Jellyfin & Emby",
   description:
     "Plekt is the self-hosted source of truth that tracks what you watch, remembers canonical state locally, auto-syncs Plex, Emby, Jellyfin, Trakt, and keeps private media choices close at hand.",
   url: "https://plekt.net",
-  repository: "https://github.com/Lasikiewicz/plembfin",
+  repository: "https://github.com/Lasikiewicz/plekt",
   support: "https://github.com/sponsors/Lasikiewicz",
-  repositoryDocs: "https://github.com/Lasikiewicz/plembfin/tree/main/docs",
+  repositoryDocs: "https://github.com/Lasikiewicz/plekt/tree/main/docs",
   discord: "https://discord.gg/7ZmEGKcRC5",
   reddit: "https://www.reddit.com/r/plembfin/",
 };
@@ -388,6 +388,11 @@ export const docsNav = [
           { id: "verify-a-connection-without-guessing", label: "Verify a connection without guessing" },
         ],
       },
+      {
+        slug: "sync-plex-with-trakt",
+        label: "Sync Plex with Trakt",
+        description: "Set up two-way Plex and Trakt watch-history sync and troubleshoot missed changes.",
+      },
     ],
   },
   {
@@ -627,6 +632,7 @@ export const docsSidebarNav = [
     slug: "guides",
     children: [
       { slug: "getting-started", label: "Getting started" },
+      { slug: "sync-plex-with-trakt", label: "Sync Plex with Trakt" },
       { slug: "upgrading-from-plembfin", label: "Upgrading from Plembfin" },
       { slug: "moving-to-port-5056", label: "Moving to port 5056" },
       { slug: "concepts", label: "The sync model" },
@@ -670,6 +676,7 @@ export const docsPageNav = [
   { slug: "media-details", label: "Media details and editing" },
   { slug: "appearance", label: "Appearance menu" },
   { slug: "integrations", label: "Integrations" },
+  { slug: "sync-plex-with-trakt", label: "Sync Plex with Trakt" },
   { slug: "settings", label: "Settings" },
   { slug: "settings/general", label: "General" },
   { slug: "settings/media-servers", label: "Media servers" },

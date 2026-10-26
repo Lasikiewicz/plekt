@@ -1,4 +1,4 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9"; import { renderDroppedView } from "./dropped-title-views.js?v=2.1.1.0.9";
 import {
   state, elements, explorerCardModeKey,
   EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS,
@@ -6,25 +6,26 @@ import {
   HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS,
   HISTORY_VIEW_KEY, HISTORY_FILTER_KEY,
   HISTORY_VIEW_MODES, HISTORY_FILTERS,
-} from "./state.js?v=2.1.1.0.8";
+} from "./state.js?v=2.1.1.0.9";
 import {
   escapeHtml, escapeAttribute, slug, showTitleFrom, showName, tvShowBaseHrefFromEpisode,
   movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, platformBadge, sourceClass, sourceBadgeHtml, formatDate,
   computeProgress, sanitizeTitle, episodeTitle, episodeCode, appendRestInChunks,
-} from "./utils.js?v=2.1.1.0.8";
-import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.1.1.0.8";
+} from "./utils.js?v=2.1.1.0.9";
+import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.1.1.0.9";
 import {
   historySyncPill, renderSyncStatusDot, renderMediaSyncPills,
   renderAvailabilityPills, renderShowAvailabilityPills, showAvailIssuePopup,
   isWatchedHistoryAction,
-} from "./sync.js?v=2.1.1.0.8";
-import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.8";
-import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.1.1.0.8";
-import { renderMediaCard } from "./media-card.js?v=2.1.1.0.8";
-import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.1.1.0.8";
-import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.8";
-import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.1.1.0.8";
-import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.1.1.0.8";
+} from "./sync.js?v=2.1.1.0.9";
+import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.9";
+import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.1.1.0.9";
+import { renderMediaCard } from "./media-card.js?v=2.1.1.0.9";
+import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.1.1.0.9";
+import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.9";
+import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.1.1.0.9";
+import { renderHistoryDayGroups } from "./history-day-view.js?v=2.1.1.0.9";
+import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.1.1.0.9";
 // ---------------------------------------------------------------------------
 // Callback injection - functions defined outside the 2636-4016 range in app.js
 // ---------------------------------------------------------------------------
@@ -740,7 +741,7 @@ function syncExplorerCardMode() {
 }
 
 export function renderExplorer() {
-  syncExplorerControlsState();
+  syncExplorerControlsState(); renderDroppedView("library");
   if (state.mediaDetailInline) return;
   for (const button of elements.explorerButtons) {
     button.classList.toggle("active", button.dataset.explorerMode === state.explorerMode);
@@ -820,7 +821,7 @@ export function isAlphabeticalExplorerSort(sortMode = currentExplorerSort()) {
 export function updateAlphaFilter() {
   const nav = elements.alphaFilterNav;
   if (!nav) return;
-  if (state.mediaDetailInline || state.activeView !== "explorer" || !isAlphabeticalExplorerSort()) {
+  if (state.mediaDetailInline || state.activeView !== "explorer" || !isAlphabeticalExplorerSort() || elements.explorerPanel?.hidden) {
     nav.classList.add("hidden");
     return;
   }
@@ -1525,6 +1526,7 @@ function historyMediaFilterParam() {
 }
 function historyEntryDisplay(entry) {
   const isEpisode = entry.media_type === "episode";
+  const isTvShow = entry.media_type === "tv";
   let displayTitle = entry.title;
   let epTitle = "";
   let href = "";
@@ -1552,21 +1554,25 @@ function historyEntryDisplay(entry) {
     }
     const canonicalShowName = entry.show_title || showName(entry.title);
     href = tvShowBaseHrefFromEpisode(entry, canonicalShowName);
+  } else if (isTvShow) {
+    displayTitle = entry.title;
+    href = entry.tmdb_id ? tvShowTmdbHref(entry.tmdb_id, displayTitle)
+      : entry.tvdb_id ? tvShowTvdbHref(entry.tvdb_id, displayTitle) : "";
   } else {
     href = entry.tmdb_id ? movieTmdbHref(entry.tmdb_id, entry.title) : movieHref(entry);
   }
   const sourceBadge = entry.source ? sourceBadgeHtml(entry.source) : "None";
-  const mediaLabel = isEpisode ? "TV Show" : "Movie";
+  const mediaLabel = isEpisode || isTvShow ? "TV Show" : "Movie";
   const seasonEpisode = isEpisode ? episodeCode(entry.season, entry.episode) : "";
-  return { isEpisode, displayTitle, epTitle, href, sourceBadge, mediaLabel, seasonEpisode };
+  return { isEpisode, isTvShow, displayTitle, epTitle, href, sourceBadge, mediaLabel, seasonEpisode };
 }
 function renderHistoryGridCard(entry) {
-  const { isEpisode, displayTitle, epTitle, href, mediaLabel } = historyEntryDisplay(entry);
+  const { isEpisode, isTvShow, displayTitle, epTitle, href, mediaLabel } = historyEntryDisplay(entry);
   return `
-    <a class="history-grid-card" data-history-id="${entry.id}" href="${escapeAttribute(href)}" data-prefetch-type="${isEpisode ? "tv" : "movie"}" data-prefetch-tmdb="${escapeAttribute(isEpisode ? (entry.show_tmdb_id || "") : (entry.tmdb_id || ""))}" data-prefetch-title="${escapeAttribute(displayTitle || "")}">
+    <a class="history-grid-card" data-history-id="${entry.id}" href="${escapeAttribute(href)}" data-prefetch-type="${isEpisode || isTvShow ? "tv" : "movie"}" data-prefetch-tmdb="${escapeAttribute(isEpisode ? (entry.show_tmdb_id || "") : (entry.tmdb_id || ""))}" data-prefetch-title="${escapeAttribute(displayTitle || "")}">
       <div class="poster-media-wrap">
         ${posterMarkup(entry, "history-grid-poster")}${historyPosterOverlay(entry, isEpisode && epTitle)}
-        ${posterOverflowMenu(entry, isEpisode ? { showTitle: displayTitle, label: displayTitle } : {})}
+        ${posterOverflowMenu(entry, isEpisode || isTvShow ? { showTitle: displayTitle, label: displayTitle } : {})}
       </div>
       <div class="history-grid-copy">
         <b title="${escapeAttribute(displayTitle)}">${escapeHtml(displayTitle)}</b>
@@ -1577,9 +1583,9 @@ function renderHistoryGridCard(entry) {
   `;
 }
 function renderHistoryListRow(entry) {
-  const { isEpisode, displayTitle, epTitle, href, sourceBadge, mediaLabel, seasonEpisode } = historyEntryDisplay(entry);
+  const { isEpisode, isTvShow, displayTitle, epTitle, href, sourceBadge, mediaLabel, seasonEpisode } = historyEntryDisplay(entry);
   return `
-    <a class="history-list-row" data-history-id="${entry.id}" href="${escapeAttribute(href)}" data-prefetch-type="${isEpisode ? "tv" : "movie"}" data-prefetch-tmdb="${escapeAttribute(isEpisode ? (entry.show_tmdb_id || "") : (entry.tmdb_id || ""))}" data-prefetch-title="${escapeAttribute(displayTitle || "")}">
+    <a class="history-list-row" data-history-id="${entry.id}" href="${escapeAttribute(href)}" data-prefetch-type="${isEpisode || isTvShow ? "tv" : "movie"}" data-prefetch-tmdb="${escapeAttribute(isEpisode ? (entry.show_tmdb_id || "") : (entry.tmdb_id || ""))}" data-prefetch-title="${escapeAttribute(displayTitle || "")}">
       ${posterMarkup(entry, "history-list-poster")}${historyPosterOverlay(entry, isEpisode && epTitle)}
       <span class="history-list-title" title="${escapeAttribute(displayTitle)}">${escapeHtml(displayTitle)}</span>
       <span class="history-list-col" title="${escapeAttribute(epTitle || mediaLabel)}">${escapeHtml(epTitle || mediaLabel)}</span>
@@ -1642,11 +1648,12 @@ function historyItemLayout() {
 export function renderHistoryItems(items = state.historyViewRaw) {
   if (!state.historyViewRaw.length) return emptyExplorer("No watch history items found");
   const sentinel = `<div class="explorer-scroll-sentinel" data-history-sentinel aria-live="polite"><span>${state.historyViewLoading ? "Loading..." : ""}</span></div>`;
+  if (state.historyViewMode === "days") return `${renderHistoryDayGroups(items, renderHistoryPageCard)}${sentinel}`;
   const { listClass, head, renderItem } = historyItemLayout();
   return `<div class="${listClass}">${head}${items.map(renderItem).join("")}</div>${sentinel}`;
 }
 export function renderHistoryView() {
-  if (state.activeView !== "history" || state.mediaDetailInline) return;
+  if (state.activeView !== "history" || state.mediaDetailInline) return; renderDroppedView("history");
   const key = [state.historyViewSearch, state.historyViewFilter].join("|");
   if (state.historyViewQueryKey !== key) resetHistoryView(key);
   if (!state.historyViewRaw.length && state.historyViewHasMore && !state.historyViewLoading && state.token) {
@@ -1674,7 +1681,7 @@ export function renderHistoryView() {
   // it whole so the scroll position holds. The sentinel waits for the last chunk.
   const panel = elements.historyPanel;
   const atStart = panel.getBoundingClientRect().top >= 0 && !panel.querySelector(".history-list")?.scrollLeft;
-  const firstCount = atStart ? HISTORY_FIRST_PAINT_COUNT : Infinity, { listClass, renderItem } = historyItemLayout();
+  const firstCount = atStart && state.historyViewMode !== "days" ? HISTORY_FIRST_PAINT_COUNT : Infinity, { listClass, renderItem } = historyItemLayout();
   panel.innerHTML = renderHistoryItems(state.historyViewRaw.slice(0, firstCount));
   hydratePosters(panel);
   appendRestInChunks(panel, state.historyViewRaw.slice(firstCount), {
@@ -1726,7 +1733,7 @@ export function observeHistorySentinel() {
   clearHistoryViewLoadWatchers();
   const sentinel = elements.historyPanel?.querySelector("[data-history-sentinel]");
   if (!sentinel) return;
-  const historyRail = elements.historyPanel?.querySelector(".history-list");
+  const historyRail = state.historyViewMode === "days" ? null : elements.historyPanel?.querySelector(".history-list");
   if (historyRail && window.innerWidth <= 760) {
     const loadThreshold = Math.max(160, historyRail.clientWidth * 0.75);
     historyViewLoadScrollHandler = () => {

@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.1.1.0.8";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.1.1.0.8";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.1.1.0.8";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.1.1.0.8";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.1.0.8";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.1.1.0.8";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.1.1.0.8";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.1.1.0.8";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.1.1.0.8";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.1.1.0.8";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.1.1.0.9";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.1.1.0.9";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.1.1.0.9";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.1.1.0.9";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.1.1.0.9";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.1.1.0.9";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.1.1.0.9";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.1.1.0.9"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.1.1.0.9";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.1.1.0.9";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.1.1.0.9";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -16,7 +16,7 @@ import {
   refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.1.1.0.8";
+} from "./media-detail-shared.js?v=2.1.1.0.9";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
@@ -1889,7 +1889,7 @@ export function renderShowModalContent(show, {
   ` : "";
 
   setMediaDetailActions(`
-    ${personalMediaActionsHtml(personalMediaItem)}
+    ${personalMediaActionsHtml(personalMediaItem)}${droppedTitleActionHtml(personalMediaItem)}
     ${upNextShowActionHtml({
       title: showTitle,
       tmdb_id: tmdbData?.id || show.tmdb_id || "",
@@ -1959,13 +1959,13 @@ export function renderShowModalContent(show, {
             ${loading ? `<span class="immersive-poster-loading" role="status" aria-label="Loading data"><span class="immersive-poster-loading-label"><span class="immersive-poster-loading-dot" aria-hidden="true"></span><span>Loading data</span></span></span>` : ""}
           </div>
           <div class="immersive-meta">
-            ${logoUrl ? `<img class="immersive-logo" data-err="logo-title" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(showTitle)}" /><h2 class="immersive-title sr-only">${escapeHtml(showTitle)}</h2>` : `<h2 class="immersive-title">${escapeHtml(showTitle)}</h2>`}
+            ${logoUrl && !tmdbData?.anidb ? `<img class="immersive-logo" data-err="logo-title" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(showTitle)}" /><h2 class="immersive-title sr-only">${escapeHtml(showTitle)}</h2>` : `<h2 class="immersive-title">${escapeHtml(anidbDisplayTitle(tmdbData, showTitle))}</h2>`}
             <div class="media-detail-bottom-stack">
               <div class="ratings-row" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
                 ${showModalStatus(loading, Boolean(tmdbData))}
               </div>
 
-              <p class="immersive-overview">${escapeHtml(overview)}</p>
+              <p class="immersive-overview">${escapeHtml(overview)}</p>${anidbAttributionHtml(tmdbData)}
 
               ${localEvidence}
 

@@ -80,11 +80,17 @@ npm start         # serve the local checkout as a develop build
 npm run dev       # same, with --watch auto-reload
 npm test          # node:test suite in test/**/*.test.js
 npm run test:multiprocess # real isolated web/worker replica test
-npm run docs:check # verify README setup guidance matches package/runtime requirements
+npm run docs:check # verify README setup guidance matches package/runtime requirements, and docs/code-index.md is current
+npm run code-index # regenerate docs/code-index.md after adding, removing or renaming a route, source file or export
 npm run build     # syntax check + npm test + server boot gate
 npm run seed:demo # insert fictional demo movies/shows with generated posters
 npm run server:restart # stop whatever listens on PORT, start detached, wait for /api/ping (--if-down reuses)
 ```
+
+`npm test` preloads `scripts/test-data-setup.js`, which points `DATA_DIR` at a temp folder per
+test worker. Run single files with `npm test -- test/foo.test.js`, not bare `node --test`: under
+the test runner `db.js` refuses to open the real `data/` folder, so files that import server
+modules statically fail without the preload instead of touching the local database.
 
 `server:restart` (`scripts/restart-server.js`) writes the server output to
 `plembfin-local-server.log` in the OS temp directory and prints one status line, or the last log
@@ -162,7 +168,6 @@ Grandfathered files, already over their limit (measured 2026-09-08):
 | `public/modules/media-detail-events.js` | 1774 | 1500 |
 | `public/modules/watch-action.js` | 1680 | 1500 |
 | `public/modules/tools-maintenance.js` | 1541 | 1500 |
-| `public/modules/onboarding.js` | 1442 | 1200 soft |
 | `public/modules/sync.js` | 1355 | 1200 soft |
 | `public/modules/tools-backups.js` | 1276 | 1200 soft |
 | `server/src/routes/sync.js` | 3389 | 1500 |
@@ -180,7 +185,7 @@ Grandfathered files, already over their limit (measured 2026-09-08):
    and password setup guidance aligned with the enforced package/runtime configuration
 4. parses `package.json`, `package-lock.json`, `changelog.json`
 5. verifies every routed API handler is either intentionally public or calls
-   `requireAdmin`, `resolveAdminPrincipal`, or `verifyWebhookToken`
+   `requireAdmin`, `requireInstallAdmin`, `resolveAdminPrincipal`, or `verifyWebhookToken`
 6. **rejects any bare `fetch(` outside `server/src/utils/outbound.js`** - outbound
    calls must use `fetchWithTimeout`, which enforces timeouts and validates both
    initial and redirected URLs
@@ -226,7 +231,7 @@ Changelog content for all three branches is computed **locally**, before each pu
 part of running the command itself - never by a CI job reading GitHub's push-event
 commit list afterward. That payload is only reliable for a plain incremental push;
 `alpha` and `main` are always reached by a force-push, for which it's empty or
-incomplete. See [`architecture.md`](architecture.md#changelog--update-check) for the
+incomplete. See [Changelog and update check](#changelog-and-update-check) for the
 full generation/rendering detail; the summary here is what each publish workflow itself
 does, which in every case is now just "verify, then build and publish the image using
 values already committed" - none of them write anything back to their branch.
@@ -439,6 +444,9 @@ image with `PLEKT_DEMO_MODE=1`, `BUILD_CHANNEL=main`, and the existing isolated 
 mount. It does not use the local Portainer installation or the local-only
 `plembfin.lasikie.co.uk` environment.
 
+Demo-mode HTTP responses include `X-Robots-Tag: noindex`, and `/robots.txt` disallows
+crawling. Self-hosted installs do not receive the noindex header.
+
 Configure these GitHub Actions settings before the next main promotion:
 
 - Variables: `OCI_DEMO_HOST`, `OCI_DEMO_KNOWN_HOSTS`, `OCI_DEMO_CONTAINER`,
@@ -482,7 +490,7 @@ release manifest/version from `main`. Manual runs default to following the selec
 branch (`auto`) unless an explicit channel is chosen.
 
 The in-app update check compares the bundled `changelog.json` against the published one
-on GitHub - see the changelog section of [architecture.md](architecture.md).
+on GitHub - see [Changelog and update check](#changelog-and-update-check).
 
 ### Discord release notifications
 
@@ -506,6 +514,151 @@ The Devvit release app is retired from this repository. Its legacy installation 
 uninstalled from r/plembfin on 2026-10-19, and a follow-up CLI listing showed no apps
 installed there. This did not archive the Developer Platform listing or change other
 community installations. See [`reddit-app/README.md`](../reddit-app/README.md).
+
+## Changelog and update check
+
+Each build ships with a bundled `changelog.json` at the repo root (served verbatim at
+`GET /changelog.json`) that records the version this instance was built from - this is what
+the Changelog screen reads. A small `GET /version.json` response carries only that installed
+version for the sidebar badge. On dashboard load `loadAppVersion()` calls `/api/changelog`
+with `?refresh=1` for a quick update check; when a newer release exists the badge changes
+from `v0.2.15` to `v0.2.15 - Update available` (accent-tinted).
+
+`GET /api/changelog` (`handleChangelog` in `routes/maintenance.js`) layers an update check on top: it
+reads the bundled `changelog.json` for the current version and fetches the published
+`changelog.json` from GitHub raw (`Lasikiewicz/plekt@main`), cached in-process for one
+minute (8-second fetch timeout). `?refresh=1` from an admin session bypasses that cache and
+re-fetches immediately. The browser cannot reach GitHub directly because the CSP is
+`connect-src 'self'`, so the server proxies and caches it.
+
+Settings -> Changelog carries a Main / Alpha toggle in the card heading, centred on the title
+row (it stacks under the title on phones). The page's rebrand help card is `data-help-static`,
+so it has no "Read more" collapse. The toggle is available on every
+channel, because `/api/changelog` returns the alpha branch's live manifest whatever is
+installed, so a release install can read alpha build notes. Reading them never changes the
+reported installed version and never raises an update prompt: the server forces
+`alphaBuild.newerBuildAvailable` to false off the alpha channel. An alpha or develop install is
+told separately about a newer build on its own channel and a newer published release, rather
+than only whichever check ran first. Alpha builds left over from an earlier release are kept after the
+current cycle's builds, without a heading, and so are not read as builds of the installed one. Display formatting
+for the five-segment build version (`formatBuildVersion()`, `versionDisplayLabel()`) lives in
+core `public/modules/utils.js`, because the sidebar badge renders it on every page; it trims
+trailing zero segments so a release reads `v1.1.0` and an alpha build `v1.1.0.1`. The Settings
+changelog renderer itself is `public/modules/changelog-channels.js`, loaded with that route.
+
+Each alpha build entry carries `sections` (`newFeatures`/`majorBugFixes`/`tweaks`),
+produced by `categorizeEntries()` in `scripts/promote-develop-to-alpha.js` from that
+build's own develop commits. A main-release entry's `sections` are produced by merging
+every alpha build entry's own `sections` directly (`mergeSections()`, also in
+`promote-develop-to-alpha.js`, used by `scripts/promote-alpha-to-main.js`) rather than
+re-categorizing the entries themselves - an entry's `message` is a synthesized headline
+sentence, not a commit-message bullet, and re-categorizing it would land it in tweaks as
+a garbled duplicate. Settings → Changelog (`renderChangelogDetails()` in `public/app.js`)
+and the generated `CHANGELOG.md` (`scripts/generate-changelog-md.js`) render `sections`
+as separate headed groups whenever any of the three is non-empty, falling back to the
+flat `entry.details` list otherwise. Alpha and main promotion automatically derive
+optional `sectionGroups` for thematic `####` subheadings; a reviewed release may
+override those defaults without changing the flat arrays. Develop's entry stays flat,
+since it never carries `sections` at all (see below). Main release entries may also carry
+`websiteUrl`; GitHub-facing renderers use a Markdown link, while Reddit and the app/website
+views render the same URL through their own compatible output instead of assuming GitHub
+Markdown will be interpreted everywhere.
+
+Both promotion scripts run the same release-content check
+(`changelogEntryProcessViolations` in `scripts/changelog-message.js`) on the entry they
+just assembled, and refuse to write it - throwing rather than publishing - if any
+recognized release-process text survives (changelog consolidation, folded-in release-note
+bullets, branch build-counter resets, and similar). This is the only gate; there is no
+separate CI validation step.
+
+The two entry lists are merged rather than one replacing the other: entries are keyed by
+commit (falling back to version + message), remote copies win on conflict except that a
+local entry's `details` are kept when the remote one has none, and the result is sorted
+newest-first by semver then date. A release that exists only in the bundled file therefore
+stays visible alongside releases that exist only on GitHub. The response is
+`{ current, channel, alphaBuild, latest, updateAvailable, remoteAvailable, remoteError, newer, entries }`,
+where `latest` is the highest version across the remote manifest and the merged entries,
+`newer` lists releases with a higher semver than the running build, `updateAvailable` is
+true when `latest` outranks `current`, and `channel` is `"alpha"` when the image was built
+with `BUILD_CHANNEL=alpha` (the `ghcr.io/lasikiewicz/plekt:alpha` image) or `"release"`
+otherwise. `current` itself always stays a plain semver string so entry-matching and
+update comparisons are unaffected; the frontend appends " alpha" (and, on alpha, the build
+number) only where the version is displayed - the sidebar badge and About's
+current-version banner - never in the value compared against changelog entries. If GitHub
+is unreachable the bundled entries are served on their own.
+
+`alphaBuild` is populated only on the `alpha` channel, read from the bundled
+`changelog.alpha.json` (`readLocalAlphaChangelog()` in `routes/maintenance.js`): a rolling
+build counter and one changelog entry per build accumulated so far this cycle, separate
+from `changelog.json`'s real semver and reset on the next "Force to main".
+`scripts/promote-develop-to-alpha.js` writes this file, run locally as part of "Force to
+alpha" (before the force-push): it packages develop's current entry as its own standalone
+alpha build entry and prepends it to `entries` - so a fresh "Force to alpha" call adds
+another entry rather than updating one in place, and a user can see exactly what changed
+in each build they haven't pulled yet - bumps `build`, and resets to a fresh `baseVersion`,
+build 1, and an empty `entries` array whenever `changelog.alpha.json`'s `baseVersion`
+differs from `changelog.json`'s version (i.e. main moved forward since the last alpha
+push). Build version segments are described at the end of this section.
+`docker-publish-alpha.yml` reads the build number already in the pushed
+commit and tags the published image `alpha-<build>` alongside the rolling `alpha` tag; it
+does not write anything back.
+
+`handleChangelog` also fetches `changelog.alpha.json` from the `alpha` branch on GitHub raw
+(`fetchRemoteAlphaChangelog()`, same one-minute cache and `?refresh=1` bypass as the main
+remote fetch) and passes the local and remote alpha manifests through
+`describePendingAlphaBuild()` (a pure, exported function - no I/O - so it's unit-tested
+directly rather than through the route) to add `alphaBuild.latestBuild` /
+`alphaBuild.newerBuildAvailable` / `alphaBuild.pendingEntries` to the response.
+`newerBuildAvailable` is true when the remote's `build` is higher than the running
+instance's own, or its `baseVersion` differs (a release cycle moved on) - a distinct signal
+from a main release existing, answering "has a newer `:alpha` image been published since
+this one was built," which the running build's own bundled file can never know on its own.
+`pendingEntries` is the actual changelog bullets for those not-yet-pulled builds - read from
+the *remote* manifest, not the local one, since a build that hasn't been pulled yet can only
+ever appear in GitHub's copy of the file - so the UI can show what changed before the user
+updates, not only after.
+
+About renders the current version, a status banner, and the full release list
+with newer versions highlighted. On the `alpha` channel the banner never shows the
+"Update available" treatment for the semver gap: alpha's bundled semver only advances when
+it is merged into `main`, so it always trails main's latest release right after every merge
+even though the running alpha build may already contain newer commits than that release -
+flagging that gap as an actionable update would be misleading. It shows the real
+"Update available" treatment instead when `alphaBuild.newerBuildAvailable` is true, naming
+the newer build number and prompting a pull of the latest `:alpha` image; otherwise the
+banner states that alpha is a rolling pre-release channel and, if `newer` is non-empty,
+notes how many releases have landed on `main` since this build for context. The sidebar/About
+version label itself still distinguishes one alpha build from the next via the build number
+(`v0.8.0.7 alpha`), and the release list shows a separate "New since your build - not pulled
+yet" section (tagged "Not pulled yet", `alphaBuild.pendingEntries`) above the "Current alpha
+build" section (`alphaBuild.entries` - every build entry accumulated so far this cycle,
+newest first, not just the one this instance has installed) whenever either is non-empty,
+so a newer build's changes are visible without updating first.
+
+`developBuild` (populated only on the `develop` channel, read from `changelog.develop.json`
+via `readLocalDevelopChangelog()`) carries the current build version and its rolling cycle
+counter, `{ version, build, resetCommit, entries }`. `scripts/rebuild-develop-changelog.js`,
+run locally as part of "Push to git" (before the push), fully recomputes the single entry
+from every real commit between `resetCommit` and HEAD, rather than appending one entry per
+push - there is only ever one entry to read, and it is always current. It also stamps the
+build's own version onto every `?v=` public asset reference, so each develop build gets its
+own immutable-cache URL. `build` starts at 0 when "Force to main" completes and bumps by one
+on every later rebuild that finds real content. `promoteDevelopToAlpha()` clears the current
+entry, moves the anchor, and returns the counter to 0 for the new alpha build;
+`promoteAlphaToMain()` sets the released version and returns it to 0 for the next cycle.
+`describePendingDevelopBuild()` compares versions before build numbers so an older remote
+cycle cannot look newer merely because its counter is higher.
+
+Build versions are five numeric segments, `major.minor.patch.alpha.dev`: the released
+semver, then alpha builds since that release, then develop builds since the last alpha
+build. `scripts/version.js` owns parsing, comparison, and display for them, and
+`parseSemver`/`compareSemver` in `routes/maintenance.js` read all five so a pre-release
+build can be ordered against another and against the release that follows it. Missing
+segments zero-fill, so a four-segment version written by an earlier promotion still means
+what it did. Display trims trailing zeros and never goes below three segments, so a release
+reads `v1.1.0`, an alpha build `v1.1.0.1`, and a develop build `v1.1.0.0.2`. `package.json`
+and `changelog.json` keep the three-segment released semver only, because five segments is
+not valid semver. See `docs/decisions.md` entry 18.
 
 ## Other CI
 

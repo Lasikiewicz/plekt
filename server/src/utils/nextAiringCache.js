@@ -1,16 +1,23 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { DATA_DIR } from "../paths.js";
+import { getActiveDataDir } from "./userContext.js";
 
 const CACHE_VERSION = 1;
-const CACHE_FILE = path.join(DATA_DIR, "next-airing-cache.json");
-const TEMP_FILE = `${CACHE_FILE}.tmp`;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const ACTIVE_TTL_MS = 6 * 60 * 60 * 1000;
 const INACTIVE_TTL_MS = 7 * DAY_MS;
 
-let memoryCache = null;
-let memoryMtimeMs = 0;
+const cacheStates = new Map();
+
+function cacheState(dataDir = getActiveDataDir()) {
+  const directory = path.resolve(dataDir);
+  let state = cacheStates.get(directory);
+  if (!state) {
+    state = { directory, memoryCache: null, memoryMtimeMs: 0 };
+    cacheStates.set(directory, state);
+  }
+  return state;
+}
 
 function normalizeTitle(value = "") {
   return String(value).trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
@@ -28,33 +35,38 @@ function emptyCache() {
 }
 
 async function readFileCache() {
+  const state = cacheState();
+  const cacheFile = path.join(state.directory, "next-airing-cache.json");
   try {
-    const [stat, raw] = await Promise.all([fs.stat(CACHE_FILE), fs.readFile(CACHE_FILE, "utf8")]);
-    if (memoryCache && memoryMtimeMs === stat.mtimeMs) return memoryCache;
+    const [stat, raw] = await Promise.all([fs.stat(cacheFile), fs.readFile(cacheFile, "utf8")]);
+    if (state.memoryCache && state.memoryMtimeMs === stat.mtimeMs) return state.memoryCache;
     const parsed = JSON.parse(raw);
     const cache = {
       version: CACHE_VERSION,
       updatedAt: Number(parsed?.updatedAt || 0),
       entries: parsed?.entries && typeof parsed.entries === "object" ? parsed.entries : {},
     };
-    memoryCache = cache;
-    memoryMtimeMs = stat.mtimeMs;
+    state.memoryCache = cache;
+    state.memoryMtimeMs = stat.mtimeMs;
     return cache;
   } catch (error) {
     if (error?.code !== "ENOENT") console.error("Failed to read next airing cache", error);
-    memoryCache = emptyCache();
-    memoryMtimeMs = 0;
-    return memoryCache;
+    state.memoryCache = emptyCache();
+    state.memoryMtimeMs = 0;
+    return state.memoryCache;
   }
 }
 
 async function writeFileCache(cache) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  const state = cacheState();
+  const cacheFile = path.join(state.directory, "next-airing-cache.json");
+  const tempFile = `${cacheFile}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+  await fs.mkdir(state.directory, { recursive: true });
   const payload = JSON.stringify({ ...cache, version: CACHE_VERSION, updatedAt: Date.now() }, null, 2);
-  await fs.writeFile(TEMP_FILE, payload, "utf8");
-  await fs.rename(TEMP_FILE, CACHE_FILE);
-  memoryCache = { ...cache, version: CACHE_VERSION, updatedAt: Date.now() };
-  memoryMtimeMs = 0;
+  await fs.writeFile(tempFile, payload, "utf8");
+  await fs.rename(tempFile, cacheFile);
+  state.memoryCache = { ...cache, version: CACHE_VERSION, updatedAt: Date.now() };
+  state.memoryMtimeMs = 0;
 }
 
 export async function readNextAiringCache() {

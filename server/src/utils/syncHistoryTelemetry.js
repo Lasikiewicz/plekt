@@ -3,6 +3,7 @@ import { appendSyncHistory } from "./configStore.js";
 import { provenanceTelemetryLines } from "./watchProvenance.js";
 import { recordWatchAuditEvents } from "./watchAudit.js";
 import { mediaKeyFor } from "./dataRepo.js";
+import { trackerProviderForSource } from "./trackers/registry.js";
 
 export function addTimingHistoryRow(historyRows, media, watchedAt) {
   if (!Array.isArray(historyRows) || !media || !watchedAt) return;
@@ -114,6 +115,7 @@ export function isTargetSynced(telemetry = "", target = "", source = "") {
   const src = String(source || "").toLowerCase();
   const tgt = String(target || "").toLowerCase();
   if (src === tgt || src.startsWith(`${tgt}_`)) return true;
+  if (trackerProviderForSource(src) === tgt) return true;
 
   const text = String(telemetry || "").toLowerCase();
   if (text.includes("force sync resolved status to success")) return true;

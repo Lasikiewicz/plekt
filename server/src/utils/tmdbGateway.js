@@ -1048,6 +1048,29 @@ export async function searchTmdbCollections({ query, page = 1 }) {
   });
 }
 
+// Other names TMDB records for a title ("Mako Mermaids" for Mako: Island of Secrets).
+export async function getTmdbAlternativeTitles({ mediaType, tmdbId, lane = "sync" } = {}) {
+  const type = mediaType === "tv" ? "tv" : "movie";
+  const id = String(tmdbId || "").trim();
+  if (!/^\d+$/.test(id)) return [];
+  return collapse(`alternative_titles:${type}:${id}`, async () => {
+    const cacheId = `${type}_alternative_titles_${id}`;
+    const cached = metaGet(cacheId);
+    if (cached?.details && fresh(cached, 30 * DAY_MS)) return cached.details.titles;
+    try {
+      const response = await upstream(`${type}/${id}/alternative_titles`, {}, 0, { lane });
+      const titles = [...new Set((response.results || response.titles || [])
+        .map((entry) => String(entry?.title || "").trim()).filter(Boolean))];
+      // No tmdbId: lookups by TMDB id must keep finding the details row, not this one.
+      metaSet(cacheId, { tmdbId: null, mediaType: `${type}_alternative_titles`, details: { titles }, schemaVersion: DETAILS_SCHEMA_VERSION, updatedAtMs: Date.now() });
+      return titles;
+    } catch (error) {
+      if (cached?.details) return cached.details.titles;
+      throw error;
+    }
+  });
+}
+
 export async function getTmdbCollection(collectionId) {
   const id = String(collectionId || "").trim();
   if (!/^\d+$/.test(id)) {
@@ -1422,6 +1445,7 @@ function shapeTmdbSeason(details) {
   const episodes = Array.isArray(details?.episodes) ? details.episodes : [];
   return {
     episodes: episodes.map((episode) => ({
+      id: episode.id,
       episode_number: episode.episode_number,
       name: episode.name || "",
       overview: episode.overview || "",

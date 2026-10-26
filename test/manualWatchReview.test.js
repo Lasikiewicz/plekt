@@ -12,10 +12,13 @@ const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
 const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
 const { applyManualUnwatch } = await import("../server/src/routes/sync.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
+const { checkIncomingEpisodeSourceMismatch } = await import("../server/src/utils/sourceMismatch.js");
+const { setShowSeasonSource } = await import("../server/src/utils/seasonSource.js");
 const {
   countPendingManualWatchReviews,
   dismissPendingManualWatchReviewsForMedia,
   enqueueManualWatchReview,
+  enqueueSourceMismatchReview,
   getManualWatchReview,
   listPendingManualWatchReviews,
   listPendingManualWatchReviewsCached,
@@ -24,6 +27,101 @@ const {
 } = await import("../server/src/utils/manualWatchReview.js");
 
 test.after(() => db.close());
+
+test("source mismatch review dismissals persist for the same show ids and re-flag when an id changes", () => {
+  const mismatch = {
+    title: "Naruto - S01E52", showTitle: "Naruto", type: "episode", season: 1, episode: 52,
+    episodeTitle: "The title", source: "plex", ids: { tmdb: "100", tvdb: "200" },
+    mismatch: { stored: { season: 1, episode: 35 }, incoming: { season: 1, episode: 52 }, otherSource: "tmdb" },
+  };
+  const first = enqueueSourceMismatchReview(mismatch, { fingerprint: "100:200" });
+  assert.equal(first.queued, true);
+  assert.equal(first.review.review_kind, "source_mismatch");
+  const duplicate = enqueueSourceMismatchReview(mismatch, { fingerprint: "100:200" });
+  assert.equal(duplicate.queued, true);
+  assert.equal(duplicate.review.id, first.review.id);
+  assert.equal(listPendingManualWatchReviews().filter((review) => review.review_kind === "source_mismatch").length, 1);
+  setManualWatchReviewStatus(first.review.id, "dismissed", "source_mismatch");
+  assert.equal(enqueueSourceMismatchReview(mismatch, { fingerprint: "100:200" }).status, "dismissed");
+  const changed = enqueueSourceMismatchReview({ ...mismatch, ids: { tmdb: "101", tvdb: "200" } }, { fingerprint: "101:200" });
+  assert.equal(changed.queued, true);
+  assert.notEqual(changed.review.id, first.review.id);
+  assert.equal(listPendingManualWatchReviews().some((review) => review.id === changed.review.id), true);
+  setManualWatchReviewStatus(changed.review.id, "dismissed", "source_mismatch");
+  const singleId = { title: "Single Id Show - S01E01", showTitle: "Single Id Show", type: "episode", season: 1, episode: 1, episodeTitle: "Pilot", ids: { tmdb: "single-tmdb" } };
+  const single = enqueueSourceMismatchReview(singleId, { fingerprint: "single-tmdb:" });
+  setManualWatchReviewStatus(single.review.id, "dismissed", "source_mismatch");
+  assert.equal(enqueueSourceMismatchReview(singleId, { fingerprint: "single-tmdb:" }).status, "dismissed");
+  assert.equal(enqueueSourceMismatchReview({ ...singleId, ids: { tmdb: "changed-tmdb" } }, { fingerprint: "changed-tmdb:" }).queued, true, "changing the only source id clears the dismissal");
+  assert.equal(enqueueSourceMismatchReview({ ...singleId, ids: { tmdb: "single-tmdb", tvdb: "new-tvdb" } }, { fingerprint: "single-tmdb:new-tvdb" }).queued, true, "adding the second source id clears the dismissal");
+  db.prepare("DELETE FROM manual_watch_reviews WHERE media_key LIKE 'source-mismatch:%'").run();
+});
+
+test("dismissing a source mismatch review changes no watch history or playstate", async () => {
+  const queued = enqueueSourceMismatchReview({
+    title: "Review Safety Show - S01E05", showTitle: "Review Safety Show", type: "episode",
+    season: 1, episode: 5, episodeTitle: "Example", source: "plex", ids: { tmdb: "safety-tmdb", tvdb: "safety-tvdb" },
+    mismatch: { stored: { season: 1, episode: 8 }, incoming: { season: 1, episode: 5 }, otherSource: "tmdb" },
+  }, { fingerprint: "safety-tmdb:safety-tvdb" });
+  const beforeHistory = db.prepare("SELECT COUNT(*) AS count FROM watch_history").get().count;
+  const beforePlaystate = db.prepare("SELECT COUNT(*) AS count FROM playstate").get().count;
+  const request = {
+    method: "POST", headers: { "x-api-key": AUTH.apiKey }, cookies: {},
+    get(name) { return this.headers[String(name).toLowerCase()] || ""; },
+  };
+  const reply = { statusCode: 200, body: null };
+  const response = {
+    status(code) { reply.statusCode = code; return this; },
+    set() { return this; },
+    send(payload) { reply.body = JSON.parse(payload); return this; },
+  };
+  await handleManualWatchReview(request, response, `manual-watch-review/${encodeURIComponent(queued.review.id)}/dismiss`);
+  assert.equal(reply.statusCode, 200);
+  assert.equal(reply.body.status, "dismissed");
+  assert.equal(getManualWatchReview(queued.review.id).status, "dismissed");
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM watch_history").get().count, beforeHistory);
+  assert.equal(db.prepare("SELECT COUNT(*) AS count FROM playstate").get().count, beforePlaystate);
+  db.prepare("DELETE FROM manual_watch_reviews WHERE media_key LIKE 'source-mismatch:%'").run();
+});
+
+test("incoming mismatch checks flag alternate-source numbering, ignore matching-number title variants, and tolerate provider failures", async () => {
+  const insertStored = (key, { title, episodeTitle, season, episode }) => db.prepare(`
+    INSERT INTO watch_history (id, title, media_type, watched_at, source, tmdb_id, tvdb_id, season, episode, sync_action, show_title, episode_title)
+    VALUES (?, ?, 'episode', '2025-01-01T00:00:00.000Z', 'manual', 'tmdb-${key}', 'tvdb-${key}', ?, ?, 'watched', 'Naruto', ?)
+  `).run(`row-${key}`, `Naruto - S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")} - ${episodeTitle}`, season, episode, episodeTitle);
+  insertStored("mismatch", { season: 1, episode: 52, episodeTitle: "The Showdown" });
+  setShowSeasonSource("tvdb-mismatch", "tmdb", { rowNumbering: "tmdb" });
+  const incoming = { type: "episode", title: "Naruto - S01E35 - The Showdown", showTitle: "Naruto", season: 1, episode: 35, episodeTitle: "The Showdown", source: "plex", ids: { tmdb: "tmdb-mismatch", tvdb: "tvdb-mismatch" } };
+  let lookupCount = 0;
+  const match = await checkIncomingEpisodeSourceMismatch(incoming, {
+    runKey: "mismatch-unit",
+    loadTvdbSeasonEpisodes: async () => { lookupCount += 1; return { episodes: [{ season_number: 1, episode_number: 35, name: "The Showdown" }] }; },
+  });
+  assert.equal(match.status, "match");
+  assert.equal(match.queued, true);
+  await checkIncomingEpisodeSourceMismatch({ ...incoming, title: "Naruto - S01E36 - Another Episode", episode: 36 }, { runKey: "mismatch-unit" });
+  assert.equal(lookupCount, 1, "one conflicting show spends at most one alternate-source lookup per run");
+
+  insertStored("variation", { season: 1, episode: 35, episodeTitle: "The Showdown" });
+  const titleVariation = await checkIncomingEpisodeSourceMismatch({ ...incoming, title: "Naruto - S01E35 - The Showdown (Extended)", season: 1, episode: 35, episodeTitle: "The Showdown (Extended)", ids: { tmdb: "tmdb-variation", tvdb: "tvdb-variation" } }, { runKey: "variation-unit" });
+  assert.equal(titleVariation.status, "no_match");
+
+  const bothDisagree = await checkIncomingEpisodeSourceMismatch(incoming, {
+    runKey: "both-disagree-unit",
+    loadTvdbSeasonEpisodes: async () => ({ episodes: [{ season_number: 1, episode_number: 99, name: "The Showdown" }] }),
+  });
+  assert.equal(bothDisagree.status, "no_match");
+
+  insertStored("outage", { season: 1, episode: 52, episodeTitle: "The Outage" });
+  setShowSeasonSource("tvdb-outage", "tmdb", { rowNumbering: "tmdb" });
+  const outage = await checkIncomingEpisodeSourceMismatch({ ...incoming, title: "Naruto - S01E35 - The Outage", season: 1, episode: 35, episodeTitle: "The Outage", ids: { tmdb: "tmdb-outage", tvdb: "tvdb-outage" } }, {
+    runKey: "outage-unit",
+    loadTmdbSeasonEpisodes: async () => { throw new Error("offline"); },
+  });
+  assert.equal(outage.status, "unknown");
+  setManualWatchReviewStatus(match.review.id, "dismissed", "source_mismatch");
+  db.prepare("DELETE FROM manual_watch_reviews WHERE media_key LIKE 'source-mismatch:%'").run();
+});
 
 const media = {
   title: "Ted - S02E01",

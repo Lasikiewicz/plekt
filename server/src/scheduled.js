@@ -7,7 +7,7 @@ import { watchedPlayedSyncEnabled } from "./utils/syncFlags.js";
 import { isCronSyncPaused, loadWatchBackupRuntime } from "./utils/watchHistoryBackups.js";
 import { executeForceSyncPlan } from "./utils/forceSyncExecutor.js";
 import { isVerboseLogging } from "./utils/logVerbose.js";
-import { loadTraktWatchedDateIndex } from "./utils/mediaForceSync.js";
+import { loadTrackerWatchedDateIndex } from "./utils/mediaForceSync.js";
 import { startUpNextProviderFeed, completeUpNextProviderFeed, failUpNextProviderFeed, listUpNextProviderFeedStates, redactUpNextProviderError, withUpNextFeedSeriesIdentity } from "./utils/upNextRepository.js";
 import { refreshUpNextProviderFeeds } from "./utils/upNextProviderSync.js";
 import { reconcileAvailableWatchedItems } from "./utils/libraryAvailabilitySync.js";
@@ -511,12 +511,12 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
     // A media server's own "last watched" date can be wrong (see the identical
     // comment in mediaForceSync.js) - fetched once per catch-up pass, not per
     // item, and shared across all three servers below.
-    const traktWatchedDateIndex = await loadTraktWatchedDateIndex(logger).catch(() => null);
+    const trackerWatchedDateIndex = await loadTrackerWatchedDateIndex(logger, { trigger: "scheduled" }).catch(() => null);
 
     if (plexActive) {
       try {
         trace("Scheduled Sync: checking Plex recently watched...");
-        plexSynced = await syncRecentlyWatchedFromPlex(config, loopStore, logger, traktWatchedDateIndex);
+        plexSynced = await syncRecentlyWatchedFromPlex(config, loopStore, logger, trackerWatchedDateIndex);
       } catch (error) {
         logger(`Scheduled Sync ERROR: Plex sync failed: ${error.message}`);
       }
@@ -525,7 +525,7 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
     if (embyActive) {
       try {
         trace("Scheduled Sync: checking Emby recently watched...");
-        embySynced = await syncRecentlyWatchedFromEmby(config, loopStore, logger, traktWatchedDateIndex);
+        embySynced = await syncRecentlyWatchedFromEmby(config, loopStore, logger, trackerWatchedDateIndex);
       } catch (error) {
         logger(`Scheduled Sync ERROR: Emby sync failed: ${error.message}`);
       }
@@ -534,7 +534,7 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
     if (jellyfinActive) {
       try {
         trace("Scheduled Sync: checking Jellyfin recently watched...");
-        jellyfinSynced = await syncRecentlyWatchedFromJellyfin(config, loopStore, logger, traktWatchedDateIndex);
+        jellyfinSynced = await syncRecentlyWatchedFromJellyfin(config, loopStore, logger, trackerWatchedDateIndex);
       } catch (error) {
         logger(`Scheduled Sync ERROR: Jellyfin sync failed: ${error.message}`);
       }

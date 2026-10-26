@@ -81,8 +81,19 @@ const byteBudgets = [
   [getImageVariantPath("/assets/app-captures/dashboard-home-light.png", 1440, "webp"), 250_000],
   [getImageVariantPath("/assets/plembfin_header_logo_dark.png", 376, "webp"), 24_000],
   [getImageVariantPath("/assets/plembfin_header_logo_light.png", 376, "webp"), 24_000],
+  ["/assets/og-card.png", 600_000],
   ["/assets/optimized/plembfin-hub.svg", 300_000],
 ];
+
+const socialCardPath = path.join(assetsRoot, "og-card.png");
+if (fs.existsSync(socialCardPath)) {
+  const socialCard = await sharp(socialCardPath).metadata();
+  if (socialCard.width !== 1200 || socialCard.height !== 630) {
+    failures.push(`og-card.png must be exactly 1200x630 (found ${socialCard.width}x${socialCard.height})`);
+  }
+} else {
+  failures.push("missing public/assets/og-card.png");
+}
 
 for (const [url, maximumBytes] of byteBudgets) {
   const absolutePath = localPathFromAssetUrl(url);

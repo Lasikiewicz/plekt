@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.1.1.0.8";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.1.1.0.8";
-import { applyAppearanceToBody } from "./appearance.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.1.1.0.9";
+import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.1.1.0.9";
+import { applyAppearanceToBody } from "./appearance.js?v=2.1.1.0.9";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -1040,19 +1040,20 @@ export async function saveAppearanceSettings() {
     showReviews: elements.appearShowReviews?.checked ?? true,
     showImages: elements.appearShowImages?.checked ?? true,
     showRelated: elements.appearShowRelated?.checked ?? true,
+    hideLinks: elements.appearHideLinks?.checked ?? false,
     textScale: Number(document.querySelector("#appearTextScale")?.value) || 100,
   };
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.1.1.0.8");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.1.1.0.9");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.1.1.0.8");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.1.1.0.9");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {

@@ -1,0 +1,43 @@
+---
+title: Sync Plex with Trakt
+description: Set up two-way Plex and Trakt watch history sync with Plekt. Learn what syncs, how to connect both accounts, and how to troubleshoot missed changes.
+category: Connect services
+order: 4.1
+sourceVersion: "2.1.1"
+sourcePaths:
+  - docs/plex.md
+  - docs/settings.md
+  - docs/scheduled-sync.md
+  - docs/troubleshooting.md
+  - docs/auth.md
+screenshots: []
+---
+
+Plekt syncs Plex with Trakt by keeping a local watch-history record and reconciling changes between connected services. A watched or unwatched change from Plex can reach Trakt, and a Trakt change can flow back through Plekt to Plex and any other connected media servers.
+
+Plex reports changes to Plekt through its built-in notification connection. Plekt checks Trakt on its scheduled sync cycle, which normally runs once a minute. You do not need to install a Plex Trakt plugin or subscribe to Trakt VIP for this connection.
+
+## Set up Plex and Trakt sync
+
+1. Connect Plex under [Settings → Media servers](/docs/settings/media-servers/). Plekt needs a Plex server URL and token, or a successful account connection.
+2. Open [Settings → Connections → Trakt](/docs/settings/connections/#trakt) and choose **Connect Trakt**.
+3. Choose the initial sync policy shown by Plekt. Open the activation link, enter the device code, and approve access in Trakt.
+4. Let the first comparison finish. Then make one small watched or unwatched change and confirm its destination result in [Sync Activity](/docs/concepts/#read-sync-activity).
+
+The built-in Trakt device connection does not require a personal API application. Advanced personal-app credentials are available for users who need them, such as Trakt VIP developers.
+
+## What syncs
+
+Plekt syncs watched and unwatched state, watch dates, and individual rewatches between Trakt and connected media servers. Plex changes are received through its notification connection, with scheduled checks as a backstop. Trakt's watched snapshot is reconciled about once a minute.
+
+Plekt is the bridge between services. Keep only one writer connected to Trakt: disable the Trakt plugins and scheduled Trakt tasks in Emby and Jellyfin when Plekt handles Trakt sync. Multiple writers can reapply older state after Plekt has corrected it.
+
+## If changes do not appear
+
+- Confirm Trakt is connected in [Settings → Connections → Trakt](/docs/settings/connections/#trakt), and Plex is healthy in [Settings → Media servers](/docs/settings/media-servers/).
+- Allow one full minute for a Trakt change to be read, then check [Sync Activity](/docs/concepts/#read-sync-activity) for the source, destination, and result.
+- Disable Emby or Jellyfin Trakt plugins and their scheduled tasks if they are also writing to Trakt.
+- If a title cannot be matched, use the show-match repair and retry steps in [Sync Activity and tools](/docs/sync-tools/).
+- For a connected account whose changes keep returning, follow [Trakt changes keep coming back](/docs/troubleshooting/#trakt-changes-keep-coming-back).
+
+For the full provider setup and supported integrations, see [Integrations](/docs/integrations/). For the choices involved in importing or starting from current Trakt state, see [Settings → Connections](/docs/settings/connections/).

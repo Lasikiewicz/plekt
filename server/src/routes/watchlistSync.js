@@ -22,7 +22,7 @@ export async function handleWatchlistSync(req, res) {
         activity: listWatchlistActivity({ provider: clean(url.searchParams.get("provider")), limit: url.searchParams.get("limit") || 100, offset: url.searchParams.get("offset") || 0 }),
       });
     }
-    if (req.method === "GET") return sendJson(res, getWatchlistSyncStatus(await loadMediaConfig()));
+    if (req.method === "GET") return sendJson(res, getWatchlistSyncStatus(await loadMediaConfig({ resolveConnections: false })));
     if (req.method !== "POST") return methodNotAllowed(res);
 
     const body = await readJson(req);

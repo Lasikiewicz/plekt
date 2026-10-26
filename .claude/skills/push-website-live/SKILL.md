@@ -34,19 +34,24 @@ The current checkout is the source of truth, including uncommitted website fixes
    in chat that no website text or image shows those changes; otherwise new application
    work is documented through **Force to main**.
 
-2. From `website/`, run the website deployment checks:
+2. Check the homepage comparison table date. In `website/src/pages/index.astro`, read the
+   "accurate as of <date>" text in the `simple-home-comparison-note` paragraph. Show the
+   user that date and the comparison rows, then wait for them to confirm in chat that the
+   table is still accurate as of that date. If they do not confirm, stop before deploying.
+
+3. From `website/`, run the website deployment checks:
 
    ```bash
    npm run check:deploy
    ```
 
-3. Build the current website tree:
+4. Build the current website tree:
 
    ```bash
    npm run build
    ```
 
-4. Deploy the resulting `dist/` directly to Cloudflare Pages:
+5. Deploy the resulting `dist/` directly to Cloudflare Pages:
 
    ```bash
    npx --yes wrangler@latest pages deploy dist --project-name plembfin-website --branch main --commit-message "Update Plekt website from local source" --commit-dirty=true
@@ -56,12 +61,16 @@ The current checkout is the source of truth, including uncommitted website fixes
    or ask the user to complete Cloudflare login. Do not switch to a GitHub push as a
    workaround.
 
-5. Verify the returned `pages.dev` deployment URL and `https://plembfin.com` both serve
+6. Verify the returned `pages.dev` deployment URL and `https://plembfin.com` both serve
    the new page successfully. Confirm the production response contains the current
    website output when a specific fix or marker is part of the request.
 
-6. Report the production URL and any deployment URL. State clearly that this used the
+7. Report the production URL and any deployment URL. State clearly that this used the
    website-only path and did not trigger a Plekt application rebuild on GitHub.
 
 "Push to git", "Force to alpha", and "Force to main" remain separate workflows and do
 not imply this website-only publish.
+
+## Example request
+
+> Push website live

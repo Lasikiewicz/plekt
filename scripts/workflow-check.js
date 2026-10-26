@@ -16,6 +16,14 @@ export function assertScope(baseline, pending) {
   if (baseline.pending.length) throw Error('Baseline contains older unpushed commits. Ask for all-scope or a narrower scope; do not consolidate.');
   if (!pending.includes(baseline.head) && pending.length) throw Error('Current history no longer contains the chat baseline. Reconcile scope before committing.');
 }
+export function assertBugBacklogClear() {
+  const file = path.join(root, 'plan/bugs.md');
+  if (!fs.existsSync(file)) throw Error('Cannot verify plan/bugs.md; refusing remote push.');
+  const content = fs.readFileSync(file, 'utf8');
+  if (/^\s*-\s*\[\s\]/m.test(content)) {
+    throw Error('plan/bugs.md contains unchecked bug/follow-up work. Resolve and verify/close every item before any remote push; deferral does not clear the blocker.');
+  }
+}
 export function assertSafePaths(paths) {
   for (const p of paths) if (/^(data|backups|node_modules)(\/|$)|(^|\/)\.env($|\.(local|production|development|test)(\.local)?$)|(^|\/)(id_rsa|id_ed25519|private\.key)$/i.test(p)) {
     throw Error(`Forbidden staged path: ${p}. Unstage it; never force-add local data or credentials.`);
@@ -33,11 +41,12 @@ const KNOWN_SECURITY_ALERTS = {
   },
   'code-scanning:49': {
     matches: a => a.rule?.id === 'js/stack-trace-exposure' &&
+      a.rule?.security_severity_level === 'medium' &&
       a.most_recent_instance?.location?.path === 'server/src/utils/http.js' &&
       a.most_recent_instance?.ref === 'refs/heads/main' &&
-      a.most_recent_instance?.commit_sha === '3a45f9fc2d48fc7477092cd3e2652d79f6b8dbf0',
-    note: 'known: the Trakt replace route no longer returns a thrown error message in develop; this is the main instance, pending the next main scan',
-    remedy: () => traktReplaceErrorHidden(),
+      a.most_recent_instance?.commit_sha === 'ef11918693f1a9ce4bfd0c0225ce1652374c871e',
+    note: 'known: restore-conflict errors return fixed user-safe text in develop; this is the main instance, pending the next main scan',
+    remedy: () => restoreConflictMessageSafe(),
   },
   'dependabot:17': {
     matches: a => a.dependency?.package?.ecosystem === 'npm' &&
@@ -65,6 +74,47 @@ const KNOWN_SECURITY_ALERTS = {
     note: 'known: the website lockfile pins a patched vite in develop; GitHub still reports the default-branch alert until that lockfile reaches main',
     remedy: () => websiteVitePatched(),
   }])),
+  ...Object.fromEntries([
+    [22, 'vite', 'GHSA-698v-4r3x-3vcv', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [24, 'hono', 'GHSA-5r4p-p66f-jhc7', 'medium', '>= 4.12.4, < 4.13.11', '4.13.11'],
+    [26, 'vite', 'GHSA-587h-7wmj-h5pm', 'high', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [28, 'vite', 'GHSA-r825-w8mm-5pxw', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [30, 'vite', 'GHSA-vfpm-58rq-9qcg', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [31, 'vite', 'GHSA-rq7h-c2jc-7f22', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [32, 'vite', 'GHSA-9jrq-w75r-8gcw', 'low', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+  ].map(([number, packageName, ghsa, severity, range, fixed]) => [`dependabot:${number}`, {
+    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
+      a.dependency?.package?.name === packageName &&
+      a.dependency?.manifest_path === 'reddit-app/package-lock.json' &&
+      a.security_advisory?.ghsa_id === ghsa &&
+      a.security_advisory?.severity === severity &&
+      a.security_vulnerability?.vulnerable_version_range === range &&
+      a.security_vulnerability?.first_patched_version?.identifier === fixed,
+    note: 'known: this advisory is in the retired Devvit lockfile, removed from develop; GitHub still reports the default-branch alert until removal reaches main',
+    remedy: () => redditAppSourceRetired(),
+  }])),
+  'dependabot:29': {
+    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
+      a.dependency?.package?.name === 'ip-address' &&
+      a.dependency?.manifest_path === 'package-lock.json' &&
+      a.security_advisory?.ghsa_id === 'GHSA-rxp7-6hxx-x8q5' &&
+      a.security_advisory?.severity === 'medium' &&
+      a.security_vulnerability?.vulnerable_version_range === '<= 10.7.3' &&
+      a.security_vulnerability?.first_patched_version?.identifier === '10.7.4',
+    note: 'known: develop pins patched ip-address 10.7.5; GitHub still reports the default-branch alert until the lockfile reaches main',
+    remedy: () => lockPackagePatched('package-lock.json', 'ip-address', '10.7.4'),
+  },
+  'dependabot:33': {
+    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
+      a.dependency?.package?.name === 'astro' &&
+      a.dependency?.manifest_path === 'website/package-lock.json' &&
+      a.security_advisory?.ghsa_id === 'GHSA-mpr7-6m5w-76rw' &&
+      a.security_advisory?.severity === 'low' &&
+      a.security_vulnerability?.vulnerable_version_range === '>= 7.1.0, <= 7.3.2' &&
+      a.security_vulnerability?.first_patched_version?.identifier === '7.3.3',
+    note: 'known: develop pins patched Astro 7.4.1; GitHub still reports the default-branch alert until the lockfile reaches main',
+    remedy: () => lockPackagePatched('website/package-lock.json', 'astro', '7.3.3'),
+  },
 };
 export function knownSecurityAlertNote(kind, alert) {
   const entry = KNOWN_SECURITY_ALERTS[`${kind}:${alert.number}`];
@@ -74,9 +124,17 @@ function knownSecurityAlertRemedyPresent(kind, alert) {
   return Boolean(KNOWN_SECURITY_ALERTS[`${kind}:${alert.number}`]?.remedy());
 }
 export function vitePatched(version) {
-  const [major, minor, patch] = String(version || '').split('.').map(Number);
-  if (![major, minor, patch].every(Number.isInteger)) return false;
-  return major > 8 || (major === 8 && (minor > 3 || (minor === 3 && patch >= 3)));
+  return versionAtLeast(version, '8.3.3');
+}
+export function versionAtLeast(version, minimum) {
+  const parse = value => String(value || '').split('.').slice(0, 3).map(part => Number(part));
+  const current = parse(version);
+  const required = parse(minimum);
+  if (current.length !== 3 || required.length !== 3 || !current.every(Number.isInteger) || !required.every(Number.isInteger)) return false;
+  for (let i = 0; i < 3; i += 1) {
+    if (current[i] !== required[i]) return current[i] > required[i];
+  }
+  return true;
 }
 export function assertBuild(version, changelog, expected, channel = 'release') {
   const normalize = s => String(s || '').replace(/^v/, '');
@@ -140,10 +198,17 @@ function websiteVitePatched() {
     return vitePatched(json(path.join(root, 'website/package-lock.json')).packages?.['node_modules/vite']?.version);
   } catch { return false; }
 }
-function traktReplaceErrorHidden() {
+function lockPackagePatched(lockFile, packageName, minimumVersion) {
   try {
-    const route = fs.readFileSync(path.join(root, 'server/src/routes/showSeasonSource.js'), 'utf8');
-    return route.includes('Trakt replace failed. Check the server log for details.') && !route.includes('error: error?.message');
+    const lock = json(path.join(root, lockFile));
+    return versionAtLeast(lock.packages?.[`node_modules/${packageName}`]?.version, minimumVersion);
+  } catch { return false; }
+}
+function restoreConflictMessageSafe() {
+  try {
+    const http = fs.readFileSync(path.join(root, 'server/src/utils/http.js'), 'utf8');
+    return http.includes('error: "An authoritative watch-history restore is active. Try again when it completes."') &&
+      !/if\s*\(error\?\.code === "RESTORE_ACTIVE"\)[\s\S]{0,300}error\.message/.test(http);
   } catch { return false; }
 }
 function node(script, args = [], cwd = root) { console.log(command(process.execPath, [path.join(root, script), ...args], cwd)); }
@@ -242,6 +307,7 @@ async function main() {
     if (git('diff', '--name-only', '--', 'README.md', 'package.json', 'package-lock.json', 'changelog.json', 'changelog.alpha.json', 'changelog.develop.json', 'public')) throw Error('Index differs from checked README/manifests/public. Stage the complete reviewed restamp set before running staged checks.');
     node('scripts/docs-check.js'); node('scripts/asset-versions.js');
   } else if (phase === 'before-push') {
+    assertBugBacklogClear();
     cleanup(); assertSafePaths(git('diff', '--cached', '--name-only').split('\n'));
     if (workflow === 'push') { node('scripts/check-pending-commits.js'); node('scripts/rebuild-develop-changelog.js', ['--check']); }
     else if (workflow === 'main') pinned(json(path.resolve(option('record') || '')));

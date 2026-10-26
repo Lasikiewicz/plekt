@@ -3,8 +3,8 @@
 This directory contains the technical reference for Plekt's current architecture,
 behavior, configuration, operations, and integration contracts.
 
-> **System map:** [architecture.md](architecture.md) describes the application flow,
-> configuration, data model, and repository file map. The topic documents below define
+> **System map:** [architecture.md](architecture.md) describes the application flow and
+> routes each task to its owning files and docs; the file map is in the `file-map-*.md` files. The topic documents below define
 > the detailed behavior for each subsystem.
 
 ## Map
@@ -13,7 +13,10 @@ behavior, configuration, operations, and integration contracts.
 
 | Document | Scope |
 | --- | --- |
-| [architecture.md](architecture.md) | Application flow, repository file map, request flow, configuration, and data model. |
+| [architecture.md](architecture.md) | Big picture, subsystem map, and the "Where to look first" task-to-file table. |
+| [architecture-flows.md](architecture-flows.md) | Request flow, access logging, security headers, rate limiting, shutdown, environment variable conventions, and synchronization safety modules. |
+| [file-map-server.md](file-map-server.md), [file-map-public.md](file-map-public.md), [file-map-repo.md](file-map-repo.md) | Repository file map, one row per file. |
+| [code-index.md](code-index.md) | Generated (`npm run code-index`): every API route with its handler and file, and the exported names of each server and frontend module. |
 | [frontend.md](frontend.md) | SPA routing, state, module ownership, and data-loading conventions. |
 | [sqlite-schema.md](sqlite-schema.md) | SQLite tables, columns, indexes, and migration behavior. |
 | [personal-ratings.md](personal-ratings.md) | Canonical personal ratings, one-toggle two-way sync, queue delivery, identity, and Force Sync actions. |

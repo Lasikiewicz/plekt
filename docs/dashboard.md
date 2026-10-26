@@ -19,6 +19,11 @@ scrollable with a visible scrollbar, a taller near-full-width card, and a larger
 on phones for easier scanning. The duplicate lower title collapses into a compact
 toolbar for queue actions.
 
+On phones, the lower Up Next and Recently Watched rows use 8.5rem-wide posters
+in 12.75rem-tall horizontal cards (exact 2:3 so the full poster stays in view).
+Recently Watched cards in posters-only mode expand their details to the right,
+keeping the poster and row height stable.
+
 ## Files
 
 | File | Role |
@@ -59,6 +64,27 @@ items here**, **Allow Up Next items here** (both on by default), and the number 
 ### Up Next
 
 The dashboard's Up Next section is a single mixed queue of movies and TV episodes.
+
+Dropped titles are excluded from the queue and its provider push payloads. A completed live
+play dated after the drop restores the title; played flags, imports, history backfills and
+tracker pulls do not. Show and movie pages have a Drop / Un-drop action; Up Next cards have a
+Drop / Un-drop action inside their three-dot menu. Drop keeps watched dates, play counts and
+resume progress. Existing Remove behavior and its dismissals are unchanged.
+
+History and Movies/TV Shows have a **Dropped only** control. It lists dropped titles, including
+those without watch history, and respects the page's title search and media-type selection.
+On the TV Shows page, Dropped-only cards show **Un-drop** in their menus; while one title is
+being restored, the other Un-drop actions stay disabled until it finishes.
+Stats shows a separate **Dropped** count for current titles, labelled all time regardless of
+the selected watch-activity period. Un-drop restores queue eligibility, but does not force a
+provider rail entry back into view; normal playback/provider refresh handles that.
+
+The admin-only `GET /api/dropped-titles` lists saved titles. `POST /api/dropped-titles` accepts
+`{item, dropped: true|false}`. Local state persists before provider rail operations; failures
+are reported without reversing the drop. Plex and Emby have separate hide operations. Jellyfin
+has no independent hide operation that preserves resume progress, so an existing Jellyfin
+entry can remain visible even while Plekt and its future push payloads exclude the title.
+
 On a fresh page load or dashboard re-entry after the current snapshot expires, saved
 history and Up Next cards stay hidden while fresh server data loads. The server also
 refreshes playback and queue state in the background, so updates do not depend on the
@@ -115,7 +141,10 @@ the browser as a visible failure:
   and absolute `http(s)` URLs are kept as they are.
 
 The browser reads the shared server snapshot on every dashboard entry, without painting a
-browser-local snapshot or skipping the request for two minutes. Clear progress and Remove
+browser-local snapshot or skipping the request for two minutes. A cold start shows animated
+placeholder tiles in the Up Next rail until the first response arrives. Refreshing an existing
+rail keeps its cards in place, removes per-card checking labels, and animates the refresh icon
+with a single “Refreshing…” label beside it. Clear progress and Remove
 from Up Next invalidate and rebuild that snapshot before returning success, so another device
 can read the completed result without doing the rebuild itself. Provider feed refreshes remain
 separate. The server keeps the completed mixed snapshot
@@ -338,7 +367,9 @@ overlapping refresh waits for the animation to finish before repainting, so the 
 never yanked away mid-fade. Items that become watched somewhere else (e.g. completed on
 a connected media server or marked watched from a detail page) leave Up Next the same way:
 the server projection is authoritative and drops them, and the `/api/live-updates`
-`up-next-version`/history events pull the updated snapshot in. The rail never paints the
+`up-next-version`/history events pull the updated snapshot in. When a title is dropped from
+Up Next, the removed card dissolves and the remaining cards slide smoothly into its space.
+The rail never paints the
 same episode twice: the merge unifies the same next-up episode even when it is keyed
 under two identity sources (a native server series id, e.g. `series:jellyfin:…`, versus
 the verified external show id), reuniting them into one card when the show, season/episode,
@@ -348,7 +379,7 @@ title and coordinate but aired a different year (or is a different episode) stay
 ### Version badge / update check
 
 The sidebar version badge is populated from `/api/changelog` on dashboard load; see
-the "Changelog & update check" section of [architecture.md](architecture.md).
+[Changelog and update check](development.md#changelog-and-update-check) in development.md.
 
 ### Background sync indicator
 

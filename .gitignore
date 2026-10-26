@@ -47,3 +47,6 @@ website/src/generated/release.json
 
 # Local work-in-progress folder (Jellyfin plugin), kept out of develop until it is ready.
 /integrations/
+
+# Local scratch files (not part of the repo)
+TEMP/

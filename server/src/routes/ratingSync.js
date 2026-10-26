@@ -3,6 +3,8 @@ import { readJson } from "../utils/requestBody.js";
 import { methodNotAllowed, sendJson, sendOptions } from "../utils/http.js";
 import { loadMediaConfig } from "../utils/configStore.js";
 import { getRatingSyncStatus, pushPersonalRatings, retryRatingSync, resolveRatingScanHold, runRatingSync } from "../utils/personalRatingSync.js";
+import { getTrackerConnection } from "../utils/trackerConnectionRepo.js";
+import { pollConnectedTrackers } from "../utils/trackerSync.js";
 
 function clean(value) {
   return String(value ?? "").trim().toLowerCase();
@@ -51,6 +53,12 @@ export async function handleRatingSync(req, res) {
     const mode = ["baseline", "import"].includes(requestedMode)
       ? requestedMode
       : "";
+    // The rating timer never contacts Simkl; this user action reads it first.
+    if (body.snapshot !== false && config.ratingSync?.enabled && (!providers.length || providers.includes("simkl"))
+        && getTrackerConnection("simkl")?.status === "connected") {
+      await pollConnectedTrackers({ provider: "simkl", trigger: "user" })
+        .catch((error) => logger(`simkl: check before rating sync failed: ${error.message || error}`));
+    }
     return sendJson(res, await runRatingSync({
       providers,
       mode,

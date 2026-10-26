@@ -1,21 +1,24 @@
 import fs from "node:fs";
+import path from "node:path";
 import crypto from "node:crypto";
 import { CONFIG_PATH, ensureDataDirs } from "./paths.js";
 import { detectAndMarkPristineInstall, isAccountClaimed } from "./utils/onboardingStore.js";
+import { getActiveDataDir, getUserContext, isNonAdminTenantContext } from "./utils/userContext.js";
 
 ensureDataDirs();
 
-function readConfigFile() {
+function readConfigFile(filePath = CONFIG_PATH) {
   try {
-    return JSON.parse(fs.readFileSync(CONFIG_PATH, "utf8"));
+    return JSON.parse(fs.readFileSync(filePath, "utf8"));
   } catch {
     return {};
   }
 }
 
-function writeConfigFile(config) {
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(config, null, 2));
-  try { fs.chmodSync(CONFIG_PATH, 0o600); } catch { /* non-POSIX FS (Windows, some Docker volumes) */ }
+function writeConfigFile(config, filePath = CONFIG_PATH) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
+  try { fs.chmodSync(filePath, 0o600); } catch { /* non-POSIX FS (Windows, some Docker volumes) */ }
 }
 
 function hashPassword(plain, salt = crypto.randomBytes(16).toString("hex")) {
@@ -102,13 +105,62 @@ function resolveAuthConfig() {
 }
 
 const config = resolveAuthConfig();
+const tenantConfigs = new Map();
+
+function resolveTenantAuthConfig(dataDir, defaultUsername = "user") {
+  const resolvedDir = path.resolve(dataDir);
+  if (tenantConfigs.has(resolvedDir)) return tenantConfigs.get(resolvedDir);
+  const configPath = path.join(resolvedDir, "config.json");
+  const stored = readConfigFile(configPath);
+  let changed = false;
+
+  const username = String(stored.username || defaultUsername || "user");
+  if (stored.username !== username) { stored.username = username; changed = true; }
+
+  // Non-admin tenants never inherit the admin's API_KEY, WEBHOOK_SECRET,
+  // SESSION_SECRET, ADMIN_USERNAME, or ADMIN_PASSWORD environment overrides.
+  const apiKey = String(stored.apiKey || crypto.randomBytes(24).toString("hex"));
+  assertMinSecretLength("API_KEY", apiKey);
+  if (stored.apiKey !== apiKey) { stored.apiKey = apiKey; changed = true; }
+
+  const webhookSecret = String(stored.webhookSecret || crypto.randomBytes(24).toString("hex"));
+  assertMinSecretLength("WEBHOOK_SECRET", webhookSecret);
+  if (stored.webhookSecret !== webhookSecret) { stored.webhookSecret = webhookSecret; changed = true; }
+
+  const sessionSecret = String(stored.sessionSecret || crypto.randomBytes(32).toString("hex"));
+  assertMinSecretLength("SESSION_SECRET", sessionSecret);
+  if (stored.sessionSecret !== sessionSecret) { stored.sessionSecret = sessionSecret; changed = true; }
+
+  if (changed) writeConfigFile(stored, configPath);
+  tenantConfigs.set(resolvedDir, stored);
+  return stored;
+}
+
+export function clearTenantAuthConfigCache(dataDir) {
+  if (!dataDir) {
+    tenantConfigs.clear();
+    return;
+  }
+  tenantConfigs.delete(path.resolve(dataDir));
+}
+
+function activeAuthConfig() {
+  if (!isNonAdminTenantContext()) return config;
+  const ctx = getUserContext();
+  return resolveTenantAuthConfig(getActiveDataDir(), ctx?.name || "user");
+}
+
+function activeConfigPath() {
+  if (!isNonAdminTenantContext()) return CONFIG_PATH;
+  return path.join(getActiveDataDir(), "config.json");
+}
 
 // Runs once at startup to warn about insecure configuration.
 function logSecuritySummary() {
   const warnings = [];
 
   if (isDefaultPasswordHash(config.passwordHash)) {
-    warnings.push("ADMIN PASSWORD IS DEFAULT ('admin') - change it immediately in Settings → General");
+    warnings.push("ADMIN PASSWORD IS DEFAULT ('admin') - change it immediately in Settings \u2192 General");
   } else if (!config.authManagedInApp && process.env.ADMIN_PASSWORD && process.env.ADMIN_PASSWORD.length < 8) {
     warnings.push("ADMIN_PASSWORD is shorter than 8 characters - use a stronger password");
   }
@@ -120,8 +172,8 @@ function logSecuritySummary() {
   if (process.env.SESSION_SECRET) pinned.push("SESSION_SECRET"); else generated.push("SESSION_SECRET");
 
   if (warnings.length > 0) {
-    console.warn("⚠️  Security warnings:");
-    for (const w of warnings) console.warn(`   • ${w}`);
+    console.warn("\u26a0\ufe0f  Security warnings:");
+    for (const w of warnings) console.warn(`   \u2022 ${w}`);
   }
   if (generated.length > 0) {
     console.log("[security] Auto-generated secrets are persisted in data/config.json.");
@@ -133,7 +185,7 @@ function logSecuritySummary() {
     console.warn("[security] Admin credentials are managed in-app; ADMIN_USERNAME/ADMIN_PASSWORD environment variables are ignored (remove authManagedInApp from data/config.json to restore env control).");
   }
   if (generatedInitialPassword) {
-    console.warn("⚠️  An initial admin password was generated. Set ADMIN_PASSWORD before first start or use the in-app recovery flow.");
+    console.warn("\u26a0\ufe0f  An initial admin password was generated. Set ADMIN_PASSWORD before first start or use the in-app recovery flow.");
   }
   if (isClaimRequired()) {
     console.log("[security] Pristine install detected - open the app to claim the administrator account. No password was generated.");
@@ -143,17 +195,54 @@ function logSecuritySummary() {
 logSecuritySummary();
 
 export const AUTH = {
-  username: config.username,
-  apiKey: config.apiKey,
-  webhookSecret: config.webhookSecret,
-  sessionSecret: config.sessionSecret,
+  get username() { return activeAuthConfig().username; },
+  set username(value) { activeAuthConfig().username = value; },
+  get apiKey() { return activeAuthConfig().apiKey; },
+  set apiKey(value) { activeAuthConfig().apiKey = value; },
+  get webhookSecret() { return activeAuthConfig().webhookSecret; },
+  set webhookSecret(value) { activeAuthConfig().webhookSecret = value; },
+  get sessionSecret() { return activeAuthConfig().sessionSecret; },
+  set sessionSecret(value) { activeAuthConfig().sessionSecret = value; },
 };
+
+export function getRootSessionSecret() {
+  return config.sessionSecret;
+}
+
+export function getRootAdminUsername() {
+  return config.username;
+}
+
+function verifyPasswordAgainstHash(plain, stored = "") {
+  const [scheme, salt, hash] = String(stored || "").split("$");
+  if (scheme !== "scrypt" || !salt || !hash) return false;
+  const candidate = crypto.scryptSync(String(plain), salt, 64).toString("hex");
+  const a = Buffer.from(candidate, "hex");
+  const b = Buffer.from(hash, "hex");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+export function verifyRootAdminUsername(name) {
+  if (!name || !config.username) return false;
+  const a = Buffer.from(String(name));
+  const b = Buffer.from(config.username);
+  try {
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+export function verifyRootAdminPassword(plain) {
+  return verifyPasswordAgainstHash(plain, config.passwordHash);
+}
 
 // scrypt is ~45ms on the event loop and auth/status is polled, so the answer is
 // memoized per stored hash; any credential change produces a new hash.
 let defaultPasswordMemo = { hash: null, value: false };
 export function isDefaultPassword() {
-  const hash = config.passwordHash;
+  if (isNonAdminTenantContext()) return false;
+  const hash = activeAuthConfig().passwordHash;
   if (defaultPasswordMemo.hash !== hash) {
     defaultPasswordMemo = { hash, value: isDefaultPasswordHash(hash) };
   }
@@ -162,10 +251,12 @@ export function isDefaultPassword() {
 
 // True while a pristine install has no path to sign in yet: no in-app
 // credentials have been claimed, and no ADMIN_PASSWORD env override exists.
-// Re-checked live (not cached) so a successful claim clears it without a
-// restart.
+// Non-admin tenants are created with a password in users.json, so they skip
+// the administrator account-claim gate and go straight to guided setup.
 export function isClaimRequired() {
-  if (config.authManagedInApp === true) return false;
+  if (isNonAdminTenantContext()) return false;
+  const active = activeAuthConfig();
+  if (active.authManagedInApp === true) return false;
   if (process.env.ADMIN_PASSWORD) return false;
   return !isAccountClaimed();
 }
@@ -178,28 +269,23 @@ export function verifyWebhookToken(token) {
 }
 
 export function rotateWebhookSecret() {
+  const active = activeAuthConfig();
   const newSecret = crypto.randomBytes(24).toString("hex");
-  const nextConfig = { ...config, webhookSecret: newSecret };
-  writeConfigFile(nextConfig);
-  Object.assign(config, nextConfig);
-  AUTH.webhookSecret = newSecret;
+  const nextConfig = { ...active, webhookSecret: newSecret };
+  writeConfigFile(nextConfig, activeConfigPath());
+  Object.assign(active, nextConfig);
   return newSecret;
 }
 
 export function verifyPassword(plain) {
-  const stored = String(config.passwordHash || "");
-  const [scheme, salt, hash] = stored.split("$");
-  if (scheme !== "scrypt" || !salt || !hash) return false;
-  const candidate = crypto.scryptSync(String(plain), salt, 64).toString("hex");
-  const a = Buffer.from(candidate, "hex");
-  const b = Buffer.from(hash, "hex");
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+  return verifyPasswordAgainstHash(plain, activeAuthConfig().passwordHash);
 }
 
 export function verifyUsername(name) {
-  if (!name || !config.username) return false;
+  const active = activeAuthConfig();
+  if (!name || !active.username) return false;
   const a = Buffer.from(String(name));
-  const b = Buffer.from(config.username);
+  const b = Buffer.from(active.username);
   try {
     return a.length === b.length && crypto.timingSafeEqual(a, b);
   } catch {
@@ -207,27 +293,22 @@ export function verifyUsername(name) {
   }
 }
 
-// Resets data/config.json to a pristine, unclaimed install: fresh apiKey,
-// webhookSecret, and sessionSecret, and no password hash (so isClaimRequired()
-// is true again). Reuses resolveAuthConfig() so this stays exactly in sync
-// with what a genuinely fresh install resolves on first boot, including any
-// ADMIN_USERNAME/ADMIN_PASSWORD/API_KEY/WEBHOOK_SECRET/SESSION_SECRET env
-// overrides still in effect. Called by the "Wipe All / Fresh Start" data-wipe
-// scope (server/src/routes/maintenance.js) - the caller is responsible for
-// clearing the database first so detectAndMarkPristineInstall() re-detects a
-// clean install rather than an already-claimed one.
 export function resetAdminAccount() {
+  if (isNonAdminTenantContext()) {
+    const resolvedDir = path.resolve(getActiveDataDir());
+    const configPath = path.join(resolvedDir, "config.json");
+    writeConfigFile({}, configPath);
+    tenantConfigs.delete(resolvedDir);
+    const fresh = resolveTenantAuthConfig(resolvedDir, getUserContext()?.name || "user");
+    return { username: fresh.username };
+  }
   writeConfigFile({});
   const fresh = resolveAuthConfig();
   Object.assign(config, fresh);
-  AUTH.username = config.username;
-  AUTH.apiKey = config.apiKey;
-  AUTH.webhookSecret = config.webhookSecret;
-  AUTH.sessionSecret = config.sessionSecret;
   return { username: config.username };
 }
 
-export function updateAdminCredentials({ username, password = "" }) {
+export function updateRootAdminCredentials({ username, password = "" }) {
   const nextUsername = String(username || "").trim();
   if (!nextUsername) throw new Error("Username is required");
 
@@ -238,10 +319,12 @@ export function updateAdminCredentials({ username, password = "" }) {
     sessionSecret: crypto.randomBytes(32).toString("hex"),
   };
   if (password) nextConfig.passwordHash = hashPassword(password);
-  writeConfigFile(nextConfig);
+  writeConfigFile(nextConfig, CONFIG_PATH);
   Object.assign(config, nextConfig);
 
-  AUTH.username = config.username;
-  AUTH.sessionSecret = config.sessionSecret;
   return { username: config.username };
+}
+
+export function updateAdminCredentials({ username, password = "" }) {
+  return updateRootAdminCredentials({ username, password });
 }

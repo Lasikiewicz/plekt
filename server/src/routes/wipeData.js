@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import nodePath from "node:path";
-import { requireAdmin } from "../utils/auth.js";
+import { requireInstallAdmin } from "../utils/auth.js";
 import { readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { db, writeAuditLog, bumpDataVersion } from "../db.js";
@@ -8,6 +8,8 @@ import { invalidateHistoryDerivedCaches } from "../utils/dataRepo.js";
 import { clearWatchlistRestorePending } from "../utils/personalWatchlistRepository.js";
 import { resetAdminAccount } from "../appConfig.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR } from "../paths.js";
+import { ownsArtworkFiles } from "../utils/userContext.js";
+import { clearSharedProviderCaches, isSharedProviderCacheTable } from "../utils/sharedMetadataStore.js";
 
 // ---------------------------------------------------------------------------
 // Wipe data (Settings -> Tools -> Wipe Data)
@@ -35,6 +37,9 @@ const WIPE_SCOPES = {
     label: "Watch History",
     tables: [
       "watch_history",
+      "initial_sync_items",
+      "simkl_full_sync_items",
+      "simkl_full_sync_runs",
       "playstate",
       "manual_watch_reviews",
       "playback_progress",
@@ -42,9 +47,12 @@ const WIPE_SCOPES = {
       "live_tracking_cache",
       "tracker_item_state",
       "tracker_play_history",
+      "dropped_title_tracker_state",
+      "dropped_title_tracker_cursors",
       "up_next_provider_items",
       "up_next_provider_feed_state",
       "up_next_manual_shows",
+      "dropped_titles",
     ],
   },
   watchlist: {
@@ -74,7 +82,8 @@ WIPE_SCOPES.all = {
     ...WIPE_SCOPES.logs.tables,
   ])],
 };
-// Every table in schema.sql except schema_migrations (schema-version
+// Every table in schema.sql except schema_migrations and AniDB request guards
+// (provider limits must survive resets as well as cache clears). Schema-version
 // bookkeeping, not user data). Listed explicitly rather than derived, so a
 // schema change is caught by a reviewer here instead of silently expanding
 // (or shrinking) what a factory reset touches.
@@ -83,6 +92,9 @@ WIPE_SCOPES.factory = {
   resetAuth: true,
   tables: [
     "show_merge_history",
+    "initial_sync_items",
+    "simkl_full_sync_items",
+    "simkl_full_sync_runs",
     "watch_history",
     "playstate",
     "manual_watch_reviews",
@@ -103,6 +115,8 @@ WIPE_SCOPES.factory = {
     "season_artwork",
     "poster_cache",
     "tmdb_metadata_cache",
+    "anidb_metadata_cache",
+    "anidb_matches",
     "tmdb_search_cache",
     "tmdb_season_cache",
     "tmdb_person_cache",
@@ -123,6 +137,8 @@ WIPE_SCOPES.factory = {
     "tracker_auth_flows",
     "tracker_item_state",
     "tracker_play_history",
+    "dropped_title_tracker_state",
+    "dropped_title_tracker_cursors",
     "personal_watchlist",
     "personal_watchlist_meta",
     "personal_watchlist_mutations",
@@ -134,15 +150,21 @@ WIPE_SCOPES.factory = {
     "up_next_provider_feed_state",
     "up_next_manual_shows",
     "up_next_library_items",
+    "dropped_titles",
   ],
 };
 
 function wipeScopeCounts(scope) {
   const def = WIPE_SCOPES[scope];
   if (!def) throw new Error(`Unknown wipe scope: ${scope}`);
+  const canWipeShared = ownsArtworkFiles();
   const counts = {};
   let total = 0;
   for (const table of def.tables) {
+    if (!canWipeShared && isSharedProviderCacheTable(table)) {
+      counts[table] = 0;
+      continue;
+    }
     const row = db.prepare(`SELECT COUNT(*) AS c FROM ${table}`).get();
     counts[table] = row.c;
     total += row.c;
@@ -172,7 +194,7 @@ async function deleteAllCachedImages() {
 export async function handleWipeDataPreview(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const preview = Object.keys(WIPE_SCOPES).map((scope) => wipeScopeCounts(scope));
     return sendJson(res, { ok: true, scopes: preview }, 200, { "Cache-Control": "no-store" });
@@ -185,7 +207,7 @@ export async function handleWipeDataPreview(req, res) {
 export async function handleWipeData(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   try {
     const body = await readJson(req);
     const scope = String(body?.scope || "").trim();
@@ -198,12 +220,18 @@ export async function handleWipeData(req, res) {
       return sendJson(res, { error: "Type DELETE to confirm this action" }, 400);
     }
 
+    const canWipeShared = ownsArtworkFiles();
     const before = wipeScopeCounts(scope);
     db.transaction(() => {
       for (const table of def.tables) {
+        if (isSharedProviderCacheTable(table)) continue;
         db.prepare(`DELETE FROM ${table}`).run();
       }
+      if (def.tables.includes("watch_history")) db.prepare("DELETE FROM settings WHERE id='initial-outward-sync'").run();
     })();
+    if (canWipeShared && def.tables.some((table) => isSharedProviderCacheTable(table))) {
+      clearSharedProviderCaches();
+    }
 
     // The restore gate lives in settings rather than the watchlist tables so a
     // restored local list cannot remain paused after the user explicitly wipes
@@ -213,7 +241,7 @@ export async function handleWipeData(req, res) {
     }
 
     let imagesDeleted = 0;
-    if (def.resetAuth) imagesDeleted = await deleteAllCachedImages();
+    if (def.resetAuth && canWipeShared) imagesDeleted = await deleteAllCachedImages();
 
     if (def.tables.includes("watch_history")) {
       await invalidateHistoryDerivedCaches("handleWipeData").catch(() => null);

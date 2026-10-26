@@ -21,7 +21,10 @@ export function sendOptions(res) {
 
 export function sendApiError(res, error, body = { error: "Request failed" }, status = 500) {
   if (error?.code === "RESTORE_ACTIVE") {
-    return sendJson(res, { ...body, error: error.message, code: "RESTORE_ACTIVE" }, 409);
+    return sendJson(res, {
+      error: "An authoritative watch-history restore is active. Try again when it completes.",
+      code: "RESTORE_ACTIVE",
+    }, 409);
   }
   return sendJson(res, body, status);
 }

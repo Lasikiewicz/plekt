@@ -15,7 +15,25 @@ used for show navigation.
 | `public/styles.css` | Week-row grid, mobile agenda layout, search results, poster sizing |
 | `server/src/routes/metadata.js` | Authenticated `handleUpcoming` API response |
 | `server/src/utils/upcomingCalendarCache.js` | Persistent month results, historical backfill, future checks, and new-show merging |
+| `server/src/routes/calendarFeed.js` | Admin feed URL settings and token-authenticated `.ics` response |
+| `server/src/utils/calendarFeed.js` | Public-origin validation, token/type storage, and calendar serialization |
 | `server/src/index.js` | Dispatches `GET /api/upcoming` |
+
+## Private calendar subscription
+
+The **Subscribe** button in the Upcoming page navbar opens the private `.ics` URL controls.
+Choose TV shows, movies, or both (both are selected by default). Generate or regenerate the
+URL to save the selection; regenerating immediately revokes the previous URL. Calendar clients
+cannot send Plekt login cookies, so the URL contains a high-entropy bearer token. The token is stored
+in SQLite runtime state and compared in constant time. The public read-only endpoint returns the
+selected upcoming library episodes and/or cached movie release dates and answers with no calendar
+data for an invalid token. The feed
+uses the persistent upcoming episode cache and cached movie metadata so a calendar refresh does
+not trigger metadata requests across the whole library. Watchlist and playlist entries are not
+included. Set `PLEKT_PUBLIC_URL` to an internet-reachable public origin before generating a link;
+local hostnames and private or reserved IP addresses are rejected and never shown. The URL is
+built from that configured origin, not the address used to open the dashboard. The access logger
+redacts the URL's `token` query parameter.
 
 ## Backend
 

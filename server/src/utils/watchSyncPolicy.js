@@ -67,6 +67,7 @@ const INTENT_BY_SOURCE = Object.freeze({
   force_sync: "historical",
   trakt_import: "import",
   tautulli_import: "import",
+  netflix_import: "import",
 });
 
 export function normalizeWatchSyncIntent(value) {

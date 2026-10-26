@@ -1,67 +1,33 @@
-import { getTrackerConnection, recordTrackerOutbound, recordTrackerOutboundBatch, replaceTrackerSnapshot, updateTrackerConnectionStatus, updateTrackerTokens } from "./trackerConnectionRepo.js";
-import { fetchTraktHistoryWindow, fetchTraktPlayHistory, refreshTraktToken, setTraktWatchHistoryBatch, setTraktWatchState, trackerMediaIdentityKeys, trackerMediaKey, trackerMediaMatches } from "./traktClient.js";
+import { getTrackerConnection, listTrackerConnections, recordTrackerOutbound, recordTrackerOutboundBatch, replaceTrackerSnapshot, updateTrackerConnectionStatus, updateTrackerTokens } from "./trackerConnectionRepo.js";
+import { assertTrackerGeneration, currentTrackerGeneration, runInTrackerGeneration, StaleTrackerConnectionError } from "./trackers/generation.js";
 import { hydrateTraktAppCredentials } from "./traktAppConfig.js";
 import { getTmdbDetails } from "./tmdbGateway.js";
 import { canonicalCompoundEpisodeMedia, canonicalizeCompoundEpisodeRows } from "./compoundEpisode.js";
 import { DISMISSED_TRAKT_NOT_FOUND_DETAIL, isTraktNotFoundDismissed } from "./traktDismissals.js";
 import { withSeasonSourceTraktOverride } from "./traktOutboundNumbering.js";
+import { assertTrackerEnabled, getTrackerAdapter, trackerProviderForSource } from "./trackers/registry.js";
+import { traktNotFoundCount, traktDispatchErrorDetail } from "./trackers/trakt.js";
+import { runTraktWrite, withTraktRateLimitRetry } from "./trackers/traktWrites.js";
+import { dispatchSimklWatchState } from "./trackers/simklDispatch.js";
+import { trackerBacklogSkipReason } from "./trackers/backlogGate.js";
+import { TARGET_DECISIONS } from "./watchSyncPolicy.js";
+
+export { withTraktRateLimitRetry } from "./trackers/traktWrites.js";
+const traktAdapter = getTrackerAdapter("trakt");
+const { refreshToken: refreshTraktToken } = traktAdapter.auth;
+const { keys: trackerMediaIdentityKeys, key: trackerMediaKey, matches: trackerMediaMatches } = traktAdapter.identity;
+const {
+  historyWindow: fetchTraktHistoryWindow,
+  playHistory: fetchTraktPlayHistory,
+} = traktAdapter.operations;
+
+// Existing callers already enforce their domain policies. Preserve both states
+// and signatures while selecting the provider operation at this seam.
+const setTraktWatchState = (connection, media, state, options) =>
+  traktAdapter.operations[state === "unwatched" ? "unwatchedWrite" : "watchedWrite"](connection, media, options);
+const { writeBatch: setTraktWatchHistoryBatch } = traktAdapter.history;
 
 let traktRefreshInFlight = null;
-
-const TRAKT_RATE_LIMIT_RETRIES = 3;
-const TRAKT_WRITE_MIN_INTERVAL_MS = 200;
-let traktWriteQueue = Promise.resolve();
-let lastTraktWriteStartedAt = 0;
-
-function waitForTraktRetry(delayMs) {
-  return new Promise((resolve) => setTimeout(resolve, Math.max(0, Number(delayMs) || 0)));
-}
-
-function traktRetryDelayMs(error, attempt) {
-  const retryAfterSeconds = Number(error?.retryAfter);
-  if (Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0) {
-    return Math.min(60_000, Math.max(10, retryAfterSeconds * 1000));
-  }
-  return Math.min(30_000, 1_000 * (2 ** Math.max(0, attempt)));
-}
-
-// The shared outbound governor prevents unbounded concurrency, but its normal
-// 30ms host interval is still too bursty for a sequence of Trakt history
-// writes. Serialize only Trakt writes and leave a short gap between request
-// starts; this keeps grouped show actions fast while avoiding a remove/add
-// burst that turns every episode in the batch into the same 429 error.
-async function runTraktWrite(operation) {
-  const waitMs = Math.max(0, lastTraktWriteStartedAt + TRAKT_WRITE_MIN_INTERVAL_MS - Date.now());
-  if (waitMs) await waitForTraktRetry(waitMs);
-  lastTraktWriteStartedAt = Date.now();
-  return operation();
-}
-
-function enqueueTraktWrite(operation) {
-  const run = async () => {
-    return runTraktWrite(operation);
-  };
-  const result = traktWriteQueue.then(run, run);
-  traktWriteQueue = result.catch(() => {});
-  return result;
-}
-
-// Trakt's sync endpoints return 429 when several history writes arrive in a
-// burst. The shared outbound governor cools the host after seeing that
-// response, but the request that was rejected still needs a bounded retry or
-// a large manual show mark is left partially propagated until the next
-// scheduled retry. Keep this wrapper specific to Trakt writes so metadata and
-// media-server traffic retain their existing retry semantics.
-export async function withTraktRateLimitRetry(operation) {
-  for (let attempt = 0; ; attempt += 1) {
-    try {
-      return await enqueueTraktWrite(operation);
-    } catch (error) {
-      if (Number(error?.status) !== 429 || attempt >= TRAKT_RATE_LIMIT_RETRIES) throw error;
-      await waitForTraktRetry(traktRetryDelayMs(error, attempt));
-    }
-  }
-}
 
 function trackerShowTitle(media = {}) {
   const explicit = String(media.showTitle || media.show_title || "").trim();
@@ -195,35 +161,26 @@ function tokenExpiry(tokens) {
 export async function withFreshTraktConnection(force = false) {
   let connection = getTrackerConnection("trakt", { includeCredentials: true });
   if (!connection || connection.status !== "connected") return null;
+  assertTrackerGeneration("trakt");
   connection = hydrateTraktAppCredentials(connection);
   if (!force && Number(connection.accessTokenExpiresAt || 0) > Date.now() + 5 * 60_000) return connection;
-  if (!traktRefreshInFlight) {
-    traktRefreshInFlight = refreshTraktToken(connection)
-      .then((tokens) => {
-        updateTrackerTokens("trakt", { accessToken: tokens.access_token, refreshToken: tokens.refresh_token, accessTokenExpiresAt: tokenExpiry(tokens) });
-      })
+  // One refresh per connection generation; its writes land only on that generation,
+  // and a caller never receives a replacement account's credentials.
+  const generation = connection.id;
+  if (traktRefreshInFlight?.generation !== generation) {
+    const flight = { generation };
+    flight.promise = runInTrackerGeneration("trakt", generation, () => refreshTraktToken(connection)
+      .then((tokens) => { updateTrackerTokens("trakt", { accessToken: tokens.access_token, refreshToken: tokens.refresh_token, accessTokenExpiresAt: tokenExpiry(tokens) }); })
       .catch((error) => {
         updateTrackerConnectionStatus("trakt", { status: error.status === 400 || error.status === 401 ? "reauth_required" : "connected", lastError: error.message });
         throw error;
-      })
-      .finally(() => { traktRefreshInFlight = null; });
+      })).finally(() => { if (traktRefreshInFlight === flight) traktRefreshInFlight = null; });
+    traktRefreshInFlight = flight;
   }
-  await traktRefreshInFlight;
+  await traktRefreshInFlight.promise;
   connection = getTrackerConnection("trakt", { includeCredentials: true });
+  if (connection?.id !== generation) throw new StaleTrackerConnectionError("trakt");
   return hydrateTraktAppCredentials(connection);
-}
-
-// Trakt's /sync/history and /sync/history/remove both return 200 with a
-// summary body - {added|deleted: {movies, episodes}, not_found: {movies,
-// shows, seasons, episodes}} - even when nothing actually matched. A
-// non-empty not_found means Trakt could not resolve the ids/season/episode
-// we sent to a real item, which is a real failure that an HTTP 200 alone
-// hides; without reading the body, a canonical replay's "clear existing
-// plays first" step can silently do nothing while still being reported as a
-// success.
-function traktNotFoundCount(result) {
-  const notFound = result?.not_found || {};
-  return Object.values(notFound).reduce((sum, list) => sum + (Array.isArray(list) ? list.length : 0), 0);
 }
 
 // Trakt's history is a play log, not a "watched" flag - POST /sync/history
@@ -584,7 +541,9 @@ export function serializeRestoreIssue(media = {}, sourceRow = {}, reason = "", i
     title,
     showTitle,
     sourceTitle: title,
-    type: type === "episode" || type === "movie" ? type : "unknown",
+    type: type === "episode" || type === "movie" || type === "tv"
+      ? type
+      : (type === "show" || type === "series" ? "tv" : "unknown"),
     season: coordinates.season,
     episode: coordinates.episode,
     sourceSeason: sourceCoordinates.season,
@@ -738,7 +697,9 @@ function providerIdsOverlap(media = {}, entry = {}) {
 function traktNotFoundMatchesMedia(media = {}, category = "", entry = {}) {
   if (!providerIdsOverlap(media, entry)) return false;
   const type = media.type || media.mediaType;
-  if (type !== "episode") return category === "movies";
+  if (type === "movie") return category === "movies";
+  if (type === "tv" || type === "show" || type === "series") return category === "shows";
+  if (type !== "episode") return false;
   if (category === "shows") return true;
   const entryCoordinates = traktNotFoundEntryCoordinates(entry);
   if (!entryCoordinates.length) return true;
@@ -806,6 +767,8 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
   lane = "sync",
   batchSize = 100,
   canonicalReplay = state === "watched",
+  // Full sync: drop an item Trakt already has once resolved to its numbering.
+  alreadyOnTracker = null,
 } = {}) {
   const sourceItems = Array.isArray(items) ? items : [];
   const results = new Array(sourceItems.length);
@@ -819,7 +782,7 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
   const eligible = [];
   for (const [index, sourceMedia] of sourceItems.entries()) {
     const media = sourceMedia || {};
-    if (String(media.source || "").toLowerCase().includes("trakt")) {
+    if (trackerProviderForSource(media.source) === "trakt") {
       results[index] = batchDispatchResult(index, media, "skipped", "Source tracker echo suppressed");
       continue;
     }
@@ -832,7 +795,7 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
     connection = await withFreshTraktConnection();
   } catch (error) {
     const detail = error.message || String(error);
-    updateTrackerConnectionStatus("trakt", { lastError: detail });
+    if (!error.stale) updateTrackerConnectionStatus("trakt", { lastError: detail });
     for (const { index, sourceMedia } of eligible) results[index] = batchDispatchResult(index, sourceMedia, "failed", detail);
     return batchDispatchSummary(results);
   }
@@ -860,6 +823,10 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
         source: canonicalMedia.source || "manual",
         watched_at: canonicalMedia.watched_at,
       };
+      if (alreadyOnTracker?.(media)) {
+        results[index] = batchDispatchResult(index, media, "skipped", "Already watched on Trakt");
+        continue;
+      }
       resolved.push({ index, sourceMedia, media });
     } catch (error) {
       const status = error.code === "not_found" ? "not_found" : "failed";
@@ -973,13 +940,11 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
     .filter(Number.isFinite);
   const hasFailure = results.some((result) => result?.status === "failed" || result?.status === "not_found");
   if (successfulWatchedAt.length && !hasFailure) {
-    updateTrackerConnectionStatus("trakt", {
-      lastError: "",
-    });
+    updateTrackerConnectionStatus("trakt", { lastError: "", connectionId: connection?.id });
   }
   if (hasFailure) {
     const firstFailure = results.find((result) => result?.status === "failed" || result?.status === "not_found");
-    if (firstFailure?.detail) updateTrackerConnectionStatus("trakt", { lastError: firstFailure.detail });
+    if (firstFailure?.detail) updateTrackerConnectionStatus("trakt", { lastError: firstFailure.detail, connectionId: connection?.id });
   }
   return batchDispatchSummary(results);
 }
@@ -1340,9 +1305,7 @@ export async function retryTraktRestoreItem(row = {}, {
         continue;
       }
       recordTrackerOutbound("trakt", mediaKey, candidate, "watched");
-      updateTrackerConnectionStatus("trakt", {
-        lastError: "",
-      });
+      updateTrackerConnectionStatus("trakt", { lastError: "", connectionId: connection?.id });
       return { success: true, media: candidate, mediaKey };
     } catch (error) {
       lastError = error.message || String(error);
@@ -1380,7 +1343,7 @@ async function dispatchTrakt(media, state, lane = "sync", isCancelled = () => fa
   // history import ("trakt_import", used by both the CSV/JSON importer and
   // the play-history backfill) - already exists on Trakt. Echoing it back
   // via /sync/history would create a duplicate play there every time.
-  if (String(media.source || "").toLowerCase().includes("trakt")) return { target: "trakt", status: "skipped", detail: "Source tracker echo suppressed" };
+  if (trackerProviderForSource(media.source) === "trakt") return { target: "trakt", status: "skipped", detail: "Source tracker echo suppressed" };
   let [trackerMedia] = await trackerDispatchMediaCandidates(media);
   if (!trackerMedia) {
     [trackerMedia] = await trackerDispatchMediaCandidates(media, { includeTitleFallback: true });
@@ -1488,7 +1451,7 @@ export async function primeTrackerWatchStateIntents(entries = [], {
 } = {}) {
   const connection = getTrackerConnection("trakt");
   if (!connection || connection.status !== "connected") return 0;
-  const eligible = entries.filter(({ media }) => !String(media?.source || "").toLowerCase().includes("trakt"));
+  const eligible = entries.filter(({ media }) => trackerProviderForSource(media?.source) !== "trakt");
   // Resolve every item first, then publish the entire title under one SQLite
   // transaction. A poll in another process must never observe only the first
   // few hydrated markers while the remaining Force Sync items are still being
@@ -1522,24 +1485,32 @@ export async function primeTrackerWatchStateIntents(entries = [], {
 }
 
 export async function dispatchTrackerWatchState(media, state, { lane = "sync", isCancelled = () => false } = {}) {
-  const connection = getTrackerConnection("trakt");
-  if (!connection || connection.status === "disabled") return [];
-  if (isCancelled()) return [{ target: "trakt", status: "cancelled", detail: "Trakt dispatch was cancelled before it started" }];
-  try {
-    return [await dispatchTrakt(media, state, lane, isCancelled)];
-  } catch (error) {
-    updateTrackerConnectionStatus("trakt", { lastError: error.message });
-    const status = error.code === "not_found" ? "not_found" : "failed";
-    // Keep a rate-limit or server-error status in the detail even when Trakt
-    // sent its own error text: the background retry queue reads the detail
-    // to tell a transient failure from one that will never succeed.
-    let detail = error.message || String(error);
-    const httpStatus = Number(error?.status);
-    const transientHttp = httpStatus === 429 || (httpStatus >= 500 && httpStatus <= 599);
-    if (transientHttp && error.code !== "UPSTREAM_TIMEOUT" && !detail.includes(String(httpStatus))) detail += ` (HTTP ${httpStatus})`;
-    return [{ target: "trakt", status, detail }];
-  }
+  const requested = Array.isArray(media.syncTargets) ? new Set(media.syncTargets.map((target) => String(target).trim().toLowerCase())) : null;
+  const connections = listTrackerConnections().filter(({ provider, status }) => status !== "disabled"
+    && (!requested || requested.has(provider)));
+  return Promise.all(connections.map(async (connection) => {
+    const { provider } = connection;
+    const generation = currentTrackerGeneration(provider);
+    try {
+      const adapter = assertTrackerEnabled(provider);
+      if (isCancelled()) return { target: provider, status: "cancelled", detail: `${adapter.label} dispatch was cancelled before it started` };
+      // A change that came from this tracker (its poll or import) is already
+      // there; writing it back would add a duplicate play.
+      if (trackerProviderForSource(media.source) === provider) return { target: provider, status: "skipped", detail: "Source tracker echo suppressed" };
+      const backlog = trackerBacklogSkipReason(connection, media, adapter.label, { sourceTracker: trackerProviderForSource(media.source) });
+      // Recorded as a deliberate, non-retryable skip so the row's telemetry is complete.
+      if (backlog) return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: backlog };
+      return await trackerDispatchHandlers.get(provider)(media, state, lane, isCancelled);
+    } catch (error) {
+      if (!error.stale) updateTrackerConnectionStatus(provider, { lastError: error.message, connectionId: generation });
+      const status = error.code === "not_found" ? "not_found" : "failed";
+      const detail = provider === "trakt" ? traktDispatchErrorDetail(error) : error.message || String(error);
+      return { target: provider, status, detail };
+    }
+  }));
 }
+
+const trackerDispatchHandlers = new Map([["trakt", dispatchTrakt], ["simkl", dispatchSimklWatchState]]);
 
 export function traktTokenExpiry(tokens) {
   return tokenExpiry(tokens);

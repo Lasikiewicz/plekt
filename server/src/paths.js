@@ -36,21 +36,27 @@ const usableConfiguredDataDir = configuredDataDir && !/%[^%]+%/.test(configuredD
   ? configuredDataDir
   : windowsServiceDataDir;
 
-export const DATA_DIR = path.resolve(usableConfiguredDataDir || path.join(repoRoot, "data"));
+export const DEFAULT_DATA_DIR = path.join(repoRoot, "data");
+export const DATA_DIR = path.resolve(usableConfiguredDataDir || DEFAULT_DATA_DIR);
 export const MEDIA_DIR = path.join(DATA_DIR, "media");
 export const POSTERS_DIR = path.join(MEDIA_DIR, "posters");
 export const BACKDROPS_DIR = path.join(MEDIA_DIR, "backdrops");
 export const PROFILES_DIR = path.join(MEDIA_DIR, "profiles");
+export const LOGOS_DIR = path.join(MEDIA_DIR, "logos");
 export const BACKUPS_DIR = path.join(DATA_DIR, "backups");
 export const WATCH_HISTORY_BACKUPS_DIR = path.join(BACKUPS_DIR, "watch-history");
 export const FULL_BACKUPS_DIR = path.join(BACKUPS_DIR, "plembfin");
 export const DB_PATH = resolveDbPath(DATA_DIR);
+// Install-wide provider metadata caches and (optionally) mirrored keys.
+// Lives beside the admin DB so every user in one process shares one store.
+export const SHARED_METADATA_DB_FILE = "shared-metadata.db";
+export const SHARED_METADATA_DB_PATH = path.join(DATA_DIR, SHARED_METADATA_DB_FILE);
 export const CONFIG_PATH = path.join(DATA_DIR, "config.json");
 export const CREDENTIAL_KEY_PATH = path.join(DATA_DIR, "credential.key");
 export const PUBLIC_DIR = path.join(repoRoot, "public");
 
 export function ensureDataDirs() {
-  for (const dir of [DATA_DIR, MEDIA_DIR, POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR, FULL_BACKUPS_DIR]) {
+  for (const dir of [DATA_DIR, MEDIA_DIR, POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, LOGOS_DIR, BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR, FULL_BACKUPS_DIR]) {
     fs.mkdirSync(dir, { recursive: true });
   }
 }

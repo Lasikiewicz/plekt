@@ -1,5 +1,100 @@
 # Settings
 
+Simkl checks run on demand and after media-server events, never on unattended
+polling. Event-driven checks are throttled to at most once per 30 minutes; Check
+now is immediate. Ordinary outbound watches wait up to 30 minutes so several can
+share one batch; explicit multi-item marks still send immediately. The integration retains baseline/delta
+observations and activity cursors durably. Unsafe dates, mappings and rating
+observations appear as review holds in Sync Attention when present. **Keep local
+history** hides an observation without applying it or sending a tracker write.
+Settings → Connections → External trackers includes a Simkl connection card.
+Opening Settings reads saved tracker previews and sync status locally. Watchlist
+status does not resolve Plex credentials, and Settings bootstrap skips automatic
+Seerr capability requests; explicit Seerr save/test actions can still contact Seerr.
+Simkl and Trakt have separate boxes. The Trakt box contains its live connection,
+manual connection and history importer.
+Select Connect, copy the code and approve access in Simkl; Plekt uses its own
+Simkl app, so no Client ID is needed. The page waits for completion and reports
+expiry or failure so sign-in can be restarted. Connected accounts show
+**Connected**; reconnect-required accounts show that state explicitly.
+Disconnect deletes Plekt's encrypted credentials and keeps local history; access
+can also be revoked in Simkl's connected-app settings. The Simkl card has the same
+**First connection** choice as Trakt (start from current state, or review history for
+import after connecting). The first check always establishes a baseline; it never
+imports old watched state automatically. **Check now** checks for new changes;
+historical import requires the full-sync preview and explicit selected-item approval.
+Simkl full sync supports previewed import and selected batched sends, subject to
+normal activation, identity and quota guards. Ordinary eligible watched dispatches use
+batches of up to 100 items. Titles already
+observed watched on Simkl settle without a request. Each remaining batch uses a
+quota preflight, one send and bounded delta confirmation, preserving a 55-request
+reserve. Unsent intents stay pending when quota is insufficient or unknown;
+uncertain writes wait for review and are never automatically resent. This does
+not authorize sending an unresolved write again through a new full-sync plan.
+Simkl sends audited as absent from current watched progress stay in Sync Attention
+until reviewed; full-sync previews skip those episodes, and routine cleanup retains
+their holds. Catalogue match failures retain their normal rejection behavior.
+Paid rewatches and unwatches remain disabled.
+Personal Rating Sync supports movies and shows with safe-write holds; held writes
+and readback conflicts list the title and explanation in the rating provider row.
+
+Dropped titles sync both ways for Trakt and Simkl. Trakt hides shows only (movies
+stay local). Simkl moves the title to its Dropped list and, on un-drop, restores the
+list it was on before the drop (Watching, Plan to Watch or On Hold for shows; always
+Plan to Watch for movies, because Simkl's Watching state for a movie records it as
+watched). A title that was Completed
+before the drop is held rather than moved back, because Simkl would record a watch. Drop sync never writes watched or unwatched state. When Plekt and a tracker
+disagree, the newest explicit action wins. If a tracker omits the title's change time,
+a queued local action keeps priority. A drop imported from a tracker is not pushed
+back to it. Simkl writes wait for the next user or media-server event; they are not
+drained by the scheduled poll.
+
+Each connected tracker card also shows:
+
+- the first check's durable progress (waiting, importing N of M items, finished, or
+  failed with the reason), stored on the connection rather than in onboarding state, so a
+  tracker added after setup reports its import the same way;
+- **Prefer the tracker's earlier watch date**, a per-connection toggle shown beside
+  Full sync (not inside the first-check status): when Plex, Emby or Jellyfin later
+  report a title the tracker already knew, keep the tracker's earlier date instead
+  of the server's newer one. First-run setup is import-only for trackers; sending
+  to Trakt is available later in Settings;
+- an optional **Full sync** with a mandatory stored preview, valid for one hour.
+  **Compare with Plekt** sits beside the connection actions and shows progress while reading.
+  **Compare with Plekt** lists every addition, preserved date difference and skipped
+  item, grouped into expandable shows and movies. Actionable items start selected;
+  deselect any before choosing import, send, or both directions. Tracker comparison
+  uses the last recorded observations; applying verifies fresh tracker and media-server
+  state and returns a replacement preview if anything changed. No changed plan is
+  silently approved. A verified automatic watch-history backup precedes the final
+  fresh check and all writes; its name and restore link remain in the result.
+  Imports list Plekt and eligible missing media-server destinations and use normal
+  watched propagation. Existing watched dates are preserved, including on already
+  watched media servers. Plex's inability to set a historical date is shown explicitly.
+  Sending adds one play per missing item at its earliest Plekt date, never every rewatch.
+  Pending, uncertain and recently delivered tracker writes are held out to avoid
+  duplicate sends. Simkl batches gather up to 100 and show the selected batch cost,
+  up to 18 verification requests, available quota when known, and the retained reserve.
+  Large Simkl sends need not fit one day's quota: the approved selection is stored as a
+  paced run that continues automatically after each daily reset (also across restarts).
+  Each day it leaves 20% of Simkl's reported daily allowance for normal use plus the
+  55-request safety reserve. The preview shows the selected request estimate, both
+  reserves and approximate quota days; an unknown allowance is shown as unavailable,
+  never assumed. While waiting, the card shows items left and the resume time, and
+  **Cancel full sync** stops further sends. Each day only previously approved items are
+  rechecked: already on Simkl completes, no longer watched is cancelled, a changed date
+  or held write goes to review, and an uncertain send is never replayed. New history is
+  never added to a running sync. Compare is unavailable until the run finishes or is cancelled.
+  During first-run setup, selecting **Import watch history** and pressing Continue
+  imports all eligible missing watches automatically after a verified backup and fresh-state check; no
+  separate preview is required. Progress survives reload, and partial delivery points
+  to Sync Activity. In Settings, manual full sync still requires preview and selection.
+
+Watches recorded after a tracker was connected are sent to it straight away. Older Plekt
+history recorded before the connection reaches it only through the full sync or a tool
+the user runs (Force Sync); a pending-dispatch replay of an older row records a
+deliberate skip for that tracker instead of sending it.
+
 Settings is a hierarchical, task-oriented administration area modeled on Sonarr. The
 Settings page groups related sections under bold parent headings; clicking a parent or a
 child scrolls to that section on the parent's own aggregated page rather than opening a
@@ -13,14 +108,28 @@ and mobile use the **Settings section** select control for the full settings cat
 | General | `/settings/general` | Account, System Integrity Check, Storage & Cache | `/settings/general#account`, `/settings/general#system-integrity`, `/settings/general#storage` |
 | Media servers | `/settings/media-servers` | Plex, Emby, Jellyfin | `/settings/media-servers#plex`, `/settings/media-servers#emby`, `/settings/media-servers#jellyfin` |
 | Webhooks | `/settings/webhooks` | Setup Guides, Webhook Secret | `/settings/webhooks#setup-guides`, `/settings/webhooks#webhook-secret` |
-| Connections | `/settings/connections` | Trakt, Tautulli watch-history import, Seerr | `/settings/connections#trakt`, `/settings/connections#tautulli`, `/settings/connections#seerr` |
+| Connections | `/settings/connections` | External trackers (Trakt and Simkl), One Time Imports (Tautulli and Netflix), Seerr | `/settings/connections#trakt`, `/settings/connections#one-time-imports`, `/settings/connections#seerr` |
 | Metadata | `/settings/metadata` | Metadata Providers, Refresh Metadata (TMDB, TVDB) | `/settings/metadata#metadata-providers`, `/settings/metadata#refresh-metadata` |
 | Sync | `/settings/sync` | Sync Tuning, Sync Tools (Repair Recent Items, Full Sync Watchstates, Force Sync, Personal Rating Sync, Plex Watchlist Sync), Sync History | `/settings/sync#sync-tuning`, `/settings/sync#sync-tools`, `/settings/sync#sync-history` |
 | Backup | `/settings/backup` | Local (Watch History, Plekt), Remote (Watch History, Plekt) | `/settings/backup#backup-local`, `/settings/backup#backup-remote` |
 | Restore | `/settings/restore` | Local (Watch History, Plekt), Remote (Watch History, Plekt) | `/settings/restore#restore-local`, `/settings/restore#restore-remote` |
 | Tools | `/settings/tools` | Guided Setup, Database Repairs, Library Rebuilds and Backfills, Wipe data (Watch History, Personal Watchlist, Sync History & Logs, Everything Tracked, Wipe All / Fresh Start) | `/settings/tools#guided-setup`, `/settings/tools#database-repairs`, `/settings/tools#library-rebuilds`, `/settings/tools#wipe-data` |
+| Users (admin only) | `/settings/users` | Multi-user stats, account list, Add user | - |
 | Logs | `/settings/logs` | (none - single-page group) | - |
-| Changelog | `/settings/changelog` | (none - single-page group) | Main / Alpha channel toggle; see [`architecture.md`](architecture.md#changelog--update-check) |
+| Changelog | `/settings/changelog` | (none - single-page group) | Main / Alpha channel toggle; see [`development.md`](development.md#changelog-and-update-check) |
+
+For a non-admin user, the General parent route contains only that user's Account section. The
+sidebar, Settings overview, and route aggregation omit shared installation settings and
+maintenance sections; personal media-server and connection settings, webhook setup, sync history,
+appearance, and Changelog remain available.
+
+The administrator's signed-in account appears in the sidebar footer above Version. Selecting it
+opens the account switcher when more than one account is available; non-admin accounts see their
+name without the switcher.
+
+Tracker connection views use the server's provider inventory. Trakt and Simkl are
+enabled with separate connection state and capability limits; registration alone
+does not authorize unsupported operations or a bulk history push.
 
 The Settings overview and section select expose the parent groups and their display-only
 children. Every child section navigates to the parent group's path with the section id
@@ -66,17 +175,168 @@ moving it between groups:
 a separate namespace from `SECTIONS` keys and must stay unique across the whole page,
 since `applySettingsRoute()` reveals them with a first-match `querySelector`.
 
-The Trakt page also owns the live bidirectional Trakt connection. Plekt ships a
+The External trackers section also owns the live bidirectional Trakt connection. Plekt ships a
 device application in the same model as the Jellyfin Trakt plugin, so the normal flow
 asks only for the initial-sync policy and then displays a Trakt authorization code.
 `TRAKT_CLIENT_ID` and `TRAKT_CLIENT_SECRET` can override the bundled application for
 rotation or a private deployment. The advanced personal-app fields remain a fallback
 for Trakt VIP developers and their values are encrypted at rest.
 
-The Connections page also includes the one-time **Tautulli Watch-History Importer**.
-It stores the Tautulli URL and API key separately from the Plex connection, scopes
-each request to one selected Tautulli user, and previews completed movies and episodes
-before writing. A local watch-history backup is created before a confirmed import.
+Connections includes a **One Time Imports** parent card containing Tautulli and Netflix
+accordion sections in the same compact content group, with one combined help card beside the parent.
+`#oneTimeImportsContent` is also borrowed by the guided-setup **Import & sync** step
+(`onboarding.js`); `applySettingsRoute()` re-parents it under `#oneTimeImportsHome` when
+Connections → One Time Imports is opened directly. The Netflix accordion shows
+whether a CSV is needed or selected. The Tautulli importer
+stores its URL and API key separately from the Plex connection, scopes each request to one
+selected Tautulli user, and previews completed movies and episodes before writing. A local
+watch-history backup is created before a confirmed import.
+
+During first-run setup, active one-time import commits join the initial-sync completion
+barrier. Continue on Import & sync then sends missing watches to writable destinations;
+the Initial sync chip exposes progress and held work. See [onboarding](onboarding.md).
+
+The Netflix importer reads `CONTENT_INTERACTION/ViewingActivity.csv`
+from Account → Security & privacy → Download your personal information. It lists every profile on
+the account, so after choosing the file you tick the profiles you used (`#netflixProfileChoice`);
+If the CSV contains only one profile with usable titles, it is selected automatically; profiles containing only blank, unknown, unnamed-show or supplemental titles are omitted. Preview stays disabled until at least one is ticked, and only those profiles' rows are uploaded
+(12 MB limit). Trailers, previews and other `Supplemental Video Type` rows are dropped. Each title
+counts once per UTC day: a profile's sessions for that title and day must total at least 5
+minutes, and several chosen profiles watching it the same day still give one play, dated at the
+latest session's end. Netflix's `(Episode N)` title suffix is stripped before matching; the number
+only narrows several same-titled episodes to one, lifts that episode in suggestions, and stops the
+row being read as a colon-containing film. A bare number left where Netflix dropped the word
+(`Show:  1: Title`, `:  7: Episode 8`) and localized season words (`Staffel 2:`, `Temporada 1:`)
+are season labels. Hard facts from the file then rule out candidates: a same-named show missing a
+season and episode number the rows name is dropped, and a film whose TMDB runtime is shorter
+than the furthest `Bookmark` is dropped; a single survivor matches. When exact titles miss, the
+episode at the row's season and Netflix number matches only if TMDB has no real name for it or
+the names agree (words shared by the season's names, filler words and differing part numbers
+do not count); TMDB episodes that merge two Netflix rows (`A / B`) match either one. A colon
+title with no season label or Netflix number, whose prefix is no TV show, imports as the single
+exact film of the full title. `&`/`and` and trailing sequel numerals (`II`/`2`) compare equal,
+and a title TMDB cannot find is searched again with `and`/`&` swapped. When no TMDB result has
+the exact Netflix name, a top result whose TMDB alternative titles include it counts as exact
+(Mako Mermaids for Mako: Island of Secrets, the British `Daniel Tiger's Neighbourhood`).
+Failing that, a country suffix (`Shameless (U.S.)`, `(UK)`) matches the same name only where
+TMDB records that country of origin (the 2011 US show, not the 2004 British one), and a leading
+`The` that TMDB leaves out is dropped (`The Dublin Murders` is TMDB's `Dublin Murders`). A year Netflix puts in a film title (`Beauty and the Beast (2017)`) is left out of the TMDB
+search and then picks the single same-named film released within a year of it.
+Blank-title, `Unknown Title`, and `Unknown Title (Episode N)` rows are silently discarded before profile counts or preview totals,
+so they never appear in review. The settings page no longer offers the per-profile
+`Title,Date` export (Profile & parental controls → Viewing activity → Download all), but the
+parser still accepts it. Large histories may take several
+minutes to preview (around 20 minutes for large libraries). Time varies with export size and TMDB
+response speed. Series rows match the show, then the episode title against TMDB season data, so
+only episodes present in the CSV are imported. Ambiguous shows are compared against distinct
+episode titles across the CSV: selection requires at least two exact, unique episode matches,
+a lead of at least two over the next candidate, and at least 1.5 times its matches. Rewatches
+and generic `Episode N` labels do not increase show confidence. Popularity only orders tied
+suggestions and never resolves a tied evidence score, with one exception ("Netflix title +
+clear winner"): when no hard fact splits same-named titles, the one candidate that fits an
+official Netflix report entry (its `(1999)` label or Netflix premiere year within a year) is
+matched if it has at least 50 TMDB votes and ten times the votes of every other candidate. Alternative colon boundaries allow
+show names containing colons to resolve when episode evidence establishes a clear winner.
+The selected boundary must also match the current episode, so a parent show's larger viewing
+history cannot hide a spin-off. Search suggestions with longer names require the same distinct
+episode evidence; a suggestion alone never identifies a show. Nested `Limited Series` labels,
+`Vol. N` labels and a repeated series name followed by a season number are parsed before
+matching; episode-title and conflicting-part-number guards still apply. A named batch can
+constrain a season when three distinct titles each uniquely identify that one TMDB season.
+With no episode coordinates or competing episode match, a unique released full-row movie
+title can also resolve a row whose shorter TV prefix is ambiguous.
+Explicitly sourced Netflix editorial aliases also recover title differences such as
+`Trolls Holiday Special` / `Trolls Holiday`; the word `Special` is not dropped generally,
+and these aliases never supply the clear-winner rule's engagement-report evidence.
+Netflix's Charité at War title, corroborated by producer UFA, also searches Charité;
+its six distinct episode titles establish TMDB season 2 through the existing season-map rules.
+TMDB's original-language title/name also counts as exact. If no literal title matches,
+a leading spelled English number may match its digits (`Fifty Dead Men Walking` / `50 Dead
+Men Walking`); literal matches take precedence and competing namesakes remain in review.
+Explicit season hints constrain automatic episode matching; a match in another season stays
+in review, except where Netflix renumbers a season (Mako Mermaids' Netflix season 4 is TMDB
+season 3): when at least three of a Netflix season's titles each name exactly one TMDB episode,
+all in one other season, and none matches in the labelled season, its rows match by title in
+that season (decision 55). A single title that still misses can match when one episode in the
+labelled season is the only loose fit (ignoring a leading article, filler words, `Pt.`/`Part`,
+`&`/`and` and the show's own prefix); otherwise, when nothing in the labelled season fits, the
+show's only season 0 special of that title, or, if TMDB has the labelled season, the one episode
+in the whole show with that exact title. A show-prefixed row with no season or episode number
+that names no episode (`Alvin and the Chipmunks: The Road Chip`) is imported as the one film,
+released by the watch year and long enough for the bookmark, with that full title. British `Series N:` labels are treated as explicit seasons; Netflix `Part N:` release
+batches are stripped without assuming they are provider seasons. Anthology/series subtitle
+prefixes are tried only after a full episode-title miss, retaining competing matches for review.
+Episode titles also normalize accents and numbered `(2)` / `Part 2` suffixes. Near-miss titles
+(hyphen drift, a trailing plural `s`, or a trailing `(I)` / `(II)`) auto-match only when that
+softened key is unique inside the hinted season; otherwise they stay in review. When both
+neighbouring CSV rows for the same show and season uniquely match episodes that differ by
+exactly two, the row between them takes the single missing TMDB episode (for example Netflix
+`Good to Go` between `Where the Heart Is` and `He Who Hesitates` → `Oh the Places You'll Go`).
+Netflix labels such as `Season 12:` and
+`Limited Series:` are stripped before matching, and `Season N` / `Episode N` numbers are used as
+hints when present. When several TMDB movies share an exact name, a unique release year that
+matches the Netflix watch year is auto-selected into a collapsed “matched by watch year”
+section you can still change or skip; otherwise the title stays in requires review. Before
+that, exact movie or show candidates first released after the watch year are ruled out, but
+only when every candidate has a release year; the review list still shows all of them.
+Combined Netflix rows such as `Alpha / Beta` import every segment as its own episode, only
+when each segment names exactly one TMDB episode; this also counts as show evidence. If a
+segment has no existing title match, its known show prefix (including possessive `s`) and
+the filler words `the`, `a`, `an`, `and`, `of` may be removed from both titles. All remaining
+words must agree in order, including part numbers, and name one episode in the allowed
+season. Missing, ambiguous or repeated segment targets leave the whole row in review;
+`Grandad` and `Granddad` compare equally, recovering Peppa Pig's garage bundle without relaxing the complete-bundle or season checks.
+A reversed bundle order can match a unique complete provider episode containing exactly
+the same distinct segments; incomplete, repeated or extra segments remain in review.
+Netflix's bundle number and neighbour gap-fill cannot resolve an incomplete bundle. A bare
+`Episode N` is read as season 1 when the same show's other rows carry `Season N:` labels and
+none is labelled season 1. When the first colon does not give a unique show, a longer colon
+prefix is used only if exactly one longer prefix is a unique exact TMDB show. It previews exact unique TMDB matches, year-resolved titles, existing plays, and a requires-review
+list; unmatched episode rows are grouped under their show. Separate summary boxes show matched watches, watch-year matches, required review, existing watches, and excluded short views, with review instructions beneath them. Blank titles, Netflix's `Unknown Title`
+placeholder (including `Unknown Title (Episode N)`),
+and episode rows with no show name (such as `: Episode 8`) are silently excluded before profile and preview
+counts. Review each remaining item by choosing a suggested match or skipping it before commit.
+Choose the show once and use **Match episodes** to rematch its unresolved CSV rows in the
+preview. TMDB episode titles are tried first, then linked TVDB titles when a unique episode ID
+or air-date mapping identifies the same TMDB episode. TMDB numbering is retained; ambiguous
+cross-provider mappings stay in review. Matching never marks an entire series watched.
+Verified complete-row mappings cover the Modi special, Big Al mini-series, two LEGO Friends
+episodes and the Just One Bite / The Bully bundle. They require the exact source title and
+every recorded episode ID, canonical title and air date, while keeping current provider
+coordinates. Missing, conflicting or future targets stay on the normal review path.
+The same registry covers verified named rows in Sirens, Starstruck, Medal of Honor and
+Go, Diego, Go. Reused Don't Tell the Bride couple titles are pinned only for pre-2021 watches,
+before the retrospective versions. Longer provider names and individual named bundle segments
+can supply show evidence, but every query word must occur in order and the existing evidence
+lead and complete-current-row checks still apply.
+Sourced episode aliases also recover six alternate or censored You Me Her titles and Peppa Pig's
+Cold Winter's Day and Zoë Zebra segments. An alias requires the exact TMDB show and unique
+episode ID, the expected canonical title, and the recorded air date when present; conflicts
+stay in review. Every segment of a bundle still needs its own unique episode match.
+Other source-pinned entries cover verified broadcaster, alternate-dub and spelling variants;
+they do not allow arbitrary changed words or partial episode bundles to match.
+Choosing a show does not select its episodes. After matching, expand **Review episodes** and
+select each episode to include; each stays skipped until selected. Matching only updates the
+preview and does not write history. The source title
+and proposed episode are shown before **Use suggested matches for season…** selects that batch;
+the final import still requires confirmation. **Skip this show** selects skip for its review
+rows. Unrelated selections survive a show rematch when their candidates remain valid.
+Official Netflix engagement reports provide an additional, bundled title snapshot. Paired
+English/original-language titles expand failed searches and rank report-supported suggestions,
+labelled **Netflix title alias**. Listed full show names help preserve colons; listed film names
+can recover colon-containing movies when no competing exact TV prefix exists. Existing exact
+same-name candidates are retained, so report presence does not resolve remakes by itself.
+Report absence and viewing hours never exclude or choose a title; report years only take
+part in the clear-winner rule above.
+The snapshot covers five reports from 2023 H2 through 2026 H1, with gaps; it is not a complete
+historical catalogue. Missing snapshot data falls back to normal matching. See the metadata
+documentation for the refresh command and source provenance.
+Plekt creates a local watch-history backup, inserts only selected plays not already present,
+then queues outbound sync to connected Plex, Emby, Jellyfin, Trakt, and Simkl destinations.
+A later re-upload of the Viewing Activity CSV skips title+date rows already imported from
+Netflix before TMDB matching, so only new watches need scanning.
+The existing **Sync historical watched items to Plex** setting still controls Plex writes.
+Tracker writes use their normal configured queue spacing.
 
 The importer does not ask which servers to project to: Plekt's scheduled sync reconciles
 Emby and Jellyfin with imported watches regardless, and both receive the original playback
@@ -108,6 +368,14 @@ watches enter the same synchronization pipeline as media-server and Plekt action
 watched and unwatched state converges everywhere. Emby and Jellyfin Trakt plugins should
 be disabled to keep Plekt as the sole Trakt bridge. The browser subscribes to an
 authenticated update stream and refreshes the active page as imported changes commit.
+
+Simkl is an independent enabled tracker with user/media-event library checks rather
+than unattended inbound polling. Its complete local history remains in Plekt; Simkl
+snapshots and safe rating changes use persisted account-bound observations. Uncertain
+writes and unresolved anime/special identities stay held. Missing items in a Simkl
+snapshot never authorize automatic absence reconciliation. Paid rewatches and
+list-destructive unwatches remain unsupported. Adding a tracker after setup does not
+send older backlog automatically; use its explicit compare/full-sync controls.
 
 ### Sync Tuning: app-marked watched flags
 
@@ -169,8 +437,8 @@ summary an import or bulk mark-watched returns. A policy skip is never retried. 
 also checks Plex's current state before a mark-watched write and reports *already
 matching* instead of sending a redundant scrobble that would only move the activity date.
 
-The same control and copy appear during guided first-run setup, next to the Trakt
-first-connection choice, because it changes what an import will do.
+The same control and copy appear during guided first-run setup alongside the import
+options, because it changes what an import will do.
 
 Full Sync Watchstates replays Plekt's canonical watched and resume rows in two phases. It takes a fixed snapshot for each phase, temporarily suppresses inbound media-server callbacks and scheduled catch-up work, and shows rows processed, throughput, and an estimated remaining time. The shared sync-operation lock prevents it from overlapping Force Sync or a backup restore. The Stop Restore control cancels future batches; already completed batches remain applied. Reset Restore Lock is an administrator-confirmed recovery action for a run abandoned by a browser or server restart; it stops any in-flight restore before allowing another run to start.
 
@@ -207,7 +475,7 @@ wraps into a one-item `views` array automatically):
 | General | `general` panel's Account, System Integrity (`tools-diagnostics`), and Image Cache (`cache`) rows |
 | Media servers | `apps` panel's Plex, Emby, and Jellyfin rows |
 | Webhooks | `general` panel's Setup Guides (`general-endpoints-guides`) and Webhook Secret (`general-endpoints`) rows |
-| Connections | `tools` panel's Trakt (`tools-migration`) and Seerr rows |
+| Connections | `tools` panel's Trakt (`tools-migration`), One Time Imports (`tools-one-time-imports`, containing Tautulli and Netflix), and Seerr rows |
 
 `applySettingsRoute()` iterates every view in the route and reveals each one's panel and
 sub-panel rows; for the shared `backups` panel it also accumulates every requested
@@ -311,6 +579,8 @@ Old bookmarks are normalized with `history.replaceState`:
 | `/settings/api-keys`, `/settings/metadata/:provider` | `/settings/metadata` |
 | `/settings/connections/webhooks` | `/settings/webhooks` |
 | `/settings/connections/seerr` | `/settings/seerr` (UI: `/settings/connections#seerr`) |
+| `/settings/connections#tautulli` | `/settings/connections#one-time-imports` |
+| `/settings/tautulli` | `/settings/connections` |
 | `/settings/data`, `/settings/data/backups`, `/settings/backups`, `/settings/backup-settings` | `/settings/backup` (UI: `/settings/backup#backup-local`) |
 | `/settings/data/restore` | `/settings/restore` (UI: `/settings/restore#restore-local`) |
 | `/settings/backup-restore`, `/settings/backup-restore-group` | `/settings/backup` |
@@ -402,9 +672,11 @@ server reached over the public internet from being overwhelmed by a large sync.
   counts cover the full library; temporary metadata failures remain retryable rather than
   being presented as verified title-less records. The **Watch-State Aliases** card lists
   episode watch states the automatic repair could not tie to their show, with the reason for
-  each. **Belongs to this show** moves them into the show (the newest watch state wins);
-  **Different show** leaves them alone and stops them being listed or repaired again. Only
-  Plekt's own watch state changes; nothing is sent to connected platforms.
+  each. It includes unmatched title-keyed rows as well as episode-id aliases. **Belongs to this
+  show** moves them into the show (the newest watch state wins); **Different show** leaves them
+  alone and stops them being listed or repaired again. The **Dismissed** section can restore a
+  dismissed entry to review. These actions change only Plekt's watch state; nothing is sent to
+  connected platforms.
 - Trakt owns the Trakt/CSV importer; Backup and Restore own their respective workflows.
 - Wipe data (`server/src/routes/wipeData.js`, `GET/POST /api/wipe-data(/preview)`) offers four
   destructive scopes: Watch History, Sync History & Logs, Everything Tracked (both together),
@@ -455,10 +727,10 @@ than an issue.
 The **Server Logs** panel (`/settings/logs`) displays real-time and historical diagnostic logs captured by the server alongside browser output. Logs are automatically categorized and can be filtered using interactive tabs:
 
 - **All Logs**: Complete chronological event stream.
-- **⚡ Plex WebSockets**: WebSocket connection lifecycle, incoming timeline events, ratingKey extraction, and handler triggers.
-- **🔄 Outbound Sync**: Real-time playstate dispatches, watch record insertions, and manual watch/unwatch propagation.
-- **⏱️ Scheduled Polls**: Periodic background catch-up library checks, session tracking, and scheduled sync cycles.
-- **🖥️ System Logs**: General administrative, startup, and system events.
+- **âš¡ Plex WebSockets**: WebSocket connection lifecycle, incoming timeline events, ratingKey extraction, and handler triggers.
+- **ðŸ”„ Outbound Sync**: Real-time playstate dispatches, watch record insertions, and manual watch/unwatch propagation.
+- **â±ï¸ Scheduled Polls**: Periodic background catch-up library checks, session tracking, and scheduled sync cycles.
+- **ðŸ–¥ï¸ System Logs**: General administrative, startup, and system events.
 
 Log entries feature human-readable timestamps (`YYYY-MM-DD HH:MM:SS`), color-coded category badges (`[PLEX]`, `[SYNC]`, `[POLL]`, `[SYSTEM]`, `[ERROR]`), a live pulsing activity indicator, and glassmorphic styling compatible with both Dark and Light appearance modes. Routine keep-alive recycling and 0-item background sync ticks are filtered out before they are stored, to ensure a high-signal log stream.
 
@@ -482,5 +754,6 @@ All settings pages follow the standard layout established on `/settings/metadata
 
 3. **Help Card Height Constraint (`prepareHelpReadMore`)**:
    - `.settings-row` uses `align-items: flex-start;` so main sections and help boxes size tightly to content without creating empty vertical space.
-   - `prepareHelpReadMore()` measures the height of `.settings-row-main` on the left. If the right help box (`.settings-row-help > article`) exceeds the main card height, it auto-collapses with `max-height: ${mainCardHeight}px` and appends a "Read more" toggle button.
+   - `prepareHelpReadMore()` keeps each help box at least as tall as its matching left settings card. It shows "Read more" only when meaningful additional help is clipped; expanded help can grow past the left card.
+   - Accordion status labels in Settings and `/setup` render as plain coloured text (no pill chrome), right-aligned in the summary row.
    - A `ResizeObserver` monitors main card height changes and updates help box collapse states dynamically.

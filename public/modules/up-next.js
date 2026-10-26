@@ -1,17 +1,19 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.1.1.0.8";
-import { hydratePosters } from "./images.js?v=2.1.1.0.8";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.1.1.0.8";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.1.1.0.9";
+import { hydratePosters } from "./images.js?v=2.1.1.0.9";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.1.1.0.9";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.1.1.0.9";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
-} from "./up-next-shared.js?v=2.1.1.0.8";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.1.1.0.8";
-import { renderMediaCard } from "./media-card.js?v=2.1.1.0.8";
+} from "./up-next-shared.js?v=2.1.1.0.9";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.1.1.0.9";
+import { renderMediaCard } from "./media-card.js?v=2.1.1.0.9";
+import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.1.1.0.9";
 
 const UP_NEXT_TIMEOUT_MS = 20000;
+const UP_NEXT_DROP_SLIDE_MS = 600;
 const UP_NEXT_DISMISSED_KEY = "plembfin:upNextDismissed:v1";
 // v6 invalidates snapshots created before canonical episode identity and
 // scheduled Part Watched artwork repair were applied.
@@ -1018,6 +1020,55 @@ function dedupeUpNextItems(items = []) {
   return out;
 }
 
+// A dropped card's dissolve has ended (poster-menu.js): close its empty slot.
+if (typeof document !== "undefined") {
+  document.addEventListener?.("plekt:dropped-card-dissolved", () => {
+    const panel = elements.upNextPanel;
+    const droppedCard = panel?.querySelector?.(".dashboard-up-next-card.dropped-card-gone");
+    if (droppedCard) {
+      const cards = [...panel.children].filter((node) => node.matches?.(".dashboard-up-next-card"));
+      const droppedIndex = cards.indexOf(droppedCard);
+      const followingCards = droppedIndex < 0 ? [] : cards.slice(droppedIndex + 1);
+      const startingLeft = new Map(followingCards.map((card) => [
+        card.dataset.upNextCardId,
+        card.getBoundingClientRect().left,
+      ]));
+      droppedCard.remove();
+      renderUpNext();
+
+      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+      if (!reduceMotion) {
+        const shiftedCards = [];
+        const cardsAfterRemoval = [...panel.children].filter((node) => node.matches?.(".dashboard-up-next-card"));
+        for (const card of cardsAfterRemoval) {
+          const oldLeft = startingLeft.get(card.dataset.upNextCardId);
+          if (oldLeft == null) continue;
+          const deltaX = oldLeft - card.getBoundingClientRect().left;
+          if (deltaX < 1) continue;
+          card.style.transition = "none";
+          card.style.transform = `translate3d(${deltaX}px, 0, 0)`;
+          shiftedCards.push(card);
+        }
+        if (shiftedCards.length) {
+          void panel.offsetWidth;
+          window.requestAnimationFrame(() => {
+            for (const card of shiftedCards) {
+              if (!card.isConnected) continue;
+              card.style.transition = `transform ${UP_NEXT_DROP_SLIDE_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`;
+              card.style.transform = "";
+              window.setTimeout(() => {
+                card.style.removeProperty("transition");
+                card.style.removeProperty("transform");
+              }, UP_NEXT_DROP_SLIDE_MS + 40);
+            }
+          });
+        }
+      }
+    }
+    if (!droppedCard) renderUpNext();
+  });
+}
+
 function upNextExitStillAnimating() {
   return Boolean(elements.upNextPanel?.querySelector?.(".dashboard-card-exit"));
 }
@@ -1057,10 +1108,12 @@ function renderUpNextSyncControl() {
   const syncEnabled = state.savedConfig?.upNextSync?.enabled !== false;
   const label = button.querySelector(".up-next-sync-label");
   button.disabled = !signedIn || !syncEnabled || syncing || loading;
-  button.setAttribute("aria-busy", String(syncing));
-  if (label) label.textContent = syncing ? "Syncing…" : "";
+  button.setAttribute("aria-busy", String(syncing || loading));
+  if (label) label.textContent = syncing ? "Syncing…" : loading ? "Refreshing…" : "";
   button.title = syncing
     ? "Pushing Plekt Up Next to Plex, Emby, and Jellyfin…"
+    : loading
+      ? "Refreshing Up Next…"
     : !signedIn
       ? "Sign in to push Up Next to your media servers"
       : !syncEnabled
@@ -1068,6 +1121,8 @@ function renderUpNextSyncControl() {
         : "Push Plekt Up Next to Plex, Emby, and Jellyfin";
   button.setAttribute("aria-label", syncing
     ? "Pushing Plekt Up Next to connected media servers"
+    : loading
+      ? "Refreshing Up Next"
     : !signedIn
       ? "Sign in to push Up Next to your media servers"
       : !syncEnabled
@@ -1207,6 +1262,8 @@ export function initUpNext(callbacks = {}) {
   if (actionsBound) return;
   actionsBound = true;
   elements.upNextPanel?.addEventListener("click", (event) => {
+    const dropped = event.target.closest("[data-plekt-dropped-title-action]");
+    if (dropped) { event.preventDefault(); event.stopPropagation(); handleDroppedTitleAction(dropped, { onSuccess: () => loadUpNext({ force: true }) }); return; }
     const retry = event.target.closest("[data-up-next-retry]");
     if (!retry) return;
     event.preventDefault();
@@ -1310,6 +1367,12 @@ export function renderUpNext({ exitIds = [] } = {}) {
     scheduleUpNextExitRepaint();
     return;
   }
+  // A dropped card dissolves for longer than an exit; repaint once it is gone.
+  if (elements.upNextPanel?.querySelector?.(".dropped-card-scrub")) {
+    state.upNextExitIds = pendingExitIds;
+    scheduleUpNextExitRepaint();
+    return;
+  }
 
   const commitPanel = (html, onCommitted) => updateDashboardRowWithMotion(panel, html, {
     exitKeys: pendingExitIds,
@@ -1326,7 +1389,11 @@ export function renderUpNext({ exitIds = [] } = {}) {
 
   if (state.upNextLoading && !state.upNextItems.length) {
     if (section) section.classList.remove("hidden");
-    commitPanel(`<div class="empty-log up-next-empty-state"><b>Loading Up Next…</b></div>`);
+    commitPanel(`<div class="up-next-loading-tiles" role="status" aria-label="Loading Up Next">${Array.from({ length: 4 }, () => `
+      <article class="history-page-card dashboard-history-page-card dashboard-up-next-card up-next-skeleton" aria-hidden="true">
+        <div class="up-next-skeleton-poster"></div>
+        <div class="up-next-skeleton-details"><span></span><span></span><span></span><span></span></div>
+      </article>`).join("")}</div>`);
     return;
   }
 

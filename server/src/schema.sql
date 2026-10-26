@@ -282,6 +282,56 @@ CREATE TABLE IF NOT EXISTS up_next_library_items (
   resolved_at INTEGER NOT NULL
 );
 
+-- Shows and movies the user dropped on purpose (droppedTitles.js). Permanent
+-- and uncapped, unlike up_next_dismissals; never touches watch history.
+CREATE TABLE IF NOT EXISTS dropped_titles (
+  id TEXT PRIMARY KEY,
+  media_type TEXT NOT NULL CHECK (media_type IN ('show', 'movie')),
+  aliases_json TEXT NOT NULL DEFAULT '[]',
+  title TEXT NOT NULL DEFAULT '',
+  year INTEGER,
+  tmdb_id TEXT,
+  tvdb_id TEXT,
+  imdb_id TEXT,
+  snapshot_json TEXT,
+  dropped_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_dropped_titles_dropped_at
+  ON dropped_titles(dropped_at DESC);
+
+-- Durable two-way tracker state for dropped titles. Rows are tombstones too:
+-- desired_dropped=0 prevents a stale remote dropped snapshot resurrecting a
+-- newer local un-drop after restart. Failed writes remain pending for retry.
+CREATE TABLE IF NOT EXISTS dropped_title_tracker_state (
+  id TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  connection_id TEXT NOT NULL DEFAULT '',
+  account_id TEXT NOT NULL DEFAULT '',
+  identity_key TEXT NOT NULL,
+  media_json TEXT NOT NULL,
+  desired_dropped INTEGER NOT NULL,
+  action_at INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  remote_changed_at INTEGER,
+  remote_present INTEGER,
+  previous_status TEXT,
+  write_status TEXT NOT NULL DEFAULT 'pending',
+  last_error TEXT,
+  updated_at INTEGER NOT NULL,
+  UNIQUE(provider, identity_key)
+);
+CREATE INDEX IF NOT EXISTS idx_dropped_title_tracker_pending
+  ON dropped_title_tracker_state(provider, write_status, action_at);
+CREATE TABLE IF NOT EXISTS dropped_title_tracker_cursors (
+  provider TEXT PRIMARY KEY,
+  connection_id TEXT NOT NULL,
+  account_id TEXT NOT NULL DEFAULT '',
+  activities_json TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
 -- Cross-process mutex for writes that change a media server's played state.
 -- A watched write and the corresponding progress-clear + unplayed pair must
 -- never pass each other on the wire: whichever operation acquires this lease
@@ -409,6 +459,18 @@ CREATE TABLE IF NOT EXISTS restore_reports (
   updated_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_restore_reports_updated ON restore_reports(updated_at DESC);
+
+-- Progress rows are separate from the small job header in settings: completing
+-- one initial-sync item must not rewrite a whole imported library's JSON.
+CREATE TABLE IF NOT EXISTS initial_sync_items (
+  job_id TEXT NOT NULL,
+  destination TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  item_json TEXT NOT NULL,
+  status TEXT NOT NULL,
+  detail TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (job_id, destination, item_id)
+);
 
 CREATE TABLE IF NOT EXISTS settings (
   id TEXT PRIMARY KEY,
@@ -732,6 +794,11 @@ CREATE TABLE IF NOT EXISTS tracker_connections (
   last_error TEXT,
   history_synced_at INTEGER,
   prefer_earlier_watched_date INTEGER NOT NULL DEFAULT 1,
+  -- When this account generation was connected; older backlog is not sent to it.
+  connected_at INTEGER,
+  -- Durable progress for the first import and the optional full sync (JSON).
+  initial_sync_json TEXT,
+  full_sync_json TEXT,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -756,7 +823,9 @@ CREATE TABLE IF NOT EXISTS tracker_auth_flows (
   expires_at INTEGER NOT NULL,
   last_polled_at INTEGER,
   created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  -- Connection generation (tracker_connections.id, '' for none) at flow start.
+  expected_connection_id TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_tracker_auth_flows_expiry ON tracker_auth_flows(expires_at);
 
@@ -768,6 +837,7 @@ CREATE TABLE IF NOT EXISTS tracker_item_state (
   last_seen_at INTEGER NOT NULL,
   last_outbound_state TEXT CHECK (last_outbound_state IN ('watched', 'unwatched')),
   last_outbound_at INTEGER,
+  last_outbound_intent_id TEXT,
   PRIMARY KEY(provider, media_key)
 );
 
@@ -785,6 +855,48 @@ CREATE TABLE IF NOT EXISTS tracker_play_history (
   PRIMARY KEY(provider, history_id)
 );
 CREATE INDEX IF NOT EXISTS idx_tracker_play_history_media ON tracker_play_history(provider, media_key);
+
+-- Durable outbound work, independent of the latest snapshot and permanent play ledger.
+CREATE TABLE IF NOT EXISTS tracker_write_intents (
+  id TEXT PRIMARY KEY,
+  provider TEXT NOT NULL,
+  connection_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  logical_key TEXT NOT NULL,
+  watch_record_id TEXT,
+  media_key TEXT NOT NULL,
+  media_json TEXT NOT NULL,
+  action TEXT NOT NULL,
+  watched_at TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  fingerprint TEXT NOT NULL,
+  native_idempotency INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
+  attempts INTEGER NOT NULL DEFAULT 0,
+  due_at INTEGER NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  settled_at INTEGER,
+  remote_event_id TEXT,
+  last_error TEXT,
+  UNIQUE(provider, connection_id, logical_key)
+);
+-- Explicit Simkl observation inbox. Deltas merge; absence never deletes rows.
+CREATE TABLE IF NOT EXISTS tracker_observation_cursors (
+  provider TEXT PRIMARY KEY, connection_id TEXT NOT NULL, account_id TEXT NOT NULL,
+  cursor TEXT NOT NULL, activities_json TEXT NOT NULL, updated_at INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS tracker_observations (
+  id TEXT PRIMARY KEY, provider TEXT NOT NULL, connection_id TEXT NOT NULL,
+  account_id TEXT NOT NULL, observation_key TEXT NOT NULL, kind TEXT NOT NULL,
+  observation_json TEXT NOT NULL, status TEXT NOT NULL, reason TEXT,
+  created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+  UNIQUE(provider, connection_id, observation_key)
+);
+CREATE INDEX IF NOT EXISTS idx_tracker_observations_pending ON tracker_observations(provider, connection_id, status);
+CREATE INDEX IF NOT EXISTS idx_tracker_intents_due ON tracker_write_intents(status, due_at);
+CREATE INDEX IF NOT EXISTS idx_tracker_intents_correlation ON tracker_write_intents(provider, account_id, media_key, watched_at);
 
 -- Local personal media organization. Watchlist choices and custom lists remain
 -- Plembfin-local. Ratings are still canonical here, but the separate optional
@@ -813,11 +925,13 @@ CREATE TABLE IF NOT EXISTS personal_ratings (
 );
 CREATE INDEX IF NOT EXISTS idx_personal_ratings_updated ON personal_ratings(updated_at DESC);
 
+-- Rating provider columns are free text checked by the tracker registry
+-- (migration 58 removed their CHECK lists).
 -- Provider-specific rating observations. This ledger is deliberately separate
 -- from watched-state tables: a remote rating of NULL is an explicit unrated
 -- observation, not a missing watched event.
 CREATE TABLE IF NOT EXISTS personal_rating_sources (
-  provider TEXT NOT NULL CHECK (provider IN ('plex', 'emby', 'jellyfin', 'trakt')),
+  provider TEXT NOT NULL,
   media_key TEXT NOT NULL,
   media_json TEXT NOT NULL,
   provider_item_id TEXT,
@@ -833,7 +947,7 @@ CREATE TABLE IF NOT EXISTS personal_rating_sources (
   last_outbound_state TEXT CHECK (last_outbound_state IN ('rated', 'unrated')),
   last_outbound_intent_id TEXT,
   last_outbound_at INTEGER,
-  sync_status TEXT NOT NULL DEFAULT 'unknown' CHECK (sync_status IN ('unknown', 'synced', 'pending', 'conflict', 'not_found', 'reauth_required', 'failed')),
+  sync_status TEXT NOT NULL DEFAULT 'unknown' CHECK (sync_status IN ('unknown', 'synced', 'pending', 'conflict', 'not_found', 'reauth_required', 'failed', 'held')),
   last_error TEXT,
   PRIMARY KEY (provider, media_key)
 );
@@ -844,7 +958,7 @@ CREATE INDEX IF NOT EXISTS idx_personal_rating_sources_snapshot
 -- explicit for clears, so an unrated tombstone can never be confused with a
 -- missing queue value.
 CREATE TABLE IF NOT EXISTS personal_rating_sync_queue (
-  provider TEXT NOT NULL CHECK (provider IN ('plex', 'emby', 'jellyfin', 'trakt')),
+  provider TEXT NOT NULL,
   media_key TEXT NOT NULL,
   media_json TEXT NOT NULL,
   desired_state TEXT NOT NULL CHECK (desired_state IN ('rated', 'unrated')),
@@ -852,7 +966,7 @@ CREATE TABLE IF NOT EXISTS personal_rating_sync_queue (
   source TEXT NOT NULL CHECK (source IN ('manual', 'import', 'reconcile', 'push')),
   intent_id TEXT NOT NULL,
   canonical_version INTEGER NOT NULL DEFAULT 0,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'succeeded', 'not_found', 'reauth_required', 'failed')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'succeeded', 'not_found', 'reauth_required', 'failed', 'held')),
   attempt_count INTEGER NOT NULL DEFAULT 0,
   next_attempt_at INTEGER NOT NULL DEFAULT 0,
   lease_owner TEXT,
@@ -870,7 +984,7 @@ CREATE INDEX IF NOT EXISTS idx_personal_rating_sync_queue_due
 -- generation is the complete-snapshot gate: missing remote rows only mean
 -- "unrated" after a full provider scan has completed successfully.
 CREATE TABLE IF NOT EXISTS personal_rating_sync_runs (
-  provider TEXT PRIMARY KEY CHECK (provider IN ('plex', 'emby', 'jellyfin', 'trakt')),
+  provider TEXT PRIMARY KEY,
   run_id TEXT,
   generation INTEGER NOT NULL DEFAULT 0,
   mode TEXT NOT NULL DEFAULT 'baseline' CHECK (mode IN ('baseline', 'import')),
@@ -1176,6 +1290,38 @@ CREATE TABLE IF NOT EXISTS personal_list_item_availability (
   FOREIGN KEY (list_id, media_key) REFERENCES personal_list_items(list_id, media_key) ON DELETE CASCADE
 );
 
+-- AniDB payloads are disposable; request guards are separate so clearing cached
+-- metadata cannot bypass the provider's daily fetch limit or restart cooldowns.
+CREATE TABLE IF NOT EXISTS anidb_metadata_cache (
+  aid TEXT PRIMARY KEY,
+  data TEXT NOT NULL,
+  schema_version INTEGER NOT NULL,
+  fetched_at_ms INTEGER NOT NULL
+);
+-- Explicitly confirmed anime identity; never used as a watched-state alias.
+CREATE TABLE IF NOT EXISTS anidb_matches (
+  media_key TEXT PRIMARY KEY,
+  media_type TEXT NOT NULL CHECK (media_type IN ('movie', 'tv')),
+  tmdb_id TEXT NOT NULL DEFAULT '',
+  tvdb_id TEXT NOT NULL DEFAULT '',
+  aid TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  evidence TEXT NOT NULL CHECK (evidence IN ('confirmed', 'provider')),
+  updated_at_ms INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS anidb_request_state (
+  aid TEXT PRIMARY KEY,
+  next_fetch_at_ms INTEGER NOT NULL,
+  error_code TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS anidb_provider_state (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  next_start_at_ms INTEGER NOT NULL DEFAULT 0,
+  cooldown_until_ms INTEGER NOT NULL DEFAULT 0,
+  lease_token TEXT NOT NULL DEFAULT '',
+  lease_until_ms INTEGER NOT NULL DEFAULT 0
+);
+
 -- App-side changes the pull pass held back for confirmation instead of
 -- applying: many removals from one playlist in one pass, or a playlist
 -- deletion seen on more than one playlist of the same app at once.
@@ -1192,4 +1338,33 @@ CREATE TABLE IF NOT EXISTS personal_list_held_changes (
   confirmed_at INTEGER,
   PRIMARY KEY (list_id, provider, kind),
   FOREIGN KEY (list_id, provider) REFERENCES personal_list_targets(list_id, provider) ON DELETE CASCADE
+);
+
+-- Durable, resumable selected/full initial Simkl watched-state sync.
+CREATE TABLE IF NOT EXISTS simkl_full_sync_runs (
+  id TEXT PRIMARY KEY,
+  connection_id TEXT NOT NULL,
+  account_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('queued', 'running', 'waiting_quota', 'completed', 'review', 'cancelled')),
+  next_run_at INTEGER NOT NULL,
+  lease_owner TEXT,
+  lease_until INTEGER,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL,
+  state_json TEXT NOT NULL DEFAULT '{}'
+);
+CREATE INDEX IF NOT EXISTS idx_simkl_full_sync_runs_due
+  ON simkl_full_sync_runs(status, next_run_at, lease_until);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_simkl_full_sync_runs_active_connection_account
+  ON simkl_full_sync_runs(connection_id, account_id)
+  WHERE status IN ('queued', 'running', 'waiting_quota');
+
+CREATE TABLE IF NOT EXISTS simkl_full_sync_items (
+  run_id TEXT NOT NULL,
+  item_id TEXT NOT NULL,
+  row_json TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('pending', 'sending', 'completed', 'review', 'cancelled')),
+  detail TEXT,
+  PRIMARY KEY (run_id, item_id),
+  FOREIGN KEY (run_id) REFERENCES simkl_full_sync_runs(id) ON DELETE CASCADE
 );

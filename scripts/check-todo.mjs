@@ -6,12 +6,18 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkPlanLayouts } from "./plan-layout.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const planDir = path.join(root, "plan");
 const todoPath = path.join(root, "todo.md");
-const SECTIONS = ["Last edited", "Outstanding", "Future features", "Deferred"];
-// An entry is two lines, the first ending in a `\` line break:
+const SECTION_PATTERNS = [
+  ["Post Release", /^Post Release \(v[^)]+\)$/],
+  ["Release", /^Release: v[^)]+ \(Expected\)$/],
+  ["Future Release", /^Future Release$/],
+];
+const STATUS_SECTIONS = ["Work in Progress", "Requires Remote Testing", "Not Started"];
+// A release-plan entry is two lines, the first ending in a `\` line break:
 // `**Title** - [](plan/<name>.md) - <date>`, then a very brief summary. The link has no text;
 // the desktop app shows it as the plan file's chip.
 const ENTRY = /^\*\*[^*]+\*\* - \[[^\]]*\]\(plan\//;
@@ -35,16 +41,10 @@ function walk(dir) {
   });
 }
 
-// Local calendar date as YYYY-MM-DD, so the comparison ignores time zones.
-function localDay(ms) {
-  const d = new Date(ms);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 function check() {
-  if (!fs.existsSync(todoPath) || !fs.existsSync(planDir)) return [];
+  if (!fs.existsSync(todoPath) || !fs.existsSync(planDir)) return checkPlanLayouts(root);
   const errors = [];
+  errors.push(...checkPlanLayouts(root));
   const todo = fs.readFileSync(todoPath, "utf8").replace(/\r\n/g, "\n");
   const todoMtime = fs.statSync(todoPath).mtimeMs;
 
@@ -52,9 +52,14 @@ function check() {
   // Only markdown counts there: tools also write run output into active folders (check logs,
   // id chunks, run JSON, and the capture tool's captures/ folder with its own results.md),
   // and those writes are not plan changes, so they must not make todo.md stale mid-run.
+  const bugsPlanPath = path.join(planDir, "bugs.md");
+  const bugsPlan = fs.existsSync(bugsPlanPath) ? fs.readFileSync(bugsPlanPath, "utf8") : "";
+  const bugSteps = bugsPlan.split(/^## Steps\s*$/m)[1]?.split(/^## /m)[0] || "";
+  const emptyBugBacklog = /^\s*No open bugs\./m.test(bugSteps) && !/^\s*-\s*\[[ x]\]/m.test(bugSteps);
   const summaries = fs
     .readdirSync(planDir)
     .filter((f) => f.endsWith(".md") && !NOT_PLANS.has(f))
+    .filter((f) => f !== "bugs.md" || !emptyBugBacklog)
     .map((f) => `plan/${f}`);
   const activeFiles = fs.existsSync(path.join(planDir, "active"))
     ? walk(path.join(planDir, "active"))
@@ -62,25 +67,59 @@ function check() {
       .filter((f) => f.endsWith(".md") && !f.split("/").includes("captures"))
     : [];
 
-  // 1. The "Last edited" entry's date must not be older than the newest plan change.
-  const section = (name) => {
-    const m = todo.match(new RegExp(String.raw`## ${name}\n([\s\S]*?)(?=\n## |$)`));
-    return m ? m[1] : null;
+  // 1. Release assignment and TODO freshness.
+  const headings = [...todo.matchAll(/^## (.+)$/gm)].map((m) => ({ name: m[1], index: m.index }));
+  const section = (pattern) => {
+    const headingIndex = headings.findIndex(({ name }) => pattern.test(name));
+    if (headingIndex < 0) return null;
+    const start = headings[headingIndex].index;
+    const end = headings[headingIndex + 1]?.index ?? todo.length;
+    return todo.slice(start, end);
   };
   const newest = Math.max(0, ...[...summaries, ...activeFiles].map((f) => fs.statSync(path.join(root, f)).mtimeMs));
-  for (const name of SECTIONS) {
-    if (section(name) === null) errors.push(`todo.md has no "## ${name}" section`);
+  for (const [name, pattern] of SECTION_PATTERNS) {
+    const matches = headings.filter(({ name: heading }) => pattern.test(heading));
+    if (matches.length !== 1) errors.push(`todo.md needs exactly one "${name}" section`);
   }
-  const lastEdited = section("Last edited") || "";
-  const lastEntries = lastEdited.split("\n").filter((l) => ENTRY.test(l));
-  if (lastEntries.length !== 1) errors.push(`"Last edited" lists ${lastEntries.length} plans; list exactly one`);
-  const latest = lastEdited.match(DATE_LINE);
-  if (!latest) {
-    errors.push('the "Last edited" entry has no date');
-  } else if (new Date(latest[1]).getTime() && localDay(new Date(latest[1]).getTime()) < localDay(newest)) {
-    errors.push(`the "Last edited" date is ${latest[1]}, but a plan file changed on ${localDay(newest)}`);
+  const postPattern = SECTION_PATTERNS[0][1];
+  const releasePattern = SECTION_PATTERNS[1][1];
+  const futurePattern = SECTION_PATTERNS[2][1];
+  const releaseSection = section(releasePattern) || "";
+  for (const name of STATUS_SECTIONS) {
+    const count = (releaseSection.match(new RegExp(`^### ${name}$`, "gm")) || []).length;
+    if (count !== 1) errors.push(`Release needs exactly one "${name}" subsection`);
   }
 
+  const postIndex = headings.findIndex(({ name }) => postPattern.test(name));
+  const releaseIndex = headings.findIndex(({ name }) => releasePattern.test(name));
+  const postHasEntries = (section(postPattern) || "").split("\n").some((line) => ENTRY.test(line));
+  const postVersion = headings.find(({ name }) => postPattern.test(name))?.name.match(/v([0-9]+(?:\.[0-9]+)*)/)?.[1];
+  const releaseVersion = headings.find(({ name }) => releasePattern.test(name))?.name.match(/v([0-9]+(?:\.[0-9]+)*)/)?.[1];
+  const compareVersions = (a, b) => {
+    const left = a?.split(".").map(Number) || [];
+    const right = b?.split(".").map(Number) || [];
+    for (let i = 0; i < Math.max(left.length, right.length); i++) {
+      if ((left[i] || 0) !== (right[i] || 0)) return (left[i] || 0) - (right[i] || 0);
+    }
+    return 0;
+  };
+  // Post-release tasks are active only after their version has been released,
+  // so they rise above Release only when that version is older than the expected version.
+  const postShouldBeFirst = postHasEntries && compareVersions(postVersion, releaseVersion) < 0;
+  if (postIndex >= 0 && releaseIndex >= 0 && ((postIndex < releaseIndex) !== postShouldBeFirst)) {
+    errors.push(postShouldBeFirst
+      ? "Active Post Release must appear above Release"
+      : "Release must appear above Post Release until its version has been released");
+  }
+  const expectedOrder = postShouldBeFirst
+    ? [postPattern, releasePattern, futurePattern]
+    : [releasePattern, postPattern, futurePattern];
+  const orderedHeadings = headings
+    .filter(({ name }) => SECTION_PATTERNS.some(([, pattern]) => pattern.test(name)))
+    .map(({ name }) => name);
+  const orderIsValid = expectedOrder.every((pattern, index) => pattern.test(orderedHeadings[index] || ""))
+    && orderedHeadings.length === expectedOrder.length;
+  if (!orderIsValid) errors.push("todo.md sections are not in the requested release order");
   // 2. A plan file changed after todo.md was last saved means the TODO was not updated with it.
   if (newest > todoMtime) {
     errors.push("a plan file was changed after todo.md was last saved");
@@ -105,9 +144,9 @@ function check() {
   let sectionName = "";
   let previous = Infinity;
   lines.forEach((line, i) => {
-    const heading = line.match(/^## (.+)/);
+    const heading = line.match(/^(#{2,3}) (.+)/);
     if (heading) {
-      sectionName = heading[1];
+      sectionName = heading[2];
       previous = Infinity;
     }
     if (!ENTRY.test(line)) return;
@@ -141,7 +180,7 @@ const input = process.argv.includes("--stop-hook") ? readStdin() : {};
 const message =
   "todo.md is stale, so this turn cannot end yet:\n" +
   errors.map((e) => `- ${e}`).join("\n") +
-  "\nUpdate todo.md (the plan's entry and date, the plan under Last edited, each plan listed once) and the owning plan summary, then finish the turn.";
+  "\nUpdate todo.md with current plan assignments and summaries, then finish the turn.";
 console.error(message);
 // The Stop hook is re-run after a block. If it is still stale on that retry, let the turn end
 // so it cannot loop; the message above is the record of what is outstanding.

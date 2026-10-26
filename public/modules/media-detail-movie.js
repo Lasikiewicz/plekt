@@ -1,18 +1,19 @@
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, formatDate, formatTmdbDate, isDemoMode } from "./utils.js?v=2.1.1.0.8";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters } from "./images.js?v=2.1.1.0.8";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml } from "./sync.js?v=2.1.1.0.8";
-import { fetchTmdbDetails } from "./tmdb.js?v=2.1.1.0.8";
-import { renderWatchDatePrompt, isMovieSavingWatchAction } from "./watch-action.js?v=2.1.1.0.8";
-import { authHeaders, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.1.1.0.8";
-import { personalRatingPillHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.1.1.0.8";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, formatDate, formatTmdbDate, isDemoMode } from "./utils.js?v=2.1.1.0.9";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters } from "./images.js?v=2.1.1.0.9";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml } from "./sync.js?v=2.1.1.0.9";
+import { fetchTmdbDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.1.1.0.9";
+import { renderWatchDatePrompt, isMovieSavingWatchAction } from "./watch-action.js?v=2.1.1.0.9";
+import { authHeaders, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.1.1.0.9";
+import { personalRatingPillHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.1.1.0.9";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.1.1.0.9";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderMediaImagesSection, renderMediaFacts,
   renderExternalRatingPills, ratingPillHtml, renderSeerrRequestPill, fetchSeerrMediaStatus,
   refreshActiveMediaDetailAfterSeerrStatus, rankedRecommendations, recommendedTvShowsForMovie,
   renderRecommendationSection, hydrateMediaAppLinks, renderCollectionSection, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.1.1.0.8";
+} from "./media-detail-shared.js?v=2.1.1.0.9";
 
 // Watch history list - playHistory (every { id, watched_at, source } entry for
 // this movie, collapsed server-side in dedupeMovies/collapseMovieCluster) has
@@ -299,7 +300,7 @@ function _renderWatchedMovieContent(root, movie, {
   };
 
   setMediaDetailActions(`
-    ${personalMediaActionsHtml(personalMediaItem)}
+    ${personalMediaActionsHtml(personalMediaItem)}${droppedTitleActionHtml(personalMediaItem)}
     ${ytWatchBtn}
     ${mediaToolsActionHtml(`
       <button class="action-pill action-pill-ghost" type="button" ${isSaving || isSyncing ? "disabled" : ""} data-unwatch-id="${escapeAttribute(movie.id)}" data-unwatch-kind="movie" data-unwatch-tmdb-id="${escapeAttribute(tmdbData?.id || movie.tmdb_id || "")}" data-unwatch-label="${escapeAttribute(movie.title || "this movie")}">
@@ -337,11 +338,11 @@ function _renderWatchedMovieContent(root, movie, {
         <header class="immersive-header">
           <img class="immersive-poster-img" src="${escapeAttribute(posterUrl || localPoster)}" alt="${escapeHtml(movieTitle)} poster" data-err="fav" data-lightbox-src="${escapeAttribute(posterUrl || localPoster)}" />
           <div class="immersive-meta">
-            ${logoUrl ? `<img class="immersive-logo" data-err="logo-title" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(movieTitle)}" /><h2 class="immersive-title sr-only">${escapeHtml(movieTitle)}</h2>` : `<h2 class="immersive-title">${escapeHtml(movieTitle)}</h2>`}
+            ${logoUrl && !tmdbData?.anidb ? `<img class="immersive-logo" data-err="logo-title" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(movieTitle)}" /><h2 class="immersive-title sr-only">${escapeHtml(movieTitle)}</h2>` : `<h2 class="immersive-title">${escapeHtml(anidbDisplayTitle(tmdbData, movieTitle))}</h2>`}
             ${youtubeMeta?.channelName ? `<p class="immersive-subtitle">${escapeHtml(youtubeMeta.channelName)}</p>` : ""}
             <div class="media-detail-bottom-stack">
               ${renderSeerrRequestPill("movie", tmdbData?.id || movie.tmdb_id, true)}
-              <p class="immersive-overview">${escapeHtml(overview)}</p>
+              <p class="immersive-overview">${escapeHtml(overview)}</p>${anidbAttributionHtml(tmdbData)}
               <section class="progress-section" style="border: 0; padding-top: 0; margin-top: 0.5rem; width: 100%;">
                 <h3>Watch Status</h3>
                 <div class="progress-label-row">
@@ -419,7 +420,7 @@ export function patchMovieWatchedState(movie) {
   };
 
   setMediaDetailActions(`
-    ${personalMediaActionsHtml(personalMediaItem)}
+    ${personalMediaActionsHtml(personalMediaItem)}${droppedTitleActionHtml(personalMediaItem)}
     ${ytWatchBtn}
     ${mediaToolsActionHtml(`
       <button class="action-pill action-pill-ghost" type="button" data-unwatch-id="${escapeAttribute(movie.id)}" data-unwatch-kind="movie" data-unwatch-tmdb-id="${escapeAttribute(movie.tmdb_id || "")}" data-unwatch-label="${escapeAttribute(movie.title || "this movie")}">
@@ -590,7 +591,7 @@ export async function openMovieImmersiveModalByTmdbId(tmdbId) {
     summary: { watchedCount: 0, totalCount: 1, progressPercent: 0 },
     records: [],
   });
-  setMediaDetailActions(`${personalMediaActionsHtml(personalMediaItem)}${mediaToolsActionHtml(`
+  setMediaDetailActions(`${personalMediaActionsHtml(personalMediaItem)}${droppedTitleActionHtml(personalMediaItem)}${mediaToolsActionHtml(`
     ${mediaInfoActionHtml()}
     ${mediaForceSyncActionHtml({
       type: "movie",
@@ -606,10 +607,10 @@ export async function openMovieImmersiveModalByTmdbId(tmdbId) {
       <header class="immersive-header">
         <img class="immersive-poster-img" src="${escapeAttribute(posterUrl)}" alt="${escapeHtml(movieTitle)} poster" data-err="fav" data-lightbox-src="${escapeAttribute(posterUrl)}" />
         <div class="immersive-meta">
-          ${logoUrl ? `<img class="immersive-logo" data-err="logo-title" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(movieTitle)}" /><h2 class="immersive-title sr-only">${escapeHtml(movieTitle)}</h2>` : `<h2 class="immersive-title">${escapeHtml(movieTitle)}</h2>`}
+          ${logoUrl && !tmdbData?.anidb ? `<img class="immersive-logo" data-err="logo-title" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(movieTitle)}" /><h2 class="immersive-title sr-only">${escapeHtml(movieTitle)}</h2>` : `<h2 class="immersive-title">${escapeHtml(anidbDisplayTitle(tmdbData, movieTitle))}</h2>`}
           <div class="media-detail-bottom-stack">
             ${renderSeerrRequestPill("movie", tmdbId, false)}
-            <p class="immersive-overview">${escapeHtml(overview)}</p>
+            <p class="immersive-overview">${escapeHtml(overview)}</p>${anidbAttributionHtml(tmdbData)}
             <section class="progress-section" style="border: 0; padding-top: 0; margin-top: 0.5rem; width: 100%;">
               <h3>Watch Status</h3>
               <div class="progress-label-row">

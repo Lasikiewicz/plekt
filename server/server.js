@@ -47,11 +47,15 @@ if (path.basename(DB_PATH) === "plembfin.db" && fs.existsSync(path.join(DATA_DIR
 }
 const { dispatch } = await import("./src/index.js");
 const { db } = await import("./src/db.js");
+const { closeAllTenantDatabases } = await import("./src/utils/tenantDatabase.js");
+const { runWithUserContext } = await import("./src/utils/userContext.js");
+const { resolveSessionTenantContext } = await import("./src/utils/auth.js");
 const { enableTmdbMetadataWarmup } = await import("./src/utils/tmdbGateway.js");
 const { clearRestoreSyncState, loadMediaConfig, loadRuntimeState, RESTORE_KIND_FULL_SYNC } = await import("./src/utils/configStore.js");
 const { createCspImageOriginMemo, createHttpTimingMiddleware, createResponseCompression, setPublicAssetCacheHeaders } = await import("./src/utils/httpPerformance.js");
 const { restoreMissingCachedArtwork } = await import("./src/utils/posterCache.js");
 const { recoverInterruptedBackgroundImports } = await import("./src/utils/onboardingStore.js");
+const { recoverInitialSync } = await import('./src/utils/initialSyncStore.js');
 const { schedulerLeaseStatus } = await import("./src/utils/schedulerLease.js");
 const { createWorkerCoordinator } = await import("./src/workerCoordinator.js");
 const { flushPending: flushDiagnosticLogs } = await import("./src/utils/diagnosticLogger.js");
@@ -75,6 +79,7 @@ if (roleHasWeb(ROLE)) {
 
 if (roleHasWeb(ROLE)) {
   const recoveredImports = recoverInterruptedBackgroundImports();
+  recoverInitialSync();
   if (recoveredImports.recovered.length) {
     console.warn("Cancelled background imports interrupted by server restart", {
       providers: recoveredImports.recovered,
@@ -125,6 +130,16 @@ const PORT = Number(process.env.PORT || 5056);
 const HOST = String(process.env.HOST || "0.0.0.0").trim() || "0.0.0.0";
 const app = express();
 app.disable("x-powered-by");
+if (DEMO_MODE) {
+  app.use((_req, res, next) => {
+    res.setHeader("X-Robots-Tag", "noindex");
+    next();
+  });
+}
+app.get("/robots.txt", (_req, res, next) => {
+  if (!DEMO_MODE) return next();
+  res.type("text/plain").send("User-agent: *\nDisallow: /\n");
+});
 // Request timing is deliberately opt-in for diagnosing the performance plan's
 // localhost stalls. It logs only slow/error responses and includes event-loop
 // delay, so normal deployments do not add per-request telemetry overhead.
@@ -219,10 +234,11 @@ app.use(async (_req, res, next) => {
 app.use(createResponseCompression());
 
 // Rate limiting - applied before any route handler.
-app.use("/api/login", rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false }));
-app.use("/api/webhook", rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
-app.use("/api/tmdb-poster", rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
-app.use("/api/tmdb-profile", rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+const withTenantApiPaths = (paths) => paths.flatMap((p) => [p, `/u/:tenant${p}`]);
+app.use(withTenantApiPaths(["/api/login"]), rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false }));
+app.use(withTenantApiPaths(["/api/webhook"]), rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+app.use(withTenantApiPaths(["/api/tmdb-poster"]), rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
+app.use(withTenantApiPaths(["/api/tmdb-profile"]), rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
 // Interactive provider flows poll read-only status endpoints every two seconds.
 // Do not charge those reads to the mutation budget: a normal authorization
 // lasting two minutes would otherwise consume all 60 requests and block the
@@ -234,14 +250,14 @@ const providerMutationLimiter = () => rateLimit({
   legacyHeaders: false,
   skip: (req) => req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS",
 });
-app.use("/api/media-auth", providerMutationLimiter());
-app.use("/api/media-connections", providerMutationLimiter());
-app.use("/api/tracker-auth", providerMutationLimiter());
-app.use("/api/tracker-connections", providerMutationLimiter());
+app.use(withTenantApiPaths(["/api/media-auth"]), providerMutationLimiter());
+app.use(withTenantApiPaths(["/api/media-connections"]), providerMutationLimiter());
+app.use(withTenantApiPaths(["/api/tracker-auth"]), providerMutationLimiter());
+app.use(withTenantApiPaths(["/api/tracker-connections"]), providerMutationLimiter());
 // Destructive/expensive admin actions - several of these paths also serve a
 // cheap GET status/poll (e.g. force-sync progress), so only the mutating
 // request is throttled; GET/HEAD/OPTIONS pass through untouched.
-app.use([
+app.use(withTenantApiPaths([
   "/api/delete-media",
   "/api/backup/import",
   "/api/watch-backups",
@@ -255,7 +271,7 @@ app.use([
   "/api/admin-fix-history",
   "/api/clear-cache",
   "/api/tautulli/import",
-], rateLimit({
+]), rateLimit({
   windowMs: 60 * 1000,
   max: 15,
   standardHeaders: true,
@@ -265,7 +281,14 @@ app.use([
 // General API limiter - generous ceiling so the poster-heavy dashboard/explorer is never
 // throttled in normal use, while still capping abusive bursts. Applied after the tighter
 // per-route limiters above so those still take precedence for their paths.
-app.use("/api", rateLimit({ windowMs: 60 * 1000, max: 1200, standardHeaders: true, legacyHeaders: false }));
+app.use(withTenantApiPaths(["/api/users", "/api/users/password", "/api/users/manage"]), rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS",
+}));
+app.use(["/api", "/u/:tenant/api"], rateLimit({ windowMs: 60 * 1000, max: 1200, standardHeaders: true, legacyHeaders: false }));
 // The demo asset bundle is deliberately made up of many small immutable files
 // (posters, season art, gallery images, cast portraits, and related posters).
 // A single valid page crawl can exceed the generic static ceiling, so never
@@ -294,15 +317,26 @@ const traksProxyHandler = createTraksProxyHandler({ collectorOrigin: TRAKS_CONFI
 app.all("/t", traksProxyHandler);
 app.all("/api/event", express.raw({ type: "*/*", limit: "256kb" }), traksProxyHandler);
 
-app.use("/api", (_req, res, next) => {
+app.use(["/api", "/u/:tenant/api"], (_req, res, next) => {
   res.setHeader("Cache-Control", "no-store");
   next();
 });
 
 // A backup upload can be over 1 GB; its handler streams the body to disk.
 const isStreamedUpload = (req) => /^\/api\/plembfin-backups\/upload\/?$/i.test(String(req.path || ""));
-app.all("/api/*path", express.raw({ type: (req) => !isStreamedUpload(req), limit: "15mb" }), (req, res) => {
-  Promise.resolve(dispatch(req, res)).catch((error) => {
+const isStreamedTenantUpload = (req) => isStreamedUpload({ path: String(req.path || "").replace(/^\/u\/[^/]+/i, "") });
+// Routes that always operate against the root install (login, logout, claim,
+// user management, and the admin's unprefixed /api/webhook). All other
+// unprefixed /api/* requests follow the active user in the session cookie.
+const ROOT_ONLY_API_RE = /^\/api\/(?:webhook|login|logout|auth\/claim|users)(?:\/|$)/i;
+const handleApiDispatch = (req, res) => {
+  const pathOnly = String(req.path || req.url || "").split("?")[0];
+  const sessionTenant = ROOT_ONLY_API_RE.test(pathOnly) ? null : resolveSessionTenantContext(req);
+  const invoke = () => dispatch(req, res);
+  const promise = sessionTenant
+    ? Promise.resolve(runWithUserContext(sessionTenant, invoke))
+    : Promise.resolve(invoke());
+  promise.catch((error) => {
     console.error("Unhandled API error", error);
     if (res.headersSent) return;
     // Deliberate client errors (e.g. readJson's 400 for a malformed body) keep
@@ -317,7 +351,15 @@ app.all("/api/*path", express.raw({ type: (req) => !isStreamedUpload(req), limit
     }
     res.status(500).json({ error: "Internal error" });
   });
-});
+};
+app.all("/api/*path", express.raw({ type: (req) => !isStreamedUpload(req), limit: "15mb" }), handleApiDispatch);
+// Single-process multi-user: /u/<name>/api/* resolves in this process (no child Node).
+const { createTenantApiHandler } = await import("./src/utils/tenantRouting.js");
+app.all(
+  "/u/:tenant/api/*path",
+  express.raw({ type: (req) => !isStreamedTenantUpload(req), limit: "15mb" }),
+  createTenantApiHandler(dispatch),
+);
 
 // Locally cached posters/backdrops.
 app.use("/media", express.static(MEDIA_DIR, { maxAge: "365d", immutable: true }));
@@ -535,6 +577,7 @@ async function shutdown(signal) {
   const finish = () => {
     // Persist buffered diagnostics while the database is still open.
     try { flushDiagnosticLogs(); } catch { /* ignore */ }
+    try { closeAllTenantDatabases(); } catch { /* ignore */ }
     try { db.close(); } catch { /* ignore */ }
     process.exit(0);
   };

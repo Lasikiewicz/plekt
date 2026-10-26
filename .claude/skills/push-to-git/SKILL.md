@@ -112,3 +112,9 @@ Pause on conflicts or unfamiliar source changes. Never silently absorb unrelated
 Only after successful push, close included/agreed dependency PRs with the pushed SHA,
 using the closure comment from the reference workflow. Never close declined/unshipped PRs.
 Then release the lock. Report what shipped and any unavailable security coverage honestly.
+
+## Example requests
+
+> Push to git
+
+> Push all to git

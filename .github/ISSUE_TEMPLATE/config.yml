@@ -1,5 +1,14 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
-  - name: Security vulnerability
+  - name: Q&A in Discussions
+    url: https://github.com/Lasikiewicz/plekt/discussions/categories/q-a
+    about: Ask for help or discuss how to use Plekt.
+  - name: Ideas in Discussions
+    url: https://github.com/Lasikiewicz/plekt/discussions/categories/ideas
+    about: Share open-ended ideas and start a conversation.
+  - name: Plekt documentation
+    url: https://plekt.net
+    about: Read the Plekt documentation.
+  - name: Private security reporting
     url: https://github.com/Lasikiewicz/plekt/security/advisories/new
-    about: Please report security vulnerabilities privately instead of opening a public issue - see SECURITY.md.
+    about: Report security vulnerabilities privately through GitHub Security Advisories.

@@ -16,6 +16,7 @@ import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutbo
 import { applyUnwatchedTransition } from "./utils/watchStateTransitions.js";
 import { plexUnplayedHasWatchEvidence, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
 import { pollConnectedTrackers } from "./utils/trackerSync.js";
+import { kickSimklFullSyncRuns } from "./utils/trackers/simklFullSyncRunner.js";
 import { getTrackerConnection } from "./utils/trackerConnectionRepo.js";
 import { withFreshTraktConnection } from "./utils/trackerDispatcher.js";
 import { reconcileTraktProviderOverrides } from "./utils/traktProviderReconciliation.js";
@@ -470,6 +471,8 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   if (!deferOutbound) {
     await runWithTimeBudget("Tracker watched-state poll", () => pollConnectedTrackers(), 45_000);
   }
+  // Approved paced Simkl full sync; due only after a reset or a short pause.
+  await runWithTimeBudget("Simkl paced full sync", () => kickSimklFullSyncRuns(), 60_000);
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
   // Personal ratings have their own opt-in queue and provider snapshot

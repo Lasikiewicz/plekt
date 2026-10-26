@@ -80,6 +80,9 @@ export function normalizeWatchProvenance(value, defaults = {}) {
   const capturedAt = timestamp(input.captured_at || input.capturedAt || defaults.capturedAt) || new Date().toISOString();
   const percentComplete = Number(input.percent_complete ?? input.percentComplete ?? defaults.percentComplete);
   const providerOverrides = normalizeProviderOverrides(input.provider_overrides || input.providerOverrides || defaults.provider_overrides || defaults.providerOverrides);
+  // Kept for one-time imports (Netflix CSV, etc.) so a later re-upload can skip
+  // already-imported title+date rows before hitting metadata providers.
+  const sourceTitle = text(input.source_title || input.sourceTitle || defaults.source_title || defaults.sourceTitle, 400);
 
   return {
     version: 1,
@@ -97,6 +100,7 @@ export function normalizeWatchProvenance(value, defaults = {}) {
     source_timestamp: sourceTimestamp,
     captured_at: capturedAt,
     confidence,
+    ...(sourceTitle ? { source_title: sourceTitle } : {}),
     ...(Number.isFinite(percentComplete) ? { percent_complete: Math.max(0, Math.min(100, percentComplete)) } : {}),
     ...(providerOverrides ? { provider_overrides: providerOverrides } : {}),
     note: text(input.note || defaults.note || (confidence === "source_only" ? LEGACY_NOTE : ""), 400),

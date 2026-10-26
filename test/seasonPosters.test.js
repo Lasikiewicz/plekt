@@ -31,6 +31,14 @@ test("a later save replaces the season poster for the same season", () => {
   assert.equal(getCanonicalSeasonPosterUrls(slowHorses).get(1), "/api/season-1.jpg?v=2");
 });
 
+test("a title-only season poster can be read back without provider ids", () => {
+  const titleOnly = { media_type: "tv", title: "A Title Only Show" };
+  const saved = saveCanonicalSeasonPoster(titleOnly, 2, "/api/title-only-season-2.jpg");
+
+  assert.equal(saved.ok, true);
+  assert.equal(getCanonicalSeasonPosterUrls(titleOnly).get(2), "/api/title-only-season-2.jpg");
+});
+
 test("a season save without a usable url or season number is rejected", () => {
   assert.equal(saveCanonicalSeasonPoster(slowHorses, 4, "").ok, false);
   assert.equal(saveCanonicalSeasonPoster(slowHorses, -1, "/api/season-4.jpg").ok, false);

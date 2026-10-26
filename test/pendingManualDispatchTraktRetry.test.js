@@ -240,6 +240,37 @@ test("a local retry never re-sends to Trakt when Trakt is already confirmed", as
   });
 });
 
+test("a local retry carries every registered tracker's settled line forward, not only Trakt's", async () => {
+  connectTrakt();
+  await withTraktFetch({}, async (calls) => {
+    const inserted = await repo.insertWatchRecord({
+      title: "Jellyfin Down Simkl Movie",
+      media_type: "movie",
+      tmdb_id: "retry-local-only-simkl-movie",
+      watched_at: "2026-09-24T10:00:00.000Z",
+      source: "plex",
+      sync_action: "watched",
+      sync_dispatch_telemetry: [
+        "Origin: plex",
+        "Loop-check: Passed",
+        "Dispatch status: partial",
+        "Details: Synced to Trakt and Simkl; failed Jellyfin",
+        "Target jellyfin status: error - Upstream request failed",
+        "Target trakt status: success - Marked watched on Trakt",
+        "Target simkl status: success - Watched state confirmed on Simkl",
+      ].join("\n"),
+    });
+
+    const config = { jellyfin: { baseUrl: "http://jellyfin.invalid", apiKey: "key", userId: "user" } };
+    await syncPendingManualDispatches(config, createLoopStore());
+
+    assert.equal(calls.historyReads.length + calls.adds + calls.removes, 0, "Trakt must not be contacted");
+    const row = await rowById(inserted.id);
+    assert.match(row.sync_dispatch_telemetry, /Target trakt status: success - Marked watched on Trakt/);
+    assert.match(row.sync_dispatch_telemetry, /Target simkl status: success - Watched state confirmed on Simkl/, "the Simkl line is not dropped");
+  });
+});
+
 // Mirrors the live Gold Rush rows (29 Sept 2026): a manual watch writes its
 // target lines without the "Target " prefix. A Trakt-only retry must keep those
 // local lines, or the row looks unsynced and is retried again.

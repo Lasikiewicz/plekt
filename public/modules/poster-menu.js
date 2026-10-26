@@ -5,10 +5,11 @@
 // usually sits inside an <a> card - portaling the menu items out of that
 // anchor means clicking them never triggers card navigation.
 
-import { state } from "./state.js?v=2.1.1.0.8";
-import { customListsForPersonalItem, isPersonalWatchlisted, loadPersonalMedia, personalItemFromPosterMenuDataset } from "./personal-media.js?v=2.1.1.0.8";
-import { isShowInUpNext } from "./up-next-shared.js?v=2.1.1.0.8";
-import { playlistAcceptsItem, playlistItemKind } from "./playlists.js?v=2.1.1.0.8";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { customListsForPersonalItem, isPersonalWatchlisted, loadPersonalMedia, personalItemFromPosterMenuDataset } from "./personal-media.js?v=2.1.1.0.9";
+import { isShowInUpNext, upNextRemovalMatches } from "./up-next-shared.js?v=2.1.1.0.9";
+import { playlistAcceptsItem, playlistItemKind } from "./playlists.js?v=2.1.1.0.9";
+import { loadDroppedTitleState, handleDroppedTitleAction, isDroppedUnDropBusy } from "./dropped-titles.js?v=2.1.1.0.9";
 
 let openMenu = null; // { dropdown, button, submenu, submenuTrigger, actionPending, keepOpen, actionButton }
 
@@ -27,6 +28,101 @@ function closeOpenMenu() {
   openMenu.button.classList.remove("is-open");
   openMenu.dropdown.remove();
   openMenu = null;
+}
+
+// Drop scrubs its card away while it saves. The show's Up Next items leave the
+// state at once, so the rail repaint that follows the save (the Up Next SSE
+// refresh repaints before it fetches) cannot paint the card back at full size.
+// A failed drop puts them back for the next repaint.
+function takeDroppedShowFromUpNext(card) {
+  const cardId = card?.dataset.upNextCardId;
+  const items = Array.isArray(state.upNextItems) ? state.upNextItems : [];
+  const index = cardId ? items.findIndex((item) => String(item?.id ?? item?.media_key ?? "") === cardId) : -1;
+  if (index < 0) return null;
+  const target = items[index];
+  const taken = items.filter((item) => item === target || upNextRemovalMatches(target, item, "show"));
+  state.upNextItems = items.filter((item) => !taken.includes(item));
+  return { items: taken, index };
+}
+
+// The card dissolves block by block: an SVG mask whose squares switch off at
+// random times. It is then held invisible until the rail repaints, and the
+// rail waits for the dissolve to finish (up-next.js). Returns an undo for a
+// failed drop.
+const DROP_DISSOLVE_MS = 3000;
+const DROP_BLOCK_PX = 14;
+
+function dissolveDroppedCard(card) {
+  if (!card) return () => {};
+  const parent = card.parentNode;
+  const nextSibling = card.nextSibling;
+  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (!reduced) {
+    const { width, height } = card.getBoundingClientRect();
+    const cols = Math.max(4, Math.round(width / DROP_BLOCK_PX));
+    const rows = Math.max(4, Math.round(height / DROP_BLOCK_PX));
+    let blocks = "";
+    for (let y = 0; y < rows; y += 1) {
+      for (let x = 0; x < cols; x += 1) {
+        const begin = (Math.random() * 0.9 * DROP_DISSOLVE_MS / 1000).toFixed(2);
+        blocks += `<rect x="${x}" y="${y}" width="1.05" height="1.05"><set attributeName="opacity" to="0" begin="${begin}s"/></rect>`;
+      }
+    }
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${cols} ${rows}" preserveAspectRatio="none" shape-rendering="crispEdges">${blocks}</svg>`;
+    card.style.setProperty("--dropped-card-mask", `url("data:image/svg+xml,${encodeURIComponent(svg)}")`);
+    card.classList.add("dropped-card-scrub");
+  }
+  const finish = () => {
+    card.classList.remove("dropped-card-scrub");
+    card.classList.add("dropped-card-gone");
+    // The rail repaints at once instead of leaving an empty slot until its next refresh.
+    document.dispatchEvent(new CustomEvent("plekt:dropped-card-dissolved"));
+  };
+  const timer = reduced ? (finish(), null) : window.setTimeout(finish, DROP_DISSOLVE_MS);
+  return () => {
+    if (timer) window.clearTimeout(timer);
+    if (!card.isConnected && parent?.isConnected) {
+      parent.insertBefore(card, nextSibling?.parentNode === parent ? nextSibling : null);
+    }
+    card.classList.remove("dropped-card-scrub", "dropped-card-gone");
+    card.style.removeProperty("--dropped-card-mask");
+    document.dispatchEvent(new CustomEvent("plekt:dropped-card-dissolved"));
+  };
+}
+
+function returnDroppedShowToUpNext(removal) {
+  if (!removal) return;
+  const items = Array.isArray(state.upNextItems) ? state.upNextItems : [];
+  const missing = removal.items.filter((item) => !items.includes(item));
+  const index = Math.min(removal.index, items.length);
+  state.upNextItems = [...items.slice(0, index), ...missing, ...items.slice(index)];
+}
+
+function droppedCardForAction(action, dropping) {
+  const selector = dropping
+    ? ".dashboard-up-next-card, .shared-media-card"
+    : "#explorerDroppedPanel .explorer-history-card";
+  const openedCard = openMenu?.button?.closest(selector);
+  if (openedCard?.isConnected) return openedCard;
+  if (dropping) return null;
+
+  const title = String(action?.dataset?.droppedTitle || "").trim().toLocaleLowerCase();
+  const ids = ["droppedTmdb", "droppedTvdb"];
+  return [...(document.querySelectorAll?.("#explorerDroppedPanel .explorer-history-card") || [])].find((card) => {
+    const template = card.querySelector("template[data-dropped-menu-action]");
+    const currentAction = template?.content?.querySelector?.("[data-plekt-dropped-title-action]");
+    if (!currentAction) return false;
+    let matchedId = false;
+    for (const key of ids) {
+      const actionId = String(action.dataset[key] || "").trim();
+      const cardId = String(currentAction.dataset[key] || "").trim();
+      if (actionId && cardId) {
+        if (actionId !== cardId) return false;
+        matchedId = true;
+      }
+    }
+    return matchedId || String(currentAction.dataset.droppedTitle || "").trim().toLocaleLowerCase() === title;
+  }) || null;
 }
 
 export function closePosterOverflowMenu() {
@@ -300,6 +396,22 @@ function buildDropdown(button) {
   const dropdown = document.createElement("div");
   dropdown.className = "poster-overflow-dropdown";
   dropdown.setAttribute("role", "menu");
+  const droppedTemplate = button.parentElement?.querySelector("template[data-dropped-menu-action]");
+  const appendDroppedAction = () => {
+    if (!droppedTemplate) return;
+    const action = droppedTemplate.content.firstElementChild.cloneNode(true);
+    action.classList.add("poster-overflow-item-danger");
+    action.querySelector("[data-dropped-icon]")?.remove();
+    action.dataset.droppedLoaded = "1";
+    dropdown.appendChild(action);
+    void loadDroppedTitleState(action);
+  };
+
+  // A Dropped-only library card has no watch history, so Un-drop is its only action.
+  if (d.posterMenuMode === "dropped") {
+    appendDroppedAction();
+    return dropdown;
+  }
 
   if (d.posterMenuMode === "personal") {
     appendPersonalMenuActions(dropdown, button);
@@ -363,6 +475,7 @@ function buildDropdown(button) {
         upNextProviderItems: providerItems,
       }));
     }
+    appendDroppedAction();
     dropdown.appendChild(menuItem("poster-overflow-item-danger", "Remove from up next", {
       upNextRemove: d.posterMenuUpNextWatch || d.posterMenuId || "",
       upNextMediaType: mediaType,
@@ -428,6 +541,7 @@ function buildDropdown(button) {
   dropdown.appendChild(menuItem("", "Rate", ratingDataset(d)));
   appendPersonalMenuActions(dropdown, button);
   appendUpNextShowMenuAction(dropdown, button);
+  appendDroppedAction();
   dropdown.appendChild(menuItem("poster-overflow-item-danger", "Mark unwatched", {
     unwatchId: d.posterMenuId,
     unwatchKind: d.posterMenuKind || "item",
@@ -507,6 +621,28 @@ export function initPosterOverflowMenu() {
     }
 
     if (target?.closest(".poster-overflow-dropdown") === openMenu.dropdown) {
+      const droppedAction = target.closest("[data-plekt-dropped-title-action]");
+      if (droppedAction) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!droppedAction.disabled) {
+          // Drop dissolves its rail card; Un-drop dissolves the card in the Dropped-only list.
+          const dropping = droppedAction.getAttribute("aria-pressed") !== "true";
+          // Opening this menu while another Un-drop is saving can briefly look enabled;
+          // do not start a dissolve the action handler will reject.
+          if (!dropping && isDroppedUnDropBusy()) return;
+          const card = droppedCardForAction(droppedAction, dropping);
+          closeOpenMenu();
+          const undoDissolve = dissolveDroppedCard(card);
+          const removal = takeDroppedShowFromUpNext(card);
+          void handleDroppedTitleAction(droppedAction).then((saved) => {
+            if (saved) return;
+            returnDroppedShowToUpNext(removal);
+            undoDissolve();
+          });
+        }
+        return;
+      }
       const watchlistAction = target.closest("[data-poster-menu-watchlist]");
       if (watchlistAction) {
         // The app-level delegated handler performs the request and keeps the

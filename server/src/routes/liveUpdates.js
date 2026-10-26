@@ -9,6 +9,8 @@ import {
 } from "../utils/configStore.js";
 import { getOnboardingState } from "../utils/onboardingStore.js";
 import { syncAttentionState } from "../utils/syncAttention.js";
+import { trackerWriteAttentionItems } from "../utils/trackerWriteIntents.js";
+import { simklObservationAttentionItems } from "../utils/trackers/simklObservations.js";
 import { getBackgroundJobLogs, getLatestBackgroundJob } from "../utils/backgroundJobs.js";
 
 const POLL_MS = 250;
@@ -21,7 +23,7 @@ function writeEvent(res, payload) {
 function onboardingImportIsActive() {
   const onboarding = getOnboardingState();
   const serverImports = Object.values(onboarding.backgroundImports?.servers || {});
-  const imports = [...serverImports, onboarding.backgroundImports?.trakt];
+  const imports = [...serverImports, ...Object.values(onboarding.backgroundImports?.trackers || {})];
   return imports.some((entry) => entry?.status === "importing" && entry?.enabled !== false);
 }
 
@@ -84,7 +86,7 @@ async function loadSyncStatus() {
   const importing = onboardingImportIsActive();
   const startupScanActive = runtime.startupScanActive === true;
   const active = retryAll?.active || importing || startupScanActive || Boolean(operation) || dispatchActive;
-  const attention = syncAttentionState(runtime, getOnboardingState());
+  const attention = syncAttentionState({ ...runtime, trackerWriteAttention: [...trackerWriteAttentionItems(), ...simklObservationAttentionItems()] }, getOnboardingState());
   return {
     total: retryAll ? retryAll.total : total,
     completed: retryAll ? retryAll.completed : completed,

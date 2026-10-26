@@ -14,6 +14,22 @@ The first complete snapshot imports provider ratings; later snapshots reconcile
 additions, changes, and removals. A partial or failed snapshot cannot clear local
 ratings through missing rows.
 
+Simkl also participates for movies and shows. Its rating snapshots read observations
+stored by user-triggered or media-event library checks; the rating timer does not
+poll Simkl or refresh credentials for these reads. Rating **Sync now** checks a
+connected Simkl account first. Only an explicit empty rating on a previously rated
+title clears its stored rating; a missing row or field never clears it.
+During an incremental user/event check, a newer Simkl `rated_at` activity also
+triggers one `/sync/ratings` delta read: rating-only changes can be absent from
+the watched-library delta. That feed contributes ratings and explicit clears only,
+never watched events or episode coverage.
+
+Outbound Simkl ratings and clears require a movie already completed with a known
+watch date, or a show already in a Simkl list. Anime and episodes are excluded from
+safe writes. Unsafe writes remain held with an explanation until explicitly retried
+or superseded. After sending, one lookup checks that list membership and watch date
+stayed unchanged; a changed or failed readback marks the source for review.
+
 Later complete scans hold removals for review when **at least two** previously rated
 items and **more than 20%** of that provider's rated baseline disappear. Exactly 20%
 or one missing rating follows normal reconciliation. Malformed or truncated scans

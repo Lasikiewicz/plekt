@@ -1,10 +1,16 @@
 import crypto from "node:crypto";
 import { db, parseJson, toJson, transaction } from "../db.js";
 import { personalRatingMediaAliases, ratingMediaForStorage, showTitleKey } from "./personalRatingIdentity.js";
+import { trackerRatingProviderIds } from "./trackers/registry.js";
 
-export const PERSONAL_RATING_PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
-const QUEUE_STATUSES = ["pending", "processing", "succeeded", "not_found", "reauth_required", "failed"];
-const SOURCE_STATUSES = ["unknown", "synced", "pending", "conflict", "not_found", "reauth_required", "failed"];
+// The rating tables' provider columns are free text (migration 58); this list,
+// derived from the tracker registry, is the authority every write checks.
+export const PERSONAL_RATING_PROVIDERS = ["plex", "emby", "jellyfin", ...trackerRatingProviderIds()];
+// Rows naming a provider outside that list (a restore or downgrade) are
+// quarantined: kept untouched, and never claimed, listed or counted.
+const KNOWN_PROVIDER_SQL = `provider IN (${PERSONAL_RATING_PROVIDERS.map((provider) => `'${provider}'`).join(",")})`;
+const QUEUE_STATUSES = ["pending", "processing", "succeeded", "not_found", "reauth_required", "failed", "held"];
+const SOURCE_STATUSES = ["unknown", "synced", "pending", "conflict", "not_found", "reauth_required", "failed", "held"];
 const MAX_ERROR_LENGTH = 1000;
 
 function cleanError(value) {
@@ -328,7 +334,7 @@ export function claimPersonalRatingQueue({ provider = "", limit = 20, owner = cr
     const candidates = db.prepare(`
       SELECT *
       FROM personal_rating_sync_queue
-      WHERE ${target ? "provider = @provider AND " : ""}
+      WHERE ${target ? "provider = @provider" : KNOWN_PROVIDER_SQL} AND
         ((status IN ('pending', 'failed') AND next_attempt_at <= @now)
           OR (status = 'processing' AND lease_expires_at IS NOT NULL AND lease_expires_at <= @now))
       ORDER BY updated_at ASC, provider ASC, media_key ASC
@@ -411,13 +417,13 @@ export function supersedePersonalRatingIntent(provider, mediaKeys = []) {
   return db.prepare(`
     DELETE FROM personal_rating_sync_queue
     WHERE provider = ? AND media_key IN (${keys.map(() => "?").join(",")})
-      AND status IN ('pending', 'failed', 'reauth_required')
+      AND status IN ('pending', 'failed', 'reauth_required', 'held')
   `).run(target, ...keys).changes;
 }
 
 export function retryPersonalRatingQueue({ provider = "", mediaKey = "", now = Date.now() } = {}) {
   const target = provider ? providerOrThrow(provider) : "";
-  const clauses = ["status IN ('not_found','reauth_required','failed')"];
+  const clauses = ["status IN ('not_found','reauth_required','failed','held')", KNOWN_PROVIDER_SQL];
   const params = { now: Number(now) || Date.now() };
   if (target) { clauses.push("provider = @provider"); params.provider = target; }
   if (mediaKey) { clauses.push("media_key = @mediaKey"); params.mediaKey = String(mediaKey); }
@@ -434,7 +440,7 @@ export function listPersonalRatingQueue({ provider = "", statuses = QUEUE_STATUS
   if (!allowed.length) return [];
   const placeholders = allowed.map(() => "?").join(",");
   const params = target ? [target, ...allowed, Math.max(1, Math.min(500, Number(limit) || 100))] : [...allowed, Math.max(1, Math.min(500, Number(limit) || 100))];
-  const providerClause = target ? "provider = ? AND " : "";
+  const providerClause = target ? "provider = ? AND " : `${KNOWN_PROVIDER_SQL} AND `;
   return db.prepare(`SELECT * FROM personal_rating_sync_queue WHERE ${providerClause} status IN (${placeholders}) ORDER BY updated_at ASC LIMIT ?`).all(...params).map(mapQueueRow);
 }
 
@@ -442,7 +448,7 @@ export function ratingQueueCounts(provider = "") {
   const target = provider ? providerOrThrow(provider) : "";
   const rows = target
     ? db.prepare("SELECT status, COUNT(*) AS count FROM personal_rating_sync_queue WHERE provider = ? GROUP BY status").all(target)
-    : db.prepare("SELECT status, COUNT(*) AS count FROM personal_rating_sync_queue GROUP BY status").all();
+    : db.prepare(`SELECT status, COUNT(*) AS count FROM personal_rating_sync_queue WHERE ${KNOWN_PROVIDER_SQL} GROUP BY status`).all();
   return Object.fromEntries(QUEUE_STATUSES.map((status) => [status, Number(rows.find((row) => row.status === status)?.count || 0)]));
 }
 
@@ -451,7 +457,7 @@ export function getPersonalRatingSyncRun(provider) {
 }
 
 export function listPersonalRatingSyncRuns() {
-  return db.prepare("SELECT * FROM personal_rating_sync_runs ORDER BY provider ASC").all().map(mapRunRow);
+  return db.prepare(`SELECT * FROM personal_rating_sync_runs WHERE ${KNOWN_PROVIDER_SQL} ORDER BY provider ASC`).all().map(mapRunRow);
 }
 
 export function startPersonalRatingSyncRun(provider, mode = "baseline", timestamp = Date.now()) {

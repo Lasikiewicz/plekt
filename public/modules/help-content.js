@@ -1,5 +1,157 @@
-import { getWebhookToken } from "./auth.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.1.1.0.8";
+import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.1.1.0.9";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.1.1.0.9";
+
+function webhookAckEntry(acks, provider) {
+  return acks?.[provider] || null;
+}
+
+function webhookAckMethod(ack) {
+  const method = String(ack?.method || "").trim();
+  return method === "plugin" || method === "webhook" ? method : "";
+}
+
+function webhookConnectedLabel(method) {
+  if (method === "plugin") return "Plugin - Connected";
+  if (method === "webhook") return "Webhook - Connected";
+  return "Connected";
+}
+
+function webhookGuideStatusPill(provider, ack = null) {
+  if (provider === "plex") return `<span class="status-pill status-ready">Automatic</span>`;
+  if (ack) {
+    return `<span id="${provider}WebhookStatus" class="status-pill status-ready">${escapeHtml(webhookConnectedLabel(webhookAckMethod(ack)))}</span>`;
+  }
+  return `<span id="${provider}WebhookStatus" class="status-pill status-muted">Not confirmed</span>`;
+}
+
+function webhookMethodLabel(provider, method) {
+  if (method === "plugin") return provider === "jellyfin" ? "Plekt Jellyfin plugin" : "Plekt Emby plugin";
+  return provider === "jellyfin" ? "Jellyfin Webhooks plugin" : "built-in Emby webhook";
+}
+
+function webhookMethodConfirmation(provider, method, ack = null, {
+  dataAttr = "data-settings-webhook-ack",
+  namePrefix = "",
+} = {}) {
+  const checked = webhookAckMethod(ack) === method;
+  return `
+    <label class="field-label setup-webhook-confirmation" style="margin-top: var(--space-3);">
+      <input type="radio" name="${escapeAttribute(`${namePrefix}${provider}-webhook-method`)}" ${dataAttr}="${escapeAttribute(provider)}" data-webhook-method="${escapeAttribute(method)}" ${checked ? "checked" : ""} />
+      I have configured the ${escapeHtml(webhookMethodLabel(provider, method))}
+    </label>
+  `;
+}
+
+async function fetchWebhookAcknowledgements() {
+  try {
+    const response = await fetch("/api/setup/status", {
+      headers: buildAuthHeaders(state.token),
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    if (!response.ok) return {};
+    const data = await response.json().catch(() => ({}));
+    return data?.onboarding?.acknowledgements?.webhooks || {};
+  } catch {
+    return {};
+  }
+}
+
+function setWebhookGuideStatus(provider, method = "") {
+  const status = document.getElementById(`${provider}WebhookStatus`);
+  if (!status) return;
+  if (!method) {
+    status.textContent = "Not confirmed";
+    status.className = "status-pill status-muted";
+    return;
+  }
+  status.textContent = webhookConnectedLabel(method);
+  status.className = "status-pill status-ready";
+}
+
+function bindWebhookGuideAcknowledgements(container) {
+  container.querySelectorAll("[data-settings-webhook-ack]").forEach((input) => {
+    input.addEventListener("change", async () => {
+      if (!input.checked) return;
+      const provider = input.dataset.settingsWebhookAck;
+      const method = input.dataset.webhookMethod;
+      try {
+        const response = await fetch("/api/setup/step", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...buildAuthHeaders(state.token) },
+          credentials: "same-origin",
+          body: JSON.stringify({ webhookAck: { provider, method } }),
+        });
+        if (!response.ok) throw new Error("Could not save webhook confirmation");
+        setWebhookGuideStatus(provider, method);
+      } catch {
+        input.checked = false;
+      }
+    });
+  });
+}
+
+async function renderWebhookSetupGuides(container) {
+  const acks = await fetchWebhookAcknowledgements();
+  const embyAck = webhookAckEntry(acks, "emby");
+  const jellyfinAck = webhookAckEntry(acks, "jellyfin");
+  container.innerHTML = `
+      <details id="plexWebhookGuideDetails" class="sync-tool-details">
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Plex</b>
+          </div>
+          ${webhookGuideStatusPill("plex")}
+          <span>No webhook setup required</span>
+        </summary>
+        <div class="tool-item-row">
+          <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">Plekt watches Plex automatically. It picks up watched and unwatched changes in real time, and also checks playback progress every minute.</p>
+          <p style="font-size: 0.9rem; color: var(--muted); margin: var(--space-2) 0 0;">Changes are saved to Plekt and passed on to your other servers.</p>
+          <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
+            <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
+              Turn off "Refresh library metadata periodically"
+            </b>
+            <ol style="margin: var(--space-1) 0 0; padding-left: 1.1rem; font-size: 0.82rem; line-height: 1.5; color: var(--text-muted, var(--muted));">
+              <li>In Plex, go to <b>Settings &rarr; Scheduled Tasks</b>.</li>
+              <li>Disable <b>"Refresh library metadata periodically"</b>.</li>
+            </ol>
+            <p style="margin: var(--space-1) 0 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
+              This Plex task can quietly reset watched items back to unwatched overnight. Plekt would then copy that "unwatch" to Emby, Jellyfin, and Trakt. Turning it off stops that from happening.
+            </p>
+          </div>
+        </div>
+      </details>
+      <details id="embyWebhookGuideDetails" class="sync-tool-details">
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Emby Webhook Setup Guide</b>
+          </div>
+          ${webhookGuideStatusPill("emby", embyAck)}
+          <span>Instructions for adding webhooks in Emby Server</span>
+        </summary>
+        <div class="tool-item-row">
+          ${embyWebhookSetup({ ack: embyAck, confirmationAttr: "data-settings-webhook-ack" })}
+        </div>
+      </details>
+      <details id="jellyfinWebhookGuideDetails" class="sync-tool-details">
+        <summary class="accordion-header">
+          <div class="sync-tool-summary-title">
+            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+            <b>Jellyfin Plugin Setup Guide</b>
+          </div>
+          ${webhookGuideStatusPill("jellyfin", jellyfinAck)}
+          <span>Instructions for the Plekt plugin and Jellyfin Webhooks in Jellyfin Media Server</span>
+        </summary>
+        <div class="tool-item-row">
+          ${jellyfinWebhookSetup({ ack: jellyfinAck, confirmationAttr: "data-settings-webhook-ack" })}
+        </div>
+      </details>
+    `;
+  bindWebhookGuideAcknowledgements(container);
+}
 
 function snippet(code, language = "text") {
   const trimmed = String(code).trim();
@@ -166,14 +318,28 @@ export function traktBridgeGuide() {
 
 export function buildWebhookUrl() {
   const token = getWebhookToken();
-  const base = `${window.location.origin}/api/webhook`;
+  const base = `${window.location.origin}${getWebhookPath()}`;
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 
-export function embyWebhookSetup() {
+function singleSenderWarning(choice) {
+  return `
+    <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: 0;">
+      <b style="color: var(--yellow); font-size: 0.85rem; display: block;">Set up one, not both</b>
+      <p style="margin: 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
+        Use ${escapeHtml(choice)} for this server, not both. Both send the same playback and watched events to Plekt, so running them together makes every event arrive twice.
+      </p>
+    </div>`;
+}
+
+export function embyWebhookSetup({ ack = null, confirmationAttr = "", namePrefix = "" } = {}) {
   const url = buildWebhookUrl();
+  const confirmOpts = confirmationAttr ? { dataAttr: confirmationAttr, namePrefix } : null;
+  const pluginConfirm = confirmOpts ? webhookMethodConfirmation("emby", "plugin", ack, confirmOpts) : "";
+  const webhookConfirm = confirmOpts ? webhookMethodConfirmation("emby", "webhook", ack, confirmOpts) : "";
   return `
     <div class="webhook-guide-content" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
+      ${singleSenderWarning("the Plekt plugin or the built-in Emby webhook")}
       <details class="sync-tool-details" open>
         <summary class="accordion-header">
           <div class="sync-tool-summary-title">
@@ -203,6 +369,7 @@ export function embyWebhookSetup() {
           <li>Turn off any built-in Emby webhook (<b>Settings → Notifications</b>) that posts to this Plekt server, otherwise every event arrives twice.</li>
         </ol>
         <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">The plugin sends playback start, pause, unpause and stop, progress at most every 30 seconds, and explicit mark played or unplayed changes. It needs no Emby Premiere and no built-in webhook. If Plekt is unreachable, Emby playback is unaffected and Plekt's scheduled Emby sync catches up.</p>
+        ${pluginConfirm}
         </div>
         </div>
       </details>
@@ -239,6 +406,7 @@ export function embyWebhookSetup() {
         <li>Leave every other event category unticked. Plekt ignores library, system, and activity events, and they only add rejected entries to Sync History.</li>
         <li>Enable <b>Send All Properties</b> so payloads include <code>PlaybackPositionTicks</code> for resume sync.</li>
       </ul>
+        ${webhookConfirm}
         </div>
         </div>
       </details>
@@ -246,10 +414,14 @@ export function embyWebhookSetup() {
   `;
 }
 
-export function jellyfinWebhookSetup() {
+export function jellyfinWebhookSetup({ ack = null, confirmationAttr = "", namePrefix = "" } = {}) {
   const url = buildWebhookUrl();
+  const confirmOpts = confirmationAttr ? { dataAttr: confirmationAttr, namePrefix } : null;
+  const pluginConfirm = confirmOpts ? webhookMethodConfirmation("jellyfin", "plugin", ack, confirmOpts) : "";
+  const webhookConfirm = confirmOpts ? webhookMethodConfirmation("jellyfin", "webhook", ack, confirmOpts) : "";
   return `
     <div class="webhook-guide-content" style="display: grid; gap: var(--space-2); padding-top: var(--space-1);">
+      ${singleSenderWarning("the Plekt plugin or the Jellyfin Webhooks plugin")}
       <details class="sync-tool-details" open>
         <summary class="accordion-header">
           <div class="sync-tool-summary-title">
@@ -284,6 +456,7 @@ export function jellyfinWebhookSetup() {
             </div>
           </li>
         </ol>
+        ${pluginConfirm}
         </div>
         </div>
       </details>
@@ -324,6 +497,7 @@ export function jellyfinWebhookSetup() {
         <li>Check <b>Send All Properties (ignores template)</b> so resume position fields are included.</li>
         <li>The body has to be JSON, but the content type does not matter - Jellyfin labels its payloads <code>text/plain</code> and Plekt reads them anyway. A body that is not JSON is logged in Sync History as <code>Unsupported webhook content type</code>, along with the sender that posted it.</li>
         </ol>
+        ${webhookConfirm}
         </div>
         </div>
       </details>
@@ -582,56 +756,7 @@ export function renderSettingsInlineHelp() {
   if (webhookSecret) webhookSecret.textContent = getWebhookToken() || "Not available";
 
   const webhookSetupGuides = document.getElementById("webhookSetupGuides");
-  if (webhookSetupGuides) {
-    webhookSetupGuides.innerHTML = `
-      <details class="sync-tool-details">
-        <summary class="accordion-header">
-          <div class="sync-tool-summary-title">
-            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-            <b>Plex</b>
-            <span class="badge badge-success">Automatic</span>
-          </div>
-          <span>No webhook setup required</span>
-        </summary>
-        <div class="tool-item-row">
-          <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">Plekt watches Plex automatically. It picks up watched and unwatched changes in real time, and also checks playback progress every minute.</p>
-          <p style="font-size: 0.9rem; color: var(--muted); margin: var(--space-2) 0 0;">Changes are saved to Plekt and passed on to your other servers.</p>
-          <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
-            <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
-              Turn off "Refresh library metadata periodically"
-            </b>
-            <ol style="margin: var(--space-1) 0 0; padding-left: 1.1rem; font-size: 0.82rem; line-height: 1.5; color: var(--text-muted, var(--muted));">
-              <li>In Plex, go to <b>Settings &rarr; Scheduled Tasks</b>.</li>
-              <li>Disable <b>"Refresh library metadata periodically"</b>.</li>
-            </ol>
-            <p style="margin: var(--space-1) 0 0; font-size: 0.82rem; line-height: 1.4; color: var(--text-muted, var(--muted));">
-              This Plex task can quietly reset watched items back to unwatched overnight. Plekt would then copy that "unwatch" to Emby, Jellyfin, and Trakt. Turning it off stops that from happening.
-            </p>
-          </div>
-        </div>
-      </details>
-      <details class="sync-tool-details">
-        <summary class="accordion-header">
-          <div class="sync-tool-summary-title">
-            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-            <b>Emby Webhook Setup Guide</b>
-          </div>
-          <span>Instructions for adding webhooks in Emby Server</span>
-        </summary>
-        <div class="tool-item-row">${embyWebhookSetup()}</div>
-      </details>
-      <details class="sync-tool-details">
-        <summary class="accordion-header">
-          <div class="sync-tool-summary-title">
-            <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-            <b>Jellyfin Plugin Setup Guide</b>
-          </div>
-          <span>Instructions for the Plekt plugin and Jellyfin Webhooks in Jellyfin Media Server</span>
-        </summary>
-        <div class="tool-item-row">${jellyfinWebhookSetup()}</div>
-      </details>
-    `;
-  }
+  if (webhookSetupGuides) void renderWebhookSetupGuides(webhookSetupGuides);
 
   const watchlistHelp = document.getElementById("watchlistSyncHelp");
   if (watchlistHelp) watchlistHelp.innerHTML = watchlistSyncGuide();

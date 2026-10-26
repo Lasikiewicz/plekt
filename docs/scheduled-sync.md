@@ -2,7 +2,8 @@
 
 The elected background worker runs `runScheduledTick()` **every minute**, timed from the start
 of each tick so the cadence holds regardless of how long a tick takes; a tick that overruns a
-full minute skips the periods it consumed rather than running back to back. In the
+full minute skips the periods it consumed rather than running back to back
+(`nextTickDelayMs()` computes the delay). In the
 default `ROLE=all` deployment this is the same server process as the UI. A SQLite
 lease ensures only one `all` or `worker` process runs scheduler work and the Plex
 notification listener. The lease is renewed every 10 seconds and expires after 60.
@@ -154,6 +155,14 @@ Provider-ID changes can create a distinct local record. Fix Match
 changes a record's identity. Title comparisons normalize whitespace, so title variants from
 Trakt and media servers can resolve to the same watched item when provider IDs are absent.
 
+## Playlist sync scheduler
+
+Playlist sync (`playlistSyncTriggers.js`) runs as the next elected-worker step: a full
+pull-then-push pass over every app-targeted playlist once per 5 minutes, plus a
+debounced single-playlist sync 5 seconds after a Plekt add, remove, or delete. A
+web-only process skips the debounced sync (the per-playlist lock is in-process) and
+leaves it to the worker's next pass. Plekt-only playlists never sync.
+
 ## One canonical state, input from every connected service
 
 Plekt stores the canonical `playstate`/watch-history decision, but accepts explicit
@@ -296,6 +305,25 @@ Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback 
      was lost) marks the row synced without writing again. A retry for a local
      server alone never re-sends to Trakt; the row's earlier Trakt line is kept
      (decision 41).
+   - **Tracker write intents.** Every Trakt history add or remove is first committed
+     to `tracker_write_intents` (`trackerWriteIntents.js`, wrapped around the send by
+     `trackerIntentRequest.js`), keyed by watch record, action and watched date, so two
+     plays of one title stay independent. A send whose response is lost (timeout, 5xx,
+     or a restart mid-send) becomes `uncertain`: the next attempt reads Trakt's history
+     around the watched date first, acknowledges a matching play, and only resends when
+     the history read succeeded and holds no match. A play that matches more than one
+     open intent, a write still failing after 10 attempts, or work older than 30 days is
+     held as `review` and shown in Sync Attention, where **Cancel this write** cancels it
+     without touching local history. Settled, cancelled and match-failed intents are
+     deleted lazily 30 days after settling; unresolved intents are never deleted on a
+     timer. A due intent also puts its watch record back into this retry queue.
+     Reconnecting a different account clears the old account's intents. Upgrading
+     migrates only rows whose Trakt line was pending or a transient failure; a pending
+     row with no Trakt line is held for review rather than sent.
+     Rows in the tracker tables for a tracker this version does not register (from a
+     restore or a downgrade) are never read, sent, cleaned up or deleted; Sync Attention
+     shows one non-blocking message per such tracker, and **Hide this message** only
+     hides it.
      A destination no-match is recorded in the row's telemetry. For an episode
      mutation, Plex, Emby, and Jellyfin invalidate the cached series episode index and
      retry once before returning a skip; Sync Activity shows the final reason when the
@@ -476,6 +504,78 @@ disappear, and completes it.
    checks the current month plus the next 12 months every 6 hours. Future checks only
    rewrite stored data when episode results changed; historical months are not refreshed.
    Newly tracked shows are merged into cached months on the next calendar request.
+
+## Simkl adapter gate
+
+Simkl is an active sync destination when its connection status is `connected`. Its
+adapter accepts only user/media-server event triggers (never the per-minute
+scheduler). Inbound checks after media-server webhooks run at most once per
+**30 minutes**, and only for webhooks that survive Plekt outbound-echo
+suppression (Up Next rail refresh, resume marks, unplayed flags, restore/sync
+locks). Settings **Check now** stays immediate. Ordinary outbound watched intents
+share a **30-minute coalesce window** so the intent worker can send them as one
+batch (up to 100). Explicit multi-item marks bypass that wait and still form one
+chunk immediately.
+
+Its adapter checks activities before reading, and returns an explicit observations
+envelope rather than the plain snapshot array consumed by Trakt reconciliation. Initial reads cover movies,
+shows and anime; `max_items` retries split the affected type by every valid status.
+A failed or malformed partition aborts the whole read. Deltas and API omissions never
+authorize automatic removals, including rating clears. Episode coverage gaps remain
+review observations; unknown/sentinel dates never become current-time anchors.
+The provider's watched-episode count excludes season-zero specials. Recorded specials
+remain mapping-review observations and do not inflate the regular-episode coverage count.
+
+Ordinary watched writes require a current-account durable intent, preserve existing
+remote dates, send one explicit item, and confirm watched state by readback. Interrupted
+or unconfirmed writes are held rather than automatically resent. Unsafe rating sets,
+list-destructive unwatches, repeat-play sessions, date replacement, watchlists and
+unresolved native anime/special mappings stay gated. Adapter reads reuse encrypted
+token rotation with one read-only 401 retry and discard stale-generation results.
+
+Eligible concurrent Simkl watched intents share chunks of up to 100. Each chunk
+uses four requests: activities preflight, history POST, activities readback and
+cursor delta. Sequential callers may each form a separate chunk.
+
+Bulk manual watched actions now finish LAN work at its existing concurrency, then
+submit their eligible Simkl items together (up to 100) and await each confirmed
+outcome before writing final telemetry. Trakt episode marks retain their grouped
+history phase; movie dispatch keeps Trakt's existing bounded item concurrency.
+Ordinary single marks and playback completions queue into the 30-minute coalesce
+window above; they are not sent as one-item chunks the moment they arrive. The
+intent worker gathers up to 100 due Simkl intents per run, including intents linked
+to surviving watch rows. It records each result on that row without dropping other
+providers' telemetry. Changed dates/unwatched state cancel stale queued work;
+interrupted or uncertain writes still require review. Only existing captured
+intents qualify, so this does not discover/send old backlog or enable Simkl
+full-sync push before its preview and approval safeguards.
+
+Full sync now uses stored, selected-item previews from `trackers/fullSyncPlans.js`.
+Initial snapshots establish a baseline regardless of legacy import flags; unapproved
+historical reconcile calls are rejected, and staged Simkl import evidence is retained.
+Trakt's normal play-history watermark begins at connection time; older watched-state
+imports use the approved preview. Apply verifies a local backup, then rechecks fresh
+tracker/LAN state, connection, local state and policies before claiming the plan.
+Changed state replaces the preview without sending. Selected imports propagate only
+to listed missing media-server destinations under normal roles; other tracker backlogs
+remain separate approval scopes. Simkl selected pushes use 100-item chunks. Their
+verification scan is capped at 18 requests and preserves 55 plus the selected batch
+cost; auth/partition retries cannot escape that scope. Pending/uncertain/recent writes
+are excluded at preview and checked again before each chunk, so a new plan cannot
+silently become a resend. Partial destination outcomes remain visible in the result.
+
+Batch preflight
+checks known quota before sending; a full chunk requires 59 remaining before its
+four calls to preserve 55. A first check with unknown quota is allowed once.
+Before auth/preflight, an account-scoped reservation is saved in `settings`.
+Failure, invalid data, interrupted execution or insufficient quota retains that
+hold until the next Simkl quota reset, including across restarts and reconnects.
+A completed batch releases it only when at least 59 requests remain. This protects
+batch traffic; other Simkl operations still need their own request budgets and do
+not inherit a global 55-request reserve.
+Activation still needs persisted baseline/delta integration, visible review handling,
+Settings controls and the documented provider/application release checks; the scheduler
+does not discover this adapter or create Simkl work.
 
 ## Echo suppression
 

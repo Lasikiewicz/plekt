@@ -7,7 +7,9 @@ browser does not wait for Plex.
 ## Why Plex is the only provider
 
 Plex has a real account-level watchlist covering its whole catalogue, so it can hold what
-a watchlist is for: titles you do not own yet. Emby and Jellyfin have no watchlist concept.
+a watchlist is for: titles you do not own yet. Plekt uses the account-level Universal
+Watchlist; the Plex watchlist RSS feed is read-only, so it serves only as a read fallback
+(`plexWatchlistClient.js`). Emby and Jellyfin have no watchlist concept.
 Their nearest equivalents, a playlist or Favorites, address items by library id and so can
 only hold media already on the server. Both were verified against their live APIs before
 being retired: adding an id the library does not hold is accepted and then silently ignored

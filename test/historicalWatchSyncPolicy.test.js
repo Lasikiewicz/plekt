@@ -26,7 +26,7 @@ const { markJellyfinPlayed } = await import("../server/src/utils/jellyfinClient.
 const { markPlexPlayed } = await import("../server/src/utils/plexClient.js");
 const { buildTautulliTelemetry, tautulliTargetPlan } = await import("../server/src/utils/tautulliImport.js");
 const { selectTraktWatchedTransitions } = await import("../server/src/utils/trackerSync.js");
-const { syncMediaPlaystate } = await import("../server/src/utils/syncOrchestrator.js");
+const { getTargetsForSource, syncMediaPlaystate } = await import("../server/src/utils/syncOrchestrator.js");
 const { manualWatchMediaFromRecord } = await import("../server/src/routes/sync.js");
 const { db } = await import("../server/src/db.js");
 
@@ -60,6 +60,7 @@ test("sync intent is explicit and never inferred from how old the date looks", (
   assert.equal(resolveWatchSyncIntent({ source: "emby", watched_at: "2011-04-17T20:00:00.000Z" }), "live");
   // An import can carry today's date and is still an import.
   assert.equal(resolveWatchSyncIntent({ source: "tautulli_import", watched_at: new Date().toISOString() }), "import");
+  assert.equal(resolveWatchSyncIntent({ source: "netflix_import", watched_at: new Date().toISOString() }), "import");
   assert.equal(resolveWatchSyncIntent({ source: "trakt_import" }), "import");
   assert.equal(resolveWatchSyncIntent({ source: "emby_initial_sync" }), "import");
   assert.equal(resolveWatchSyncIntent({ source: "restore_replay" }), "restore");
@@ -74,6 +75,10 @@ test("sync intent is explicit and never inferred from how old the date looks", (
   assert.equal(isHistoricalWatchIntent("historical"), true);
   assert.equal(isHistoricalWatchIntent("manual"), false);
   assert.equal(isHistoricalWatchIntent("live"), false);
+});
+
+test("Netflix history imports target all configured media servers", () => {
+  assert.deepEqual(getTargetsForSource("netflix_import", {}), ["plex", "emby", "jellyfin"]);
 });
 
 // ── Provider matrix ────────────────────────────────────────────────────────
@@ -309,7 +314,7 @@ test("an already-watched Plex item does not receive a redundant mark-played writ
 
 // ── Trakt baseline vs import ───────────────────────────────────────────────
 
-test("a Trakt baseline creates no outbound provider work; an import projects the snapshot", () => {
+test("a Trakt initial snapshot never creates watch transitions, even in legacy import mode", () => {
   const snapshot = [
     { mediaKey: "movie:tmdb:1", media: { title: "One" }, watchedAt: 1_600_000_000_000 },
     { mediaKey: "movie:tmdb:2", media: { title: "Two" }, watchedAt: 1_600_000_100_000 },
@@ -318,9 +323,9 @@ test("a Trakt baseline creates no outbound provider work; an import projects the
     selectTraktWatchedTransitions({ snapshot, previous: [], baseline: false, initialSyncMode: "baseline" }),
     [],
   );
-  assert.equal(
-    selectTraktWatchedTransitions({ snapshot, previous: [], baseline: false, initialSyncMode: "import" }).length,
-    2,
+  assert.deepEqual(
+    selectTraktWatchedTransitions({ snapshot, previous: [], baseline: false, initialSyncMode: "import" }),
+    [],
   );
 });
 

@@ -12,6 +12,7 @@ import { handleActiveSessions, handleCronSync, handleCronSyncStatus, handleForce
 import { handleSeasonPosterOptions, handleSeasonPosters } from "./routes/seasonArtwork.js";
 import { handleShowSeasonSource, handleShowSeasonSourcePreview, handleShowSeasonSourceTraktPreview, handleShowSeasonSourceTraktReplace } from "./routes/showSeasonSource.js";
 import { handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch, handleOmdbRating, handlePoster, handlePosterBatch, handleRemoteArtwork, handleTmdbCollection, handleTmdbDetails, handleTmdbDetailsBatch, handleTmdbImages, handleTmdbPerson, handleTmdbPoster, handleTmdbProfile, handleTmdbSearch, handleTmdbSeason, handleTvdbImages, handleTvdbSearch, handleUpcoming, handleUpNext, handleUpNextShow, handleYoutubeMeta } from "./routes/metadata.js";
+import { handleCalendarFeed, handleCalendarFeedSettings } from "./routes/calendarFeed.js";
 import { handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats, handleChangelog, handleClearCache, handleDebugPlexMatch, handleDiagnosticLogs, handleMaintenanceStub, handlePing, handleRefreshTmdbMetadata, handleRefreshTvdbMetadata, handleRematchTvShows, handleSyncHealth, handleSyncMatchReport, handleEpisodeTitleAudit, handleEpisodeTitleBackfill, handlePhantomWatchAudit, handlePhantomWatchRepair, handleStaleTraktImportAudit, handleStaleTraktImportRepair, handleStalePendingWatchAudit, handleStalePendingWatchRepair, handleSplitIdentityUnwatchAudit, handleSplitIdentityUnwatchRepair, handleLikelyFalseUnwatchAudit, handleLikelyFalseUnwatchRepair } from "./routes/maintenance.js";
 import { handleWipeDataPreview, handleWipeData } from "./routes/wipeData.js";
 import { handleEmbyLikeAuth, handleEmbyLikeConnection, handlePlexAuth, handlePlexConnection } from "./routes/mediaAuth.js";
@@ -19,15 +20,20 @@ import { handleTrackerAuth, handleTrackerConnections } from "./routes/trackerAut
 import { handleLiveUpdates } from "./routes/liveUpdates.js";
 import { handleSyncAttention } from "./routes/syncAttention.js";
 import { handleSetupStatus, handleSetupStep, handleSetupImport, handleSetupComplete, handleSetupRestart, handleSetupChecklistDismiss, handleSetupCtaDismiss } from "./routes/onboarding.js";
+import { handleInitialSyncStatus } from './routes/initialSync.js';
 import { handlePersonalMedia } from "./routes/personal.js";
 import { handleRatingSync } from "./routes/ratingSync.js";
 import { handleWatchlistSync } from "./routes/watchlistSync.js";
+import { handleDroppedTitles } from "./routes/droppedTitles.js";
 import { handleManualWatchReview } from "./routes/manualWatchReview.js";
 import { handlePlaystateAliases } from "./routes/playstateAliases.js";
 import { handleWebhookPort } from "./routes/webhookPort.js";
 import { isDemoMode } from "./utils/demoMode.js";
 import { handleTautulli } from "./routes/tautulli.js";
+import { handleNetflixImport } from "./routes/netflixImport.js";
+import { handleAnidb } from "./routes/anidb.js";
 import { handlePlektRestore, handlePlektRestoreUpload } from "./routes/plektRestore.js";
+import { handleUsers, handleUserPassword, handleUserManage } from "./routes/users.js";
 import { noteRequestActivity } from "./utils/cacheWarmup.js";
 
 function routePath(req) {
@@ -46,6 +52,7 @@ const CLAIM_GATE_WHITELIST = new Set(["ping", "changelog", "login", "logout", "a
 // rejected before it reaches a normal route handler.
 const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^setup(?:\/|$)/i,
+  /^users(?:\/|$)/i,
   /^auth\/(?:apikey|webhook-secret|credentials|claim|sessions\/revoke-all)(?:\/|$)/i,
   /^(?:media-auth|media-connections|tracker-auth|tracker-connections)(?:\/|$)/i,
   /^(?:backup|watch-backups|plembfin-backups)(?:\/|$)/i,
@@ -54,6 +61,8 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^(?:sync-jobs|sync\/|sync-match-report|health\/sync|sync-attention|sync-activity|sync-history|manual-watch-review|retry-sync)(?:\/|$)/i,
   /^(?:test-connection|test-plex-notifications|seerr)(?:\/|$)/i,
   /^(?:tautulli)(?:\/|$)/i,
+  /^(?:netflix)(?:\/|$)/i,
+  /^anidb(?:\/|$)/i,
   /^(?:tmdb-search|tvdb-search|fix-match-search|media-search|refresh-tmdb-metadata|refresh-tvdb-metadata)(?:\/|$)/i,
   /^(?:remote-artwork|tmdb-poster|tmdb-profile|fanart-images|tvdb-images|tmdb-images|season-poster-options|youtube-meta|omdb-rating)(?:\/|$)/i,
   /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|likely-false-)/i,
@@ -133,7 +142,11 @@ async function dispatch(req, res) {
     if (path === "logout") return handleLogout(req, res);
     if (path === "auth/status" || path === "auth-status") return handleAuthStatus(req, res);
     if (path === "auth/claim") return handleAuthClaim(req, res);
+    if (path === "users") return handleUsers(req, res);
+    if (path === "users/password") return handleUserPassword(req, res);
+    if (path === "users/manage") return handleUserManage(req, res);
     if (path === "setup/status") return handleSetupStatus(req, res);
+    if (path === "setup/initial-sync") return handleInitialSyncStatus(req, res);
     if (path === "setup/step") return handleSetupStep(req, res);
     if (path === "setup/import") return handleSetupImport(req, res);
     if (path === "setup/complete") return handleSetupComplete(req, res);
@@ -149,9 +162,10 @@ async function dispatch(req, res) {
     if (path === "media-auth/emby/login" || path === "media-auth/jellyfin/login" || path === "media-auth/jellyfin/quick-connect/start" || /^media-auth\/jellyfin\/quick-connect\/[a-f\d-]+\/status$/i.test(path)) return handleEmbyLikeAuth(req, res, path);
     if (path === "media-connections/emby") return handleEmbyLikeConnection(req, res, "emby");
     if (path === "media-connections/jellyfin") return handleEmbyLikeConnection(req, res, "jellyfin");
-    if (path === "tracker-auth/trakt/start" || /^tracker-auth\/trakt\/[a-f\d-]+\/status$/i.test(path)) return handleTrackerAuth(req, res, path);
-    if (path === "tracker-connections" || path === "tracker-connections/trakt") return handleTrackerConnections(req, res, path);
+    if (/^tracker-auth\/[a-z0-9_-]+\/(?:start|[a-f\d-]+\/status)$/i.test(path)) return handleTrackerAuth(req, res, path);
+    if (path === "tracker-connections" || /^tracker-connections\/[a-z0-9_-]+(?:\/full-sync(?:\/compare)?)?$/i.test(path)) return handleTrackerConnections(req, res, path);
     if (path === "config") return handleConfig(req, res);
+    if (path === "anidb" || path.startsWith("anidb/")) return handleAnidb(req, res, path);
     if (path === "tautulli/status") return handleTautulli(req, res, "status");
     if (path === "tautulli/users") return handleTautulli(req, res, "users");
     if (path === "tautulli/test") return handleTautulli(req, res, "test");
@@ -160,6 +174,10 @@ async function dispatch(req, res) {
     if (path === "tautulli/import/preview/status") return handleTautulli(req, res, "preview-status");
     if (path === "tautulli/import/preview") return handleTautulli(req, res, "preview");
     if (path === "tautulli/import") return handleTautulli(req, res, "import");
+    if (path === "netflix/import/preview/start") return handleNetflixImport(req, res, "preview-start");
+    if (path === "netflix/import/preview/status") return handleNetflixImport(req, res, "preview-status");
+    if (path === "netflix/import/preview/review") return handleNetflixImport(req, res, "preview-review");
+    if (path === "netflix/import") return handleNetflixImport(req, res, "import");
     if (path === "appearance") return handleAppearance(req, res);
     if (path === "history") return handleHistory(req, res);
     if (path === "history-audit") return handleHistoryAudit(req, res);
@@ -183,12 +201,15 @@ async function dispatch(req, res) {
     if (path === "shows") return handleShows(req, res);
     if (path === "show") return handleShow(req, res);
     if (path === "upcoming") return handleUpcoming(req, res);
+    if (path === "calendar-feed/settings") return handleCalendarFeedSettings(req, res);
+    if (path === "calendar-feed.ics") return handleCalendarFeed(req, res);
     if (path === "up-next") return handleUpNext(req, res);
     if (path === "up-next/show") return handleUpNextShow(req, res);
     if (path === "up-next/remove") return handleUpNextRemove(req, res);
     if (path === "up-next/sync") return handleUpNextSync(req, res);
     if (path === "up-next/dismissed") return handleUpNextDismissed(req, res);
     if (path === "up-next/restore") return handleUpNextRestore(req, res);
+    if (path === "dropped-titles") return handleDroppedTitles(req, res);
     if (path === "full-sync-watchstates") return handleFullSyncWatchstates(req, res);
     if (path === "import") return handleImport(req, res);
     if (path === "backup/export") return handleBackupExport(req, res);

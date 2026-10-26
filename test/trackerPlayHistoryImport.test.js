@@ -26,6 +26,9 @@ function connectTrakt(overrides = {}) {
     lastValidatedAt: Date.now(),
     ...overrides,
   });
+  // Fixture history predates this connection, so it remains eligible for the
+  // normal post-baseline play-history import path.
+  repo.requireDb().prepare("UPDATE tracker_connections SET connected_at=? WHERE provider='trakt'").run(Date.parse("2026-01-01T00:00:00.000Z"));
 }
 
 // Regression coverage for the incident where the Trakt play-history import
@@ -95,11 +98,7 @@ test("importing Trakt play history never pushes those plays back out to Trakt or
 // defense-in-depth against any future bug (or plain clock skew) doing the
 // same thing again.
 test("an IMDb-rich Trakt play arriving after our TMDB-only push is treated as an echo", async () => {
-  // baselineComplete stays false here so pollTrakt's watched/unwatched
-  // snapshot diff (which also reads tracker_item_state) is a no-op; only the
-  // play-history import path below is under test, not the unrelated
-  // snapshot-diff reconciliation for this synthetic media.
-  connectTrakt({ baselineComplete: false });
+  connectTrakt({ baselineComplete: true });
   const media = { type: "movie", ids: { imdb: "tt9999999", tmdb: "999999" } };
   const outboundMedia = { type: "movie", ids: { tmdb: "999999" } };
   trackerConnectionRepo.recordTrackerOutbound("trakt", trackerMediaKey(outboundMedia), outboundMedia, "watched");

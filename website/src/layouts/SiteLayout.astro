@@ -2,16 +2,25 @@
 import { site } from "../data/site.js";
 import SiteHeader from "../components/SiteHeader.astro";
 import SiteFooter from "../components/SiteFooter.astro";
+import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import "../styles/site.css";
 
 const {
   title,
   description = site.description,
-  image = "/assets/app-captures/dashboard-dark.png",
+  image = "/assets/og-card.png",
   noindex = false,
 } = Astro.props;
 
-const pageTitle = title ? `${site.name} - ${title}` : site.title;
+const pageTitle = title ? `${title} | ${site.name}` : site.title;
+const imagePath = path.join(process.cwd(), "public", image.replace(/^\//, ""));
+const imageVersion = fs.existsSync(imagePath)
+  ? crypto.createHash("sha256").update(fs.readFileSync(imagePath)).digest("hex").slice(0, 10)
+  : "";
+const socialImage = new URL(image, site.url);
+if (imageVersion) socialImage.searchParams.set("v", imageVersion);
 const canonical = new URL(Astro.url.pathname, site.url).href;
 const previewBranch = import.meta.env.MODE !== "development" && process.env.CF_PAGES_BRANCH && process.env.CF_PAGES_BRANCH !== "main";
 const robots = noindex || previewBranch ? "noindex,nofollow" : "index,follow";
@@ -31,17 +40,19 @@ const traksEnabled = Boolean(traksSiteKey);
     <meta name="robots" content={robots} />
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <title>{pageTitle}</title>
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Plekt" />
     <meta property="og:title" content={pageTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={new URL(image, site.url).href} />
+    <meta property="og:image" content={socialImage.href} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={pageTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={new URL(image, site.url).href} />
+    <meta name="twitter:image" content={socialImage.href} />
     <script is:inline>
       (() => {
         const themeKey = "plembfin:theme";

@@ -31,6 +31,7 @@ import {
 } from "./watchSyncPolicy.js";
 import { compoundEpisodeForMedia } from "./compoundEpisode.js";
 import { brandEnv } from "./brandEnv.js";
+import { isTrackerProvider, trackerProviderForSource } from "./trackers/registry.js";
 
 const LOOP_CACHE_TTL_SECONDS = 60;
 const LOOP_WINDOW_MS = 15_000;
@@ -342,6 +343,7 @@ const TARGETS_BY_SOURCE = {
   force_sync: ["plex", "emby", "jellyfin"],
   trakt_import: ["plex", "emby", "jellyfin"],
   tautulli_import: ["plex", "emby", "jellyfin"],
+  netflix_import: ["plex", "emby", "jellyfin"],
   trakt_current: ["plex", "emby", "jellyfin"],
 };
 
@@ -1127,7 +1129,7 @@ async function includeTrackerDispatch(summary, media, state, lane = "sync", isCa
   // unadvertised side effect.
   if (Array.isArray(media?.syncTargets)) {
     const requested = new Set(media.syncTargets.map((target) => String(target).trim().toLowerCase()).filter(Boolean));
-    if (!requested.has("trakt")) return summary;
+    if (![...requested].some(isTrackerProvider)) return summary;
   }
   if (shouldSuppressPlexNotificationEpisodeUnwatch(summary, media, state)) {
     const detail = "Episode unwatch withheld from Trakt because no matching Emby or Jellyfin item was found";
@@ -1190,7 +1192,7 @@ export async function syncMediaPlaystate(media, config, kv, {
     return { skipped: true, status: "skipped", details: "Invalid normalized media payload", results: [] };
   }
 
-  if (!["manual", "force_sync", "restore", "restore_replay", "trakt", "trakt_import", "tautulli_import", "trakt_current"].includes(String(media.source || "").toLowerCase()) && !canSendState(config, String(media.source || "").toLowerCase(), "watched")) {
+  if (!trackerProviderForSource(media.source) && !["manual", "force_sync", "restore", "restore_replay", "trakt", "trakt_import", "tautulli_import", "netflix_import", "trakt_current"].includes(String(media.source || "").toLowerCase()) && !canSendState(config, String(media.source || "").toLowerCase(), "watched")) {
     return { skipped: true, status: "skipped", details: "Source is not allowed to send watched state", targetStates: [], results: [] };
   }
 
@@ -1368,7 +1370,7 @@ export async function syncMediaUnplayedPlaystate(media, config, kv, {
     return { skipped: true, status: "skipped", details: "Invalid normalized media payload", results: [] };
   }
 
-  if (!["manual", "force_sync", "restore", "restore_replay", "trakt", "trakt_import", "tautulli_import", "trakt_current"].includes(String(media.source || "").toLowerCase()) && !canSendState(config, String(media.source || "").toLowerCase(), "unwatched")) {
+  if (!trackerProviderForSource(media.source) && !["manual", "force_sync", "restore", "restore_replay", "trakt", "trakt_import", "tautulli_import", "trakt_current"].includes(String(media.source || "").toLowerCase()) && !canSendState(config, String(media.source || "").toLowerCase(), "unwatched")) {
     return { skipped: true, status: "skipped", details: "Source is not allowed to send unwatched state", targetStates: [], results: [] };
   }
   media = compoundEpisodeMediaForDispatch(providerItemsForMedia(media));

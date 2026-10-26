@@ -4,3 +4,4 @@ dist/
 *.local
 .local-review/
 public/assets/optimized/
+src/generated/quickstart.js

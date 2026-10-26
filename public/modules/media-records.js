@@ -1,4 +1,4 @@
-import { slug } from "./utils.js?v=2.1.1.0.8";
+import { slug } from "./utils.js?v=2.1.1.0.9";
 
 export function mediaRecordIdentity(record = {}, mode = "") {
   if (mode === "shows" || record.media_type === "episode") {

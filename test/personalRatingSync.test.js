@@ -22,6 +22,9 @@ const {
   getRatingSourceRow,
   listPersonalRatingQueue,
   ratingQueueCounts,
+  failPersonalRatingQueue,
+  retryPersonalRatingQueue,
+  supersedePersonalRatingIntent,
   upsertCanonicalPersonalRating,
 } = await import("../server/src/utils/personalRatingRepository.js");
 const { queuePersonalRatingMutation } = await import("../server/src/utils/personalRatingSync.js");
@@ -43,7 +46,7 @@ test("rating sync is one on/off policy across every provider", () => {
       intervalMinutes: 5,
       initialSyncMode: "import",
       conflictPolicy: "local_wins",
-      providers: { plex: "bidirectional", emby: "bidirectional", jellyfin: "bidirectional", trakt: "bidirectional" },
+      providers: { plex: "bidirectional", emby: "bidirectional", jellyfin: "bidirectional", trakt: "bidirectional", simkl: "bidirectional" },
     },
   );
   assert.deepEqual(
@@ -53,7 +56,7 @@ test("rating sync is one on/off policy across every provider", () => {
       intervalMinutes: 5,
       initialSyncMode: "import",
       conflictPolicy: "local_wins",
-      providers: { plex: "bidirectional", emby: "bidirectional", jellyfin: "bidirectional", trakt: "bidirectional" },
+      providers: { plex: "bidirectional", emby: "bidirectional", jellyfin: "bidirectional", trakt: "bidirectional", simkl: "bidirectional" },
     },
   );
   assert.deepEqual(validateConfig({ ratingSync: normalizeRatingSyncSection({}) }), []);
@@ -139,4 +142,21 @@ test("a claimed rating queue item records outbound markers without touching watc
   assert.equal(getRatingSourceRow("trakt", media.media_key).last_outbound_rating, 7);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM watch_history").get().count, 0);
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM playstate").get().count, 0);
+});
+
+test("held rating writes stay terminal until explicitly retried, then can be superseded", () => {
+  const media = normalizePersonalRatingMedia({ media_type: "movie", title: "Held rating", tmdb_id: "903" });
+  const held = enqueuePersonalRatingMutation({ provider: "simkl", media, desiredState: "rated", desiredRating: 8, intentId: "held-1", timestamp: 4000 });
+  const firstClaim = claimPersonalRatingQueue({ provider: "simkl", owner: "held-initial", now: 4000 });
+  assert.equal(firstClaim.rows[0].intent_id, held.intent_id);
+  assert.equal(failPersonalRatingQueue({ provider: "simkl", mediaKey: media.media_key, intentId: held.intent_id, status: "held", error: "unsafe", timestamp: 4001 }), true);
+  assert.equal(claimPersonalRatingQueue({ provider: "simkl", now: 5000 }).rows.length, 0);
+  assert.equal(retryPersonalRatingQueue({ provider: "simkl", mediaKey: media.media_key, now: 5000 }), 1);
+  const claimed = claimPersonalRatingQueue({ provider: "simkl", owner: "held-retry", now: 5000 });
+  assert.equal(claimed.rows[0].intent_id, held.intent_id);
+  assert.equal(failPersonalRatingQueue({ provider: "simkl", mediaKey: media.media_key, intentId: held.intent_id, status: "held", error: "unsafe", timestamp: 5001 }), true);
+  assert.equal(claimPersonalRatingQueue({ provider: "simkl", now: 9000 }).rows.length, 0);
+  assert.equal(retryPersonalRatingQueue({ provider: "simkl", mediaKey: media.media_key, now: 10_000 }), 1);
+  assert.equal(supersedePersonalRatingIntent("simkl", [media.media_key]), 1);
+  assert.equal(listPersonalRatingQueue({ provider: "simkl" }).length, 0);
 });

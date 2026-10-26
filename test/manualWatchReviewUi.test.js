@@ -43,6 +43,14 @@ test("manual watch review groups preserve newest incoming order and sort episode
   assert.deepEqual(groups[0].reviews.map((review) => review.episode), [1, 2]);
 });
 
+test("source mismatch notifications stay separate from watched-state decision groups", () => {
+  const mismatch = { id: "m1", review_kind: "source_mismatch", media_type: "episode", show_title: "Naruto", season: 1, episode: 52 };
+  const manual = { id: "w1", review_kind: "manual_watch", media_type: "episode", show_title: "Naruto", season: 1, episode: 2 };
+  const groups = groupManualWatchReviews([mismatch, manual]);
+  assert.deepEqual(groups.map((group) => group.kind), ["mismatch", "show"]);
+  assert.equal(groups[0].reviews[0].id, "m1");
+});
+
 test("a show group whose title two shows share looks its show up by proven ids, never by title alone", () => {
   // Live: the 2001 Scrubs group drew the 2026 reboot's poster from a title lookup.
   const plex = { id: "p", media_type: "episode", show_title: "Scrubs", season: 1, episode: 23, show_title_ambiguous: true, media: {} };

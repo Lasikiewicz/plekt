@@ -9,9 +9,13 @@ the module rules. Feature-specific behavior lives in the per-feature docs
 
 ## Structure
 
+The sidebar footer places the signed-in account and build/version button above the GitHub, plekt.net, and GitHub Sponsors links. The version button stays in the footer when the Appearance panel opens.
+
 ## Brand colours
 
 Use these shell surface colours as Plekt's brand colours for the two themes:
+
+Dark mode uses the logo's central green (#10b981) for the accent, including selected navigation and settings highlights. Light mode retains its blue accent.
 
 | Theme | Left menu | Main background |
 | --- | --- | --- |
@@ -44,7 +48,7 @@ per-section background.
 
 - **`public/modules/*.js`** - feature modules with named ES exports (soft limit 1,200
   lines, hard limit 1,500). The module ownership rules in this document and the file map
-  in [architecture.md](architecture.md) are authoritative.
+  in [file-map-public.md](file-map-public.md) are authoritative.
 - **`public/modules/settings-ui.js`** - reusable settings card-grid, picker, and edit
   dialog primitives. `settings-services.js` owns media-server/metadata behavior, while
   `tools-backups.js` consumes the same primitives for remote destinations.
@@ -55,7 +59,7 @@ per-section background.
 
 `app.js` statically imports only the core graph needed for the first paint: auth,
 state, utils, images, logs, settings shell, sync,
-live updates, the small appearance, status-indicator, media-routing, and cast-disclosure
+live updates, the small appearance, status-indicator, supervisor-switch, media-routing, and cast-disclosure
 helpers, and `route-modules.js`. Dashboard, Up Next, backup tools, the metadata helper,
 shared detail renderer, and the full status pages are registered route modules, so
 their graphs load only when the relevant route or action needs them. The `modulepreload`
@@ -70,18 +74,20 @@ loaded on demand with native `import()`:
   Settings explicitly loads it for the library Force Sync panel. The tracker, rating-sync,
   watchlist-sync, and Tautulli modules are Settings-only and load with that route, after
   the saved config has been fetched. So does `settings-events.js`, which holds the Settings
-  page's own handlers (logs, admin login, import, backups, maintenance tools, sync controls);
+  page's own handlers (logs, admin login, import, backups, maintenance tools, sync controls, user management);
   `app-events.js` initializes it through `onRouteModuleLoaded()`.
 - **Status modules** (`STATUS_ROUTE_MODULES`: sync activity and manual watch review) load only
   when their pages are opened. The small `status-indicators.js` core helper keeps the sidebar
   sync progress, attention, and Manual Watch review count live and polls their compact summaries
-  after sign-in. Poster-card menus are route work and load only for library, dashboard,
+  after sign-in. Source mismatch notifications share that count and review page, use separate
+  dismiss handling, and link to the show's existing Fix Match entry point without applying watch
+  state. Poster-card menus are route work and load only for library, dashboard,
   discovery, upcoming, personal-media, and detail views.
 - The onboarding wizard is also route-scoped: its large setup/claim module loads only for
   `/setup`, a claim-required session, or when the deferred `/api/setup/status` check for a
-  signed-in account finds something for it to show (setup unfinished and not dismissed, or a
-  non-empty dashboard checklist). A finished install never downloads it, and the dashboard
-  renders its checklist through `ifLoaded("onboarding", ...)`.
+  signed-in account finds unfinished setup or recommended tasks. The compact **Finish Setup**
+  reminder is rendered above **Sync - Idle** in the sidebar; a finished install with no tasks
+  never downloads the wizard module.
 - The Settings service renderer (`settings-services.js`, with its `settings-ui.js` and
   `help-content.js` dependencies) is route-scoped as well. Direct Settings routes initialize
   it before applying saved config; Dashboard reaches it only through the onboarding checklist
@@ -142,6 +148,8 @@ Rules that keep this correct:
   Card Art off, `card-art.js` stops looking up card backdrops and a CSS rule clears
   `--modern-art` on every `[data-art]`. With Background Art off, `dashboard-modern.js` sets no
   `data-page-art` on the page shell and CSS hides the details-page `.modal-backdrop-image`.
+  **Hide Links** hides all project links, including GitHub Sponsors; its value is saved with the
+  server-backed appearance settings.
 - Dashboard behaviour lives in
   `modules/dashboard-modern.js` (imported by `dashboard.js`): consecutive watches of one show
   collapse into a single TV history card that expands in place when clicked (the newest
@@ -336,8 +344,10 @@ stays set to the slug throughout, so the address bar keeps the `/tvshow/:key` fo
   outside the visible range - see [upcoming.md](upcoming.md).
 - Up Next loads through `/api/up-next` on every dashboard entry without a browser-local
   first-paint snapshot or a client freshness window, and
-  uses a durable mixed movie/episode server snapshot with stale-while-revalidate. Resume
-  cards are ordered by canonical progress updates and released provider/local `next_up`
+  uses a durable mixed movie/episode server snapshot with stale-while-revalidate. A cold
+  load shows animated placeholder tiles; refreshes keep existing cards in place and show
+  “Refreshing…” beside the animated refresh icon instead of labeling every card “Checking…”.
+  Resume cards are ordered by canonical progress updates and released provider/local `next_up`
   cards follow a stable order; a matching resume/next-up observation renders once. A
   changed Up Next snapshot announces its generation on `/api/live-updates`, and feed
   events are forwarded to other visible windows through BroadcastChannel while one tab owns
@@ -524,6 +534,16 @@ and navbar.
 
 ## Settings Layout & Design Standards
 
+Settings → Users starts with live account and shared-process statistics, followed by the
+account list and the Add user form. The overview reports account, running, stopped and disabled
+counts, the account open in the current session, process memory and uptime; memory is one shared
+Node-process value, never a per-user estimate. The Add user help card follows the shared
+height-matching behavior and offers Read more when its content exceeds the collapsed height.
+User option rows use compact vertical spacing so accounts remain easy to scan. Non-admin Settings
+navigation is limited to their own account, appearance, media-server and personal connection
+settings, webhook setup, and sync history; shared provider keys, install controls, and maintenance
+sections are hidden, with connection-only writes enforced by the server.
+
 These are canonical values for the settings UI - do not change them without explicit user instruction.
 
 ### Spacing Token Reference (`styles.css` `:root`)
@@ -679,6 +699,8 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Static help/guide HTML | `modules/help-content.js` |
 | Always-available appearance preferences | `modules/appearance.js` |
 | Always-available sync/manual-review indicators and compact status summaries | `modules/status-indicators.js` |
+| In-app user switcher (sidebar between Appearance and About, and `/setup` footer) | `modules/supervisor-switch.js` |
+| Settings → Users panel and non-admin self-service password form | `modules/settings-users.js` (account list refreshes each time the Users route opens) |
 | Core movie lookups and Now Playing route links | `modules/media-routing.js` |
 | Core deferred cast disclosure markup and focus handling | `modules/cast-disclosure.js` |
 | Sync status, sync history, now-playing polling | `modules/sync.js`, `modules/sync-preview.js` |
@@ -691,8 +713,9 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Shared media identity/deduplication (provider IDs before title fallback; artwork URLs are never identities) | `modules/media-records.js` |
 | Stats rendering | `modules/stats.js` |
 | Explorer grid, history page, search page | `modules/explorer.js` |
+| History Days view: one newest-first box per calendar day | `modules/history-day-view.js` |
 | Persisted Movies and TV Shows explorer-page cache | `modules/explorer-page-cache.js` |
-| Upcoming page (scrolling month calendar of upcoming episode air dates) | `modules/upcoming.js` |
+| Upcoming page (scrolling month calendar, private calendar feed subscription controls) | `modules/upcoming.js` |
 | Up Next rail, provider push, dismissed-items dialog | `modules/up-next.js` |
 | Up Next show identity, same-title show veto, dismissal keys, and action markup | `modules/up-next-shared.js` |
 | Personal ratings/watchlist/playlist metadata fill (overview, release date) | `modules/personal-media-metadata.js` |
@@ -703,6 +726,8 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Backup/restore tools (Settings route) | `modules/tools-backups.js` |
 | Settings changelog renderer and Main/Alpha tabs (build-version display formatting is core, in `modules/utils.js`) | `modules/changelog-channels.js` |
 | TV/movie detail entry points, lookups, modal-close routing | `modules/media-detail.js` |
+| Detail-page Drop/Un-drop controls and dropped-title state | `modules/dropped-titles.js` |
+| Dropped-only library/history panels and current dropped-title stats count | `modules/dropped-title-views.js` |
 | Detail-modal shell/context: callbacks, `authHeaders`, modal DOM root, render-token, debug modal | `modules/media-detail-context.js` |
 | Detail-page watch and sync info summary rendering | `modules/media-info-summary.js` |
 | Route-scoped shared TMDB/Seerr rendering fragments (cast, trailers, images, ratings, recommendations) | `modules/media-detail-shared.js` |
@@ -718,8 +743,9 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | TMDB detail/season/person enrichment helpers | `modules/tmdb.js` |
 | Trailer playback and photo lightbox | `modules/media-lightbox.js` |
 | Trakt/CSV import and settings tools bridge | `modules/tools.js` |
-| Tautulli connection and one-time watch-history importer | `modules/settings-services.js`, `modules/tautulli-import.js` |
-| Live Trakt connection and initial-sync controls | `modules/tracker-settings.js` |
+| Tautulli connection and one-time watch-history imports | `modules/settings-services.js`, `modules/tautulli-import.js`, `modules/netflix-import.js` |
+| Live Trakt connection/initial-sync controls and gated Simkl device sign-in | `modules/tracker-settings.js` |
+| Tracker card progress, date preference and optional full sync | `modules/tracker-full-sync.js` |
 | Authenticated live watch-state refresh stream | `modules/live-updates.js` |
 | Backup tools and appearance save actions | `modules/tools-backups.js`; `modules/appearance.js` owns the always-available defaults/body/loading helper |
 | Maintenance diagnostics, cache tools, sync repair tools, and sync health | `modules/tools-maintenance.js`, `modules/tools-health.js` |
@@ -727,7 +753,11 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Watch-state aliases card: fold or dismiss unproven episode-id playstate rows (Settings → Tools → Database Repairs) | `modules/tools-playstate-aliases.js` |
 | Wipe data (Settings → Tools → Wipe data): watch history, sync history/logs, and full factory reset | `modules/tools-wipe-data.js` |
 | Auth, session, tokens | `modules/auth.js` |
-| Guided first-run setup (`/setup`), account-claim form wiring, dashboard checklist, Settings resume banner | `modules/onboarding.js` |
+| Guided first-run setup (`/setup`), account-claim form wiring, Finish Setup sidebar reminder, Settings resume banner and navigation | `modules/onboarding.js` |
+| Initial outward-sync sidebar chip, authenticated progress reads, destination counts and pending/held item dialog | `modules/initial-sync.js` (core graph through status indicators) |
+| Setup step rendering, server imports, metadata, webhooks, Seerr, Import & sync (incl. borrowed One Time Imports), options and review | `modules/onboarding-sections.js` |
+| Setup encrypted backup configuration and shared remote-destination form | `modules/onboarding-backups.js` |
+| Registry-driven setup tracker cards, per-provider authorization flows, import choices and parallel import requests | `modules/onboarding-trackers.js` |
 | Debug/diagnostic logs & telemetry export | `modules/logs.js` (categorization, local time formatting, export) |
 | Connection label formatting | `modules/settings.js` |
 | Shared settings modal, picker, and card-grid primitives | `modules/settings-ui.js` |
@@ -736,7 +766,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Flat settings routes, landing list, sidebar, help panels, and clean path routing (`/settings/media-servers`, `/settings/sync`, etc.) | `modules/settings-shell.js` |
 | Shared `state` and `elements` objects | `modules/state.js` |
 | Global app event wiring | `modules/app-events.js` |
-| Settings-page event wiring (logs, admin login/webhook secret, import, backups, maintenance tools, sync controls), loaded with the Settings route | `modules/settings-events.js` |
+| Settings-page event wiring (logs, admin login/webhook secret, import, backups, maintenance tools, sync controls, user management), loaded with the Settings route | `modules/settings-events.js` |
 | Media-detail modal click delegation (cast/trailers/poster edit/watch actions/card navigation) | `modules/media-detail-events.js` |
 | Shared copy for the Plex historical watched-sync setting (setup wizard and Sync Tuning) | `modules/plex-history-policy.js` |
 | Poster-card three-dot overflow menu (Mark Unwatched / Edit watch date / Fix match) outside the media detail pages | `modules/poster-menu.js` |
@@ -755,7 +785,7 @@ lines, then add it to this table.
    route modules" above) and gets no preload.
 3. Import it in `app.js` (or the owning module) and, if it needs app-level functions,
    give it an `init<Feature>(callbacks)` entry point.
-4. Add the module to the file map in [architecture.md](architecture.md) and the relevant
+4. Add the module to the file map in [file-map-public.md](file-map-public.md) and the relevant
    feature documentation.
 
 ### Cache-busting version strings

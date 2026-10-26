@@ -6,6 +6,41 @@ caches every source (the CSP is `connect-src 'self'`).
 
 ## Files
 
+AniDB is an optional, anime-only source of titles and descriptions (Settings > Metadata
+providers > AniDB, off by default). It never changes seasons, episode numbering, artwork,
+watch history or outbound identities. A movie or show uses AniDB only through a match the
+user previewed and confirmed (`anidb_matches`), automatically for movies through a unique
+Wikidata TMDB movie ID/AniDB ID link whose AniDB entry has type Movie, or when its cached TVDB
+series record carries exactly one AniDB link and the cached AniDB entry covers the same
+number of regular episodes. Anything else keeps the existing TMDB/TVDB metadata; there is
+no title-based matching. Matched detail pages show the AniDB title as text (not the logo),
+the AniDB description, and an attribution line linking the entry and CC BY-NC-SA 4.0.
+
+Files: `anidbGateway.js` (registered HTTP client `plekt` v1, request deduplication and
+last-good fallback), `anidbProtocol.js` (bounded XML normalization), `anidbRepository.js`
+(SQLite cache, daily request guards and cross-process pacing), `anidbMatches.js` (saved
+and automatic match resolution), `anidbMovieMatches.js` (movie-only Wikidata lookup),
+`anidbBackup.js` (backup collections) and
+`routes/anidb.js` (`/api/anidb/status|settings|preview|matches|enrich|cache`, admin only,
+disabled in demo mode). The browser side is `public/modules/anidb-settings.js` (Settings
+card) and `anidb-metadata.js` (one bounded `/api/anidb/enrich` call per TMDB detail batch).
+The gateway refreshes at most once per 24 hours per entry and at most one request every
+two seconds; failures retain the last successful metadata without extending its success
+timestamp. Request guards and provider cooldowns are separate from cached payloads, so
+clearing the AniDB cache or a factory reset cannot bypass AniDB limits; saved matches
+survive a cache clear. Backups carry the cache, guards and matches, and a restore only
+moves guards forward. AniDB data terms are separate from Plekt's code license.
+AniDB's [data-use policy](https://anidb.net/policy) permits donations only to cover operating
+costs, and prohibits profit and paid features/services. Plekt's sponsorship is used only
+for operating costs (confirmed 22 October 2026); reassess these terms if that model changes.
+Unlicensed third-party mapping datasets and AniDB artwork are not included. Wikidata structured IDs
+are [CC0](https://www.wikidata.org/wiki/Help:Data_access). Movie lookup uses P4947 and
+P5646 on the same entity; multiple results remain unresolved. Saved confirmations take
+priority. The bounded process-local lookup cache retains positive/negative results for
+24 hours and resets on restart; cache-only reads never query Wikidata. Failed lookups
+pause queries for at least 15 minutes (longer Retry-After is respected) and keep existing
+metadata. Automatic lookup results are derived data, not saved confirmations or backup data.
+
 | File | Role |
 | --- | --- |
 | `server/src/utils/tmdbGateway.js` | TMDB gateway + merged TV details assembly, discovery feeds, collection search/details; caches in `tmdb_metadata_cache`, `tmdb_search_cache`, `tmdb_person_cache` |
@@ -44,7 +79,7 @@ show and episode page load, cached or not.
 
 | Data | Movies | TV shows |
 | --- | --- | --- |
-| Title, overview, status, genres, artwork | TMDB | **TheTVDB** (prefer its English series overview when available) |
+| Title, overview, status, network, genres, artwork | TMDB | **TheTVDB** (prefer its English series overview when available) |
 | Season/episode numbering, titles, overviews, air dates | - | **TheTVDB** |
 | Cast/credits, trailers, reviews, recommendations, watch providers, content ratings | TMDB | TMDB |
 | Extra artwork (posters/backdrops/logos gallery) | TMDB + Fanart.tv | TMDB + TVDB + Fanart.tv |
@@ -52,9 +87,85 @@ show and episode page load, cached or not.
 | Trailer titles/metadata | YouTube Data API | YouTube Data API |
 
 The split is invisible to callers: `getTmdbDetails()` / `getTmdbSeason()`
-(`tmdbGateway.js`) return one merged shape for TV, keyed by TMDB id. The full rationale
-and edge cases (remoteIds verification, Specials handling, `DETAILS_SCHEMA_VERSION`
-bumping) are in the "TV metadata" section of [architecture.md](architecture.md).
+(`tmdbGateway.js`) return one merged shape for TV, keyed by TMDB id, so every caller
+(routes, frontend, `deriveNextAiring`) is unaware of the split. TheTVDB's numbering is
+deliberately preferred because it is more accurate than TMDB's own for many shows.
+
+The Netflix CSV importer is a separate matching path: it keeps TMDB episode coordinates.
+`netflixImport.js` orchestrates previews, review and commit; `netflixCsv.js` owns CSV and
+label parsing, and `netflixEpisodes.js` owns episode matching and season evidence. Existing
+importer exports remain available from `netflixImport.js`.
+For combined `A / B` rows only, an unmatched segment may drop its known show prefix and
+grammatical filler (`the`, `a`, `an`, `and`, `of`); remaining words must agree in order.
+Every segment must uniquely identify a different episode in the allowed season, or the
+whole bundle stays in review without a whole-row number or neighbour fallback.
+Reversed segment order can match one provider episode only when it contains the same complete
+set of distinct segment keys in the allowed season; missing, extra or competing bundles stay in review.
+`netflixEpisodeAliases.js` adds linked TVDB episode names as alternate titles only when a
+unique episode remote ID or unique exact air date maps them to a TMDB episode. It does not
+copy TVDB numbering into a TMDB watch identity. Missing or conflicting mappings retain the
+original TMDB data and leave the row reviewable.
+`server/resources/netflix-episode-title-aliases.json` also records sourced episode-title
+variants, including broadcaster-confirmed Ghost Wars titles, officially paired Winx Club
+dub names and The Hive's Mamma/Mama spelling. Each entry requires its TMDB show and unique episode
+ID, the expected current canonical title, and its recorded air date when supplied. These
+aliases survive TVDB outages, preserve provider coordinates, and are ignored on identity or
+title conflicts. They do not enable general prefix or fuzzy matching.
+Its `rows` registry pins complete Netflix source titles to verified episode identities for
+standalone specials, Big Al's separate mini-series, LEGO Friends and SpongeBob release-order
+differences. All targets require a unique episode ID, exact canonical title and air date, and
+must have aired by the watch date. Any failed target leaves the complete row on the normal
+review path. Current metadata supplies the coordinates; Netflix's labels are never copied.
+The registry also disambiguates verified named rows for Sirens, Starstruck, Medal of Honor
+and Go, Diego, Go. Don't Tell the Bride entries have a pre-2021 watch window because the
+couples' names were reused in later retrospective episodes; later watches remain reviewable.
+When no search result has the exact Netflix
+show or film name, `getTmdbAlternativeTitles` (`tmdbGateway.js`, `{movie|tv}/{id}/alternative_titles`,
+cached 30 days in the metadata cache under a key with no TMDB id) is read for the top five
+results, and a result listing the exact name counts as an exact match.
+When an exact show is missing coordinates explicitly named by the CSV, its recorded Netflix
+aliases are searched too. Empty metadata is not evidence against a show; the original candidate
+is retained and the existing structure/episode checks must still establish a single survivor.
+Longer search titles containing every query word in order may enter the same evidence
+comparison, without becoming exact title matches. Distinct named segments of one complete
+bundle count independently; generic Episode N segments, incomplete bundles and tied shows
+remain unresolved. This recovers Pocoyo's named bundle and the individually named DreamWorks
+Spooky Stories shorts, while leaving its unspecified Play All program for review.
+Episode-evidence selection also rejects a suggested series with a known release year
+later than the CSV watch, so a future namesake cannot bypass the watch-date guard.
+
+`netflixCatalogue.js` reads `server/resources/netflix-catalogue.json` lazily for Netflix CSV
+imports. The snapshot records five official engagement-report sources, workbook SHA-256 hashes,
+paired bilingual titles, their original report labels and `releaseYears` (the years in the
+reports' Release Date column, Netflix's own premiere of a film or season; licensed titles usually
+have none). It excludes Other aggregate rows and the unclassified combined 2023 H1 sheet. Only
+positive title/alias evidence is used; there are no Netflix IDs in these workbooks. Existing
+same-name TMDB candidates remain reviewable unless episode evidence, a hard fact, or the
+"Netflix title + clear winner" rule (`reportedCandidates`, see docs/settings.md and
+docs/decisions.md entry 54) resolves them. Missing/unreadable snapshot data retains the previous matching behavior.
+
+Refresh the bundled snapshot with `python scripts/update-netflix-catalogue.py` (Python 3,
+standard library only). The updater caches official workbooks outside the repository and
+records skipped sources. `--generated-at <ISO-UTC-time>` makes regeneration reproducible.
+Imports read the snapshot offline rather than downloading workbooks for each preview.
+`server/resources/netflix-title-aliases.json` separately keeps title pairs supported by
+Netflix pages, with UFA producer corroboration for Charité at War / Charité, alongside
+Trolls Holiday Special / Trolls Holiday. Sources require Netflix and accept only Netflix
+or UFA URLs. Charité at War's six episode titles establish the existing season map to
+Charité season 2; the alias does not copy Netflix season numbers. These pairs recover exact-title searches but never count as engagement-report
+presence or premiere-year evidence for the clear-winner rule. Remakes remain ambiguous.
+
+- `id` on a TV show's details is always the resolved TMDB ID (via TheTVDB's `remoteIds`,
+  or the caller-supplied ID), since Seerr requests and `/tvshow/tmdb/:id` routing are
+  TMDB-keyed. TheTVDB's `remoteIds` mapping is community-submitted and occasionally
+  points at a stale/incorrect TMDB id; `getTvShowDetails` verifies it by fetching that
+  id and, if it 404s, falls back to a TMDB title search and uses the corrected id -
+  otherwise cast/trailers/images would silently stay empty for that show.
+- A "Specials" (season 0) entry is only included in a show's `seasons` list when
+  TheTVDB actually has episodes attached to it - an empty placeholder season is
+  dropped rather than shown as a dead, always-empty accordion row.
+- `DETAILS_SCHEMA_VERSION` bumping is described under [Caching](#caching); no manual
+  cache clearing is needed after an upgrade that changes the cached shape.
 
 ## API keys
 

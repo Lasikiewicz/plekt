@@ -1,15 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.1.1.0.8";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.1.1.0.8";
-import { ifLoaded } from "./route-modules.js?v=2.1.1.0.8";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.1.1.0.8";
-import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.8";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.1.1.0.8";
-import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.8";
-
-// The setup wizard loads only when unfinished or its checklist has items.
-const renderDashboardChecklist = ifLoaded("onboarding", "renderDashboardChecklist");
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.1.1.0.9";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.1.1.0.9";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.1.1.0.9";
+import { dedupeMediaRecords } from "./media-records.js?v=2.1.1.0.9";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.1.1.0.9";
+import { cardArtAttribute } from "./card-art.js?v=2.1.1.0.9";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.1.1.0.9";
 
 const PART_WATCHED_DASHBOARD_LIMIT = 30;
 const EXPLORER_PAGE_SIZE = 240;
@@ -456,9 +453,9 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
   const titleRowHtml = isUpNext
     ? `<div class="history-card-title-row">${titleHtml}${options.upNextChecking ? `<span class="up-next-checking-status" role="status">Checking…</span>` : ""}</div>`
     : titleHtml;
-  const menuHtml = isUpNext
-    ? posterOverflowMenu(entry, { menuMode: "up-next", showTitle: displayTitle, title: displayTitle, label: displayTitle, mediaType: isEpisode ? "tv" : "movie", kind: isEpisode ? "episode" : "movie", queueKind: entry.queue_kind })
-    : (!isPartWatched ? posterOverflowMenu(entry, isEpisode ? { showTitle: displayTitle, label: displayTitle } : {}) : "");
+  const menuHtml = options.menuHtml ?? (isUpNext
+    ? `${posterOverflowMenu(entry, { menuMode: "up-next", showTitle: displayTitle, title: displayTitle, label: displayTitle, mediaType: isEpisode ? "tv" : "movie", kind: isEpisode ? "episode" : "movie", queueKind: entry.queue_kind })}${droppedTitleActionHtml(isEpisode ? { media_type: "show", title: entry.show_title || displayTitle, tmdb_id: entry.show_tmdb_id || "", tvdb_id: entry.show_tvdb_id || "", imdb_id: entry.show_imdb_id || "", year: entry.show_year || "", poster_url: effectiveShowPoster || "" } : { media_type: "movie", title: entry.title || displayTitle, tmdb_id: entry.tmdb_id || "", tvdb_id: entry.tvdb_id || "", imdb_id: entry.imdb_id || "", year: entry.year || entry.release_date || "" }, { card: true })}`
+    : (!isPartWatched ? posterOverflowMenu(entry, isEpisode ? { showTitle: displayTitle, label: displayTitle } : {}) : ""));
   const cardClass = [
     "history-page-card",
     "dashboard-history-page-card",
@@ -949,14 +946,13 @@ bindDashboardRuns(renderDashboardHistoryRows);
 
 // Reconciles only the dashboard history surfaces after an SSE-triggered
 // background fetch. The rest of the dashboard stays untouched, including
-// Now Playing, checklist content, scroll positions, and any open controls.
+// Now Playing, scroll positions, and any open controls.
 export function refreshDashboardHistoryInPlace() {
   if (partWatchedTargets().length) renderPartWatched({ renderInline: false });
   renderDashboardHistoryRows();
 }
 
 export function renderDashboard() {
-  renderDashboardChecklist();
   if (partWatchedTargets().length) renderPartWatched({ renderInline: false });
   setDashboardHistoryRowMode(elements.tvHistoryRow);
   setDashboardHistoryRowMode(elements.movieHistoryRow);

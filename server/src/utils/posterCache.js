@@ -6,6 +6,9 @@ import sharp from "sharp";
 import { db } from "../db.js";
 import { MEDIA_DIR } from "../paths.js";
 import { fetchWithTimeout, normalizeHttpUrl } from "./outbound.js";
+import { listNonAdminUsers, multiUserEnabled } from "./tenancy.js";
+import { getTenantDatabaseForUser } from "./tenantDatabase.js";
+import { usesSharedArtworkNaming } from "./userContext.js";
 
 const FAILED_RETRY_MS = 24 * 60 * 60 * 1000;
 const MISSING_RETRY_MS = 7 * 24 * 60 * 60 * 1000;
@@ -14,6 +17,38 @@ const MAX_ARTWORK_BYTES = 10 * 1024 * 1024;
 function cacheIdFor(mediaKey = "", variant = "poster") {
   const key = variant === "poster" ? mediaKey : `${mediaKey}:${variant}`;
   return crypto.createHash("sha256").update(String(key || "unknown")).digest("hex");
+}
+
+function storageFolderFor(variant = "poster") {
+  return variant === "backdrop" ? "backdrops" : variant === "profile" ? "profiles" : variant === "logo" ? "logos" : "posters";
+}
+
+// In multi-user mode every user reads and writes one artwork folder, and a
+// media key is not unique across users (two media servers can number different
+// titles alike). Name the file after the variant and source URL so the same
+// image is stored once and different sources never overwrite each other. An
+// uploaded data-URL has no remote source, so its bytes name it.
+export function sharedFileNameFor(variant, originalUrl = "", buffer = null) {
+  const hash = crypto.createHash("sha256").update(`${variant}\n`);
+  if (String(originalUrl).startsWith("data:image/")) hash.update(buffer || String(originalUrl));
+  else hash.update(String(originalUrl));
+  return hash.digest("hex");
+}
+
+// Writes the complete file under a temporary name and renames it into place so
+// concurrent readers or writers never see a half-written image. When
+// sameContent is true, an existing file of the same name holds identical
+// bytes, so a rename refused by Windows (destination open) is harmless.
+export async function writeArtworkFile(absolutePath, buffer, { sameContent = false } = {}) {
+  const tempPath = `${absolutePath}.${process.pid}.${crypto.randomBytes(6).toString("hex")}.tmp`;
+  await fs.writeFile(tempPath, buffer);
+  try {
+    await fs.rename(tempPath, absolutePath);
+  } catch {
+    await fs.rm(tempPath, { force: true }).catch(() => null);
+    if (sameContent && existsSync(absolutePath)) return;
+    await fs.writeFile(absolutePath, buffer);
+  }
 }
 
 function extensionForContentType(contentType = "") {
@@ -37,7 +72,7 @@ function sanitizedRemoteUrl(value = "") {
       if (/token|api[_-]?key|key/i.test(key)) url.searchParams.set(key, "redacted");
     }
     return url.toString();
-  } catch (error) {
+  } catch {
     return String(value || "");
   }
 }
@@ -145,6 +180,25 @@ export async function cacheLogoFromUrl(mediaKey = "", remoteUrl = "", source = "
 export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source = "unknown", { variant = "poster", width = 340, quality = 80 } = {}) {
   if (!mediaKey || !remoteUrl) return null;
 
+  const recordCached = (storagePath, contentType, sizeBytes, originalUrl, cached) => {
+    const url = publicMediaUrl(storagePath);
+    upsertStmt.run({
+      id: currentCacheIdFor(mediaKey, variant),
+      media_key: mediaKey,
+      variant,
+      status: "cached",
+      source,
+      detail: null,
+      original_url: sanitizedRemoteUrl(originalUrl),
+      storage_path: storagePath,
+      content_type: contentType,
+      size_bytes: sizeBytes,
+      url,
+      updated_at_ms: Date.now(),
+    });
+    return { url, cached, source };
+  };
+
   const persistBuffer = async (buffer, contentType, originalUrl) => {
     if (!buffer.length || buffer.length > MAX_ARTWORK_BYTES) {
       await markPosterFailure(mediaKey, source, "Artwork body is empty or too large", originalUrl, variant);
@@ -167,28 +221,13 @@ export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source 
     }
 
     const cacheId = currentCacheIdFor(mediaKey, variant);
-    const storageFolder = variant === "backdrop" ? "backdrops" : variant === "profile" ? "profiles" : variant === "logo" ? "logos" : "posters";
-    const storagePath = `${storageFolder}/${cacheId}.${extension}`;
+    const shared = usesSharedArtworkNaming();
+    const fileName = shared ? sharedFileNameFor(variant, originalUrl, finalBuffer) : cacheId;
+    const storagePath = `${storageFolderFor(variant)}/${fileName}.${extension}`;
     const absolutePath = path.join(MEDIA_DIR, storagePath);
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-    await fs.writeFile(absolutePath, finalBuffer);
-
-    const url = publicMediaUrl(storagePath);
-    upsertStmt.run({
-      id: cacheId,
-      media_key: mediaKey,
-      variant,
-      status: "cached",
-      source,
-      detail: null,
-      original_url: sanitizedRemoteUrl(originalUrl),
-      storage_path: storagePath,
-      content_type: finalContentType,
-      size_bytes: finalBuffer.length,
-      url,
-      updated_at_ms: Date.now(),
-    });
-    return { url, cached: false, source };
+    await writeArtworkFile(absolutePath, finalBuffer, { sameContent: shared });
+    return recordCached(storagePath, finalContentType, finalBuffer.length, originalUrl, false);
   };
 
   // Handle local cached storage URLs directly without fetching.
@@ -231,6 +270,17 @@ export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source 
       return null;
     }
     return persistBuffer(Buffer.from(match[2], "base64"), match[1].toLowerCase(), remoteUrl);
+  }
+
+  // Another user may already have stored this image in the shared folder. This
+  // user's database has no row for it yet, so record the file that is there
+  // instead of fetching again.
+  if (usesSharedArtworkNaming()) {
+    const storagePath = `${storageFolderFor(variant)}/${sharedFileNameFor(variant, remoteUrl)}.webp`;
+    const stat = await fs.stat(path.join(MEDIA_DIR, storagePath)).catch(() => null);
+    if (stat?.isFile() && stat.size > 0) {
+      return recordCached(storagePath, "image/webp", stat.size, remoteUrl, true);
+    }
   }
 
   try {
@@ -284,11 +334,27 @@ const selectByStoragePathStmt = db.prepare(
 );
 const restoresInFlight = new Map();
 
+function findPosterRowByStoragePath(storagePath = "") {
+  const fromActive = selectByStoragePathStmt.get(storagePath);
+  if (fromActive) return fromActive;
+  if (!multiUserEnabled()) return null;
+  for (const user of listNonAdminUsers()) {
+    try {
+      const tenantDb = getTenantDatabaseForUser(user.name);
+      const row = tenantDb
+        .prepare("SELECT media_key, variant, source, original_url FROM poster_cache WHERE storage_path = ? AND status = 'cached' LIMIT 1")
+        .get(storagePath);
+      if (row) return row;
+    } catch { /* ignore */ }
+  }
+  return null;
+}
+
 // A cached file that has gone missing from disk (a restore that skipped it, a moved
 // data folder) is downloaded again from the source recorded for it. Returns the
 // /media URL of the restored file, or null when no downloadable source is recorded.
 export async function restoreMissingCachedArtwork(storagePath = "") {
-  const row = selectByStoragePathStmt.get(storagePath);
+  const row = findPosterRowByStoragePath(storagePath);
   // Only http(s) sources can be fetched again. Sanitized data-image uploads and
   // local /media paths have nothing to download.
   if (!row || !/^https?:\/\//i.test(row.original_url || "")) return null;

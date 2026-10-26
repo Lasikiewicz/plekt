@@ -6,6 +6,7 @@
 
 let cachedToken = "";
 let cachedWebhookToken = "";
+let cachedWebhookPath = "/api/webhook";
 let cachedUser = null;
 
 function userFrom(username) {
@@ -21,6 +22,25 @@ function clearSession() {
   cachedUser = null;
   cachedToken = "";
   cachedWebhookToken = "";
+  cachedWebhookPath = "/api/webhook";
+}
+
+function applyTenantStatusFlags(data = {}) {
+  const isAdminSession = data.role === "admin";
+  const isAdminOnNonAdminTenant = isAdminSession && data.supervisedView === true;
+  const isNonAdminUser = data.role === "user" || isAdminOnNonAdminTenant;
+  const isElevatedAdmin = isAdminSession && data.elevatedAdmin === true;
+  document.documentElement.classList.toggle("admin-session", isAdminSession);
+  document.documentElement.classList.toggle("supervised-child", isAdminOnNonAdminTenant);
+  document.documentElement.classList.toggle("non-admin-user", isNonAdminUser);
+  document.documentElement.classList.toggle("elevated-admin", isElevatedAdmin);
+  const selfServicePasswordForm = document.querySelector("#userPasswordForm");
+  if (selfServicePasswordForm) selfServicePasswordForm.hidden = !(isNonAdminUser || isElevatedAdmin);
+  if (typeof data.webhookPath === "string" && data.webhookPath.startsWith("/")) {
+    cachedWebhookPath = data.webhookPath;
+  } else {
+    cachedWebhookPath = "/api/webhook";
+  }
 }
 
 // Fetches the admin API key from the server and caches it. Called after any
@@ -57,6 +77,10 @@ export function getWebhookToken() {
   return cachedWebhookToken;
 }
 
+export function getWebhookPath() {
+  return cachedWebhookPath || "/api/webhook";
+}
+
 // Called once at startup. Resolves the current auth state from the session
 // cookie and invokes the callback with (user, token) or (null, "").
 export function onAuthChange(callback) {
@@ -64,6 +88,7 @@ export function onAuthChange(callback) {
     try {
       const res = await fetch("/api/auth/status", { credentials: "same-origin" });
       const data = await res.json().catch(() => ({}));
+      applyTenantStatusFlags(data);
       if (data.authenticated) {
         setSession(data.username);
         await Promise.all([fetchAndCacheApiKey(), fetchAndCacheWebhookToken()]);
@@ -92,6 +117,11 @@ export async function signInAdmin(username, password) {
     throw new Error(data.error || "Invalid username or password");
   }
   setSession(data.username);
+  try {
+    const statusRes = await fetch("/api/auth/status", { credentials: "same-origin" });
+    const statusData = await statusRes.json().catch(() => ({}));
+    applyTenantStatusFlags(statusData);
+  } catch { /* best-effort */ }
   await Promise.all([fetchAndCacheApiKey(), fetchAndCacheWebhookToken()]);
   return { user: cachedUser, token: "session" };
 }

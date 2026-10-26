@@ -224,22 +224,22 @@ const SECTIONS = {
   },
   connections: {
     label: "Connections",
-    description: "Connect Trakt or Seerr, or import watch history",
+    description: "Connect Trakt, Simkl or Seerr, or import watch history",
     panel: "tools",
-    subPanels: ["tools-migration", "tools-tautulli", "seerr"],
+    subPanels: ["tools-migration", "tools-one-time-imports", "seerr"],
   },
   trakt: {
-    label: "Trakt",
-    description: "Connect live two-way watched sync or import Trakt exports",
+    label: "External trackers",
+    description: "Connect Trakt or Simkl, or import Trakt exports",
     panel: "tools",
     subPanels: ["tools-migration"],
     isDisplayOnly: true,
   },
-  tautulli: {
-    label: "Tautulli",
-    description: "Import one user's completed Tautulli watch history with an identity-aware preview",
+  "one-time-imports": {
+    label: "One Time Imports",
+    description: "Import watch history from Tautulli or Netflix",
     panel: "tools",
-    subPanels: ["tools-tautulli"],
+    subPanels: ["tools-one-time-imports"],
     isDisplayOnly: true,
   },
   "system-integrity": {
@@ -251,6 +251,12 @@ const SECTIONS = {
       { id: "sync-health-box", label: "Refresh Sync Health", description: "Loads a fast snapshot of database row counts, disk storage usage, and outbound media server request pressure." },
       { id: "system-diagnostic-box", label: "Run System Diagnostic", description: "Runs nine live diagnostic checks in sequence and provides actionable fix recommendations for any warnings or errors." },
     ],
+    isDisplayOnly: true,
+  },
+  users: {
+    label: "Users",
+    description: "Add users, each with their own Plekt instance on this server",
+    panel: "users",
     isDisplayOnly: true,
   },
   logs: {
@@ -342,8 +348,8 @@ const SECTION_GROUPS = [
   {
     id: "connections",
     label: "Connections",
-    sections: ["trakt", "tautulli", "seerr"],
-    displayOnly: ["trakt", "tautulli", "seerr"],
+    sections: ["trakt", "one-time-imports", "seerr"],
+    displayOnly: ["trakt", "one-time-imports", "seerr"],
   },
   {
     id: "metadata",
@@ -376,6 +382,12 @@ const SECTION_GROUPS = [
     displayOnly: ["database-repairs", "library-rebuilds", "wipe-data"],
   },
   {
+    id: "users",
+    label: "Users",
+    sections: [],
+    displayOnly: [],
+  },
+  {
     id: "logs",
     label: "Logs",
     sections: [],
@@ -389,17 +401,45 @@ const SECTION_GROUPS = [
   },
 ];
 
+// Non-admin accounts manage their own connections and profile. Installation
+// settings and maintenance sections remain visible to the install admin only.
+const USER_SETTINGS_SECTIONS = new Set([
+  "account", "plex", "emby", "jellyfin", "setup-guides", "webhook-secret",
+  "trakt", "one-time-imports", "seerr", "sync-history", "changelog",
+]);
+
+function isNonAdminSettingsUser() {
+  return typeof document !== "undefined" && (
+    document.documentElement?.classList.contains("non-admin-user")
+    || document.documentElement?.classList.contains("supervised-child")
+  );
+}
+
+function canOpenSettingsSection(sectionId) {
+  if (!isNonAdminSettingsUser()) return true;
+  if (USER_SETTINGS_SECTIONS.has(sectionId)) return true;
+  const group = SECTION_GROUPS.find((entry) => entry.id === sectionId);
+  return Boolean(group?.sections.some((section) => USER_SETTINGS_SECTIONS.has(section)));
+}
+
+function visibleSettingsSections(group) {
+  return isNonAdminSettingsUser()
+    ? group.sections.filter((section) => USER_SETTINGS_SECTIONS.has(section))
+    : group.sections;
+}
+
 // One-line summaries for the group boxes on the settings landing page.
 const GROUP_DESCRIPTIONS = {
   general: "Account, diagnostics, and cache settings.",
   "media-servers": "Connect Plex, Emby, and Jellyfin.",
   webhooks: "Webhook listener and background scheduler endpoints.",
-  connections: "Connect Trakt or Seerr, or import watch history.",
+  connections: "Connect Trakt, Simkl or Seerr, or import watch history.",
   metadata: "Configure TMDB, TVDB, Fanart.tv, and OMDb, and refresh cached metadata.",
   sync: "Tune sync behavior, run sync tools, and inspect history.",
   backup: "Schedule local and remote backups of watch history and full Plekt data.",
   restore: "Restore watch history or a full backup from local files or a remote destination.",
   tools: "Reopen guided setup, repair the database, rebuild the library, and wipe data.",
+  users: "Add users and see who has an instance on this server.",
   logs: "Live server and browser diagnostic output.",
   changelog: "Version history and release notes.",
 };
@@ -425,6 +465,7 @@ const LEGACY_PATHS = {
   "/settings/connections/plex": "/settings/media-servers",
   "/settings/connections/emby": "/settings/media-servers",
   "/settings/connections/jellyfin": "/settings/media-servers",
+  "/settings/tautulli": "/settings/connections",
   "/settings/connections/seerr": "/settings/seerr",
   "/settings/connections/webhooks": "/settings/webhooks",
   "/settings/metadata/tmdb": "/settings/metadata",
@@ -458,10 +499,12 @@ const LEGACY_TABS = {
   backups: "/settings/backup",
   tools: "/settings/database-repairs",
   sync: "/settings/sync",
+  users: "/settings/users",
   logs: "/settings/logs",
   cache: "/settings/storage",
   about: "/about",
   changelog: "/settings/changelog",
+  tautulli: "/settings/connections#one-time-imports",
 };
 
 export const SETTINGS_SECTIONS = Object.freeze(SECTIONS);
@@ -479,12 +522,12 @@ export function settingsPathForLegacy(value = "") {
 
 function sectionRoute(section, requestedPath) {
   const definition = SECTIONS[section];
-  const groupObj = SECTION_GROUPS.find((g) => g.sections.includes(section));
+  const groupObj = SECTION_GROUPS.find((g) => g.id === section || g.sections.includes(section));
   const group = groupObj?.id || section;
 
   let subPanels = definition.subPanels;
   if (groupObj && groupObj.displayOnly && section === group) {
-    const allGroupSubPanels = groupObj.sections.flatMap((s) => SECTIONS[s]?.subPanels || []);
+    const allGroupSubPanels = visibleSettingsSections(groupObj).flatMap((s) => SECTIONS[s]?.subPanels || []);
     if (allGroupSubPanels.length) subPanels = [...new Set(allGroupSubPanels)];
   }
 
@@ -519,11 +562,15 @@ export function parseSettingsRoute(value = "/settings", { mustChangePassword = f
   if (parts[0] !== "settings" || !SECTIONS[parts[1]]) {
     return { kind: "overview", group: "overview", task: "", path: "/settings", requestedPath, title: "Settings overview" };
   }
+  if (!canOpenSettingsSection(parts[1])) {
+    return { kind: "overview", group: "overview", task: "", path: "/settings", requestedPath, title: "Settings overview" };
+  }
   const route = sectionRoute(parts[1], requestedPath);
-  const hash = String(value || "").split("#")[1]?.split(/[?&]/, 1)[0] || "";
+  const rawHash = String(value || "").split("#")[1]?.split(/[?&]/, 1)[0] || "";
+  const hash = rawHash === "tautulli" ? "one-time-imports" : rawHash;
   if (hash) {
     const matchedGroup = SECTION_GROUPS.find((group) => group.id === route.group);
-    if (SECTIONS[hash]) {
+    if (SECTIONS[hash] && canOpenSettingsSection(hash)) {
       // The hash names a real section directly (e.g. a sidebar child link
       // like /settings/media-servers#emby). The page should keep showing
       // every sibling in the group (all three servers, all three tools rows,
@@ -567,7 +614,9 @@ function renderSettingsSidebar() {
   const fragment = document.createDocumentFragment();
 
   for (const group of SECTION_GROUPS) {
-    const parentPath = SECTIONS[group.id] ? `/settings/${group.id}` : `/settings/${group.sections[0]}`;
+    const sections = visibleSettingsSections(group);
+    if (!sections.length && !canOpenSettingsSection(group.id)) continue;
+    const parentPath = SECTIONS[group.id] ? `/settings/${group.id}` : `/settings/${sections[0] || group.id}`;
     const parentButton = document.createElement("button");
     parentButton.type = "button";
     parentButton.className = "settings-tab settings-group-parent";
@@ -576,7 +625,7 @@ function renderSettingsSidebar() {
     parentButton.textContent = group.label;
     fragment.append(parentButton);
 
-    for (const sectionId of group.sections) {
+    for (const sectionId of sections) {
       const definition = SECTIONS[sectionId];
       const childButton = document.createElement("button");
       childButton.type = "button";
@@ -602,15 +651,17 @@ function renderSettingsSectionSelect() {
   select.append(overview);
 
   for (const group of SECTION_GROUPS) {
+    const sections = visibleSettingsSections(group);
+    if (!sections.length && !canOpenSettingsSection(group.id)) continue;
     const groupOptgroup = document.createElement("optgroup");
     groupOptgroup.label = group.label;
-    if (!group.sections.length) {
+    if (!sections.length) {
       const option = document.createElement("option");
       option.value = `/settings/${group.id}`;
       option.textContent = group.label;
       groupOptgroup.append(option);
     }
-    for (const sectionId of group.sections) {
+    for (const sectionId of sections) {
       const definition = SECTIONS[sectionId];
       const option = document.createElement("option");
       option.value = `/settings/${sectionId}`;
@@ -633,7 +684,9 @@ function renderSettingsOverview() {
   list.replaceChildren();
 
   for (const group of SECTION_GROUPS) {
-    const firstSectionId = group.sections[0];
+    const sections = visibleSettingsSections(group);
+    if (!sections.length && !canOpenSettingsSection(group.id)) continue;
+    const firstSectionId = sections[0];
     const targetSectionId = SECTIONS[group.id] ? group.id : firstSectionId;
     const parentPath = SECTIONS[group.id] ? `/settings/${group.id}` : `/settings/${firstSectionId}`;
 
@@ -661,14 +714,60 @@ function prepareToolsDisclosures() {
 }
 
 let helpResizeObserver = null;
+let helpToggleListenerBound = false;
+
+function helpMatchTarget(main) {
+  const card = main.querySelector(":scope > .settings-card, :scope > article, :scope > section, :scope > .sync-panel, :scope > .logs-panel, :scope > .backup-settings-panel");
+  const target = card || main;
+  // getBoundingClientRect() is scaled by the app chassis zoom (75% here), but
+  // the matched height is written back as CSS pixels. Read the resolved CSS
+  // height so the help card stays the same size as the main card on screen.
+  const resolvedHeight = Number.parseFloat(getComputedStyle(target).height);
+  return Number.isFinite(resolvedHeight) && resolvedHeight > 0
+    ? resolvedHeight
+    : target.offsetHeight;
+}
+
+function setHelpMatchHeight(article, heightPx, minHeightPx = heightPx) {
+  if (minHeightPx > 0) article.style.setProperty("--help-match-height", `${minHeightPx}px`);
+  else article.style.removeProperty("--help-match-height");
+  article.style.minHeight = minHeightPx > 0 ? `${minHeightPx}px` : "";
+  article.style.maxHeight = heightPx > 0 ? `${heightPx}px` : "";
+  article.style.height = heightPx > 0 ? `${heightPx}px` : "";
+}
+
+export function settingsHelpLayout(fullHelpHeight, targetHeight, expanded = false) {
+  const target = Math.max(0, Number(targetHeight) || 0);
+  const full = Math.max(0, Number(fullHelpHeight) || 0);
+  // Avoid showing a control for sub-line layout overflow (padding, borders,
+  // or fractional text metrics) when the user has no meaningful extra copy to read.
+  const canReadMore = full > target + 24;
+  const isExpanded = expanded && canReadMore;
+  return {
+    minHeight: target,
+    height: isExpanded ? 0 : target,
+    collapsed: !isExpanded && canReadMore,
+    showReadMore: canReadMore,
+    expanded: isExpanded,
+  };
+}
 
 export function prepareHelpReadMore() {
+  if (!helpToggleListenerBound) {
+    helpToggleListenerBound = true;
+    document.addEventListener("toggle", (event) => {
+      const details = event.target;
+      if (!details?.matches?.("details") || !details.closest(".settings-row-main")) return;
+      prepareHelpReadMore();
+    }, true);
+  }
+
   document.querySelectorAll(".settings-row-help > article, .settings-row-help > section").forEach((article) => {
     const row = article.closest(".settings-row");
     const main = row?.querySelector(".settings-row-main");
     if (!main || row.classList.contains("hidden")) return;
 
-    const targetHeight = main.offsetHeight || main.scrollHeight;
+    const targetHeight = helpMatchTarget(main);
     if (!targetHeight || targetHeight < 20) return;
 
     let content = article.querySelector(":scope > .help-content");
@@ -689,60 +788,72 @@ export function prepareHelpReadMore() {
       button.type = "button";
       button.className = "help-read-more button-primary sync-action-btn sync-tool-button";
       button.textContent = "Read more";
+      button.setAttribute("aria-expanded", "false");
       button.addEventListener("click", () => {
         const isExpanded = article.classList.contains("help-expanded");
         if (isExpanded) {
           article.classList.remove("help-expanded");
           article.classList.add("help-collapsed");
-          article.style.maxHeight = `${main.offsetHeight || main.scrollHeight}px`;
+          const targetHeight = helpMatchTarget(main);
+          setHelpMatchHeight(article, targetHeight, targetHeight);
           button.textContent = "Read more";
+          button.setAttribute("aria-expanded", "false");
         } else {
           article.classList.add("help-expanded");
           article.classList.remove("help-collapsed");
-          article.style.maxHeight = "";
+          setHelpMatchHeight(article, 0, helpMatchTarget(main));
           button.textContent = "Read less";
+          button.setAttribute("aria-expanded", "true");
         }
       });
       article.append(button);
     }
 
-    if (article.dataset.helpStatic === "true") {
-      button.remove();
-      article.classList.remove("help-collapsed", "help-expanded");
-      article.style.maxHeight = "";
-      return;
-    }
+    const wasExpanded = article.classList.contains("help-expanded");
+    // Compare the help card's natural height with the matched main card. The
+    // content viewport can temporarily collapse to zero while its parent is
+    // being resized, which falsely makes short help look clipped.
+    article.classList.remove("help-collapsed", "help-expanded");
+    setHelpMatchHeight(article, 0);
+    button.classList.add("hidden");
+    // Button styles can override the hidden utility, so remove it from the
+    // natural-height measurement explicitly.
+    button.style.setProperty("display", "none", "important");
+    const layout = settingsHelpLayout(article.scrollHeight, targetHeight, wasExpanded);
+    button.style.removeProperty("display");
+    article.classList.remove("help-collapsed");
+    setHelpMatchHeight(article, 0);
 
-    if (article.classList.contains("help-expanded")) {
+    if (layout.expanded && layout.showReadMore) {
       button.classList.remove("hidden");
       button.textContent = "Read less";
-      article.style.maxHeight = "";
+      button.setAttribute("aria-expanded", "true");
+      article.classList.add("help-expanded");
+      setHelpMatchHeight(article, 0, targetHeight);
       return;
     }
 
-    const compStyle = getComputedStyle(article);
-    const paddingTop = parseFloat(compStyle.paddingTop) || 0;
-    const paddingBottom = parseFloat(compStyle.paddingBottom) || 0;
-    const headingHeight = article.querySelector(":scope > .section-heading")?.offsetHeight || 0;
-    const fullHelpHeight = content.scrollHeight + headingHeight + paddingTop + paddingBottom;
-
-    if (fullHelpHeight > targetHeight + 2) {
+    if (layout.showReadMore) {
       button.classList.remove("hidden");
+      button.setAttribute("aria-expanded", "false");
       article.classList.add("help-collapsed");
       article.classList.remove("help-expanded");
-      article.style.maxHeight = `${targetHeight}px`;
+      setHelpMatchHeight(article, targetHeight, targetHeight);
       button.textContent = "Read more";
     } else {
       button.classList.add("hidden");
+      button.setAttribute("aria-expanded", "false");
       article.classList.remove("help-collapsed", "help-expanded");
-      article.style.maxHeight = "";
+      setHelpMatchHeight(article, targetHeight, targetHeight);
     }
   });
 
-  if (typeof ResizeObserver !== "undefined" && !helpResizeObserver) {
-    helpResizeObserver = new ResizeObserver(() => {
-      prepareHelpReadMore();
-    });
+  if (typeof ResizeObserver !== "undefined") {
+    if (!helpResizeObserver) {
+      helpResizeObserver = new ResizeObserver(() => {
+        prepareHelpReadMore();
+      });
+    }
     document.querySelectorAll(".settings-row-main").forEach((main) => {
       helpResizeObserver.observe(main);
     });
@@ -757,6 +868,10 @@ export function prepareSettingsShell() {
 }
 
 export function applySettingsRoute(route) {
+  // Auth status is resolved after the initial shell render. Rebuild these
+  // navigation surfaces on each route so a user's role is reflected as soon
+  // as the authenticated route is applied.
+  prepareSettingsShell();
   document.querySelector("#settingsOverview")?.classList.toggle("hidden", route.kind !== "overview");
   document.querySelectorAll("[data-settings-panel]").forEach((panel) => panel.classList.add("hidden"));
   document.querySelectorAll("[data-sub-panel]").forEach((panel) => panel.classList.add("hidden"));
@@ -810,6 +925,12 @@ export function applySettingsRoute(route) {
         if (local && local.parentElement !== home) home.appendChild(local);
         if (remote && remote.parentElement !== home) home.appendChild(remote);
       }
+    }
+    // Same borrow pattern for One Time Imports on the Import & sync setup step.
+    if (views.some((view) => (view.subPanels || []).includes("tools-one-time-imports"))) {
+      const home = document.getElementById("oneTimeImportsHome");
+      const content = document.getElementById("oneTimeImportsContent");
+      if (home && content && content.parentElement !== home) home.appendChild(content);
     }
   }
 

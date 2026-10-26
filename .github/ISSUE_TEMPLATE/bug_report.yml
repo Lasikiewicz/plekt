@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a problem with Plekt.
+title: "[Bug]: "
+labels: [bug, needs-triage]
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I am using the latest Plekt version for my release channel.
+          required: true
+        - label: I have searched existing issues for this problem.
+          required: true
+  - type: input
+    id: plekt-version
+    attributes:
+      label: Plekt version
+      description: Find this in Settings → About, or in your image/tag details.
+      placeholder: e.g. 1.2.3 or develop-123
+    validations:
+      required: true
+  - type: dropdown
+    id: release-channel
+    attributes:
+      label: Release channel
+      options:
+        - Stable
+        - Alpha
+        - Develop
+    validations:
+      required: true
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Install method
+      options:
+        - Windows installer
+        - Docker or Docker Compose
+        - Unraid
+        - Node.js
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: media-servers
+    attributes:
+      label: Media servers involved
+      options:
+        - label: Plex
+        - label: Jellyfin
+        - label: Emby
+  - type: checkboxes
+    id: trackers
+    attributes:
+      label: Trackers involved
+      options:
+        - label: Trakt
+        - label: Simkl
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem and where you encountered it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction-steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Do ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: Paste relevant logs or attach a log file. Redact tokens, URLs and usernames before sharing.
+      render: text

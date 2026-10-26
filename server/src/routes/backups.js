@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
+import { getTrackerAdapter, isTrackerProvider } from "../utils/trackers/registry.js";
 import fs from "node:fs";
 import path from "node:path";
 import { pipeline } from "node:stream/promises";
-import { requireAdmin } from "../utils/auth.js";
+import { requireInstallAdmin } from "../utils/auth.js";
 import { readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout } from "../utils/outbound.js";
@@ -104,7 +105,7 @@ function loadRestoreReport(runId) {
 export async function handleImport(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
     return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; watch-history imports are paused until it completes." }, 409);
   }
@@ -118,7 +119,7 @@ export async function handleImport(req, res) {
 export async function handleBackupExport(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   const collection = String(req.query?.collection || "").trim();
   if (!collection) return sendJson(res, backupManifest(req.headers.origin || ""));
@@ -137,7 +138,7 @@ export async function handleBackupExport(req, res) {
 export async function handleBackupImport(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
     return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; backup imports are paused until it completes." }, 409);
   }
@@ -159,7 +160,7 @@ export async function handleBackupImport(req, res) {
 
 export async function handlePlektBackups(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   if (req.method === "GET") {
     const filename = String(req.query?.download || "").trim();
@@ -471,7 +472,7 @@ function restoreOutcomeIsExpectedSkip(outcome = {}) {
     || outcome.summary?.details
     || "",
   ).trim();
-  return state.status === "skipped" && /no matching item/i.test(detail);
+  return state.status === "skipped" && /no matching \w+/i.test(detail);
 }
 
 function restoreProjectionIssue(row, outcome, historyRow = null) {
@@ -815,8 +816,8 @@ function restoreIssueProvider(issue = {}) {
 function restoreFailureMessage(issues = [], fallback = "One or more restored projections reported failures.") {
   const providers = [...new Set(issues.map(restoreIssueProvider).filter(Boolean))];
   if (!issues.length) return fallback;
-  if (providers.length === 1 && providers[0] === "trakt") {
-    return `Trakt rejected ${issues.length} restored play${issues.length === 1 ? "" : "s"}; item-level attention is required.`;
+  if (providers.length === 1 && isTrackerProvider(providers[0])) {
+    return `${getTrackerAdapter(providers[0]).label} rejected ${issues.length} restored play${issues.length === 1 ? "" : "s"}; item-level attention is required.`;
   }
   const providerText = providers.length ? ` on ${providers.join(", ")}` : "";
   return `${issues.length} restored item projection${issues.length === 1 ? "" : "s"} still need attention${providerText}.`;
@@ -1063,7 +1064,7 @@ async function startAuthoritativeRestore(filename, clearMode) {
 
 export async function handleWatchBackups(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
 
   if (req.method === "GET") {
     const filename = String(req.query?.download || "").trim();

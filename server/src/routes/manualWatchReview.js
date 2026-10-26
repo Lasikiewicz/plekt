@@ -537,6 +537,7 @@ export async function handleManualWatchReview(req, res, path) {
       // those records into one row.
       count: countPendingManualWatchReviewItems(pendingReviews),
       reviewCount: pendingReviews.length,
+      sourceMismatchCount: pendingReviews.filter((review) => review.review_kind === "source_mismatch").length,
       // The sidebar summary hides reviews the page has just decided. It needs
       // the ids to subtract only those the server still reports, otherwise a
       // decided review cancels out a newly flagged one.
@@ -549,6 +550,16 @@ export async function handleManualWatchReview(req, res, path) {
 
   const review = getManualWatchReview(id);
   if (!review) return sendJson(res, { error: "Manual watch review not found" }, 404);
+  if (review.review_kind === "source_mismatch") {
+    if (action !== "dismiss") return sendJson(res, { error: "Source mismatch reviews only support dismiss." }, 400);
+    const updated = setManualWatchReviewStatus(id, "dismissed", "source_mismatch");
+    const pendingReviews = listPendingManualWatchReviews();
+    return sendJson(res, {
+      ok: true, id, status: "dismissed", review: updated,
+      count: countPendingManualWatchReviewItems(pendingReviews), reviewCount: pendingReviews.length,
+      sourceMismatchCount: pendingReviews.filter((item) => item.review_kind === "source_mismatch").length,
+    }, 200, { "Cache-Control": "no-store" });
+  }
   if (action === "dismiss") {
     try {
       const result = review.status === "pending"

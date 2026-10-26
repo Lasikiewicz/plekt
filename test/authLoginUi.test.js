@@ -7,6 +7,24 @@ const root = path.resolve(import.meta.dirname, "..");
 const appSource = fs.readFileSync(path.join(root, "public/app.js"), "utf8");
 const indexSource = fs.readFileSync(path.join(root, "public/index.html"), "utf8");
 const stylesSource = fs.readFileSync(path.join(root, "public/styles.css"), "utf8");
+const authSource = fs.readFileSync(path.join(root, "public/modules/auth.js"), "utf8");
+const switchSource = fs.readFileSync(path.join(root, "public/modules/supervisor-switch.js"), "utf8");
+
+test("self-service password form is hidden until a user or delegated admin is confirmed", () => {
+  assert.match(indexSource, /<form id="userPasswordForm"[^>]*\shidden>/);
+  assert.match(authSource, /const isAdminOnNonAdminTenant = isAdminSession && data\.supervisedView === true;/);
+  assert.match(authSource, /const isElevatedAdmin = isAdminSession && data\.elevatedAdmin === true;/);
+  assert.match(authSource, /selfServicePasswordForm\.hidden = !\(isNonAdminUser \|\| isElevatedAdmin\);/);
+  assert.match(authSource, /classList\.toggle\("admin-session", isAdminSession\)/);
+  assert.match(stylesSource, /\.settings-pane \.settings-card #userPasswordForm\[hidden\]\s*\{\s*display:\s*none\s*!important;/);
+  assert.match(stylesSource, /html\.elevated-admin \.account-admin-only,[\s\S]*?html\.elevated-admin \.account-user-only/);
+  assert.match(stylesSource, /\.settings-pane #userPasswordForm \.admin-credentials-grid\s*\{\s*display:\s*grid !important;\s*grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\) !important;/);
+  assert.match(stylesSource, /\.settings-pane #userPasswordForm \.admin-credentials-grid > \.field-label\s*\{\s*display:\s*grid !important;\s*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(12rem, 18rem\) !important;/);
+});
+
+test("administrator account picker remains available while viewing a user workspace", () => {
+  assert.match(switchSource, /contains\("non-admin-user"\)[\s\S]*?&&\s*!document\.documentElement\.classList\.contains\("admin-session"\)/);
+});
 
 test("locked login keeps its logo in sync with the selected theme", () => {
   assert.match(indexSource, /<body class="auth-locked">/);

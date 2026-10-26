@@ -1,13 +1,13 @@
 // Coordinates the safe, additive background pulls onboarding offers per
-// connected server and for Trakt. Deliberately reuses already-tested sync
-// code rather than any new watched-item ingestion path:
+// connected server and per connected tracker. Deliberately reuses already-
+// tested sync code rather than any new watched-item ingestion path:
 //   - Per-server pulls call forceSyncLibraryState({ mode: "pull", source })
 //     (server/src/utils/libraryForceSync.js) - the same "Import Watched
 //     Status" pull already offered from Settings -> Sync -> Force Sync.
-//   - The Trakt baseline snapshot calls pollConnectedTrackers({ reconcile })
-//     (server/src/utils/trackerSync.js) - the same first-sync path the
-//     regular Trakt poll cycle uses once a connection's baselineComplete is
-//     false.
+//   - Each tracker's baseline snapshot calls pollConnectedTrackers({
+//     reconcile, provider }) (server/src/utils/trackerSync.js) - the same
+//     first-sync path the regular poll cycle uses once a connection's
+//     baselineComplete is false.
 // Both are read-only pulls into Plembfin's local watch_history - neither
 // pushes anything outward - so, unlike the global "force_sync" operation
 // lock, running several of these at once (e.g. Plex and Jellyfin together)
@@ -17,8 +17,10 @@
 import { forceSyncLibraryState } from "./libraryForceSync.js";
 import { pollConnectedTrackers } from "./trackerSync.js";
 import { activeSyncOperation, isAuthoritativeRestoreActive, loadRuntimeState, SYNC_OPERATION_SCHEDULED } from "./configStore.js";
-import { countTrackerItemStates } from "./trackerConnectionRepo.js";
-import { getOnboardingState, saveOnboardingState } from "./onboardingStore.js";
+import { countTrackerItemStates, getTrackerConnection } from "./trackerConnectionRepo.js";
+import { compareTrackerWithPlekt, startTrackerFullSync } from './trackers/fullSync.js';
+import { getOnboardingState, saveOnboardingState, trackerImportState } from "./onboardingStore.js";
+import { assertTrackerEnabled } from "./trackers/registry.js";
 
 const MEDIA_SERVERS = ["plex", "emby", "jellyfin"];
 const cancelTokens = new Map();
@@ -29,11 +31,19 @@ function patchServerImport(provider, patch) {
   return saveOnboardingState({ backgroundImports: { ...state.backgroundImports, servers } });
 }
 
-function patchTraktImport(patch) {
+function patchTrackerImport(provider, patch) {
   const state = getOnboardingState();
-  return saveOnboardingState({
-    backgroundImports: { ...state.backgroundImports, trakt: { ...state.backgroundImports.trakt, ...patch } },
-  });
+  const trackers = { ...state.backgroundImports.trackers, [provider]: { ...trackerImportState(state, provider), ...patch } };
+  return saveOnboardingState({ backgroundImports: { ...state.backgroundImports, trackers } });
+}
+
+// Media-server pulls wait while any tracker the user chose to import is still
+// importing, up to one shared cap measured from when that pull first waited.
+export function trackerGateDecision(state, waitStartedAt, now = Date.now()) {
+  const importing = Object.entries(state.backgroundImports.trackers || {})
+    .filter(([, entry]) => entry?.enabled !== false && entry?.status === "importing")
+    .map(([provider]) => provider);
+  return { importing, wait: importing.length > 0 && now - waitStartedAt < TRACKER_WAIT_MAX_MS };
 }
 
 // The routine per-minute scheduled sync tick shares outbound client/rate-
@@ -43,13 +53,16 @@ function patchTraktImport(patch) {
 // budgeted at 45s and recurs every ~60s, so it clears on its own quickly.
 const SCHEDULED_LOCK_RETRY_DELAY_MS = 5_000;
 const SCHEDULED_LOCK_MAX_WAIT_MS = 120_000;
-// Trakt connects (and its reconcile pass runs) before the media servers
-// specifically so its watch dates can take priority once the servers pull -
-// see loadTraktWatchedDateIndex in mediaForceSync.js. That reconcile can
+// Trackers connect (and their reconcile passes run) before the media servers
+// specifically so their watch dates can take priority once the servers pull -
+// see loadTraktWatchedDateIndex in mediaForceSync.js. A reconcile can
 // legitimately run for many minutes on a large account, far longer than the
-// scheduled-sync wait above covers, so it gets its own much longer cap.
-const TRAKT_WAIT_RETRY_DELAY_MS = 5_000;
-const TRAKT_WAIT_MAX_MS = 30 * 60_000;
+// scheduled-sync wait above covers, so it gets its own much longer cap. All
+// connected trackers import in parallel and share this one cap (docs/
+// decisions.md): per-tracker caps would leave a three-tracker first run
+// showing "Importing" for 90 minutes.
+const TRACKER_WAIT_RETRY_DELAY_MS = 5_000;
+const TRACKER_WAIT_MAX_MS = 30 * 60_000;
 const RESTORE_RETRY_DELAY_MS = 5_000;
 
 // This wait is deliberately server-side, not something the caller polls for
@@ -57,7 +70,7 @@ const RESTORE_RETRY_DELAY_MS = 5_000;
 // tab's own JS timer, which silently evaporated on any page reload or
 // navigation, leaving the UI showing "Importing" with nothing actually
 // running behind it. Retrying via a real server-side timer survives that.
-export async function startServerImport(provider, { lockWaitStartedAt = Date.now(), traktWaitStartedAt = Date.now() } = {}) {
+export async function startServerImport(provider, { lockWaitStartedAt = Date.now(), trackerWaitStartedAt = Date.now() } = {}) {
   if (!MEDIA_SERVERS.includes(provider)) throw new Error("Unsupported provider");
   if (getOnboardingState().runState === "completed") return { started: false, code: "ONBOARDING_COMPLETE" };
   const waitToken = cancelTokens.get(`server:${provider}`) || { cancelled: false };
@@ -68,25 +81,25 @@ export async function startServerImport(provider, { lockWaitStartedAt = Date.now
     patchServerImport(provider, { enabled: true, status: "importing", error: null });
     setTimeout(() => {
       if (waitToken.cancelled) return;
-      startServerImport(provider, { lockWaitStartedAt, traktWaitStartedAt }).catch(() => {});
+      startServerImport(provider, { lockWaitStartedAt, trackerWaitStartedAt }).catch(() => {});
     }, RESTORE_RETRY_DELAY_MS);
     return { started: false, code: "RESTORE_ACTIVE_RETRYING" };
   }
 
-  const traktImport = getOnboardingState().backgroundImports.trakt;
-  const traktStillImporting = traktImport?.enabled !== false && traktImport?.status === "importing";
-  if (traktStillImporting) {
-    if (Date.now() - traktWaitStartedAt < TRAKT_WAIT_MAX_MS) {
+  const trackerGate = trackerGateDecision(getOnboardingState(), trackerWaitStartedAt);
+  if (trackerGate.importing.length) {
+    if (trackerGate.wait) {
       patchServerImport(provider, { enabled: true, status: "importing", error: null });
       setTimeout(() => {
         if (waitToken.cancelled) return;
-        startServerImport(provider, { lockWaitStartedAt, traktWaitStartedAt }).catch(() => {});
-      }, TRAKT_WAIT_RETRY_DELAY_MS);
-      return { started: false, code: "TRAKT_IMPORTING_RETRYING" };
+        startServerImport(provider, { lockWaitStartedAt, trackerWaitStartedAt }).catch(() => {});
+      }, TRACKER_WAIT_RETRY_DELAY_MS);
+      return { started: false, code: "TRACKER_IMPORTING_RETRYING" };
     }
-    // After 30 minutes, stop waiting and proceed anyway - Trakt's own poll
-    // cycle continues the reconcile regardless, and this server's watched
-    // dates are still better than none.
+    // After 30 minutes in total, however many trackers are still importing,
+    // stop waiting and proceed anyway - each tracker's own poll cycle
+    // continues its reconcile regardless, and this server's watched dates are
+    // still better than none.
   }
 
   const runtime = await loadRuntimeState();
@@ -95,7 +108,7 @@ export async function startServerImport(provider, { lockWaitStartedAt = Date.now
       patchServerImport(provider, { enabled: true, status: "importing", error: null });
       setTimeout(() => {
         if (waitToken.cancelled) return;
-        startServerImport(provider, { lockWaitStartedAt, traktWaitStartedAt }).catch(() => {});
+        startServerImport(provider, { lockWaitStartedAt, trackerWaitStartedAt }).catch(() => {});
       }, SCHEDULED_LOCK_RETRY_DELAY_MS);
       return { started: false, code: "SYNC_LOCKED_RETRYING" };
     }
@@ -132,7 +145,7 @@ export async function startServerImport(provider, { lockWaitStartedAt = Date.now
         patchServerImport(provider, { enabled: true, status: "importing", completedAt: null, error: null });
         setTimeout(() => {
           if (token.cancelled) return;
-          startServerImport(provider, { lockWaitStartedAt, traktWaitStartedAt }).catch(() => {});
+          startServerImport(provider, { lockWaitStartedAt, trackerWaitStartedAt }).catch(() => {});
         }, RESTORE_RETRY_DELAY_MS);
         return;
       }
@@ -160,84 +173,110 @@ export function cancelServerImport(provider) {
 }
 
 // A connection's very first poll only establishes a baseline reference point
-// - the reconcile pass inside pollTrakt (trackerSync.js) is gated behind the
-// connection's baselineComplete flag already being true *before* that call
-// starts, so the very first call always imports nothing no matter what
-// options it's given, then flips the flag true at the end. A real watch-
+// - the reconcile pass inside pollTrackerPass (trackerSync.js) is gated
+// behind the connection's baselineComplete flag already being true *before*
+// that call starts, so the very first call always imports nothing no matter
+// what options it's given, then flips the flag true at the end. A real watch-
 // history backfill needs at least one more pass after that, now genuinely
 // walking the full snapshot against local state. Loop until a pass applies
 // zero further watched transitions so "complete" means the backlog is
 // actually caught up, not just that the fast baseline handshake finished -
-// a large account's snapshot can need several passes.
-const MAX_TRAKT_RECONCILE_PASSES = 25;
-async function runFullTraktReconcile() {
-  for (let pass = 0; pass < MAX_TRAKT_RECONCILE_PASSES; pass++) {
+// a large account's snapshot can need several passes. The loop, its pass
+// counter and its item count are per provider: one tracker settling must not
+// end another's import, and a settled tracker must not keep re-polling.
+const MAX_TRACKER_RECONCILE_PASSES = 25;
+export async function reconcileTrackerUntilSettled(provider, {
+  poll = pollConnectedTrackers,
+  count = countTrackerItemStates,
+  report = (itemCount) => patchTrackerImport(provider, { itemCount }),
+} = {}) {
+  let passes = 0;
+  for (let pass = 0; pass < MAX_TRACKER_RECONCILE_PASSES; pass++) {
     if (isAuthoritativeRestoreActive()) {
-      throw Object.assign(new Error("An authoritative watch-history restore is active; Trakt import is paused."), { code: "RESTORE_ACTIVE" });
+      throw Object.assign(new Error("An authoritative watch-history restore is active; the tracker import is paused."), { code: "RESTORE_ACTIVE" });
     }
-    const result = await pollConnectedTrackers({ reconcile: true });
+    const result = await poll({ reconcile: true, provider });
+    passes += 1;
     // See the identical note where this is called - report what's actually
     // on file, not an in-memory accumulator a restart could lose.
-    patchTraktImport({ itemCount: countTrackerItemStates("trakt") });
+    report(count(provider));
     if (pass > 0 && !result?.watched) break;
   }
+  return { passes };
 }
 
-export async function startTraktImport() {
+export function pauseTrackerImportForRestore(provider) {
+  // An in-flight pass can encounter the restore after the user opted out.
+  // Preserve that newer choice instead of re-enabling its onboarding gate.
+  const entry = trackerImportState(getOnboardingState(), provider);
+  if (entry.enabled === false) return false;
+  patchTrackerImport(provider, { enabled: true, status: "preview_required", error: 'Restore interrupted the import; review a fresh preview before continuing' });
+  return true;
+}
+
+export async function startTrackerImport(provider, {planId,selectedIds}={}) {
+  // Only trackers whose sync is switched on can import; a gated tracker
+  // throws here and is rejected as unsupported.
+  assertTrackerEnabled(provider);
   if (getOnboardingState().runState === "completed") return { started: false, code: "ONBOARDING_COMPLETE" };
   if (isAuthoritativeRestoreActive()) {
-    patchTraktImport({ enabled: true, status: "importing", error: null });
-    setTimeout(() => {
-      const state = getOnboardingState().backgroundImports.trakt;
-      if (state?.enabled === false || state?.status !== "importing") return;
-      startTraktImport().catch(() => {});
-    }, RESTORE_RETRY_DELAY_MS);
-    return { started: false, code: "RESTORE_ACTIVE_RETRYING" };
+    return { started: false, code: "RESTORE_ACTIVE" };
   }
   const runtime = await loadRuntimeState();
   const activeOperation = activeSyncOperation(runtime);
   // Unlike the per-server pulls above, pollConnectedTrackers only talks to
-  // Trakt's API - it shares no outbound client/rate-limit state with Plex/
-  // Emby/Jellyfin, and already coalesces concurrent calls itself (pollInFlight
-  // in trackerSync.js). So the routine per-minute scheduled sync tick - which
-  // reliably recurs every 60s and can otherwise permanently starve this of a
-  // clear window - isn't treated as a conflict; only a genuinely unrelated
-  // operation (force sync, rebuild, restore) still blocks.
+  // the tracker's own API - it shares no outbound client/rate-limit state
+  // with Plex/Emby/Jellyfin (or with other trackers), and already coalesces
+  // concurrent calls per provider itself (trackers/polling.js). So the
+  // routine per-minute scheduled sync tick - which reliably recurs every 60s
+  // and can otherwise permanently starve this of a clear window - isn't
+  // treated as a conflict; only a genuinely unrelated operation (force sync,
+  // rebuild, restore) still blocks.
   if (activeOperation && activeOperation.kind !== SYNC_OPERATION_SCHEDULED) {
-    patchTraktImport({ enabled: true, status: "failed", error: "A sync operation is already running. Retry once it finishes." });
+    patchTrackerImport(provider, { enabled: true, status: "failed", error: "A sync operation is already running. Retry once it finishes." });
     return { started: false, code: "SYNC_LOCKED" };
   }
-  patchTraktImport({ enabled: true, status: "importing", startedAt: Date.now(), completedAt: null, itemCount: null, error: null });
-
-  runFullTraktReconcile()
+  if(!getTrackerConnection(provider)?.baselineComplete)await pollConnectedTrackers({provider,reconcile:false,trigger:'user'});
+  if(!planId) {
+    // Setup's explicit "Import watch history" choice authorizes the initial
+    // import. Keep the comparison plan and all freshness/backup guards, while
+    // selecting every eligible missing watch automatically for this first run.
+    const fullSync=await compareTrackerWithPlekt(provider);
+    selectedIds=fullSync.preview.items.filter(row=>row.selectable&&row.side==='plekt').map(row=>row.id);
+    planId=fullSync.preview.id;
+    if(!selectedIds.length) {
+      patchTrackerImport(provider,{enabled:true,status:'complete',itemCount:0,completedAt:Date.now(),error:null});
+      return {started:false,code:'NOTHING_TO_IMPORT',fullSync};
+    }
+  }
+  const run=await startTrackerFullSync(provider,'import',{planId,selectedIds,isCancelled:()=>trackerImportState(getOnboardingState(),provider).enabled===false});
+  patchTrackerImport(provider, { enabled: true, status: "importing", startedAt: Date.now(), completedAt: null, itemCount: null, error: null });
+  run.promise
     .then(() => {
       // Report the count actually on file rather than the in-memory total
       // accumulated across this run's passes - a dev-server restart (or any
       // process restart) mid-import abandons that in-flight promise before
       // it ever reaches here, and whatever value a *previous*, unrelated
       // completion left behind would otherwise stand uncorrected forever.
-      patchTraktImport({ status: "complete", completedAt: Date.now(), itemCount: countTrackerItemStates("trakt") });
+      const state=getTrackerConnection(provider)?.fullSync;
+      patchTrackerImport(provider, { status: ['failed','partial'].includes(state?.status)?'failed':'complete', completedAt: Date.now(), itemCount: state?.imported||0,error:state?.error||(state?.status==='partial'?'Some destinations were not confirmed. Review Sync Activity':null),backup:state?.backup||null });
     })
     .catch((error) => {
       if (error?.code === "RESTORE_ACTIVE" || isAuthoritativeRestoreActive()) {
-        patchTraktImport({ enabled: true, status: "importing", error: null });
-        setTimeout(() => {
-          const state = getOnboardingState().backgroundImports.trakt;
-          if (state?.enabled === false || state?.status !== "importing") return;
-          startTraktImport().catch(() => {});
-        }, RESTORE_RETRY_DELAY_MS);
+        pauseTrackerImportForRestore(provider);
         return;
       }
-      patchTraktImport({ status: "failed", completedAt: Date.now(), error: error.message || String(error) });
+      patchTrackerImport(provider, { status: "failed", completedAt: Date.now(), error: error.message || String(error) });
     });
 
-  return { started: true };
+  return { started: true,fullSync:run.state };
 }
 
-export function cancelTraktImport() {
+export function cancelTrackerImport(provider) {
+  assertTrackerEnabled(provider);
   // The baseline snapshot has no mid-flight cancel hook; unchecking the box
-  // just stops onboarding from waiting on/reporting it. The regular Trakt
+  // just stops onboarding from waiting on/reporting it. The tracker's regular
   // poll cycle still owns baselineComplete and continues in the background.
-  patchTraktImport({ enabled: false });
+  patchTrackerImport(provider, { enabled: false });
   return { cancelled: true };
 }

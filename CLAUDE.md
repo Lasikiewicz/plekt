@@ -2,15 +2,23 @@
 
 Project instructions for all agents.
 
-> **Before changing anything, read the relevant parts of [`docs/architecture.md`](docs/architecture.md).**
-> It covers architecture, file ownership, request flow, data, auth and environment.
-> Read "The big picture" and "Subsystem map"
-> (top ~85 lines) first, then only the file-map subsection and topic sections for the area
-> you are touching. The routing table at the end of this file names the doc that owns each area.
+> **Before changing anything, find the owning file and doc this way, in order:**
+>
+> 1. Do not read [`docs/architecture.md`](docs/architecture.md) in full by default. Grep it for the
+>    `## Where to look first` heading, Read only that table (offset and limit), and take the
+>    task's row for the owning files and topic doc.
+> 2. Read its "The big picture" and "Subsystem map" sections only for broad or cross-cutting work,
+>    not for a single lookup.
+> 3. For a route, function or module name, Grep [`docs/code-index.md`](docs/code-index.md) first,
+>    then open the listed file with Read and offset and limit (Grep the name inside it).
+> 4. Use the `docs/file-map-*.md` files only to ask what a file is for.
+> 5. Only then search the repo with Grep, with a narrow path or glob.
+>
+> The routing table at the end of this file names the doc that owns each area.
 
 ## Agent Guidelines
 
-- **No Git Pushes** - Never run `git push` or push to any remote unless the user explicitly instructs it in their request.
+- **No Git Pushes** - Never run `git push` or push to any remote unless the user explicitly instructs it in their request. Independently, never push while `plan/bugs.md` has unchecked bug/follow-up work; deferral does not clear this blocker.
 - **Local commits only at the end of a chat** - `git add` and `git commit` run without a prompt, so never commit mid-task. Commit once, as the last step when the chat's work is finished.
 - **No Deployments** - Never deploy or run deployment commands unless explicitly instructed.
 - **No Unsolicited Actions** - Do exactly what the user asks. No unsolicited refactors, extra features, or edits outside the request's scope.
@@ -50,9 +58,14 @@ its rules pre-approve test-instance writes. Live and remote services are in
 
 ## Agent conduct and efficient work
 
+Always delegate bounded routine tasks (such as Settings checks, API verification,
+log inspection and broad searches) to a cheaper capable subagent from the current
+agent's own provider when available. Never use another provider's models for subagents.
+Follow the model-selection, handoff and fallback rules in docs/agent-conduct.md.
+
 Read [docs/agent-conduct.md](docs/agent-conduct.md) for session/context thresholds,
 checkpointing, efficient exploration and verification ownership before multi-phase work
-or app verification. Preserve the 150k/250k interruption rules and fresh-session handoffs.
+or app verification. Preserve the 150k/250k cost warnings, mid-step compaction and step-boundary handoffs.
 Use one browser stack, text probes first; delegate broad searches/multi-step browser checks.
 Use the environment's edit tool and permission rules. Restart with server:restart, not loops.
 
@@ -69,6 +82,8 @@ live in the skills below.
 
 These phrases trigger a named procedure. **Invoke the skill (or workflow file) and follow it
 exactly. Never improvise or reconstruct these procedures from memory.**
+For a task-based index of Plekt skills and example requests, see
+[docs/agent-skills.md](docs/agent-skills.md).
 
 | The user says | Invoke |
 | --- | --- |
@@ -90,8 +105,14 @@ any provider requiring login.
 ## Plans, documentation and backlog
 
 Read [docs/agent-plans.md](docs/agent-plans.md) before creating/updating plans or todo.md.
-After EVERY step update its Results, summary (current state/steps at top, history below),
-todo entry (moved to Last edited, dated); run npm run todo:check. Keep plans small and truthful:
+When creating a new plan or feature, ask which release it belongs in (Post Release, Release,
+or Future Release) unless the user already specified it. Deferred work belongs in Future Release.
+Record the chosen release/version
+in the plan and TODO section. After EVERY step update its Results and summary (Steps, then a brief
+current "Where we are"; background/history linked to separate history.md in the plan folder, never
+inline), update `todo.md` in the same change (keep its release and status subsection
+accurate); run npm run todo:check. Do not add Last edited or Deferred sections, and give each
+open item a specific owner plan instead of a catch-all loose-ends plan. Keep plans small and truthful:
 implemented, unit-tested and live-verified are different. Untested checks remain unticked;
 archive only when all checks pass. Ask behavior decisions when encountered, before building.
 Do not put website work in feature plans; it belongs to Force to main unless user-authorized.
@@ -126,7 +147,9 @@ in a third module; helpers become shared utilities only when multiple route modu
 
 | Touching | Read |
 | --- | --- |
-| Anything, first time in a session | [`docs/architecture.md`](docs/architecture.md) (relevant sections, see top of this file) |
+| Anything, first time in a session | [`docs/architecture.md`](docs/architecture.md) "Where to look first" table (see top of this file) |
+| Where a route, function or module lives | [`docs/code-index.md`](docs/code-index.md) (generated by `npm run code-index`) |
+| What a file is for | [`docs/file-map-server.md`](docs/file-map-server.md), [`docs/file-map-public.md`](docs/file-map-public.md), [`docs/file-map-repo.md`](docs/file-map-repo.md) |
 | Why a guard or a cautious-looking behavior exists | [`docs/decisions.md`](docs/decisions.md) |
 | A watch that looks wrong, or an episode that will not match | [`docs/troubleshooting.md`](docs/troubleshooting.md) |
 | Webhook parsing, phases, auth | [`docs/webhooks.md`](docs/webhooks.md) |

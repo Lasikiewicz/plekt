@@ -25,6 +25,8 @@ import { db } from "./db.js";
 import { setRuntimeState } from "./utils/configStore.js";
 import { yieldToEventLoop } from "./utils/eventLoop.js";
 import { brandEnv } from "./utils/brandEnv.js";
+import { listActiveTenants } from "./utils/tenancy.js";
+import { runWithUserContext } from "./utils/userContext.js";
 import {
   claimSchedulerLease,
   markSchedulerTick,
@@ -249,7 +251,17 @@ export function createWorkerCoordinator({ holderId, role }) {
       tickRunning = true;
       try {
         markSchedulerTick({ holderId, generation: lease.generation });
-        activeTickPromise = runScheduledTick({ isLeader });
+        activeTickPromise = (async () => {
+          await runScheduledTick({ isLeader });
+          for (const tenant of listActiveTenants()) {
+            if (stopped || !isLeader()) break;
+            try {
+              await runWithUserContext(tenant, () => runScheduledTick({ isLeader }));
+            } catch (error) {
+              console.error(`Scheduled tick failed for user ${tenant.name}`, error);
+            }
+          }
+        })();
         await activeTickPromise;
       } catch (error) {
         console.error("Scheduled tick failed", error);
@@ -355,11 +367,23 @@ export function createWorkerCoordinator({ holderId, role }) {
     // particular, an event-triggered Up Next push must not race the catch-up
     // feed refresh that is discovering the queue it is about to send.
     if (!jobRunning && !tickRunning && isLeader()) {
-      const job = claimNextBackgroundJob({ holderId, generation: lease.generation });
-      if (job) {
+      let claimedJob = claimNextBackgroundJob({ holderId, generation: lease.generation });
+      let claimedTenant = null;
+      if (!claimedJob) {
+        for (const tenant of listActiveTenants()) {
+          claimedJob = runWithUserContext(tenant, () => claimNextBackgroundJob({ holderId, generation: lease.generation }));
+          if (claimedJob) {
+            claimedTenant = tenant;
+            break;
+          }
+        }
+      }
+      if (claimedJob) {
         jobRunning = true;
         try {
-          activeJobPromise = executeJob(job);
+          activeJobPromise = claimedTenant
+            ? runWithUserContext(claimedTenant, () => executeJob(claimedJob))
+            : executeJob(claimedJob);
           await activeJobPromise;
         } finally {
           activeJobPromise = null;
@@ -367,6 +391,9 @@ export function createWorkerCoordinator({ holderId, role }) {
         }
       }
       pruneBackgroundJobs();
+      for (const tenant of listActiveTenants()) {
+        runWithUserContext(tenant, () => pruneBackgroundJobs());
+      }
     }
     later(pollJobs, JOB_POLL_MS);
   }

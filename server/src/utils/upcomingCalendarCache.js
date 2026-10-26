@@ -1,14 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { DATA_DIR } from "../paths.js";
+import { getActiveDataDir } from "./userContext.js";
 import { getCachedShows } from "./dataRepo.js";
 import { getTmdbDetails, getTmdbSeason } from "./tmdbGateway.js";
 import { getCanonicalSeasonPosterUrls } from "./mediaArtwork.js";
 import { cachedNextAiringFor, readNextAiringCache } from "./nextAiringCache.js";
 
 const CACHE_VERSION = 2;
-const CACHE_FILE = path.join(DATA_DIR, "upcoming-calendar-cache.json");
-const TEMP_FILE = `${CACHE_FILE}.tmp`;
 const FUTURE_CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
 // Floor between background rebuilds triggered by opening the page, so repeatedly
 // refreshing the browser cannot queue a rebuild storm against TMDB/TVDB.
@@ -18,30 +16,48 @@ const BACKGROUND_HISTORY_MONTHS = 24;
 const BACKGROUND_FUTURE_MONTHS = 12;
 const UPCOMING_CONCURRENCY = 4;
 
-let memoryCache = null;
-let writeChain = Promise.resolve();
-const buildsInFlight = new Map();
-const checkedAtByMonth = new Map();
-let preferHistoricalBuild = true;
+const cacheStates = new Map();
+
+function cacheState(dataDir = getActiveDataDir()) {
+  const directory = path.resolve(dataDir);
+  let state = cacheStates.get(directory);
+  if (!state) {
+    state = {
+      directory,
+      memoryCache: null,
+      memoryMtimeMs: 0,
+      writeChain: Promise.resolve(),
+      buildsInFlight: new Map(),
+      checkedAtByMonth: new Map(),
+      preferHistoricalBuild: true,
+    };
+    cacheStates.set(directory, state);
+  }
+  return state;
+}
 
 function emptyCache() {
   return { version: CACHE_VERSION, updatedAt: 0, months: {} };
 }
 
-async function readCache() {
-  if (memoryCache) return memoryCache;
+async function readCache(state = cacheState()) {
+  const cacheFile = path.join(state.directory, "upcoming-calendar-cache.json");
   try {
-    const parsed = JSON.parse(await fs.readFile(CACHE_FILE, "utf8"));
-    memoryCache = {
+    const stat = await fs.stat(cacheFile);
+    if (state.memoryCache && state.memoryMtimeMs === stat.mtimeMs) return state.memoryCache;
+    const parsed = JSON.parse(await fs.readFile(cacheFile, "utf8"));
+    state.memoryCache = {
       version: CACHE_VERSION,
       updatedAt: Number(parsed?.updatedAt || 0),
       months: parsed?.months && typeof parsed.months === "object" ? parsed.months : {},
     };
+    state.memoryMtimeMs = stat.mtimeMs;
   } catch (error) {
     if (error?.code !== "ENOENT") console.error("Failed to read upcoming calendar cache", error);
-    memoryCache = emptyCache();
+    state.memoryCache = emptyCache();
+    state.memoryMtimeMs = 0;
   }
-  return memoryCache;
+  return state.memoryCache;
 }
 
 function trimMonths(months) {
@@ -51,10 +67,10 @@ function trimMonths(months) {
   return Object.fromEntries(entries.slice(0, CACHE_MAX_MONTHS));
 }
 
-async function storeMonth(month, payload, showKeys) {
+async function storeMonth(month, payload, showKeys, state = cacheState()) {
   let changed = false;
-  writeChain = writeChain.catch(() => {}).then(async () => {
-    const cache = await readCache();
+  state.writeChain = state.writeChain.catch(() => {}).then(async () => {
+    const cache = await readCache(state);
     const existing = cache.months[month];
     const normalizedKeys = [...new Set(showKeys)].sort();
     if (JSON.stringify(existing?.payload) === JSON.stringify(payload)
@@ -65,13 +81,16 @@ async function storeMonth(month, payload, showKeys) {
       updatedAt: now,
       months: trimMonths({ ...cache.months, [month]: { builtAt: now, showKeys: normalizedKeys, payload } }),
     };
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(TEMP_FILE, JSON.stringify(next), "utf8");
-    await fs.rename(TEMP_FILE, CACHE_FILE);
-    memoryCache = next;
+    const cacheFile = path.join(state.directory, "upcoming-calendar-cache.json");
+    const tempFile = `${cacheFile}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    await fs.mkdir(state.directory, { recursive: true });
+    await fs.writeFile(tempFile, JSON.stringify(next), "utf8");
+    await fs.rename(tempFile, cacheFile);
+    state.memoryCache = next;
+    state.memoryMtimeMs = await fs.stat(cacheFile).then((stat) => stat.mtimeMs, () => 0);
     changed = true;
   });
-  await writeChain;
+  await state.writeChain;
   return changed;
 }
 
@@ -194,26 +213,26 @@ async function collectMonth(month, { shows: suppliedShows = null, prefilterFutur
   };
 }
 
-async function buildAndStoreMonth(month) {
-  if (buildsInFlight.has(month)) return buildsInFlight.get(month);
+async function buildAndStoreMonth(month, state = cacheState()) {
+  if (state.buildsInFlight.has(month)) return state.buildsInFlight.get(month);
   const promise = collectMonth(month)
     .then(async ({ payload, showKeys }) => {
-      const changed = await storeMonth(month, payload, showKeys);
+      const changed = await storeMonth(month, payload, showKeys, state);
       return { payload, changed };
     })
-    .finally(() => buildsInFlight.delete(month));
-  buildsInFlight.set(month, promise);
+    .finally(() => state.buildsInFlight.delete(month));
+  state.buildsInFlight.set(month, promise);
   return promise;
 }
 
 // Rebuild without making the caller wait. Builds are deduped by month via
 // buildsInFlight, and throttled so a burst of page opens triggers at most one.
-function queueBackgroundRebuild(month, builtAt) {
-  const lastBuild = Number(checkedAtByMonth.get(month) || builtAt || 0);
+function queueBackgroundRebuild(month, builtAt, state = cacheState()) {
+  const lastBuild = Number(state.checkedAtByMonth.get(month) || builtAt || 0);
   if (Date.now() - lastBuild < REVALIDATE_MIN_INTERVAL_MS) return false;
-  checkedAtByMonth.set(month, Date.now());
+  state.checkedAtByMonth.set(month, Date.now());
   console.log(`Upcoming calendar: serving ${month} from cache, rebuilding in the background...`);
-  buildAndStoreMonth(month)
+  buildAndStoreMonth(month, state)
     .then((result) => {
       console.log(`Upcoming calendar background rebuild complete: ${month}, ${result.payload.episodes.length} episode${result.payload.episodes.length === 1 ? "" : "s"}${result.changed ? ", cache updated" : ", unchanged"}.`);
     })
@@ -224,18 +243,19 @@ function queueBackgroundRebuild(month, builtAt) {
 }
 
 export async function getUpcomingCalendarMonth(month, { refresh = false, revalidate = false } = {}) {
-  if (refresh) return (await buildAndStoreMonth(month)).payload;
+  const state = cacheState();
+  if (refresh) return (await buildAndStoreMonth(month, state)).payload;
 
-  const cache = await readCache();
+  const cache = await readCache(state);
   const entry = cache.months[month];
-  if (!entry?.payload) return (await buildAndStoreMonth(month)).payload;
+  if (!entry?.payload) return (await buildAndStoreMonth(month, state)).payload;
 
   // Opening the page refreshes the month behind the request rather than in
   // front of it. Rebuilding takes several seconds, so doing it inline left the
   // calendar blank on every visit even though usable data was already on disk.
   // The cheap newly-tracked-show merge below still runs, so a show added a
   // moment ago appears immediately instead of waiting for the rebuild.
-  if (revalidate) queueBackgroundRebuild(month, entry.builtAt);
+  if (revalidate) queueBackgroundRebuild(month, entry.builtAt, state);
 
   // Library-derived shows can change at any time. Add only newly tracked shows
   // to an existing month so the calendar updates immediately without rebuilding
@@ -249,12 +269,13 @@ export async function getUpcomingCalendarMonth(month, { refresh = false, revalid
     ...entry.payload,
     episodes: sortAndDedupeEpisodes([...(entry.payload.episodes || []), ...addition.payload.episodes]),
   };
-  await storeMonth(month, payload, [...covered, ...trackedShows.map(showKey)]);
+  await storeMonth(month, payload, [...covered, ...trackedShows.map(showKey)], state);
   return payload;
 }
 
 export async function refreshUpcomingCalendarCache({ forceCurrent = false } = {}) {
-  const cache = await readCache();
+  const state = cacheState();
+  const cache = await readCache(state);
   const anchor = currentMonth();
   const historicalMonths = Array.from({ length: BACKGROUND_HISTORY_MONTHS }, (_, index) => addMonths(anchor, -(index + 1)));
   const futureMonths = Array.from({ length: BACKGROUND_FUTURE_MONTHS + 1 }, (_, index) => addMonths(anchor, index));
@@ -263,8 +284,8 @@ export async function refreshUpcomingCalendarCache({ forceCurrent = false } = {}
   let month;
   if (!cache.months[anchor]) month = anchor;
   else if (missingHistorical && missingFuture) {
-    month = preferHistoricalBuild ? missingHistorical : missingFuture;
-    preferHistoricalBuild = !preferHistoricalBuild;
+    month = state.preferHistoricalBuild ? missingHistorical : missingFuture;
+    state.preferHistoricalBuild = !state.preferHistoricalBuild;
   } else {
     month = missingHistorical || missingFuture;
   }
@@ -275,14 +296,14 @@ export async function refreshUpcomingCalendarCache({ forceCurrent = false } = {}
     month = anchor;
   } else if (!month) {
     month = futureMonths
-      .filter((candidate) => Date.now() - Number(checkedAtByMonth.get(candidate) || cache.months[candidate]?.builtAt || 0) >= FUTURE_CHECK_INTERVAL_MS)
-      .sort((a, b) => Number(checkedAtByMonth.get(a) || cache.months[a]?.builtAt || 0)
-        - Number(checkedAtByMonth.get(b) || cache.months[b]?.builtAt || 0))[0];
+      .filter((candidate) => Date.now() - Number(state.checkedAtByMonth.get(candidate) || cache.months[candidate]?.builtAt || 0) >= FUTURE_CHECK_INTERVAL_MS)
+      .sort((a, b) => Number(state.checkedAtByMonth.get(a) || cache.months[a]?.builtAt || 0)
+        - Number(state.checkedAtByMonth.get(b) || cache.months[b]?.builtAt || 0))[0];
   }
   if (!month) return { refreshed: 0 };
   console.log(`Upcoming calendar cache refresh: checking ${month}...`);
-  const result = await buildAndStoreMonth(month);
-  checkedAtByMonth.set(month, Date.now());
+  const result = await buildAndStoreMonth(month, state);
+  state.checkedAtByMonth.set(month, Date.now());
   console.log(`Upcoming calendar cache refresh complete: ${month}, ${result.payload.episodes.length} episode${result.payload.episodes.length === 1 ? "" : "s"}${result.changed ? ", cache updated" : ", unchanged"}.`);
   return { refreshed: 1, changed: result.changed, month, episodes: result.payload.episodes.length };
 }

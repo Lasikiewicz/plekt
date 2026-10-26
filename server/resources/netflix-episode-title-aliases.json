@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "rows": [
+    {
+      "sourceTitle": "Sirens: Limited Series: Exile", "showTmdbId": "246992", "showTitle": "Sirens",
+      "targets": [{ "episodeTmdbId": "5161099", "expectedTitle": "Exile", "airDate": "2025-05-22" }],
+      "sources": ["https://www.netflix.com/lv/title/81589551", "https://www.bbfc.co.uk/release/sirens-q29sbgvjdglvbjpwwc0xmdmwmjkz", "https://www.themoviedb.org/tv/246992/season/1/episode/1"]
+    },
+    {
+      "sourceTitle": "Starstruck: Season 1: NYE", "showTmdbId": "93288", "showTitle": "Starstruck",
+      "targets": [{ "episodeTmdbId": "2884190", "expectedTitle": "Episode 1", "airDate": "2021-04-25" }],
+      "sources": ["https://tv.apple.com/us/episode/nye/umc.cmc.1xvv4268egksky0xrzbdu2nvm", "https://www.themoviedb.org/tv/93288/season/1/episode/1"]
+    },
+    {
+      "sourceTitle": "Starstruck: Season 1: Spring", "showTmdbId": "93288", "showTitle": "Starstruck",
+      "targets": [{ "episodeTmdbId": "2884191", "expectedTitle": "Episode 2", "airDate": "2021-04-25" }],
+      "sources": ["https://tv.apple.com/se/show/starstruck/umc.cmc.7bavvv8yljabok7tsvzb202jl?l=en", "https://www.themoviedb.org/tv/93288/season/1/episode/2"]
+    },
+    {
+      "sourceTitle": "Starstruck: Season 1: Summer", "showTmdbId": "93288", "showTitle": "Starstruck",
+      "targets": [{ "episodeTmdbId": "2884192", "expectedTitle": "Episode 3", "airDate": "2021-04-25" }],
+      "sources": ["https://tv.apple.com/se/show/starstruck/umc.cmc.7bavvv8yljabok7tsvzb202jl?l=en", "https://www.themoviedb.org/tv/93288/season/1/episode/3"]
+    },
+    {
+      "sourceTitle": "Medal of Honor: Season 1: Sylvester Antolak", "showTmdbId": "83109", "showTitle": "Medal of Honor",
+      "targets": [{ "episodeTmdbId": "1594515", "expectedTitle": "Sylvester Antolak", "airDate": "2018-11-09" }],
+      "sources": ["https://about.netflix.com/en/news/medal-of-honor", "https://www.netflix.com/fi-en/title/80169786", "https://www.themoviedb.org/tv/83109/season/1/episode/1"]
+    },
+    {
+      "sourceTitle": "Go Diego Go!: Season 3: Diego and Porcupine Save the Pinata!", "showTmdbId": "1647", "showTitle": "Go, Diego, Go!",
+      "targets": [{ "episodeTmdbId": "85631", "expectedTitle": "Diego and Porcupine Save the Pinata!", "airDate": "2008-05-02" }],
+      "sources": ["https://thetvdb.com/series/go-diego-go/allseasons/official", "https://www.themoviedb.org/tv/1647/season/3/episode/8"]
+    },
+    {
+      "sourceTitle": "Don't Tell the Bride: Season 1: Billy & Steph", "showTmdbId": "24460", "showTitle": "Don't Tell the Bride", "watchedBefore": "2021-01-01",
+      "targets": [{ "episodeTmdbId": "3661442", "expectedTitle": "Billy & Steph", "airDate": "2017-08-02" }],
+      "sources": ["https://www.channel4.com/programmes/dont-tell-the-bride/on-demand/66407-002", "https://thetvdb.com/series/dont-tell-the-bride/allseasons/official", "https://www.themoviedb.org/tv/24460/season/13/episode/2"]
+    },
+    {
+      "sourceTitle": "Don't Tell the Bride: Season 1: Carl & Rebecca", "showTmdbId": "24460", "showTitle": "Don't Tell the Bride", "watchedBefore": "2021-01-01",
+      "targets": [{ "episodeTmdbId": "3661441", "expectedTitle": "Carl & Rebecca", "airDate": "2017-07-26" }],
+      "sources": ["https://thetvdb.com/series/dont-tell-the-bride/allseasons/official", "https://www.themoviedb.org/tv/24460/season/13/episode/1"]
+    },
+    {
+      "sourceTitle": "Man vs. Wild with Bear Grylls and PM Modi", "showTmdbId": "242407", "showTitle": "Man vs Wild with Bear Grylls & PM Modi",
+      "targets": [{ "episodeTmdbId": "5030208", "expectedTitle": "Man vs Wild with Bear Grylls & PM Modi", "airDate": "2019-08-12" }],
+      "sources": ["https://www.youtube.com/watch?v=9uCcS2XeO5w", "https://www.themoviedb.org/tv/242407/season/1/episode/1"]
+    },
+    {
+      "sourceTitle": "Walking with Dinosaurs: The Ballad of Big Al: Season 1: The Ballad of Big Al", "showTmdbId": "19640", "showTitle": "The Ballad of Big Al",
+      "targets": [{ "episodeTmdbId": "1432466", "expectedTitle": "The Ballad of Big Al", "airDate": "2000-12-25" }],
+      "sources": ["https://arkiv.nrk.no/programoversikt/avansert/index798c.html", "https://www.themoviedb.org/tv/19640/season/1/episode/1"]
+    },
+    {
+      "sourceTitle": "Walking with Dinosaurs: The Ballad of Big Al: Season 1: Big Al: The Science", "showTmdbId": "19640", "showTitle": "The Ballad of Big Al",
+      "targets": [{ "episodeTmdbId": "1432469", "expectedTitle": "Big Al Uncovered", "airDate": "2000-12-27" }],
+      "sources": ["https://tv.apple.com/gb/episode/big-al-uncovered/umc.cmc.71xr6ln2mihjs7d79kw52rbt1", "https://era.org.uk/streaming-service-resource/big-al-02-big-al-uncovered-walking-with-dinosaurs-1999/", "https://www.themoviedb.org/tv/19640/season/1/episode/2"]
+    },
+    {
+      "sourceTitle": "LEGO Friends: The Power of Friendship: Season 2: Roomies", "showTmdbId": "70779", "showTitle": "LEGO Friends: The Power of Friendship",
+      "targets": [{ "episodeTmdbId": "1384137", "expectedTitle": "Roomies", "airDate": "2016-06-10" }],
+      "sources": ["https://www.themoviedb.org/tv/70779/season/1/episode/4"]
+    },
+    {
+      "sourceTitle": "LEGO Friends: The Power of Friendship: Season 2: Keepin' It Real", "showTmdbId": "70779", "showTitle": "LEGO Friends: The Power of Friendship",
+      "targets": [{ "episodeTmdbId": "1384136", "expectedTitle": "Keepin' It Real", "airDate": "2016-06-10" }],
+      "sources": ["https://www.themoviedb.org/tv/70779/season/1/episode/3"]
+    },
+    {
+      "sourceTitle": "SpongeBob SquarePants: Season 3: Just One Bite / The Bully", "showTmdbId": "387", "showTitle": "SpongeBob SquarePants",
+      "targets": [{ "episodeTmdbId": "1952655", "expectedTitle": "Just One Bite", "airDate": "2001-10-05" }, { "episodeTmdbId": "1952656", "expectedTitle": "The Bully", "airDate": "2001-10-05" }],
+      "sources": ["https://thetvdb.com/series/spongebob-squarepants/allseasons/official", "https://thetvdb.com/series/spongebob-squarepants/allseasons/altdvd", "https://www.themoviedb.org/tv/387"]
+    }
+  ],
+  "entries": [
+    {
+      "showTmdbId": "37746", "episodeTmdbId": "851277",
+      "expectedTitle": "Being Mama Bee", "airDate": "2011-03-12",
+      "titles": ["Being Mamma Bee"],
+      "sources": ["https://www.youtube.com/watch?v=wM8LBOP8wiQ", "https://www.themoviedb.org/tv/37746/season/1/episode/27"]
+    },
+    {
+      "showTmdbId": "72752", "episodeTmdbId": "1381880",
+      "expectedTitle": "The Curse of Copperhead Road", "airDate": "2017-10-19",
+      "titles": ["The Curse of Copperhead Rose"],
+      "sources": ["https://www.syfy.com/index.php/ghost-wars/season-1/blogs/episode-recap-the-curse-of-copperhead-rose", "https://www.syfy.com/ghost-wars/photos", "https://www.themoviedb.org/tv/72752/season/1/episode/3"]
+    },
+    {
+      "showTmdbId": "1848", "episodeTmdbId": "112140",
+      "expectedTitle": "It Feels Like Magic", "airDate": "2004-01-28",
+      "titles": ["An Unexpected Event"],
+      "sources": ["https://www.classification.gov.au/titles/winx-club-complete-season-1", "https://www.toongoggles.com/shows/winx-club", "https://www.themoviedb.org/tv/1848/season/1/episode/1"]
+    },
+    {
+      "showTmdbId": "1848", "episodeTmdbId": "112145",
+      "expectedTitle": "More Than High School", "airDate": "2004-01-30",
+      "titles": ["Welcome to Magix"],
+      "sources": ["https://www.classification.gov.au/titles/winx-club-complete-season-1", "https://www.toongoggles.com/shows/winx-club", "https://www.themoviedb.org/tv/1848/season/1/episode/2"]
+    },
+    {
+      "showTmdbId": "1848", "episodeTmdbId": "112151",
+      "expectedTitle": "Save the First Dance", "airDate": "2004-02-02",
+      "titles": ["Alfea College for Fairies"],
+      "sources": ["https://www.classification.gov.au/titles/winx-club-complete-season-1", "https://www.toongoggles.com/shows/winx-club", "https://www.themoviedb.org/tv/1848/season/1/episode/3"]
+    },
+    {
+      "showTmdbId": "137003", "episodeTmdbId": "3321718",
+      "expectedTitle": "True Lies (1): The Happy Face Killer", "airDate": "2021-11-04",
+      "titles": ["True Lies, Part 1: The Happy Face Killer"],
+      "sources": ["https://www.themoviedb.org/tv/137003/season/1/episode/3"]
+    },
+    {
+      "showTmdbId": "69555", "episodeTmdbId": "1255292",
+      "expectedTitle": "Bare", "airDate": "2017-01-10",
+      "titles": ["Pilot"],
+      "sources": ["https://www.netflix.com/Title/80198991", "https://tubitv.com/tv-shows/200211120/s01-e01-pilot", "https://www.themoviedb.org/tv/69555/season/1/episode/1"]
+    },
+    {
+      "showTmdbId": "69930", "episodeTmdbId": "1261487",
+      "expectedTitle": "The Chrystal Queen", "airDate": "2016-12-09",
+      "titles": ["The Crystal Queen"],
+      "sources": ["https://thetvdb.com/series/luna-petunia/allseasons/official", "https://www.themoviedb.org/tv/69930/season/1/episode/8"]
+    },
+    {
+      "showTmdbId": "62823", "episodeTmdbId": "1068354",
+      "expectedTitle": "Red Roses", "airDate": "2015-06-30",
+      "titles": ["Pilot"],
+      "sources": ["https://tv.apple.com/us/episode/pilot/umc.cmc.4n9iev39j0finq9ud0yo4cag5", "https://www.themoviedb.org/tv/62823/season/1/episode/1"]
+    },
+    {
+      "showTmdbId": "5835", "episodeTmdbId": "367217",
+      "expectedTitle": "It Came from Beneath the Sink", "airDate": "1996-02-02",
+      "titles": ["It Came from Beneath the Kitchen Sink"],
+      "sources": ["https://thetvdb.com/series/goosebumps/episodes/294865", "https://www.themoviedb.org/tv/5835/season/1/episode/14"]
+    },
+    {
+      "showTmdbId": "66008", "episodeTmdbId": "1426167",
+      "expectedTitle": "Dickless in Seattle", "airDate": "2018-03-20",
+      "titles": ["D**kless in Seattle"],
+      "sources": ["https://001images.cwtv.com/series/you-me-her/?play=e8d04a8f-5dc1-47a4-bbe9-67edb88c3546", "https://tv.apple.com/us/episode/dickless-in-seattle/umc.cmc.79ga05hruq9kdnvozw7grtpwo", "https://www.themoviedb.org/tv/66008/season/3/episode/1"]
+    },
+    {
+      "showTmdbId": "66008", "episodeTmdbId": "1755863",
+      "expectedTitle": "The Saddest Clown Show Ever", "airDate": "2019-04-16",
+      "titles": ["We've Got Gays!"],
+      "sources": ["https://tubitv.com/tv-shows/200051095/s04-e02-we-ve-got-gays", "https://www.themoviedb.org/tv/66008/season/4/episode/2"]
+    },
+    {
+      "showTmdbId": "66008", "episodeTmdbId": "1768419",
+      "expectedTitle": "The Deaf Leading The Blind Leading The Stupid", "airDate": "2019-04-23",
+      "titles": ["The Ballad of Jizzy and Jemma"],
+      "sources": ["https://001images.cwtv.com/series/you-me-her/?play=ada896ce-875e-4bba-afbc-7808f0462f44", "https://www.themoviedb.org/tv/66008/season/4/episode/3"]
+    },
+    {
+      "showTmdbId": "66008", "episodeTmdbId": "1782838",
+      "expectedTitle": "That's so Stupid and I'm Definitely Not Crying", "airDate": "2019-04-30",
+      "titles": ["Probably A Butt Thing"],
+      "sources": ["https://001images.cwtv.com/series/you-me-her/?play=ada896ce-875e-4bba-afbc-7808f0462f44", "https://tv.apple.com/us/episode/probably-a-butt-thing/umc.cmc.23p9h3j8jx2g6t4dw4nn4esp3", "https://www.themoviedb.org/tv/66008/season/4/episode/4"]
+    },
+    {
+      "showTmdbId": "66008", "episodeTmdbId": "1795801",
+      "expectedTitle": "Eat Your Strangers and Don't Talk to Vegetables!", "airDate": "2019-05-14",
+      "titles": ["Behold My Door, Bitches!"],
+      "sources": ["https://001images.cwtv.com/series/you-me-her/?play=ada896ce-875e-4bba-afbc-7808f0462f44", "https://www.themoviedb.org/tv/66008/season/4/episode/6"]
+    },
+    {
+      "showTmdbId": "66008", "episodeTmdbId": "1795803",
+      "expectedTitle": "Now Who's Got Egg in Her Hair?", "airDate": "2019-05-21",
+      "titles": ["There Will Be Shit!"],
+      "sources": ["https://tubitv.com/tv-shows/200051100/s04-e07-there-will-be-shit", "https://www.themoviedb.org/tv/66008/season/4/episode/7"]
+    },
+    {
+      "showTmdbId": "12225", "episodeTmdbId": "475844", "expectedTitle": "Cold Winter Day",
+      "titles": ["Cold Winter's Day"],
+      "sources": ["https://tv.apple.com/se/episode/cold-winter-day/umc.cmc.179gig37s1xwhv3dez32w06rn", "https://www.themoviedb.org/tv/12225/season/2/episode/52"]
+    },
+    {
+      "showTmdbId": "12225", "episodeTmdbId": "475810", "expectedTitle": "Zoe Zebra The Postman's Daughter",
+      "titles": ["Zoë Zebra"],
+      "sources": ["https://peppapigworld.co.uk/pages/zoe-zebra", "https://www.themoviedb.org/tv/12225/season/2/episode/28"]
+    }
+  ]
+}

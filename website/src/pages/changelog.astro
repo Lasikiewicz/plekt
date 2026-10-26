@@ -109,7 +109,7 @@ const sectionsOf = (entry: ChangelogEntry) => entry.sections ?? [];
   // release's own CHANGELOG.md, and raw.githubusercontent.com is CDN-cached for
   // roughly five minutes, so fetching it would only risk showing a changelog that
   // disagrees with the version prose on the same page.
-  const ALPHA_MANIFEST = "https://raw.githubusercontent.com/Lasikiewicz/plembfin/alpha/changelog.alpha.json";
+  const ALPHA_MANIFEST = "https://raw.githubusercontent.com/Lasikiewicz/plekt/alpha/changelog.alpha.json";
   const alphaPanel = document.querySelector<HTMLElement>('[data-changelog-panel="alpha"]');
   let alphaLoaded = false;
 

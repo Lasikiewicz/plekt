@@ -6,6 +6,12 @@
     "website": "Exact website/deployment references deferred to the separately authorized website release; this guard still rejects new old-name lines here."
   },
   "files": {
+    "test/simklAuthIntegration.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        ["return { method, body, cookies: session ? { plembfin_session: `${payload}.${signature}` } : {}, get: (name) => values[name.toLowerCase()] };", 1]
+      ]
+    },
     "test/upNextResetReissue.test.js": {
       "reason": "compatibility",
       "lines": [
@@ -108,6 +114,7 @@
     ".claude/skills/push-website-live/SKILL.md": {
       "reason": "compatibility",
       "lines": [
+        ["6. Verify the returned `pages.dev` deployment URL and `https://plembfin.com` both serve", 1],
         [
           "working tree directly to the existing `plembfin-website` Cloudflare Pages project.",
           1
@@ -2261,37 +2268,62 @@
         [
           "All state lives in a local **SQLite** database (`data/plekt.db`, or `data/plembfin.db` on",
           1
-        ],
-        [
-          "| `src/db.js` | Opens `data/plekt.db` (or existing `data/plembfin.db`) via better-sqlite3 (WAL), applies concurrency-safe migrations, and exposes helpers plus the SQLite-backed cache version observed by every process. |",
-          1
-        ],
-        [
-          "| `theme-boot.js` | Tiny classic script loaded with a blocking `<script>` in `<head>`, before the stylesheet. Applies the saved (or system) theme and the Card Art / Background Art toggles (`html[data-card-art]`, `html[data-background-art]`) before first paint, clears the retired `plembfin:style` key, and gives every `img[data-theme-logo]` the matching header logo as it is parsed. The logo `<img>` tags carry no `src` so the browser's preload scanner cannot fetch the wrong variant. `app.js` (`initializeTheme`/`updateThemeIcon`) keeps the theme in sync afterwards. |",
-          1
-        ],
-        [
-          "| `icons/plex.svg`, `icons/emby.svg`, `icons/jellyfin.svg`, `icons/trakt.svg`, `icons/plembfin.png`, `icons/tmdb.svg`, `icons/tvdb.svg`, `icons/imdb.svg` | Media-server, Plekt, and metadata-source badge icons used on cards and pills (the media detail page's Ratings/Watch Now rows, and per-watch source badges). A watch recorded with `source: \"manual\"` (marked watched from within Plekt itself, not reported by a media server) normalizes to `plembfin` and renders with `icons/plembfin.png` and the \"Plekt\" label, rather than defaulting to Plex (`normalizePlatformSource` in `modules/utils.js`). `icons/trakt.svg` is used by the Sync Activity page, which resolves tracker names itself. |",
-          1
-        ],
+        ]
+      ]
+    },
+    "docs/architecture-flows.md": {
+      "reason": "compatibility",
+      "lines": [
         [
           "`X-Plembfin-Webhook-Secret`, `Authorization: Bearer`, or the compatibility",
-          2
+          1
         ],
         [
           "either a signed HttpOnly session cookie (`plembfin_session`) or an API key",
           1
         ],
         [
-          "`better-sqlite3` opens `data/plembfin.db` in WAL mode and applies `schema.sql` on",
+          "older `PLEMBFIN_<NAME>` name (the new name wins when both are set), through",
           1
-        ],
+        ]
+      ]
+    },
+    "docs/code-index.md": {
+      "reason": "compatibility",
+      "lines": [
+        ["| `plembfin-backups/restore` | `handlePlektRestore` | `routes/plektRestore.js` |", 1],
+        ["| `plembfin-backups/upload` | `handlePlektRestoreUpload` | `routes/plektRestore.js` |", 1],
+        ["| `plembfin-backups` | `handlePlektBackups` | `routes/backups.js` |", 1],
+        ["- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed, listActiveUpNextProviderItems, listUpNextProviderFeedStates and 5 more", 1]
+      ]
+    },
+    "docs/file-map-server.md": {
+      "reason": "compatibility",
+      "lines": [
         [
-          "- Session: stateless HMAC-SHA256 signed cookie (`plembfin_session`), 7-day TTL.",
+          "| `src/db.js` | Opens `data/plekt.db` (or existing `data/plembfin.db`) via better-sqlite3 (WAL), applies concurrency-safe migrations, and exposes helpers plus the SQLite-backed cache version observed by every process. |",
           1
-        ],
+        ]
+      ]
+    },
+    "docs/file-map-repo.md": {
+      "reason": "compatibility",
+      "lines": [
         [
           "Platform listing may still link to them. The legacy installation in r/plembfin was",
+          1
+        ]
+      ]
+    },
+    "docs/file-map-public.md": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "| `theme-boot.js` | Tiny classic script loaded with a blocking `<script>` in `<head>`, before the stylesheet. Applies the saved (or system) theme and the Card Art / Background Art toggles (`html[data-card-art]`, `html[data-background-art]`) before first paint, clears the retired `plembfin:style` key, and gives every `img[data-theme-logo]` the matching header logo as it is parsed. The logo `<img>` tags carry no `src` so the browser's preload scanner cannot fetch the wrong variant. `app.js` (`initializeTheme`/`updateThemeIcon`) keeps the theme in sync afterwards. |",
+          1
+        ],
+        [
+          "| `icons/plex.svg`, `icons/emby.svg`, `icons/jellyfin.svg`, `icons/trakt.svg`, `icons/plembfin.png`, `icons/tmdb.svg`, `icons/tvdb.svg`, `icons/imdb.svg` | Media-server, Plekt, and metadata-source badge icons used on cards and pills (the media detail page's Ratings/Watch Now rows, and per-watch source badges). A watch recorded with `source: \"manual\"` (marked watched from within Plekt itself, not reported by a media server) normalizes to `plembfin` and renders with `icons/plembfin.png` and the \"Plekt\" label, rather than defaulting to Plex (`normalizePlatformSource` in `modules/utils.js`). `icons/trakt.svg` is used by the Sync Activity page, which resolves tracker names itself. |",
           1
         ]
       ]
@@ -3557,6 +3589,10 @@
           1
         ],
         [
+          "`better-sqlite3` opens `data/plembfin.db` in WAL mode and applies `schema.sql` on",
+          1
+        ],
+        [
           "sqlite3 data/plembfin.db \"SELECT ts, action, ip, detail FROM audit_log ORDER BY ts DESC LIMIT 50;\"",
           1
         ]
@@ -4174,6 +4210,15 @@
         ]
       ]
     },
+    "public/modules/anidb-settings.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "document.dispatchEvent(new CustomEvent(\"plembfin:config-changed\"));",
+          1
+        ]
+      ]
+    },
     "public/modules/app-events.js": {
       "reason": "internal",
       "lines": [
@@ -4315,6 +4360,40 @@
         [
           "document.dispatchEvent(new CustomEvent(\"plembfin:config-changed\"));",
           2
+        ]
+      ]
+    },
+    "public/modules/onboarding-sections.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "const backupConfig = getBackupData()?.plembfin?.config || {};",
+          1
+        ]
+      ]
+    },
+    "public/modules/onboarding-backups.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "<label class=\"field-label\"><span class=\"setup-backup-label-line\">Key prefix <span class=\"muted-copy\">(optional)</span></span><input class=\"field\" data-setup-backblaze-field=\"prefix\" value=\"${escapeAttribute(settings.prefix || \"plembfin/\")}\" /></label>`;",
+          1
+        ],
+        [
+          "<label class=\"field-label\"><span class=\"setup-backup-label-line\">Key prefix <span class=\"muted-copy\">(optional)</span></span><input class=\"field\" data-setup-backblaze-field=\"prefix\" value=\"${escapeAttribute(settings.prefix || \"plembfin/\")}\" /></label>",
+          1
+        ],
+        [
+          "const config = getBackupData().plembfin?.config || {};",
+          1
+        ],
+        [
+          "const previous = getBackupData().plembfin?.config || {};",
+          1
+        ],
+        [
+          "await api(\"/api/plembfin-backups\", {",
+          1
         ]
       ]
     },

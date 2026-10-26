@@ -1,8 +1,10 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
+import path from "node:path";
 import { CREDENTIAL_KEY_PATH } from "../paths.js";
 import { db } from "../db.js";
 import { brandEnv } from "./brandEnv.js";
+import { getActiveDataDir, isNonAdminTenantContext } from "./userContext.js";
 
 export const CREDENTIAL_VAULT_VERSION = 1;
 const KEY_BYTES = 32;
@@ -26,15 +28,19 @@ function decodeEnvironmentKey(value) {
   return key;
 }
 
-export function loadCredentialKey({ keyPath = CREDENTIAL_KEY_PATH, database = db, env = process.env } = {}) {
-  const environmentKey = decodeEnvironmentKey(brandEnv("CREDENTIAL_KEY", env));
-  if (environmentKey) return environmentKey;
+export function loadCredentialKey({ keyPath, database = db, env = process.env } = {}) {
+  const nonAdminTenant = isNonAdminTenantContext();
+  const effectiveKeyPath = keyPath || (nonAdminTenant ? path.join(getActiveDataDir(), "credential.key") : CREDENTIAL_KEY_PATH);
+  if (!nonAdminTenant || keyPath) {
+    const environmentKey = decodeEnvironmentKey(brandEnv("CREDENTIAL_KEY", env));
+    if (environmentKey) return environmentKey;
+  }
 
   let key = null;
   try {
-    key = fs.readFileSync(keyPath);
+    key = fs.readFileSync(effectiveKeyPath);
   } catch {
-    if (fs.existsSync(keyPath)) throw new Error("Credential key could not be read");
+    if (fs.existsSync(effectiveKeyPath)) throw new Error("Credential key could not be read");
   }
   if (key) {
     if (key.length !== KEY_BYTES) throw new Error("Credential key is invalid; expected exactly 32 bytes");
@@ -45,9 +51,10 @@ export function loadCredentialKey({ keyPath = CREDENTIAL_KEY_PATH, database = db
     throw new Error("Credential key is missing while encrypted media credentials exist; restore credential.key or set PLEKT_CREDENTIAL_KEY");
   }
 
+  fs.mkdirSync(path.dirname(effectiveKeyPath), { recursive: true });
   const generatedKey = crypto.randomBytes(KEY_BYTES);
-  fs.writeFileSync(keyPath, generatedKey, { mode: 0o600, flag: "wx" });
-  try { fs.chmodSync(keyPath, 0o600); } catch { /* non-POSIX filesystem */ }
+  fs.writeFileSync(effectiveKeyPath, generatedKey, { mode: 0o600, flag: "wx" });
+  try { fs.chmodSync(effectiveKeyPath, 0o600); } catch { /* non-POSIX filesystem */ }
   return generatedKey;
 }
 

@@ -250,7 +250,7 @@ test("failed initial imports are surfaced while cancelled imports remain quiet",
   const failed = buildSyncAttentionItems({}, {
     backgroundImports: {
       servers: { emby: { status: "failed", startedAt: 100, completedAt: 200, error: "Emby connection refused" } },
-      trakt: { status: "cancelled", error: "Cancelled by administrator" },
+      trackers: { trakt: { status: "cancelled", error: "Cancelled by administrator" } },
     },
   });
   assert.equal(failed.length, 1);

@@ -10,8 +10,11 @@ import { fetchPlexMetadataItem, fetchPlexSeriesEpisodes, findPlexItem } from "./
 import { fetchEmbySeriesEpisodes, fetchEmbyWatchedItems } from "./embyClient.js";
 import { fetchJellyfinSeriesEpisodes, fetchJellyfinWatchedItems } from "./jellyfinClient.js";
 import { normalizeProviderIds, parsePlexGuids } from "./parsers.js";
-import { fetchTraktWatchedSnapshot, trackerMediaIdentityKeys } from "./traktClient.js";
-import { withFreshTraktConnection } from "./trackerDispatcher.js";
+import { listTrackerConnections } from "./trackerConnectionRepo.js";
+import { readTrackerSnapshot } from "./trackers/connections.js";
+import { getTrackerAdapter } from "./trackers/registry.js";
+import { mergeTrackerWatchedDates, earliestTrackerWatchedAt } from "./trackers/watchedDates.js";
+export { earliestTrackerWatchedAt, earliestTrackerWatchedAt as earliestTraktWatchedAt } from "./trackers/watchedDates.js";
 import { isEmbyLikePlayed, releaseDateForItem, releaseDateForPlexItem, watchedAtForEmbyLikeItem, watchedAtForPlexItem } from "./watchDates.js";
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { appendSyncHistory, isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
@@ -451,62 +454,26 @@ function summaryWithDeferredTrackerState(summary, status, detail) {
 // watched, so a pulled item's date is corrected to Trakt's if Trakt already
 // has an earlier one for the same item. Fetched once per Force Sync run
 // (not per item) to avoid a Trakt API call per episode on a large show pull.
-export async function loadTraktWatchedDateIndex(logger = () => {}) {
-  let connection = await withFreshTraktConnection().catch(() => null);
-  if (!connection || connection.preferEarlierWatchedDate === false) return null;
-  let snapshot;
-  try {
-    snapshot = await fetchTraktWatchedSnapshot(connection);
-  } catch (error) {
-    if (error.status !== 401) {
-      logger(`[pull] Trakt watched-date check skipped: ${error.message || String(error)}`);
-      return null;
-    }
-    connection = await withFreshTraktConnection(true).catch(() => null);
-    if (!connection) return null;
-    try {
-      snapshot = await fetchTraktWatchedSnapshot(connection);
-    } catch (retryError) {
-      logger(`[pull] Trakt watched-date check skipped: ${retryError.message || String(retryError)}`);
-      return null;
-    }
-  }
-  const index = new Map();
-  for (const entry of snapshot) {
-    for (const key of trackerMediaIdentityKeys(entry.media)) {
-      const existing = index.get(key);
-      if (existing == null || entry.watchedAt < existing) index.set(key, entry.watchedAt);
-    }
-  }
-  return index;
+export async function loadTrackerWatchedDateIndex(logger = () => {}, { trigger = "user" } = {}) {
+  const snapshots = await Promise.all(listTrackerConnections()
+    // Only trackers whose dates may correct local ones (not Simkl, whose
+    // snapshot is an observation envelope rather than a dated list).
+    .filter((connection) => connection.status === "connected" && connection.preferEarlierWatchedDate !== false
+      && getTrackerAdapter(connection.provider).policies?.inboundDateCorrections === true)
+    .map(async ({ provider }) => {
+      try {
+        const { snapshot } = await readTrackerSnapshot(provider, { trigger });
+        return { provider, snapshot };
+      } catch (error) {
+        logger(`[pull] ${provider} watched-date check skipped: ${error.message || String(error)}`);
+        return null;
+      }
+    }));
+  const available = snapshots.filter(Boolean);
+  return available.length ? mergeTrackerWatchedDates(available) : null;
 }
 
-function lookupTraktWatchedAt(index, media) {
-  const keys = trackerMediaIdentityKeys({ type: media.type, ids: media.ids, season: media.season, episode: media.episode });
-  let best = null;
-  for (const key of keys) {
-    const value = index.get(key);
-    if (value != null && (best == null || value < best)) best = value;
-  }
-  return best;
-}
-
-export function earliestTraktWatchedAt(index, media) {
-  if (!index) return null;
-  const direct = lookupTraktWatchedAt(index, media);
-  if (direct != null) return direct;
-  // Trakt sometimes records a multi-part episode (e.g. a double-length
-  // season finale) as a single entry under the first part's episode number,
-  // while Plembfin (via TMDB/TVDB) keeps the parts as separate episodes. If
-  // this exact episode has no Trakt entry of its own but the immediately
-  // preceding episode in the same season does, treat it as the second half
-  // of that combined watch and use its date too.
-  const episode = Number(media.episode);
-  if (media.type === "episode" && Number.isFinite(episode) && episode > 1) {
-    return lookupTraktWatchedAt(index, { ...media, episode: episode - 1 });
-  }
-  return null;
-}
+export const loadTraktWatchedDateIndex = loadTrackerWatchedDateIndex;
 
 export async function forceSyncMediaState(input, { config = null, now = Date.now(), logger = () => {}, isCancelled = () => false } = {}) {
   const requested = normalizeMediaForceSyncRequest(input);
@@ -562,14 +529,14 @@ export async function forceSyncMediaState(input, { config = null, now = Date.now
   }
 
   if (requested.mode === "pull") {
-    const traktWatchedDateIndex = await loadTraktWatchedDateIndex(logger);
-    if (traktWatchedDateIndex) {
+    const trackerWatchedDateIndex = await loadTrackerWatchedDateIndex(logger);
+    if (trackerWatchedDateIndex) {
       for (const media of collection.items) {
         if (!media.watched_at) continue;
-        const traktWatchedAt = earliestTraktWatchedAt(traktWatchedDateIndex, media);
-        if (traktWatchedAt != null && traktWatchedAt < Date.parse(media.watched_at)) {
+        const trackerWatchedAt = earliestTrackerWatchedAt(trackerWatchedDateIndex, media);
+        if (trackerWatchedAt != null && trackerWatchedAt < Date.parse(media.watched_at)) {
           logger(`[pull] ${media.title}: ${media.source} reported ${media.watched_at}, but Trakt has an earlier watch - using Trakt's date instead.`);
-          media.watched_at = new Date(traktWatchedAt).toISOString();
+          media.watched_at = new Date(trackerWatchedAt).toISOString();
         }
       }
     }

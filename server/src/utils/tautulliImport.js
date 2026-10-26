@@ -2,6 +2,7 @@ import { batchInsertWatchRecords, getCachedHistory, mediaKeyFor } from "./dataRe
 import { canonicalShowTitleKey } from "./dataRepo.js";
 import { releaseDateForSourceItem } from "./watchDates.js";
 import { TARGET_DECISIONS, watchTargetPolicy } from "./watchSyncPolicy.js";
+import { trackerProviderIds } from "./trackers/registry.js";
 
 export const TAUTULLI_SOURCE = "tautulli_import";
 const TARGETS = ["plex", "emby", "jellyfin"];
@@ -357,6 +358,7 @@ export function buildTautulliTelemetry(selectedTargets = [], activeTargets = TAR
     `Details: ${details}`,
     "Ingest path: historical_import",
     "Source event: history_import",
+    ...trackerProviderIds().map((provider) => `Target ${provider} status: skipped - No tracker destination selected for this import`),
   ];
   for (const entry of plan) {
     lines.push(entry.decision === TARGET_DECISIONS.SEND

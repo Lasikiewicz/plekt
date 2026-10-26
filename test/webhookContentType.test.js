@@ -107,6 +107,8 @@ test("a watched callback caused by Plembfin is acknowledged without re-reconcili
   await upsertPlaystateForMedia(media, "watched", record.record.watched_at);
   await recordOutboundPlayedMarks(media, ["jellyfin"], createLoopStore());
 
+  const trackerSync = await import("../server/src/utils/trackerSync.js");
+  trackerSync.resetTrackerEventCheckThrottle();
   const response = responseCapture();
   await handleWebhook(webhookRequest({
     ServerId: "echo-guard-server",
@@ -122,6 +124,7 @@ test("a watched callback caused by Plembfin is acknowledged without re-reconcili
   assert.equal(response.statusCode, 200);
   assert.equal(response.body.skipped, true);
   assert.match(response.body.reason, /outbound mark/i);
+  assert.equal(trackerSync.peekTrackerEventCheckAt(), 0, "Plekt outbound play echoes must not arm Simkl checks");
 });
 
 // Defect AG: the native rail refresh toggles a watched predecessor unplayed and
@@ -150,6 +153,8 @@ test("a native rail refresh callback never unwatches or deletes watch history", 
   await recordOutboundRailRefresh(media, "emby", loopStore);
   await recordOutboundUnplayedMarks(media, ["emby"], loopStore);
 
+  const trackerSync = await import("../server/src/utils/trackerSync.js");
+  trackerSync.resetTrackerEventCheckThrottle();
   const response = responseCapture();
   await handleWebhook(webhookRequest({
     Event: "item.markunplayed",
@@ -167,6 +172,8 @@ test("a native rail refresh callback never unwatches or deletes watch history", 
   assert.match(response.body.reason, /rail refresh/i);
   assert.ok(record.id);
   assert.ok(await getWatchRecordById(record.id), "the watch history row is kept");
+  // Up Next rail refresh is media-server/Plekt only; it must not arm Simkl checks.
+  assert.equal(trackerSync.peekTrackerEventCheckAt(), 0);
 });
 
 test("a body that is not JSON at all is rejected with the sender recorded", async () => {

@@ -26,6 +26,10 @@ import {
 import { fetchTraktPersonalRatingSnapshot, setTraktPersonalRating, clearTraktPersonalRating } from "./traktClient.js";
 import { withFreshTraktConnection } from "./trackerDispatcher.js";
 import { getTrackerConnection } from "./trackerConnectionRepo.js";
+import { getTrackerAdapter, isTrackerProvider } from "./trackers/registry.js";
+import { freshSimklConnection } from "./trackers/simklConnection.js";
+import { clearSimklPersonalRating, setSimklPersonalRating, storedSimklRatingSnapshot } from "./trackers/simklRatings.js";
+import { assertTrackerGeneration, currentTrackerGeneration, runInTrackerGeneration, trackerGenerationCurrent } from "./trackers/generation.js";
 import { getMediaConnection } from "./mediaConnectionRepo.js";
 import {
   PERSONAL_RATING_PROVIDERS,
@@ -85,6 +89,12 @@ const mediaProviderAdapters = {
     write: setTraktPersonalRating,
     clear: clearTraktPersonalRating,
   },
+  // Reads stored watched-check observations; writes may be held (simklRatings.js).
+  simkl: {
+    snapshot: storedSimklRatingSnapshot,
+    write: setSimklPersonalRating,
+    clear: clearSimklPersonalRating,
+  },
 };
 
 let activeSyncPromise = null;
@@ -114,7 +124,7 @@ function configForRating(config = {}) {
 }
 
 function providerConfigured(config, provider) {
-  if (provider === "trakt") return Boolean(getTrackerConnection("trakt")?.status === "connected");
+  if (isTrackerProvider(provider)) return Boolean(getTrackerConnection(provider)?.status === "connected");
   const section = config?.[provider] || {};
   if (section.disabled) return false;
   if (provider === "plex" && section.baseUrl && section.token) return true;
@@ -123,7 +133,7 @@ function providerConfigured(config, provider) {
 }
 
 function providerConnectionStatus(config, provider) {
-  if (provider === "trakt") return getTrackerConnection("trakt")?.status || "not_connected";
+  if (isTrackerProvider(provider)) return getTrackerConnection(provider)?.status || "not_connected";
   if (config?.[provider]?.disabled) return "disabled";
   const connectionStatus = getMediaConnection(provider)?.status;
   if (connectionStatus) return connectionStatus;
@@ -134,7 +144,15 @@ function providerConnectionStatus(config, provider) {
 
 function providerConfig(config, provider) {
   if (provider === "trakt") return withFreshTraktConnection();
+  if (provider === "simkl") return freshSimklConnection();
   return Promise.resolve(config?.[provider] || null);
+}
+
+// Simkl has no episode ratings; such a rating is never queued for it.
+function providerRatesMedia(provider, media) {
+  if (!isTrackerProvider(provider)) return true;
+  const type = media?.media_type === "tv" ? "show" : media?.media_type;
+  return Boolean(getTrackerAdapter(provider).capabilities.ratingSet?.mediaTypes?.includes(type));
 }
 
 function safeError(error) {
@@ -159,7 +177,8 @@ function isNotFound(error) {
 function queueIssueCount(queue = {}) {
   return Number(queue.failed || 0)
     + Number(queue.not_found ?? queue.notFound ?? 0)
-    + Number(queue.reauth_required ?? queue.reauthRequired ?? 0);
+    + Number(queue.reauth_required ?? queue.reauthRequired ?? 0)
+    + Number(queue.held || 0);
 }
 
 function ratingSyncHasIssues(queue = {}) {
@@ -257,7 +276,7 @@ export function queuePersonalRatingMutation(media, rating, { config = {}, source
   for (const provider of PERSONAL_RATING_PROVIDERS) {
     if (Array.isArray(providers) && !providers.includes(provider)) continue;
     if (!directionAllows(settings.ratingSync.providers[provider], "send")) continue;
-    if (!providerConfigured(settings, provider)) continue;
+    if (!providerConfigured(settings, provider) || !providerRatesMedia(provider, normalized)) continue;
     ensureRatingSourceRow(provider, normalized, { now: canonicalVersion });
     enqueuePersonalRatingMutation({
       provider,
@@ -279,7 +298,7 @@ function queueImportedFanout(media, rating, sourceProvider, config, timestamp) {
   const queued = [];
   for (const provider of PERSONAL_RATING_PROVIDERS) {
     if (provider === sourceProvider || !directionAllows(settings.ratingSync.providers[provider], "send")) continue;
-    if (!providerConfigured(settings, provider)) continue;
+    if (!providerConfigured(settings, provider) || !providerRatesMedia(provider, media)) continue;
     ensureRatingSourceRow(provider, media, { now: timestamp });
     enqueuePersonalRatingMutation({
       provider,
@@ -397,8 +416,9 @@ function applyRemoteObservation({ provider, media, rating, previous, config, mod
 }
 
 async function fetchProviderSnapshot(provider, config) {
-  const connection = await providerConfig(config, provider);
-  if (!connection || (provider !== "trakt" && !providerConfigured({ [provider]: connection }, provider))) {
+  // Stored Simkl observations need no credentials or token refresh.
+  const connection = provider === "simkl" ? getTrackerConnection(provider) : await providerConfig(config, provider);
+  if (!connection || (!isTrackerProvider(provider) && !providerConfigured({ [provider]: connection }, provider))) {
     const error = new Error(`${provider} is not connected for personal rating sync`);
     error.code = "not_configured";
     throw error;
@@ -406,7 +426,14 @@ async function fetchProviderSnapshot(provider, config) {
   return mediaProviderAdapters[provider].snapshot(connection);
 }
 
-async function runProviderSnapshot(provider, { config, mode, logger = () => {}, approvedHold = null } = {}) {
+// A tracker rating scan is bound to the connection generation it started on;
+// after an account change its observations are discarded, never applied.
+function runProviderSnapshot(provider, options) {
+  if (!isTrackerProvider(provider)) return runProviderSnapshotUnfenced(provider, options);
+  return runInTrackerGeneration(provider, currentTrackerGeneration(provider), () => runProviderSnapshotUnfenced(provider, options));
+}
+
+async function runProviderSnapshotUnfenced(provider, { config, mode, logger = () => {}, approvedHold = null } = {}) {
   if (isAuthoritativeRestoreActive()) return { provider, status: "skipped", skipped: "authoritative-restore-active" };
   const admission = transaction(() => {
     const previousRun = getPersonalRatingSyncRun(provider);
@@ -471,6 +498,7 @@ async function runProviderSnapshot(provider, { config, mode, logger = () => {}, 
   }
 
   for (const record of Array.isArray(records) ? records : []) {
+    if (!trackerGenerationCurrent(provider)) return { provider, status: "skipped", skipped: "connection-changed" };
     if (isAuthoritativeRestoreActive()) {
       finishPersonalRatingSyncRun(provider, { status: "cancelled", last_error: "Authoritative watch-history restore is active" });
       return { provider, status: "skipped", skipped: "authoritative-restore-active" };
@@ -503,6 +531,7 @@ async function runProviderSnapshot(provider, { config, mode, logger = () => {}, 
         syncStatus: "synced",
       };
       const result = transaction(() => {
+        assertTrackerGeneration(provider);
         const reconciliation = applyRemoteObservation({ provider, media, rating: remoteRating, previous, config, mode, now, remoteChangedAt: observation.remoteRatedAt });
         upsertRatingSourceObservation({ ...observation, syncStatus: reconciliation.conflict ? "conflict" : "synced" });
         if (reconciliation.conflict) updateRatingSourceSyncStatus(provider, media.media_key, "conflict", "Local rating retained over an older remote observation");
@@ -533,6 +562,7 @@ async function runProviderSnapshot(provider, { config, mode, logger = () => {}, 
       try {
         const media = normalizePersonalRatingMedia(previous.media || {}, { mediaKey: previous.media_key });
         const result = transaction(() => {
+          assertTrackerGeneration(provider);
           const reconciliation = applyRemoteObservation({ provider, media, rating: null, previous, config, mode, now });
           upsertRatingSourceObservation({
             provider,
@@ -596,16 +626,17 @@ async function drainPersonalRatingQueue({ config, providers = RATING_SYNC_PROVID
   let failed = 0;
   let notFound = 0;
   let reauthRequired = 0;
+  let held = 0;
   for (const provider of normalizeProviders(providers)) {
-    if (isAuthoritativeRestoreActive()) return { processed, succeeded, failed, notFound, reauthRequired, skipped: "authoritative-restore-active" };
+    if (isAuthoritativeRestoreActive()) return { processed, succeeded, failed, notFound, reauthRequired, held, skipped: "authoritative-restore-active" };
     if (!directionAllows(settings.ratingSync.providers[provider], "send")) continue;
     const claimed = claimPersonalRatingQueue({ provider, limit, owner, leaseMs: QUEUE_LEASE_MS });
     for (const item of claimed.rows) {
-      if (isAuthoritativeRestoreActive()) return { processed, succeeded, failed, notFound, reauthRequired, skipped: "authoritative-restore-active" };
+      if (isAuthoritativeRestoreActive()) return { processed, succeeded, failed, notFound, reauthRequired, held, skipped: "authoritative-restore-active" };
       processed += 1;
       try {
         const connection = await providerConfig(settings, provider);
-        if (!connection || (provider !== "trakt" && !providerConfigured({ [provider]: connection }, provider))) {
+        if (!connection || (!isTrackerProvider(provider) && !providerConfigured({ [provider]: connection }, provider))) {
           const error = new Error(`${provider} is not connected`);
           error.code = "not_configured";
           throw error;
@@ -623,6 +654,13 @@ async function drainPersonalRatingQueue({ config, providers = RATING_SYNC_PROVID
           logger(`[ratings] ${provider}: ${item.media.title || item.media_key} -> not_found: No matching item was found on the provider`);
           continue;
         }
+        // Terminal until retried or replaced by a newer local value.
+        if (result?.status === "held") {
+          failPersonalRatingQueue({ provider, mediaKey: item.media_key, intentId: item.intent_id, status: "held", error: result.reason || "Held", nextAttemptAt: Date.now() });
+          held += 1;
+          logger(`[ratings] ${provider}: ${item.media.title || item.media_key} -> held: ${result.reason || "Held"}`);
+          continue;
+        }
         const acknowledged = acknowledgePersonalRatingQueue({
           provider,
           mediaKey: item.media_key,
@@ -632,6 +670,10 @@ async function drainPersonalRatingQueue({ config, providers = RATING_SYNC_PROVID
           desiredRating: item.desired_rating,
         });
         if (acknowledged) succeeded += 1;
+        if (acknowledged && result?.reviewReason) {
+          updateRatingSourceSyncStatus(provider, item.media_key, "conflict", result.reviewReason);
+          logger(`[ratings] ${provider}: ${item.media.title || item.media_key} -> review: ${result.reviewReason}`);
+        }
       } catch (error) {
         const status = isUnauthorized(error) ? "reauth_required" : isNotFound(error) ? "not_found" : "failed";
         if (status === "reauth_required") reauthRequired += 1;
@@ -650,7 +692,7 @@ async function drainPersonalRatingQueue({ config, providers = RATING_SYNC_PROVID
       }
     }
   }
-  return { processed, succeeded, failed, notFound, reauthRequired };
+  return { processed, succeeded, failed, notFound, reauthRequired, held };
 }
 
 function snapshotModeFor(provider, config, explicitMode = "") {
@@ -734,7 +776,7 @@ export async function pushPersonalRatings({ providers = [], items = [], logger =
   transaction(() => {
     for (const media of canonicalItems) {
       for (const provider of targets) {
-        if (!directionAllows(settings.ratingSync.providers[provider], "send")) continue;
+        if (!directionAllows(settings.ratingSync.providers[provider], "send") || !providerRatesMedia(provider, media)) continue;
         ensureRatingSourceRow(provider, media, { now: Date.now() });
         const canonical = getCanonicalPersonalRating(media.media_key);
         if (!canonical) continue;
@@ -775,6 +817,12 @@ export async function getRatingSyncStatus({ config = null } = {}) {
     connectionStatus: providerConnectionStatus(settings, provider),
     queue: ratingQueueCounts(provider),
     run: getPersonalRatingSyncRun(provider),
+    issues: [
+      ...listPersonalRatingQueue({ provider }).filter(row => row.status === "held")
+        .map(row => ({ title: row.media?.title || row.media_key, status: "held", reason: row.last_error })),
+      ...listRatingSourceRows(provider).filter(row => row.sync_status === "conflict")
+        .map(row => ({ title: row.media?.title || row.media_key, status: "conflict", reason: row.last_error })),
+    ],
   }));
   const queue = personalRatingRepositoryStatus().queue;
   const running = providers.some((entry) => entry.run?.status === "running" && Date.now() - Number(entry.run.started_at || 0) < RUN_STALE_MS);

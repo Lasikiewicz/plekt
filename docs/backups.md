@@ -1,5 +1,9 @@
 # Backups
 
+Initial outward-sync item progress is included in backups. Restored unfinished rows
+are held for review and restored active job headers become interrupted; restoring a
+backup never resumes initial provider sends automatically.
+
 Plekt has **three backup subsystems** plus a set of pluggable remote destinations.
 Schedules and destinations are managed from **Settings → Backup → Local / Remote**
 (`/settings/backup#backup-local`, `/settings/backup#backup-remote`); recovery workflows
@@ -15,6 +19,16 @@ live under **Settings → Restore → Local / Remote** (`/settings/restore#resto
 Saved show and season poster choices are included as database records. Artwork binaries,
 poster cache rows, and TMDB metadata cache rows are not included; copy `data/media/`
 separately when preserving the locally cached images themselves.
+
+Full and portable backups include dropped-title flags, identities, original drop times and
+saved title snapshots. Restoring them invalidates Up Next so dropped titles remain excluded.
+Watch-history-only backups do not include queue preferences such as Dropped. Wipe Data removes
+dropped titles with the other Up Next state.
+
+Encrypted full backups retain tracker observation cursors, inbox/review decisions and
+write intents with their original connection/account fences. Restored unfinished known
+tracker work is held for review because remote history did not roll back with the backup.
+Browser portable exports omit these account-bound ledgers alongside tracker credentials.
 
 Full and portable exports also retain each show's metadata source, stored-row numbering and
 Fix Match timestamp (`showSeasonSource`). Watch provenance retains its per-row Trakt override.

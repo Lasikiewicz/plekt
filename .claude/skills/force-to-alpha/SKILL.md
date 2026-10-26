@@ -81,3 +81,7 @@ optionally inspect gh run list --branch alpha --limit 1.
 Release the lock. STOP. Never push develop or merge/fold the release back into alpha;
 develop's local reset/restamps wait for the user's next ordinary push.
 Rationale: docs/decisions.md entry 18.
+
+## Example request
+
+> Force to alpha

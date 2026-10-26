@@ -45,9 +45,13 @@ test("automated writes and queued work throw public 409 conflicts", async () => 
 });
 test("shared HTTP error response preserves restore code/message even through a generic catch", () => {
   const f = fixture();
-  sendApiError(f.res, Object.assign(new Error("Restore is active; sync waits."), { code: "RESTORE_ACTIVE" }), { error: "Generic failure" }, 500);
+  sendApiError(f.res, Object.assign(new Error("internal stack trace and filesystem path"), { code: "RESTORE_ACTIVE" }),
+    { error: "internal stack trace and filesystem path" }, 500);
   assert.equal(f.capture.status, 409);
-  assert.deepEqual(f.capture.body, { error: "Restore is active; sync waits.", code: "RESTORE_ACTIVE" });
+  assert.deepEqual(f.capture.body, {
+    error: "An authoritative watch-history restore is active. Try again when it completes.",
+    code: "RESTORE_ACTIVE",
+  });
 });
 test("manual watch route remains available while a restore is active", async () => {
   const f = fixture({ records: [1, 2].map(n => ({ title: `Manual during restore ${n}`, media_type: "movie", source: "manual", watched_at: "2026-10-01T12:00:00.000Z" })) });

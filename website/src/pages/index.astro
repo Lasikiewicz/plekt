@@ -1,11 +1,25 @@
 ---
 import SiteLayout from "../layouts/SiteLayout.astro";
 import ScreenshotFigure from "../components/ScreenshotFigure.astro";
+import QuickstartSection from "../components/QuickstartSection.astro";
 import { integrations } from "../data/site.js";
 import release from "../generated/release.json";
 
 const syncServices = integrations.slice(0, 4);
 const demoUrl = "https://demo.plekt.net/";
+const softwareApplication = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Plekt",
+  url: "https://plekt.net",
+  description: "Plekt syncs watch history and playback progress across Plex, Jellyfin, and Emby.",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Docker, Windows, Linux",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  softwareVersion: release.version,
+  sameAs: ["https://github.com/Lasikiewicz/plekt"],
+  codeRepository: "https://github.com/Lasikiewicz/plekt",
+};
 
 const loopSteps = [
   {
@@ -73,23 +87,27 @@ const comparisonApps = [
 
 const comparisonFeatures = [
   { name: "Self-hosted", supported: [true, true, true, true, true, true, true] },
+  { name: "Quick easy setup", supported: [true, false, false, false, true, true, false] },
   { name: "Connects to Plex", supported: [true, true, true, true, true, true, true] },
   { name: "Connects to Emby", supported: [true, true, true, false, true, true, true] },
   { name: "Connects to Jellyfin", supported: [true, true, true, false, true, true, true] },
   { name: "Syncs watch state across media servers", supported: [true, false, false, false, true, true, true] },
-  { name: "Syncs resume progress across media servers", supported: [true, false, false, false, true, false, true] },
+  { name: "Syncs resume progress across media servers", supported: [true, false, false, false, true, true, true] },
   { name: "Connects to or imports from Trakt", supported: [true, true, true, true, false, true, false] },
   { name: "Tracks books, games, or other media", supported: [false, true, true, false, false, false, false] },
   { name: "Includes personal history or stats", supported: [true, true, true, false, false, true, false] },
-  { name: "Keeps a canonical archive and restores watch state to rebuilt libraries", supported: [true, false, false, false, false, false, false] },
+  { name: "Snapshot-based rollback of watch state", supported: [true, false, false, false, false, true, false] },
+  { name: "Restores watch state to rebuilt libraries", supported: [true, false, false, false, false, true, false] },
+  { name: "Up Next queue for movies and episodes", supported: [true, false, false, false, false, false, false] },
+  { name: "Discover rails and requests through Seerr", supported: [true, false, true, false, false, false, false] },
+  { name: "Single process, one SQLite file", supported: [true, false, false, false, false, false, false] },
 ];
 ---
 
 <SiteLayout
-  title="The local brain for your media stack."
   description="Keep Plex, Emby, and Jellyfin in sync from one private watch-history archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild."
-  image="/assets/home-dashboard.jpg"
 >
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(softwareApplication)} />
   <div class="simple-home">
     <div class="modern-home-intro">
     <section class="simple-home-hero" aria-labelledby="home-title">
@@ -140,6 +158,8 @@ const comparisonFeatures = [
         height={998}
       />
     </section>
+
+    <QuickstartSection />
     </div>
 
     <section class="simple-home-comparison" aria-labelledby="comparison-title">
@@ -177,7 +197,7 @@ const comparisonFeatures = [
           </tbody>
         </table>
       </div>
-      <p class="simple-home-comparison-note">Plekt keeps one restorable watch history in sync across your servers. Ticks mark each app’s documented core capabilities.</p>
+      <p class="simple-home-comparison-note">* Ticks mark each app’s documented core capabilities, accurate as of 23 October 2026. Other projects release updates often, so check their documentation for the latest.</p>
     </section>
 
     <section class="simple-home-up-next" aria-labelledby="up-next-home-title">

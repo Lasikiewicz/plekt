@@ -24,6 +24,12 @@ Behavior:
 - **Dedupe** - raw history collapses duplicates to one entry per movie or show episode
   per calendar day, so same-day webhook echoes don't crowd out genuine later rewatches
   (`dedupe` option in `queryWatchHistory`).
+- **Day view** - the default layout. The List | Days toggle in the page's control bar
+  (`data-history-view`) switches to `days` mode (`modules/history-day-view.js`): one box per local calendar day, newest day
+  first, its cards newest first inside the box, using the same card and poster-only layout as
+  Card view, each box showing its item count. Each box is painted with `--brand-menu`, the
+  same colour as the left menu in both themes (see [frontend.md](frontend.md#brand-colours)). It draws every loaded row at once (no first-paint
+  chunking) and pages in more rows as before.
 - **View modes** - grid / list / cards (`plembfin:historyView`), filter all/movies/shows
   (`plembfin:historyFilter`), search box (server-side `?search=`). There is no size
   control: posters use the other pages' poster-mode width, and on desktop the cards

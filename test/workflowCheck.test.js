@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, vitePatched } from '../scripts/workflow-check.js';
+import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, versionAtLeast, vitePatched } from '../scripts/workflow-check.js';
 
 test('cleanup refuses running and queued jobs, accepts no run or completed', () => {
   for (const status of ['queued', 'in_progress', 'waiting']) assert.throws(() => assertCleanup([{ status }]));
@@ -53,11 +53,11 @@ test('only the exact documented security alert fingerprints become notes', () =>
 
   const stackAlert = {
     number: 49,
-    rule: { id: 'js/stack-trace-exposure' },
+    rule: { id: 'js/stack-trace-exposure', security_severity_level: 'medium' },
     most_recent_instance: {
       location: { path: 'server/src/utils/http.js' },
       ref: 'refs/heads/main',
-      commit_sha: '3a45f9fc2d48fc7477092cd3e2652d79f6b8dbf0',
+      commit_sha: 'ef11918693f1a9ce4bfd0c0225ce1652374c871e',
     },
   };
   const viteAlert = {
@@ -66,11 +66,46 @@ test('only the exact documented security alert fingerprints become notes', () =>
     security_advisory: { ghsa_id: 'GHSA-587h-7wmj-h5pm', severity: 'high' },
     security_vulnerability: { vulnerable_version_range: '>= 8.3.0, <= 8.3.2', first_patched_version: { identifier: '8.3.3' } },
   };
-  assert.match(knownSecurityAlertNote('code-scanning', stackAlert), /Trakt replace/);
+  assert.match(knownSecurityAlertNote('code-scanning', stackAlert), /restore-conflict/);
   assert.equal(knownSecurityAlertNote('code-scanning', { ...stackAlert, most_recent_instance: { ...stackAlert.most_recent_instance, commit_sha: 'new-main-commit' } }), null);
   assert.match(knownSecurityAlertNote('dependabot', viteAlert), /patched vite/);
   assert.equal(knownSecurityAlertNote('dependabot', { ...viteAlert, security_advisory: { ghsa_id: 'GHSA-698v-4r3x-3vcv', severity: 'high' } }), null);
   assert.equal(knownSecurityAlertNote('dependabot', { ...viteAlert, security_vulnerability: { vulnerable_version_range: '>= 8.3.0, <= 8.3.4', first_patched_version: { identifier: '8.3.5' } } }), null);
+
+  const pendingFixAlerts = [
+    [22, 'vite', 'GHSA-698v-4r3x-3vcv', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [24, 'hono', 'GHSA-5r4p-p66f-jhc7', 'medium', '>= 4.12.4, < 4.13.11', '4.13.11'],
+    [26, 'vite', 'GHSA-587h-7wmj-h5pm', 'high', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [28, 'vite', 'GHSA-r825-w8mm-5pxw', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [30, 'vite', 'GHSA-vfpm-58rq-9qcg', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [31, 'vite', 'GHSA-rq7h-c2jc-7f22', 'medium', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+    [32, 'vite', 'GHSA-9jrq-w75r-8gcw', 'low', '>= 8.2.0, <= 8.2.3', '8.2.4'],
+  ];
+  for (const [number, name, ghsa, severity, range, fixed] of pendingFixAlerts) {
+    const alert = {
+      number,
+      dependency: { package: { ecosystem: 'npm', name }, manifest_path: 'reddit-app/package-lock.json' },
+      security_advisory: { ghsa_id: ghsa, severity },
+      security_vulnerability: { vulnerable_version_range: range, first_patched_version: { identifier: fixed } },
+    };
+    assert.match(knownSecurityAlertNote('dependabot', alert), /retired Devvit lockfile/);
+    assert.equal(knownSecurityAlertNote('dependabot', { ...alert, security_advisory: { ...alert.security_advisory, ghsa_id: 'GHSA-wrong' } }), null);
+  }
+  const ipAddressAlert = {
+    number: 29,
+    dependency: { package: { ecosystem: 'npm', name: 'ip-address' }, manifest_path: 'package-lock.json' },
+    security_advisory: { ghsa_id: 'GHSA-rxp7-6hxx-x8q5', severity: 'medium' },
+    security_vulnerability: { vulnerable_version_range: '<= 10.7.3', first_patched_version: { identifier: '10.7.4' } },
+  };
+  const astroAlert = {
+    number: 33,
+    dependency: { package: { ecosystem: 'npm', name: 'astro' }, manifest_path: 'website/package-lock.json' },
+    security_advisory: { ghsa_id: 'GHSA-mpr7-6m5w-76rw', severity: 'low' },
+    security_vulnerability: { vulnerable_version_range: '>= 7.1.0, <= 7.3.2', first_patched_version: { identifier: '7.3.3' } },
+  };
+  assert.match(knownSecurityAlertNote('dependabot', ipAddressAlert), /patched ip-address/);
+  assert.match(knownSecurityAlertNote('dependabot', astroAlert), /patched Astro/);
+  assert.equal(knownSecurityAlertNote('dependabot', { ...astroAlert, security_vulnerability: { ...astroAlert.security_vulnerability, vulnerable_version_range: '<= 7.3.2' } }), null);
 });
 test('the vite remedy check accepts only patched versions', () => {
   assert.equal(vitePatched('8.3.2'), false);
@@ -79,6 +114,10 @@ test('the vite remedy check accepts only patched versions', () => {
   assert.equal(vitePatched('9.0.0'), true);
   assert.equal(vitePatched('8.2.9'), false);
   assert.equal(vitePatched(''), false);
+  assert.equal(versionAtLeast('10.7.3', '10.7.4'), false);
+  assert.equal(versionAtLeast('10.7.5', '10.7.4'), true);
+  assert.equal(versionAtLeast('7.4.1', '7.3.3'), true);
+  assert.equal(versionAtLeast('7.x', '7.3.3'), false);
 });
 test('reconcile accepts source/asset restamping but refuses missing product changes', () => {
   assertRestampOnly('sourceVersion: 2.0.0\na.js?v=old', 'sourceVersion: 2.1.0\na.js?v=new');

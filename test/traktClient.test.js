@@ -149,6 +149,22 @@ test("Trakt episode writes use show IDs plus season and episode coordinates", as
   } finally { globalThis.fetch = originalFetch; }
 });
 
+test("Trakt show-level watches send a whole-show history entry", async () => {
+  const originalFetch = globalThis.fetch;
+  let request;
+  globalThis.fetch = async (url, options) => {
+    request = { url: String(url), body: JSON.parse(options.body) };
+    return new Response(JSON.stringify({ added: { shows: 1 } }), { status: 201, headers: { "content-type": "application/json" } });
+  };
+  try {
+    const media = { type: "tv", title: "Example Show", ids: { tmdb: 123 }, watched_at: "2024-01-01T12:00:00.000Z" };
+    await setTraktWatchState({ clientId: "client", accessToken: "token" }, media, "watched");
+    assert.equal(request.url, "https://api.trakt.tv/sync/history");
+    assert.deepEqual(request.body, { shows: [{ ids: { tmdb: 123 }, watched_at: "2024-01-01T12:00:00.000Z" }] });
+    assert.equal(trackerMediaKey(media), "show:tmdb:123");
+  } finally { globalThis.fetch = originalFetch; }
+});
+
 test("Trakt personal episode ratings resolve a leaf id when only show identity is available", async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];

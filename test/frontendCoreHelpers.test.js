@@ -31,7 +31,7 @@ const utils = await import("../public/modules/utils.js");
 const { nowPlayingHref } = await import("../public/modules/media-routing.js");
 const { dedupeMediaRecords, mediaRecordIdentity } = await import("../public/modules/media-records.js");
 const { isShowInUpNext, manualShowMatches, upNextShowActionHtml } = await import("../public/modules/up-next-shared.js");
-const { loadManualWatchReviewSummary } = await import("../public/modules/status-indicators.js");
+const { loadManualWatchReviewSummary, renderManualWatchReviewSummary } = await import("../public/modules/status-indicators.js");
 const { hydratePersonalMetadata } = await import("../public/modules/personal-media-metadata.js");
 const { refreshRatingSyncStatus } = await import("../public/modules/rating-sync-settings.js");
 const { loadSyncHistory } = await import("../public/modules/sync.js");
@@ -119,15 +119,40 @@ test("Up Next show helpers match across id field spellings and escape markup", (
 
 test("the Manual Watch review summary shares one in-flight request", async () => {
   state.token = "session";
-  const calls = stubFetch(async () => ({ ok: true, count: 3 }));
+  const calls = stubFetch(async () => ({ ok: true, count: 3, sourceMismatchCount: 1 }));
   const [first, second] = await Promise.all([loadManualWatchReviewSummary(), loadManualWatchReviewSummary()]);
   assert.equal(calls.length, 1);
   assert.equal(first, 3);
   assert.equal(second, 3);
   assert.equal(state.manualWatchReviewCount, 3);
+  assert.equal(state.manualWatchSourceMismatchCount, 1);
   state.token = "";
   assert.equal(await loadManualWatchReviewSummary(), 0, "signed out: no request, count cleared");
   assert.equal(calls.length, 1);
+});
+
+test("sidebar review summary labels the shared count as Fix Match Issue when mismatch notices are pending", () => {
+  const label = { textContent: "" };
+  const count = { textContent: "", setAttribute(name, value) { this[name] = value; } };
+  const button = {
+    classList: { toggle(name, hidden) { this.hidden = hidden; } },
+    querySelector(selector) { return selector === ".manual-watch-review-nav-label" ? label : null; },
+    setAttribute(name, value) { this[name] = value; },
+  };
+  const oldQuerySelector = document.querySelector;
+  document.querySelector = (selector) => selector === "#manualWatchReviewButton" ? button : selector === "#manualWatchReviewCount" ? count : null;
+  state.token = "session";
+  state.manualWatchReviewCount = 3;
+  state.manualWatchSourceMismatchCount = 1;
+  renderManualWatchReviewSummary();
+  assert.equal(label.textContent, "Fix Match Issue");
+  assert.equal(count.textContent, "3");
+  assert.equal(button.classList.hidden, false);
+  assert.match(button["aria-label"], /Fix Match Issue/);
+  document.querySelector = oldQuerySelector;
+  state.token = "";
+  state.manualWatchReviewCount = 0;
+  state.manualWatchSourceMismatchCount = 0;
 });
 
 test("personal metadata fill asks only about the page being viewed", async () => {
@@ -225,10 +250,10 @@ test("provider history changes fall back to the durable record id after identity
   state.showsRaw = [];
 });
 
-test("a finished setup never downloads the onboarding wizard", () => {
+test("a finished setup with no remaining tasks never downloads the onboarding wizard", () => {
   const dashboardSource = read("public/modules/dashboard.js");
   assert.doesNotMatch(dashboardSource, /from "\.\/onboarding\.js/, "the dashboard must not statically import the wizard");
-  assert.match(dashboardSource, /ifLoaded\("onboarding", "renderDashboardChecklist"\)/);
+  assert.doesNotMatch(dashboardSource, /renderDashboardChecklist|dashboardChecklist/);
   const check = appSource.slice(appSource.indexOf("Keep the large wizard graph out of the first authenticated render"), appSource.indexOf("isConfigSensitiveRoute(fullPath) && !state.mustChangePassword"));
   assert.match(check, /fetch\("\/api\/setup\/status"/);
   assert.match(check, /if \(ok && done && !data\?\.checklist\?\.length\) return;/);
@@ -272,7 +297,7 @@ test("mobile show detail episodes stay in a two-column grid", () => {
 test("mobile explorer poster grid uses capped portrait tiles with readable titles", () => {
   assert.match(
     stylesSource,
-    /@media \(max-width: 760px\) \{\s+\.page-shell\[data-active-view="explorer"\] \[data-view-panel="explorer"\]:not\(\.page-card-mode-compact\) #explorerPanel \.movie-grid:not\(\.explorer-list-view, \.explorer-overview-view\) \{\s+grid-template-columns: repeat\(auto-fill, minmax\(min\(10rem, 100%\), 1fr\)\);/,
+    /@media \(max-width: 760px\) \{\s+\.page-shell\[data-active-view="explorer"\] \[data-view-panel="explorer"\]:not\(\.page-card-mode-compact\) :is\(#explorerPanel, #explorerDroppedPanel\) \.movie-grid:not\(\.explorer-list-view, \.explorer-overview-view\) \{\s+grid-template-columns: repeat\(auto-fill, minmax\(min\(10rem, 100%\), 1fr\)\);/,
   );
   assert.match(
     stylesSource,
@@ -457,10 +482,20 @@ test("mobile page controls use the shared title Options menu", () => {
   const upcomingMarkup = indexSource.slice(upcomingStart, upcomingEnd);
   assert.match(upcomingMarkup, /upcoming-search-dropdown/);
   assert.match(upcomingMarkup, /upcoming-search-dropdown[\s\S]*upcoming-month-controls[\s\S]*upcomingTodayButton/);
+  assert.match(upcomingMarkup, /id="upcomingTopbarControls"[\s\S]*id="upcomingCalendarFeedButton"/);
+  assert.match(indexSource, /id="upcomingCalendarFeedDialog"[\s\S]*id="upcomingCalendarFeedUrl"[\s\S]*id="upcomingCalendarFeedRegenerate"/);
+  assert.match(indexSource, /id="upcomingCalendarFeedDialog" class="modal-overlay hidden"[\s\S]*class="modal-panel glass-panel upcoming-feed-modal"/);
+  assert.match(indexSource, /id="upcomingCalendarFeedIncludeTv" type="checkbox" value="tv" checked/);
+  assert.match(indexSource, /id="upcomingCalendarFeedIncludeMovies" type="checkbox" value="movies" checked/);
+  assert.match(indexSource, /class="settings-choice-grid upcoming-feed-type-grid"/);
+  assert.match(indexSource, /id="upcomingCalendarFeedUrlFields" class="upcoming-feed-url-fields hidden"/);
+  assert.match(upcomingSource, /const visibleUrl = usable \? String\(url \|\| ""\) : ""/);
+  assert.doesNotMatch(indexSource, /data-sub-panel="general-calendar-feed"|id="regenerateCalendarFeedButton"/);
   assert.match(upcomingMarkup, /<\/div>\s*<div id="upcomingCalendar"/);
   assert.doesNotMatch(upcomingMarkup, /page-tools-dropdown/);
   assert.match(upcomingSource, /function scrollToToday[\s\S]*window\.matchMedia\("\(max-width: 760px\)"\)/);
   assert.match(upcomingSource, /anchorTo\(`\[data-day="\$\{today\}"\]`/);
+  assert.match(upcomingSource, /upcomingCalendarFeedButton\?\.addEventListener/);
   // History has no size control; its cards match the other pages' size.
   assert.doesNotMatch(indexSource, /id="historyPosterSize"|data-target="size"/);
   assert.doesNotMatch(indexSource, /title="History options"/);
@@ -496,5 +531,5 @@ test("mobile page controls use the shared title Options menu", () => {
   assert.match(stylesSource, /@keyframes page-options-menu-enter\s*\{\s*from \{ transform: translateX\(100%\); \}\s*to \{ transform: translateX\(0\); \}/);
   assert.match(stylesSource, /\.upcoming-week-day\.is-outside \{\s+display: none;/);
   assert.doesNotMatch(stylesSource, /\.upcoming-week-day\.is-outside,\s+\.upcoming-week-day\.is-empty/);
-  assert.match(stylesSource, /grid-template-areas: "search month today"/);
+  assert.match(stylesSource, /grid-template-areas: "search month today feed"/);
 });

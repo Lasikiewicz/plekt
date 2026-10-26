@@ -40,7 +40,8 @@ Create the run plan before release work. Use `plan/force-to-main-<version>.md` a
 website B captures, website C, promotion/final review, and push/demo. If the version is
 not known yet, use `pending` consistently in the filenames and contents. After the preview,
 rename the summary and step folder and replace `pending` with the release version everywhere.
-Copy `assets/run-plan-summary.template.md` to the summary, then copy these step templates:
+Copy `assets/run-plan-summary.template.md` to the summary and
+`assets/run-plan-history.template.md` to the step folder's `history.md`, then copy these step templates:
 
 | Destination | Template |
 | --- | --- |
@@ -52,7 +53,9 @@ Copy `assets/run-plan-summary.template.md` to the summary, then copy these step 
 | `step6-push-demo.md` | `run-plan-step6-push-demo.template.md` |
 
 Replace every `<version>` and remaining placeholder. The summary records purpose, waiting
-on the user, phase checkboxes, current state, and next handoff. The release-candidate file
+on the user, phase checkboxes, a short current-state paragraph, and next handoff.
+Its Background and history section links to `history.md`; never put dated history or
+detailed results in the summary. The release-candidate file
 records the pinned alpha hash, previous develop tip, worktree path, data directory, server
 PID/logs, preview version and entry, approved `releaseMessage`, and approval evidence.
 Update the open step's Results and the summary at every phase end so an interruption

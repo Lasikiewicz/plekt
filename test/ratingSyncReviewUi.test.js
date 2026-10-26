@@ -35,7 +35,7 @@ test("held scan stays visible on refresh, escapes titles, and sends the reviewed
       hold = null;
       return new Response(JSON.stringify({ status: "dismissed" }), { headers: { "Content-Type": "application/json" } });
     }
-    return new Response(JSON.stringify({ config, providers: [{ provider: "emby", configured: true, run: hold, queue: {} }], queue: {} }), { headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ config, providers: [{ provider: "emby", configured: true, run: hold, queue: {} }, { provider: "simkl", configured: true, queue: { held: 1 }, issues: [{ title: "<unsafe title>", status: "held", reason: "Held: would add watched history" }, { title: "Readback", status: "conflict", reason: "Watch date changed" }] }], queue: { held: 1 } }), { headers: { "Content-Type": "application/json" } });
   };
   try {
     ui.initRatingSyncSettings({ authHeaders: () => ({ Authorization: "Bearer test-token" }) });
@@ -47,12 +47,18 @@ test("held scan stays visible on refresh, escapes titles, and sends the reviewed
     assert.match(rows.innerHTML, /Dismiss and keep ratings/);
     assert.match(rows.innerHTML, /&lt;img/);
     assert.doesNotMatch(rows.innerHTML, /<img/);
+    assert.match(rows.innerHTML, /Simkl/);
+    assert.match(rows.innerHTML, /Held: would add watched history/);
+    assert.match(rows.innerHTML, /Watch date changed/);
+    assert.match(rows.innerHTML, /&lt;unsafe title&gt;/);
     assert.match(widgets.get("#ratingSyncStatus").textContent, /sync issue/);
-    await rows.listeners.click({ target: { closest: () => ({ dataset: {
+    await rows.listeners.click({ target: { closest: (selector) => selector === "[data-rating-hold]" ? ({ dataset: {
       ratingHold: "dismiss", provider: "emby", runId: "review-token",
-    } }) } });
+    } }) : null } });
     assert.deepEqual(requests, [{ action: "dismiss-held", provider: "emby", runId: "review-token" }]);
     assert.doesNotMatch(rows.innerHTML, /Rating scan held for review/);
+    await rows.listeners.click({ target: { closest: selector => selector === "[data-rating-retry]" ? { dataset: { ratingRetry: "simkl" } } : null } });
+    assert.deepEqual(requests[1], { providers: ["simkl"] });
   } finally {
     ui.stopRatingSyncSettings();
     globalThis.fetch = originalFetch;

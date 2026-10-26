@@ -1,4 +1,5 @@
 import { db } from "../db.js";
+import { getTrackerAdapter, trackerProviderForSource, trackerProviderIds } from "./trackers/registry.js";
 import { isAuthoritativeRestoreActive } from "./configStore.js";
 import {
   deletePlaybackProgressSync,
@@ -47,7 +48,7 @@ import { removeWatchlistAfterCompletedWatch } from "./personalWatchlistRepositor
 // never subject to this - a person is allowed to unwatch as much as they
 // want in one sitting; only automatic, inbound-from-a-server decisions are
 // rate-limited.
-const AUTOMATIC_UNWATCH_SOURCES = new Set(["plex", "emby", "jellyfin", "trakt"]);
+const AUTOMATIC_UNWATCH_SOURCES = new Set(["plex", "emby", "jellyfin", ...trackerProviderIds()]);
 const AUTOMATIC_UNWATCH_BURST_WINDOW_MS = 5 * 60 * 1000;
 const AUTOMATIC_UNWATCH_BURST_THRESHOLD = 15;
 const AUTOMATIC_UNWATCH_BURST_KEY_PREFIX = "auto-unwatch-burst:";
@@ -141,15 +142,10 @@ function deferredUnwatchedResult(existingRecord = null) {
   };
 }
 
-// Trakt is the only automatic source whose reported watched date can change
-// after the fact - a user editing a play's date on trakt.tv reports back
-// through the same poll as any other "watched" transition, for an item
-// Plembfin already has watched. The generic already-watched short-circuit
-// below would otherwise silently discard that correction forever, since it
-// only distinguishes unwatched->watched, not "watched but the date moved".
-// Plex/Emby/Jellyfin have no equivalent editable date to catch here - their
-// watched flag is binary - so this stays scoped to source === "trakt".
-async function applyTraktWatchedDateCorrection(media, config, loopStore, { lane, shouldDefer }) {
+// Only an adapter with verified inbound date-correction policy may update an
+// already-watched item here. Trakt reports user-edited dates through its poll;
+// media-server watched flags and unsupported tracker dates cannot authorize it.
+async function applyTrackerWatchedDateCorrection(media, config, loopStore, { lane, shouldDefer }) {
   if (restoreBlocksTransition(media)) return deferredWatchedResult();
   const existingRow = await findWatchedByAnyMediaKey(media).catch(() => null);
   if (!existingRow) return null;
@@ -169,7 +165,7 @@ async function applyTraktWatchedDateCorrection(media, config, loopStore, { lane,
   }));
   if (summary.deferred) return { ...deferredWatchedResult(), id, summary };
   await updateWatchTelemetry(id, [
-    `Origin: ${media.source || "unknown"}`, "Action: Watched date corrected on Trakt", `Media: ${media.title || "unknown"}`,
+    `Origin: ${media.source || "unknown"}`, `Action: Watched date corrected on ${getTrackerAdapter(trackerProviderForSource(media.source)).label}`, `Media: ${media.title || "unknown"}`,
     `Dispatch status: ${summary.status || "unknown"}`, `Details: ${summary.details || "Watched date correction processed."}`,
     ...(summary.targetStates || []).map((state) => `Target ${state.target} status: ${state.status}${state.detail ? ` - ${state.detail}` : ""}`),
   ].join("\n"), { skipInvalidate: true });
@@ -181,11 +177,14 @@ export async function applyWatchedTransition(media, config, loopStore, { trackDi
   const existing = await getPlaystateForMedia(media).catch(() => null);
   if (restoreBlocksTransition(media)) return deferredWatchedResult();
   if (existing?.state === "watched") {
-    if (String(media.source || "").toLowerCase() === "trakt") {
+    const provider = trackerProviderForSource(media.source);
+    if (provider && String(media.source || "").toLowerCase() === provider && getTrackerAdapter(provider).policies?.inboundDateCorrections) {
       const incomingIso = media.watched_at ? new Date(media.watched_at).toISOString() : "";
       const currentIso = existing.watched_at ? new Date(existing.watched_at).toISOString() : "";
-      if (incomingIso && incomingIso !== currentIso) {
-        const corrected = await applyTraktWatchedDateCorrection(media, config, loopStore, { lane, shouldDefer });
+      // Trakt stores plays to the minute, so a play Plekt sent at 23:32:51 reads
+      // back as 23:32:00. That rounding is not a correction to send everywhere.
+      if (incomingIso && (!currentIso || Math.abs(Date.parse(incomingIso) - Date.parse(currentIso)) >= 60_000)) {
+        const corrected = await applyTrackerWatchedDateCorrection(media, config, loopStore, { lane, shouldDefer });
         if (corrected) return corrected;
       }
     }
@@ -245,7 +244,7 @@ export async function applyWatchedTransition(media, config, loopStore, { trackDi
   // A newer action can legitimately commit after our atomic local section.
   // Re-check before any network work so the later action owns outbound order.
   if (restoreBlocksTransition(media) || shouldDefer?.()) return { ...deferredWatchedResult(), id: result.id };
-  const summary = await syncMediaPlaystate(media, config, loopStore, { trackDispatch, lane, shouldDefer: () => restoreBlocksTransition(media) || shouldDefer?.() }).catch((error) => ({
+  const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore, { trackDispatch, lane, shouldDefer: () => restoreBlocksTransition(media) || shouldDefer?.() }).catch((error) => ({
     skipped: false, status: "error", details: `Watched propagation failed: ${error.message || String(error)}`, targetStates: [],
   }));
   if (summary.deferred) return { ...deferredWatchedResult(), id: result.id, summary };
@@ -432,7 +431,7 @@ export async function applyUnwatchedTransition(media, config, loopStore, {
 
   if (localTransitionBlocked() || shouldDefer?.()) return { ...deferredUnwatchedResult(existingRecord), wasDeleted, id: result.id };
 
-  const summary = await syncMediaUnplayedPlaystate(syncMedia, config, loopStore, { trackDispatch, lane, shouldDefer: () => restoreBlocksTransition(syncMedia) || shouldDefer?.() }).catch((error) => ({
+  const summary = await syncMediaUnplayedPlaystate({ ...syncMedia, watchRecordId: result.id }, config, loopStore, { trackDispatch, lane, shouldDefer: () => restoreBlocksTransition(syncMedia) || shouldDefer?.() }).catch((error) => ({
     skipped: false,
     status: "error",
     details: `Unwatched propagation failed: ${error.message || String(error)}`,

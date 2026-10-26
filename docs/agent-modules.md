@@ -46,5 +46,5 @@ Add the route entry in `dispatch()` in `server/src/index.js` and put the handler
 `server/src/routes/*.js` module. Keep helpers in `server/src/utils/` only when more than one
 route module needs them. No imports back into `server/src/index.js`; route modules may import
 utilities and data-layer modules directly. The owning module for each API area is in the
-`server/src/routes/` table of `docs/architecture.md` (scheduler tick and Plex notification
+`server/src/routes/` table of `docs/file-map-server.md` (scheduler tick and Plex notification
 listener: `server/src/scheduler.js`).

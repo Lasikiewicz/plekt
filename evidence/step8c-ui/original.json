@@ -1,0 +1,16 @@
+{
+ "conn": {
+  "id": "f29448b3-ee40-42b7-920e-f730d9cf2af8",
+  "full_sync_json": null,
+  "initial_sync_json": "{\"mode\":\"baseline\",\"requiresPreview\":false,\"startedAt\":1792838926211,\"status\":\"completed\",\"finishedAt\":1792838929246,\"imported\":0,\"remoteItems\":0}",
+  "status": "connected",
+  "remote_user_id": "2535021"
+ },
+ "items": [],
+ "runs": [],
+ "onboarding": {
+  "id": "onboarding",
+  "data": "{\"version\":2,\"accountClaimed\":true,\"runState\":\"completed\",\"startedAt\":1788285992739,\"completedAt\":1792611032013,\"currentStep\":\"imports\",\"acknowledgements\":{\"webhooks\":{\"emby\":{\"acknowledgedAt\":1792598026879},\"jellyfin\":{\"acknowledgedAt\":1792598032827}},\"trackersSkipped\":false},\"backgroundImports\":{\"servers\":{\"plex\":{\"enabled\":true,\"status\":\"complete\",\"startedAt\":1788287419913,\"completedAt\":1788287444631,\"itemCount\":0,\"error\":null},\"emby\":{\"enabled\":true,\"status\":\"complete\",\"startedAt\":1788287419922,\"completedAt\":1788287933669,\"itemCount\":616,\"error\":null},\"jellyfin\":{\"enabled\":true,\"status\":\"complete\",\"startedAt\":1788287419928,\"completedAt\":1788287506029,\"itemCount\":130,\"error\":null}},\"trackers\":{\"trakt\":{\"enabled\":true,\"status\":\"complete\",\"startedAt\":1788286023030,\"completedAt\":1788286024384,\"itemCount\":0,\"error\":null}}},\"pushSync\":{\"status\":\"not_started\",\"startedAt\":null,\"completedAt\":null},\"checklistDismissedAt\":1788287767838,\"ctaDismissedAt\":null}",
+  "updated_at": 1792794672682
+ }
+}

@@ -10,7 +10,7 @@ import {
   collectServerWatchedItems,
   configuredSyncServers,
 } from "./forceSyncPlanner.js";
-import { earliestTraktWatchedAt, loadTraktWatchedDateIndex } from "./mediaForceSync.js";
+import { earliestTrackerWatchedAt, loadTrackerWatchedDateIndex } from "./mediaForceSync.js";
 import { syncCanonicalPlaystate, syncMediaProgress } from "./syncOrchestrator.js";
 import {
   countWatchedPlaystateRows,
@@ -229,13 +229,13 @@ async function collectLibraryItems(config, requested, now, logger) {
   // See the identical comment in mediaForceSync.js - a media server's own
   // "last watched" date can be reset by a library rebuild/rescan; prefer an
   // earlier date already on file with a connected Trakt account.
-  const traktWatchedDateIndex = await loadTraktWatchedDateIndex(logger);
-  if (traktWatchedDateIndex) {
+  const trackerWatchedDateIndex = await loadTrackerWatchedDateIndex(logger);
+  if (trackerWatchedDateIndex) {
     for (const media of items) {
-      const traktWatchedAt = earliestTraktWatchedAt(traktWatchedDateIndex, media);
-      if (traktWatchedAt != null && traktWatchedAt < Date.parse(media.watched_at)) {
+      const trackerWatchedAt = earliestTrackerWatchedAt(trackerWatchedDateIndex, media);
+      if (trackerWatchedAt != null && trackerWatchedAt < Date.parse(media.watched_at)) {
         logger(`[pull] ${media.title}: ${media.source} reported ${media.watched_at}, but Trakt has an earlier watch - using Trakt's date instead.`);
-        media.watched_at = new Date(traktWatchedAt).toISOString();
+        media.watched_at = new Date(trackerWatchedAt).toISOString();
       }
     }
   }

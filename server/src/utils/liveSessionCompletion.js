@@ -11,6 +11,7 @@ import { refreshUpNextProviderFeeds } from "./upNextProviderSync.js";
 import { playstateBlocksStoredResumeProgress, resumeProgressBlockedByPlaystate } from "./resumeAuthority.js";
 import { deleteLiveTrackingCacheRows, deletePlaybackProgress, findWatchedByAnyMediaKey, getPlaybackProgressForMedia, getPlaystateForMedia, insertWatchRecord, invalidateHistoryDerivedCaches, loadLiveTrackingCache, markLiveTrackingComplete, mediaKeyFor, mediaToPlaybackProgressRecord, mediaToWatchRecord, purgeCompletedLiveTrackingCache, updatePlaybackProgressTelemetry, updateWatchTelemetry, upsertLiveTrackingCache, upsertPlaybackProgress, upsertPlaystateForMedia } from "./dataRepo.js";
 import { withSeriesIdentity } from "./seriesIdentity.js";
+import { undropTitleForLivePlay } from "./droppedTitles.js";
 import { buildTelemetry, buildProgressTelemetry, recordSyncHistory } from "./syncHistoryTelemetry.js";
 
 // A failed provider feed is a connection-health signal. Retry only that
@@ -156,6 +157,14 @@ async function processCompletedSession(row, config, loopStore) {
   const knownPlaystate = await getPlaystateForMedia(media).catch(() => null);
   // A manual unwatch made after this session was last seen wins: the play ended before it.
   if (resumeProgressBlockedByPlaystate(knownPlaystate, row.updated_at) === "item is unwatched") return null;
+  // A genuine completed play restores a dropped title even when history keeps
+  // only one row for multiple plays on the same UTC day. Recheck unwatch after
+  // the preceding awaits, before the same-day and any-key dedupe returns.
+  if (isAuthoritativeRestoreActive()) return null;
+  const latestCompletionState = await getPlaystateForMedia(media).catch(() => null);
+  if (resumeProgressBlockedByPlaystate(latestCompletionState, row.updated_at) === "item is unwatched") return null;
+  const livePlayedAt = Number(row.updated_at || 0) > 0 ? new Date(Number(row.updated_at)).toISOString() : "";
+  if (livePlayedAt) undropTitleForLivePlay(mediaToWatchRecord({ ...media, watched_at: livePlayedAt }, media.source));
   let isRewatchOnNewDay = false;
   if (knownPlaystate?.state === "watched") {
     const lastWatchedDay = String(knownPlaystate.watched_at || "").slice(0, 10);
@@ -206,6 +215,7 @@ async function processCompletedSession(row, config, loopStore) {
   if (isAuthoritativeRestoreActive()) return null;
   if (completionAfterInsertHook) await completionAfterInsertHook(media);
   await upsertPlaystateForMedia(media, "watched", inserted.record.watched_at, { skipInvalidate: true });
+  undropTitleForLivePlay(inserted.record);
   // Marked only after both writes: a failed insert or upsert leaves the cached row for a retry.
   await markLiveTrackingComplete(row.session_id, Date.now());
   recordWatchAuditEvent({

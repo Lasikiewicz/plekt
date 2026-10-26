@@ -1,8 +1,10 @@
 import crypto from "node:crypto";
-import { bumpDataVersion, db, parseJson, toJson } from "../db.js";
+import { bumpDataVersion, bumpUpNextVersion, db, parseJson, toJson } from "../db.js";
 import { clearWatchlistRemoteProjection, getWatchlistRestoreState, markWatchlistRestorePending } from "./personalWatchlistRepository.js";
 import { activityGroupKeyFor, activityItemKeyFor } from "./syncActivityIdentity.js";
 import { BACKUP_FORMAT, LEGACY_REDACTED_SECRETS_FIELD, REDACTED_SECRETS_FIELD, TYPE_FIELD, backupValueType } from "./backupNames.js";
+import { anidbBackupCollections } from "./anidbBackup.js";
+import { initialSyncBackupCollection, quarantineInitialSyncSetting } from './initialSyncBackup.js';
 
 export { BACKUP_FORMAT };
 export const BACKUP_VERSION = 1;
@@ -19,12 +21,20 @@ export const BACKUP_COLLECTIONS = [
   "mediaConnections",
   "trackerConnections",
   "trackerItemState",
+  "trackerObservationCursors",
+  "trackerObservations",
+  "trackerWriteIntents",
+  "initialSyncItems",
+  "droppedTitleTrackerState",
+  "droppedTitleTrackerCursors",
   "settings",
   "runtimeState",
   "loopKeys",
   "mediaArtwork",
   "seasonArtwork",
   "showSeasonSource",
+  "droppedTitles",
+  "anidbMetadata", "anidbRequests", "anidbProvider", "anidbMatches",
   "personalWatchlist",
   "personalWatchlistMutations",
   "personalWatchlistProviderItems",
@@ -32,7 +42,7 @@ export const BACKUP_COLLECTIONS = [
   "personalWatchlistSyncRuns",
   "personalWatchlistActivity",
 ];
-const BROWSER_EXCLUDED_COLLECTIONS = new Set(["mediaAuthDevices", "mediaConnections", "trackerConnections"]);
+const BROWSER_EXCLUDED_COLLECTIONS = new Set(["mediaAuthDevices", "mediaConnections", "trackerConnections", "trackerObservationCursors", "trackerObservations", "trackerWriteIntents", "droppedTitleTrackerState", "droppedTitleTrackerCursors"]);
 export const BROWSER_BACKUP_COLLECTIONS = BACKUP_COLLECTIONS.filter((name) => !BROWSER_EXCLUDED_COLLECTIONS.has(name));
 const WATCHLIST_BACKUP_COLLECTIONS = new Set(BACKUP_COLLECTIONS.filter((name) => name.startsWith("personalWatchlist")));
 const BROWSER_REDACTED_SECRETS_FIELD = REDACTED_SECRETS_FIELD;
@@ -106,6 +116,7 @@ function ids(row) {
 }
 
 const collections = {
+  ...anidbBackupCollections(db),
   watchHistory: {
     table: "watch_history",
     key: "id",
@@ -281,6 +292,12 @@ const collections = {
   mediaConnections: simpleCollection("media_connections", "id", (r) => ({ provider: r.provider, baseUrl: r.base_url, serverId: r.server_id, serverName: r.server_name, authDeviceId: r.auth_device_id, remoteUserId: r.remote_user_id, remoteUsername: r.remote_username, authKind: r.auth_kind, credentialCiphertext: r.credential_ciphertext, credentialIv: r.credential_iv, credentialTag: r.credential_tag, tokenVersion: r.token_version, serverCredentialCiphertext: r.server_credential_ciphertext, serverCredentialIv: r.server_credential_iv, serverCredentialTag: r.server_credential_tag, serverTokenVersion: r.server_token_version, accessTokenExpiresAt: r.access_token_expires_at, lastRefreshedAt: r.last_refreshed_at, refreshFailureCount: r.refresh_failure_count, status: r.status, lastValidatedAt: r.last_validated_at, createdAt: r.created_at, updatedAt: r.updated_at }), "INSERT OR REPLACE INTO media_connections (id,provider,base_url,server_id,server_name,auth_device_id,remote_user_id,remote_username,auth_kind,credential_ciphertext,credential_iv,credential_tag,token_version,server_credential_ciphertext,server_credential_iv,server_credential_tag,server_token_version,access_token_expires_at,last_refreshed_at,refresh_failure_count,status,last_validated_at,created_at,updated_at) VALUES (@id,@provider,@base_url,@server_id,@server_name,@auth_device_id,@remote_user_id,@remote_username,@auth_kind,@credential_ciphertext,@credential_iv,@credential_tag,@token_version,@server_credential_ciphertext,@server_credential_iv,@server_credential_tag,@server_token_version,@access_token_expires_at,@last_refreshed_at,@refresh_failure_count,@status,@last_validated_at,@created_at,@updated_at)", (id, d) => ({ id, provider: d.provider, base_url: d.baseUrl, server_id: d.serverId, server_name: d.serverName || null, auth_device_id: d.authDeviceId, remote_user_id: d.remoteUserId, remote_username: d.remoteUsername || null, auth_kind: d.authKind, credential_ciphertext: d.credentialCiphertext, credential_iv: d.credentialIv, credential_tag: d.credentialTag, token_version: d.tokenVersion || 1, server_credential_ciphertext: d.serverCredentialCiphertext || null, server_credential_iv: d.serverCredentialIv || null, server_credential_tag: d.serverCredentialTag || null, server_token_version: d.serverTokenVersion || 1, access_token_expires_at: toMs(d.accessTokenExpiresAt), last_refreshed_at: toMs(d.lastRefreshedAt), refresh_failure_count: d.refreshFailureCount || 0, status: d.status, last_validated_at: toMs(d.lastValidatedAt), created_at: toMs(d.createdAt), updated_at: toMs(d.updatedAt) })),
   trackerConnections: rawCollection("tracker_connections", "id", ["provider","status","remote_user_id","remote_username","client_id","client_secret_ciphertext","client_secret_iv","client_secret_tag","access_token_ciphertext","access_token_iv","access_token_tag","refresh_token_ciphertext","refresh_token_iv","refresh_token_tag","token_version","access_token_expires_at","initial_sync_mode","baseline_complete","last_polled_at","last_validated_at","last_error","created_at","updated_at"]),
   trackerItemState: rawCollection("tracker_item_state", "media_key", ["provider","media_json","remote_watched_at","last_seen_at","last_outbound_state","last_outbound_at"]),
+  trackerObservationCursors: rawCollection("tracker_observation_cursors", "provider", ["connection_id","account_id","cursor","activities_json","updated_at"]),
+  trackerObservations: trackerLedgerCollection("tracker_observations", ["provider","connection_id","account_id","observation_key","kind","observation_json","status","reason","created_at","updated_at"]),
+  trackerWriteIntents: trackerLedgerCollection("tracker_write_intents", ["provider","connection_id","account_id","logical_key","watch_record_id","media_key","media_json","action","watched_at","event_type","fingerprint","native_idempotency","remote_event_id","status","attempts","due_at","expires_at","last_error","created_at","updated_at","settled_at"]),
+  initialSyncItems:initialSyncBackupCollection(),
+  droppedTitleTrackerState: droppedTitleTrackerStateCollection(),
+  droppedTitleTrackerCursors: rawCollection("dropped_title_tracker_cursors", "provider", ["connection_id","account_id","activities_json","updated_at"]),
   settings: browserSettingsCollection(),
   runtimeState: jsonCollection("runtime_state"),
   loopKeys: simpleCollection("loop_keys", "id", (r) => ({ key: r.key || "", value: r.value || "", createdAt: r.created_at, expireAt: r.expire_at }), "INSERT OR REPLACE INTO loop_keys (id,key,value,created_at,expire_at) VALUES (@id,@key,@value,@created_at,@expire_at)", (id, d) => ({ id, key: d.key || "", value: d.value || "", created_at: toMs(d.createdAt), expire_at: toMs(d.expireAt) })),
@@ -295,6 +312,7 @@ const collections = {
   tmdbSearchCache: simpleCollection("tmdb_search_cache", "id", (r) => ({ query: r.query, mediaType: r.media_type, page: r.page, response: parseJson(r.response), missing: Boolean(r.missing), updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_search_cache (id,query,media_type,page,response,missing,updated_at_ms) VALUES (@id,@query,@media_type,@page,@response,@missing,@updated_at_ms)", (id, d) => ({ id, query: d.query || "", media_type: d.mediaType || null, page: d.page ?? 1, response: toJson(d.response), missing: d.missing ? 1 : 0, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
   tmdbSeasonCache: simpleCollection("tmdb_season_cache", "id", (r) => ({ tmdbId: r.tmdb_id, seasonNumber: r.season_number, showStatus: r.show_status, details: parseJson(r.details), updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_season_cache (id,tmdb_id,season_number,show_status,details,updated_at_ms) VALUES (@id,@tmdb_id,@season_number,@show_status,@details,@updated_at_ms)", (id, d) => ({ id, tmdb_id: d.tmdbId != null ? String(d.tmdbId) : null, season_number: d.seasonNumber ?? null, show_status: d.showStatus || null, details: toJson(d.details), updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
   tmdbPersonCache: simpleCollection("tmdb_person_cache", "id", (r) => ({ personId: r.person_id, details: parseJson(r.details), schemaVersion: r.schema_version, updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_person_cache (id,person_id,details,schema_version,updated_at_ms) VALUES (@id,@person_id,@details,@schema_version,@updated_at_ms)", (id, d) => ({ id, person_id: d.personId != null ? String(d.personId) : null, details: toJson(d.details), schema_version: d.schemaVersion ?? null, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
+  droppedTitles: rawCollection("dropped_titles", "id", ["media_type", "aliases_json", "title", "year", "tmdb_id", "tvdb_id", "imdb_id", "snapshot_json", "dropped_at", "updated_at"]),
   personalWatchlist: rawCollection("personal_watchlist", "media_key", ["media_type", "title", "tmdb_id", "tvdb_id", "imdb_id", "poster_url", "overview", "release_date", "created_at", "updated_at"]),
   personalWatchlistMutations: rawCollection("personal_watchlist_mutations", "id", ["media_key", "media_json", "desired_state", "origin", "reason", "canonical_revision", "event_fingerprint", "source_timestamp", "created_at", "superseded_at", "applied_at", "tombstone"]),
   personalWatchlistProviderItems: watchlistRawCollection("personal_watchlist_provider_items", ["provider", "connection_id", "remote_scope_key", "representation", "media_key", "media_json", "provider_item_id", "provider_ids_json", "remote_state", "managed_by_plembfin", "primary_target", "container_id", "container_name", "last_confirmed_present_at", "last_seen_at", "last_complete_generation", "last_outbound_state", "last_outbound_intent_id", "last_outbound_at", "sync_status", "last_error", "updated_at"]),
@@ -331,6 +349,36 @@ function rawCollection(table, key, columns) {
   );
 }
 
+function trackerLedgerCollection(table, columns) {
+  const collection = rawCollection(table, "id", columns);
+  const toRow = collection.dataToRow;
+  collection.dataToRow = (id, data) => {
+    const row = toRow(id, data);
+    // The remote service did not roll back with the backup. Preserve all
+    // unknown-provider data, but never replay restored unfinished known work.
+    if (["trakt", "simkl"].includes(row.provider) && ["pending", "retry", "sending", "uncertain"].includes(row.status)) {
+      row.status = "review";
+      row[table === "tracker_observations" ? "reason" : "last_error"] = "Restored unfinished tracker work needs review before any change";
+    }
+    return row;
+  };
+  return collection;
+}
+
+function droppedTitleTrackerStateCollection() {
+  const collection = rawCollection("dropped_title_tracker_state", "id", ["provider","connection_id","account_id","identity_key","media_json","desired_dropped","action_at","source","remote_changed_at","remote_present","previous_status","write_status","last_error","updated_at"]);
+  const toRow = collection.dataToRow;
+  collection.dataToRow = (id, data) => {
+    const row = toRow(id, data);
+    if (["pending", "retry", "sending", "uncertain"].includes(row.write_status)) {
+      row.write_status = "review";
+      row.last_error = "Restored dropped-title tracker work needs review before any change";
+    }
+    return row;
+  };
+  return collection;
+}
+
 function watchlistRawCollection(table, columns) {
   const collection = rawCollection(table, "rowid", columns);
   collection.numericKey = true;
@@ -356,6 +404,8 @@ function jsonCollection(table) {
 
 function browserSettingsCollection() {
   const collection = jsonCollection("settings");
+  const toRow=collection.dataToRow;
+  collection.dataToRow=(id,data)=>toRow(id,quarantineInitialSyncSetting(id,data));
   collection.browserRowToData = (row) => redactBrowserSettings(parseJson(row.data, {}));
   return collection;
 }
@@ -578,7 +628,7 @@ export function importCollectionBatch(name, documents, { reset = false, portable
   if (documents.length > 250) throw new Error("Backup import batches are limited to 250 documents");
 
   const run = db.transaction(() => {
-    if (reset && !(portable && name === "settings")) db.prepare(`DELETE FROM ${config.table}`).run();
+    if (reset && !config.preserveOnRestore && !(portable && name === "settings")) db.prepare(`DELETE FROM ${config.table}`).run();
     for (const document of documents) {
       const id = String(document?.id || "").trim();
       if (!id) throw new Error(`A ${name} document is missing its id`);
@@ -592,5 +642,6 @@ export function importCollectionBatch(name, documents, { reset = false, portable
   run();
 
   if (["watchHistory", "playstate", "playbackProgress", "mediaArtwork", "seasonArtwork", "showSeasonSource"].includes(name)) bumpDataVersion();
+  if (name === "droppedTitles") bumpUpNextVersion();
   return { collection: name, imported: documents.length, reset: Boolean(reset) };
 }

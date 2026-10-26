@@ -1,5 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { startInitialSyncUi, stopInitialSyncUi, loadInitialSyncSummary } from "./initial-sync.js?v=2.1.1.0.9";
 
 const REVIEW_POLL_MS = 30000;
 
@@ -113,6 +114,7 @@ export function renderManualWatchReviewSummary() {
   const button = document.querySelector("#manualWatchReviewButton");
   const count = document.querySelector("#manualWatchReviewCount");
   const pending = Math.max(Number(state.manualWatchReviewCount) || 0, 0);
+  const mismatchCount = Math.max(Number(state.manualWatchSourceMismatchCount) || 0, 0);
   const label = `${pending} item${pending === 1 ? "" : "s"} waiting`;
   if (count) {
     count.textContent = pending > 99 ? "99+" : String(pending);
@@ -120,13 +122,18 @@ export function renderManualWatchReviewSummary() {
   }
   if (button) {
     button.classList.toggle("hidden", !state.token || pending <= 0);
-    button.setAttribute("aria-label", pending > 0 ? `Manual Watch review - ${label}` : "Manual Watch review");
+    const title = mismatchCount > 0 ? "Fix Match Issue" : "Manual Watch review";
+    const labelElement = button.querySelector(".manual-watch-review-nav-label");
+    if (labelElement) labelElement.textContent = title;
+    button.title = title;
+    button.setAttribute("aria-label", pending > 0 ? `${title} - ${label}` : title);
   }
 }
 
 export async function loadManualWatchReviewSummary() {
   if (!state.token) {
     state.manualWatchReviewCount = 0;
+    state.manualWatchSourceMismatchCount = 0;
     renderManualWatchReviewSummary();
     return 0;
   }
@@ -141,6 +148,7 @@ export async function loadManualWatchReviewSummary() {
       if (!response.ok || !body.ok) throw new Error(body.error || `Manual Watch review failed with ${response.status}`);
       if (requestSerial === reviewSummaryRequestSerial) {
         state.manualWatchReviewCount = reviewCountFromBody(body);
+        state.manualWatchSourceMismatchCount = Math.max(Number(body?.sourceMismatchCount) || 0, 0);
         renderManualWatchReviewSummary();
       }
       return state.manualWatchReviewCount;
@@ -182,13 +190,16 @@ export async function loadSyncAttentionSummary() {
 
 export function startStatusSummaryPolling() {
   if (reviewPollTimer) return;
+  startInitialSyncUi().catch(() => null);
   reviewPollTimer = window.setInterval(() => {
     if (document.visibilityState === "hidden" || !state.token) return;
     loadManualWatchReviewSummary().catch(() => null);
+    loadInitialSyncSummary().catch(() => null);
   }, REVIEW_POLL_MS);
 }
 
 export function stopStatusSummaryPolling() {
   if (reviewPollTimer) window.clearInterval(reviewPollTimer);
   reviewPollTimer = null;
+  stopInitialSyncUi();
 }

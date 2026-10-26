@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "generatedBy": "website/scripts/capture-inventory.mjs",
   "changes": {
-    "added": [
-      "public/assets/home-dashboard-dark.jpg"
+    "added": [],
+    "changed": [
+      "public/assets/og-card.png"
     ],
-    "changed": [],
     "removed": [],
     "unreferenced": [
       "public/assets/app-captures/dashboard-home-dark.png",
@@ -63,6 +63,7 @@
       "public/assets/icons/tmdb.svg",
       "public/assets/icons/trakt.svg",
       "public/assets/icons/tvdb.svg",
+      "public/assets/og-card.png",
       "public/assets/plembfin_header_logo_dark.png",
       "public/assets/plembfin_header_logo_light.png",
       "public/assets/plembfin-hub.svg",
@@ -507,6 +508,11 @@
       ]
     },
     {
+      "slug": "sync-plex-with-trakt",
+      "sourceVersion": "2.1.1",
+      "screenshots": []
+    },
+    {
       "slug": "sync-tools",
       "sourceVersion": "2.1.1",
       "screenshots": [
@@ -578,8 +584,6 @@
       "slug": "tv-shows/media-page",
       "sourceVersion": "2.1.1",
       "screenshots": [
-        "public/assets/app-captures/fix-match-focus-dark.png",
-        "public/assets/app-captures/fix-match-focus-light.png",
         "public/assets/app-captures/media-action-row-dark.png",
         "public/assets/app-captures/media-action-row-light.png",
         "public/assets/app-captures/media-appearance-dark.png",
@@ -891,8 +895,7 @@
       },
       "referencedBy": [
         "media-details",
-        "movies/media-page",
-        "tv-shows/media-page"
+        "movies/media-page"
       ]
     },
     {
@@ -905,8 +908,7 @@
       },
       "referencedBy": [
         "media-details",
-        "movies/media-page",
-        "tv-shows/media-page"
+        "movies/media-page"
       ]
     },
     {
@@ -3380,6 +3382,16 @@
       "bytes": 2833,
       "sha256": "0c052503df50d3e9cfc1e4d393caf8ee5241237918282a054e606095e1f16cd2",
       "dimensions": null,
+      "referencedBy": []
+    },
+    {
+      "path": "public/assets/og-card.png",
+      "bytes": 808861,
+      "sha256": "9e96c709734f9347077651e8ecd73e809b5c8ffb7fd43a7e8e5320b4977621e2",
+      "dimensions": {
+        "width": 1200,
+        "height": 630
+      },
       "referencedBy": []
     },
     {

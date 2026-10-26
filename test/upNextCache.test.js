@@ -75,6 +75,19 @@ test("a stale first paint after a history change always queues a rebuild, even i
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.equal(buildCount, 1, "the history-stale snapshot must be followed by a rebuild");
 
+  // The background rebuild intentionally starts on a later timer turn. Wait
+  // for its persisted result instead of assuming a fixed 20 ms is enough on a
+  // busy Windows test runner.
+  const cacheFile = path.join(dataDir, "up-next-cache.json");
+  const deadline = Date.now() + 2000;
+  while (Date.now() < deadline) {
+    try {
+      const persisted = JSON.parse(await fs.readFile(cacheFile, "utf8"));
+      if (persisted.items?.[0]?.id === "episode-after-watch") break;
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+
   const followUp = await getUpNextCacheSnapshot(async () => [{ id: "unused", title: "Unused" }], { revalidate: true });
   assert.deepEqual(followUp.items.map((item) => item.id), ["episode-after-watch"]);
   assert.equal(followUp.stale, false);
@@ -193,4 +206,28 @@ test("an unchanged rebuild does not advance the Up Next version", async () => {
   assert.equal(second.upNextVersion, first.upNextVersion);
   assert.equal(getUpNextVersion(), first.upNextVersion);
   assert.deepEqual(second.items.map((item) => item.media_type), ["movie", "episode"]);
+});
+
+// A drop bumps the Up Next version while a background build is running. That
+// older projection must not be stamped as current, or it is served with the
+// dropped show until the next rebuild.
+test("a projection built before a queue change is not served as current", async () => {
+  await getUpNextCacheSnapshot(async () => [{ id: "episode-old", title: "Old" }], { refresh: true });
+  let release;
+  const gate = new Promise((resolve) => { release = resolve; });
+  const before = getUpNextCacheSnapshot(async () => {
+    await gate;
+    return [{ id: "episode-dropped", title: "Dropped" }];
+  }, { refresh: true });
+  bumpUpNextVersion();
+  release();
+  await before;
+
+  let fresh = 0;
+  const after = await getUpNextCacheSnapshot(async () => {
+    fresh += 1;
+    return [{ id: "episode-kept", title: "Kept" }];
+  }, { revalidate: true });
+  assert.equal(fresh, 1);
+  assert.deepEqual(after.items.map((item) => item.id), ["episode-kept"]);
 });

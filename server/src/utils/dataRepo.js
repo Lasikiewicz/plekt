@@ -1,4 +1,6 @@
-import crypto from "node:crypto";
+import crypto from "node:crypto"; import { captureTrackerDestinations } from "./trackerWriteIntents.js";
+import { trackerImportSource, trackerProviderIds } from "./trackers/registry.js";
+import { settledDestinationLines } from "./trackers/telemetry.js";
 import { db, getDataVersion, getProgressVersion, bumpDataVersion, bumpUpNextVersion, dataVersionTrigger, parseJson, toJson, transaction } from "../db.js";
 import { recordCacheRebuild, timeCacheRebuild, timeCacheRebuildAsync } from "./cacheTelemetry.js";
 import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
@@ -283,6 +285,12 @@ export function normalizeMediaType(value) {
   return type;
 }
 
+function normalizeWatchMediaType(value) {
+  const type = cleanString(value).toLowerCase();
+  if (["tv", "show", "series"].includes(type)) return "tv";
+  return normalizeMediaType(type);
+}
+
 export function normalizePlatformSource(value) {
   const source = cleanString(value).toLowerCase();
   if (source.startsWith("emby")) return "emby";
@@ -432,7 +440,7 @@ function episodeCoordinatesFromTitle(title = "") {
 }
 
 export function mediaKeyFor(record = {}) {
-  const type = normalizeMediaType(record.media_type || record.mediaType || record.type);
+  const type = normalizeWatchMediaType(record.media_type || record.mediaType || record.type);
   const coordinates = [normalizeKeyPart(type), normalizeKeyPart(record.season), normalizeKeyPart(record.episode)].join(":");
   const ids = record.ids || {};
   if (record.imdb_id || record.imdb || ids.imdb) return `${coordinates}:imdb:${normalizeKeyPart(record.imdb_id || record.imdb || ids.imdb)}`;
@@ -493,7 +501,7 @@ function normalizeImportedTitle(record = {}, mediaType = "") {
 }
 
 export function normalizeWatchRecord(record = {}, fallbackSource = "trakt_import") {
-  const mediaType = normalizeMediaType(record.media_type || record.mediaType || record.type);
+  const mediaType = normalizeWatchMediaType(record.media_type || record.mediaType || record.type);
   const ids = record.ids || record.movie?.ids || record.show?.ids || record.episode?.ids || {};
   const titleCoordinates = episodeCoordinatesFromTitleWithLegacyRepair(record.title);
   const title = normalizeImportedTitle(record, mediaType);
@@ -603,7 +611,7 @@ export function mediaToWatchRecord(media, source = media?.source || "webhook") {
 function validateWatchRecord(record) {
   const errors = [];
   if (!record.title) errors.push("title is required");
-  if (!["movie", "episode"].includes(record.media_type)) errors.push("media_type must be movie or episode");
+  if (!["movie", "episode", "tv"].includes(record.media_type)) errors.push("media_type must be movie, TV show, or episode");
   if (!record.watched_at) errors.push("watched_at is required");
   if (!record.source) errors.push("source is required");
   const remoteEpisodeError = remoteEpisodeImportError(record);
@@ -1274,7 +1282,7 @@ function newestByUpdatedAt(rows = []) {
 }
 
 function identityRows(record = {}, selectors = {}) {
-  const type = normalizeMediaType(record.media_type || record.mediaType || record.type);
+  const type = normalizeWatchMediaType(record.media_type || record.mediaType || record.type);
   const rows = [];
   const add = (row) => {
     if (row && sameEpisodeCoordinates(record, row) && !rows.some((item) => item.media_key === row.media_key)) rows.push(row);
@@ -1319,6 +1327,17 @@ function playstateRowsForMediaIdentity(record = {}) {
       .forEach(add);
   }
   return rows;
+}
+
+// Row filter for title-only movie matches: false only for a row whose IMDb or
+// TMDB id differs from one this movie carries. Movie TVDB ids are too sparse
+// and inconsistent across providers to prove a different film.
+function sameFilmAs(media = {}) {
+  const ids = media.ids || {};
+  const imdb = cleanString(ids.imdb || media.imdb_id).toLowerCase();
+  const tmdb = cleanString(ids.tmdb || media.tmdb_id);
+  return (row) => !(imdb && cleanString(row.imdb_id) && cleanString(row.imdb_id).toLowerCase() !== imdb)
+    && !(tmdb && cleanString(row.tmdb_id) && cleanString(row.tmdb_id) !== tmdb);
 }
 
 // Row filter for title/coordinate episode matches: false only for a row whose
@@ -1527,7 +1546,7 @@ export function insertWatchRecordSync(record, { id: presetId = "", watchlistConf
   const id = String(presetId || "").trim() || crypto.randomUUID();
   const params = watchRowParams(normalized);
   const storedAt = Date.now();
-  insertWatchStmt.run({ id, ...params, created_at: storedAt, updated_at: storedAt });
+  db.transaction(() => { insertWatchStmt.run({ id, ...params, created_at: storedAt, updated_at: storedAt }); captureTrackerDestinations(normalized, id); })();
   // Keep the watchlist removal in the same SQLite transaction as the
   // completed watch. Callers with a resolved provider config can queue the
   // fanout immediately; older/import paths without one are repaired by the
@@ -1640,6 +1659,7 @@ function defaultTelemetry(record) {
       `Loop-check: Pending`,
       `Dispatch status: pending`,
       `Details: Historical import stored in Plekt and queued for canonical outbound sync`,
+      ...trackerProviderIds().map((provider) => `Target ${provider} status: skipped - No tracker destination authorized by historical import`),
     ].join("\n");
   }
   return [`Origin: ${source}`, `Loop-check: Pending`, `Dispatch status: pending`, `Details: Awaiting outbound sync telemetry`].join("\n");
@@ -2034,7 +2054,7 @@ export async function addWatchDate(id, watchedAtInput) {
     params[column] = existing[column];
   }
   params.watched_at = watchedAt;
-  params.sync_dispatch_telemetry = "Origin: manual\nLoop-check: Skipped propagation\nDispatch status: skipped\nDetails: Additional watch date added manually.";
+  params.sync_dispatch_telemetry = ["Origin: manual\nLoop-check: Skipped propagation\nDispatch status: skipped\nDetails: Additional watch date added manually.", ...settledDestinationLines("Additional watch date; not re-propagated")].join("\n");
   const storedAt = Date.now();
   insertWatchStmt.run({ id: newId, ...params, created_at: storedAt, updated_at: storedAt });
   recordWatchAuditEvent({
@@ -2984,11 +3004,11 @@ export function sameEventDuplicateIds(windowMs = SAME_EVENT_WINDOW_MS) {
 }
 
 function episodeProviderGroupKeys(rows = []) {
-  return showGroupKeys(rows.filter((row) => normalizeMediaType(row.media_type) === "episode"));
+  return showGroupKeys(rows.filter((row) => normalizeWatchMediaType(row.media_type) === "episode"));
 }
 
 function sameEventKey(row = {}, providerGroupKey = "") {
-  const type = normalizeMediaType(row.media_type);
+  const type = normalizeWatchMediaType(row.media_type);
   // Episodes are the important cross-key case: Plex, Emby, Jellyfin, and
   // imports can use different provider IDs for the same show episode. The
   // show/season/episode identity is stable, while provider IDs are not.
@@ -3011,6 +3031,7 @@ function sameEventKey(row = {}, providerGroupKey = "") {
           ? `movie|tvdb:${normalizeKeyPart(row.tvdb_id)}`
           : `movie|title:${canonicalTitleKey(row.title)}`;
   }
+  if (type === "tv") return `tv|${mediaKeyFor(row)}|${String(row.watched_at || "").slice(0, 10)}`;
   return mediaKeyFor(row);
 }
 
@@ -3194,7 +3215,9 @@ async function loadHistoryRowsByType({ mediaType, limit = 50, offset = 0, sort =
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), MAX_HISTORY_LIMIT);
   const safeOffset = Math.max(Number(offset) || 0, 0);
   const allRows = await getCachedHistory();
-  const filtered = allRows.filter((row) => row.media_type === mediaType && isPlektTrackedWatchRow(row));
+  const filtered = allRows.filter((row) => (mediaType === "episode"
+    ? row.media_type === "episode" || row.media_type === "tv"
+    : row.media_type === mediaType) && isPlektTrackedWatchRow(row));
   const sorted = [...filtered];
   if (sort === "watched_asc") {
     sorted.sort((a, b) => a.watched_at.localeCompare(b.watched_at));
@@ -3402,7 +3425,7 @@ export function dedupeHistory(rows) {
 }
 
 function historyDedupeKey(row = {}, providerGroupKey = "") {
-  const mediaType = normalizeMediaType(row.media_type);
+  const mediaType = normalizeWatchMediaType(row.media_type);
   const imdb = cleanString(row.imdb_id);
   const tmdb = cleanString(row.tmdb_id);
   const tvdb = cleanString(row.tvdb_id);
@@ -3425,6 +3448,8 @@ function historyDedupeKey(row = {}, providerGroupKey = "") {
     // Poster/title are only a fallback when no external ID is present.
     return `movie|${imdb ? `imdb:${imdb}` : tmdb ? `tmdb:${tmdb}` : tvdb ? `tvdb:${tvdb}` : poster ? `poster:${poster}` : `title:${title}`}`;
   }
+
+  if (mediaType === "tv") return `tv|${mediaKeyFor(row)}|${String(row.watched_at || "").slice(0, 10)}`;
 
   return `${mediaType || "unknown"}|${canonicalTitleKey(row.title)}|${row.watched_at || ""}`;
 }
@@ -3491,7 +3516,7 @@ function historySearchWhereSql(alias = "") {
 export async function queryWatchHistory({ search = "", mediaType = "", limit = 50, offset = 0, dedupe = true } = {}) {
   const safeLimit = Math.min(Number(limit) || 50, MAX_HISTORY_LIMIT);
   const safeOffset = Math.max(Number(offset) || 0, 0);
-  const normalizedMediaType = ["movie", "episode"].includes(String(mediaType || "").toLowerCase()) ? String(mediaType).toLowerCase() : "";
+  const normalizedMediaType = ["movie", "episode", "tv"].includes(String(mediaType || "").toLowerCase()) ? String(mediaType).toLowerCase() : "";
 
   if (!dedupe) {
     const where = [trackedHistoryWhereSql("history_row")];
@@ -3499,8 +3524,9 @@ export async function queryWatchHistory({ search = "", mediaType = "", limit = 5
     const params = {};
 
     if (normalizedMediaType) {
-      where.push("history_row.media_type = @mediaType");
-      newerWhere.push("newer.media_type = @mediaType");
+      const typeClause = normalizedMediaType === "episode" ? "media_type IN ('episode', 'tv')" : "media_type = @mediaType";
+      where.push(typeClause.replaceAll("media_type", "history_row.media_type"));
+      newerWhere.push(typeClause.replaceAll("media_type", "newer.media_type"));
       params.mediaType = normalizedMediaType;
     }
 
@@ -3543,7 +3569,8 @@ export async function queryWatchHistory({ search = "", mediaType = "", limit = 5
   const rows = await loadHistoryRows({ limit: MAX_HISTORY_LIMIT, offset: 0 });
   const filtered = rows.filter((row) => {
     if (!isPlektTrackedWatchRow(row)) return false;
-    if (normalizedMediaType && row.media_type !== normalizedMediaType) return false;
+    if (normalizedMediaType === "episode" && !["episode", "tv"].includes(row.media_type)) return false;
+    if (normalizedMediaType && normalizedMediaType !== "episode" && row.media_type !== normalizedMediaType) return false;
     return matchesSearch(row, cleanString(search));
   });
   const processed = dedupe ? dedupeHistory(filtered) : filtered;
@@ -5133,9 +5160,7 @@ const STALE_TRAKT_IMPORT_TELEMETRY = [
   "Loop-check: Skipped propagation",
   "Dispatch status: skipped",
   "Details: Historical play imported before dispatch telemetry was recorded on import; repaired to stop repeated re-dispatch.",
-  "Target plex status: skipped - Historical import; not re-propagated",
-  "Target emby status: skipped - Historical import; not re-propagated",
-  "Target jellyfin status: skipped - Historical import; not re-propagated",
+  ...settledDestinationLines("Historical import; not re-propagated"),
 ].join("\n");
 const selectStaleTraktImportRowsStmt = db.prepare(
   "SELECT id, title, watched_at, created_at FROM watch_history WHERE source = 'trakt_import' AND sync_action = 'watched' AND sync_dispatch_telemetry IS NULL ORDER BY created_at ASC",
@@ -5497,9 +5522,12 @@ export function findWatchedByAnyMediaKeySync(media) {
       }
     }
   } else if (type === "movie") {
+    // Remakes share a title; a row whose ids prove another film is not this
+    // movie's watch (Beauty and the Beast 1991 vs 2017).
+    const sameFilm = sameFilmAs(media);
     const titleLower = (media.title || "").trim().toLowerCase();
     if (titleLower) {
-      const row = findWatchedByCoordinatesStmt.get("movie", null, null, null, null, titleLower);
+      const row = findWatchedByCoordinatesStmt.all("movie", null, null, null, null, titleLower).find(sameFilm);
       if (row) return rowToWatch(row);
     }
     // Last resort: an exact title_lower match can miss two rows for the same
@@ -5513,7 +5541,7 @@ export function findWatchedByAnyMediaKeySync(media) {
     const targetKey = canonicalTitleKey(media.title || "");
     if (targetKey) {
       const match = selectMoviesStmt.all()
-        .find((row) => row.sync_action === "watched" && canonicalTitleKey(row.title) === targetKey);
+        .find((row) => row.sync_action === "watched" && canonicalTitleKey(row.title) === targetKey && sameFilm(row));
       if (match) return rowToWatch(match);
     }
   }
@@ -5608,16 +5636,16 @@ export async function findWatchedByAnyMediaKey(media) {
   return findWatchedByAnyMediaKeySync(media);
 }
 
-const countMissingPosterStmt = db.prepare("SELECT COUNT(*) AS c FROM watch_history WHERE source = 'trakt_import' AND (poster_url IS NULL OR poster_url = '')");
-const listMissingPosterStmt = db.prepare("SELECT * FROM watch_history WHERE source = 'trakt_import' AND (poster_url IS NULL OR poster_url = '') LIMIT ?");
+const countMissingPosterStmt = db.prepare("SELECT COUNT(*) AS c FROM watch_history WHERE source = ? AND (poster_url IS NULL OR poster_url = '')");
+const listMissingPosterStmt = db.prepare("SELECT * FROM watch_history WHERE source = ? AND (poster_url IS NULL OR poster_url = '') LIMIT ?");
 
-export async function countMissingPosterTraktRows() {
-  return countMissingPosterStmt.get().c || 0;
+export async function countMissingPosterTrackerRows(provider = "trakt") {
+  return countMissingPosterStmt.get(trackerImportSource(provider)).c || 0;
 }
 
-export async function listMissingPosterTraktRows(limit = 50) {
+export async function listMissingPosterTrackerRows(limit = 50, provider = "trakt") {
   const safeLimit = Math.min(Math.max(Number(limit) || 50, 1), 200);
-  return listMissingPosterStmt.all(safeLimit).map(rowToWatch);
+  return listMissingPosterStmt.all(trackerImportSource(provider), safeLimit).map(rowToWatch);
 }
 
 export async function stampWatchPoster(id, posterUrl) {
@@ -5791,7 +5819,7 @@ const TRAKT_IMPORT_REAL_FAILURE_TELEMETRY_SQL = `(
   LOWER(COALESCE(sync_dispatch_telemetry, '')) LIKE '%status: error%'
   OR LOWER(COALESCE(sync_dispatch_telemetry, '')) LIKE '%status: failed%'
 )`;
-export function countTraktImportPendingDispatch() {
+export function countTrackerImportPendingDispatch(provider = "trakt") {
   const row = db.prepare(
     `SELECT
        SUM(CASE WHEN sync_dispatch_telemetry IS NULL OR ${NOT_PENDING_TELEMETRY_SQL} THEN 1 ELSE 0 END) AS total,
@@ -5803,12 +5831,13 @@ export function countTraktImportPendingDispatch() {
                            AND ${TRAKT_IMPORT_REAL_FAILURE_TELEMETRY_SQL}))
                  AND (sync_dispatch_telemetry IS NULL OR ${NOT_PENDING_TELEMETRY_SQL})
             THEN 1 ELSE 0 END) AS pending
-     FROM watch_history WHERE source = 'trakt_import'`,
-  ).get();
+     FROM watch_history WHERE source = ?`,
+  ).get(trackerImportSource(provider));
   return { total: row?.total || 0, pending: row?.pending || 0 };
 }
 
 // --- Movies / shows queries ------------------------------------------------
+export { countMissingPosterTrackerRows as countMissingPosterTraktRows, listMissingPosterTrackerRows as listMissingPosterTraktRows, countTrackerImportPendingDispatch as countTraktImportPendingDispatch };
 export async function queryMovies({ search = "", sort = "title_asc", limit = 100, offset = 0 } = {}) {
   const safeLimit = Math.min(Number(limit) || 100, 5000);
   const safeOffset = Number(offset) || 0;
@@ -6694,7 +6723,7 @@ export function watchRowToMedia(row = {}, source = "plex") {
     traktOverride: provenance?.provider_overrides?.trakt || undefined,
     posterUrl: row.poster_url || undefined,
     watched_at: row.watched_at || undefined,
-    isValid: Boolean(row.title && ["movie", "episode"].includes(row.media_type)),
+    isValid: Boolean(row.title && ["movie", "episode", "tv"].includes(row.media_type)),
   };
 }
 

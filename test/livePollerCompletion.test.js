@@ -7,6 +7,7 @@ makeTempDataDir("plembfin-live-poller-completion-");
 const repo = await import("../server/src/utils/dataRepo.js");
 const { refreshLiveSessions } = await import("../server/src/utils/liveSessionCompletion.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
+const { dropTitle, listDroppedTitles } = await import("../server/src/utils/droppedTitles.js");
 
 // End-to-end coverage of the poller's vanished-session promotion
 // (core-sync-health step 2): a cached session that is no longer reported for
@@ -54,11 +55,13 @@ async function pollUntilConfirmedGone() {
 }
 
 test("a playing session past the threshold that vanishes becomes one watch", async () => {
+  dropTitle({ media_type: "movie", title: "Poller Movie 900001", tmdb_id: "900001" }, { now: Date.now() - 60_000 });
   await seedSession({ sessionId: "poller-playing", tmdb: "900001", progress: 95 });
   await pollUntilConfirmedGone();
   const rows = await watchRows("900001");
   assert.equal(rows.length, 1);
   assert.equal(rows[0].source, "jellyfin");
+  assert.equal(listDroppedTitles().length, 0, "a completed live session restores a dropped movie");
 });
 
 test("a session paused in the credits that vanishes becomes a watch", async () => {
@@ -101,4 +104,19 @@ test("the poller does not add a second watch on the same day", async () => {
   await seedSession({ sessionId: "poller-same-day", tmdb: "900006", progress: 96 });
   await pollUntilConfirmedGone();
   assert.equal((await watchRows("900006")).length, 1);
+});
+
+test("a same-day completed play after dropping restores the title without adding a history row", async () => {
+  const media = { title: "Poller Movie 900007", type: "movie", source: "jellyfin", isValid: true, ids: { tmdb: "900007" } };
+  const earlierToday = new Date(Date.now() - 10_000).toISOString();
+  await repo.insertWatchRecord({ title: media.title, media_type: "movie", tmdb_id: "900007", watched_at: earlierToday, source: "jellyfin", sync_action: "watched" });
+  await repo.upsertPlaystateForMedia(media, "watched", earlierToday);
+
+  const droppedAt = Date.now() - 5_000;
+  dropTitle({ media_type: "movie", title: media.title, tmdb_id: "900007" }, { now: droppedAt });
+  await seedSession({ sessionId: "poller-same-day-after-drop", tmdb: "900007", progress: 96, updatedAt: droppedAt + 1_000 });
+  await pollUntilConfirmedGone();
+
+  assert.equal((await watchRows("900007")).length, 1, "same-day history dedupe keeps one watch row");
+  assert.equal(listDroppedTitles().length, 0, "completed playback after the drop restores the title");
 });

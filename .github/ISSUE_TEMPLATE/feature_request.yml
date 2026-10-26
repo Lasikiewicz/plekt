@@ -1,0 +1,37 @@
+name: Feature request
+description: Suggest a specific improvement to Plekt.
+title: "[Feature]: "
+labels: [enhancement, needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: Open-ended ideas and broader conversations belong in [Discussions → Ideas](https://github.com/Lasikiewicz/plekt/discussions/categories/ideas).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Explain the need or limitation you have encountered.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe the specific behavior or outcome you would find useful.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include workarounds or other approaches you have considered.
+  - type: checkboxes
+    id: services
+    attributes:
+      label: Services affected
+      options:
+        - label: Plex
+        - label: Jellyfin
+        - label: Emby
+        - label: Trakt
+        - label: Simkl

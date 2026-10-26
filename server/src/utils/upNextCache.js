@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getDataVersion, getUpNextVersion, bumpUpNextVersion } from "../db.js";
-import { DATA_DIR } from "../paths.js";
+import { getActiveDataDir } from "./userContext.js";
 import { getUpNextFeedSourceVersion, listUpNextProviderFeedStates } from "./upNextRepository.js";
 import { getCanonicalPosterUrl } from "./mediaArtwork.js";
 import { publicUpNextItems } from "./upNextService.js";
@@ -10,19 +10,46 @@ import { sortUpNextItems } from "./upNextIdentity.js";
 // Bump when the projection's episode-order rules change so a persisted queue
 // built by the previous rule cannot keep showing a later-season episode.
 const CACHE_VERSION = 6;
-const CACHE_FILE = path.join(DATA_DIR, "up-next-cache.json");
-const TEMP_FILE = `${CACHE_FILE}.${process.pid}.tmp`;
 const UP_NEXT_TTL_MS = 2 * 60 * 1000;
 const REVALIDATE_MIN_INTERVAL_MS = 10 * 60 * 1000;
 const MAX_ITEMS = 100;
 const UP_NEXT_PROVIDERS = new Set(["plex", "emby", "jellyfin"]);
+const CACHE_RENAME_RETRIES = 5;
+const CACHE_RENAME_RETRY_MS = 20;
 
-let memoryCache = null;
-let memoryMtimeMs = 0;
-let writeChain = Promise.resolve();
-let buildInFlight = null;
-let buildInFlightVersion = 0;
-let lastRevalidateAt = 0;
+const cacheStates = new Map();
+
+async function replaceCacheFile(tempFile, cacheFile) {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await fs.rename(tempFile, cacheFile);
+      return;
+    } catch (error) {
+      if (!(["EPERM", "EACCES", "EBUSY"].includes(error?.code)) || attempt >= CACHE_RENAME_RETRIES) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, CACHE_RENAME_RETRY_MS));
+    }
+  }
+}
+
+function cacheState(dataDir = getActiveDataDir()) {
+  const directory = path.resolve(dataDir);
+  let state = cacheStates.get(directory);
+  if (!state) {
+    state = {
+      directory,
+      memoryCache: null,
+      memoryMtimeMs: 0,
+      writeChain: Promise.resolve(),
+      buildInFlight: null,
+      buildInFlightVersion: "",
+      lastRevalidateAt: 0,
+    };
+    cacheStates.set(directory, state);
+  }
+  return state;
+}
 
 function queueAutomaticUpNextSync(reason) {
   void import("./upNextAutoSync.js")
@@ -83,19 +110,20 @@ function normalizeCache(parsed) {
   };
 }
 
-async function readCache() {
+async function readCache(state = cacheState()) {
+  const cacheFile = path.join(state.directory, "up-next-cache.json");
   try {
-    const stat = await fs.stat(CACHE_FILE);
-    if (memoryCache && memoryMtimeMs === stat.mtimeMs) return memoryCache;
-    const parsed = JSON.parse(await fs.readFile(CACHE_FILE, "utf8"));
-    memoryCache = normalizeCache(parsed);
-    memoryMtimeMs = stat.mtimeMs;
-    return memoryCache;
+    const stat = await fs.stat(cacheFile);
+    if (state.memoryCache && state.memoryMtimeMs === stat.mtimeMs) return state.memoryCache;
+    const parsed = JSON.parse(await fs.readFile(cacheFile, "utf8"));
+    state.memoryCache = normalizeCache(parsed);
+    state.memoryMtimeMs = stat.mtimeMs;
+    return state.memoryCache;
   } catch (error) {
     if (error?.code !== "ENOENT") console.error("Failed to read Up Next cache", error);
-    memoryCache = emptyCache();
-    memoryMtimeMs = 0;
-    return memoryCache;
+    state.memoryCache = emptyCache();
+    state.memoryMtimeMs = 0;
+    return state.memoryCache;
   }
 }
 
@@ -114,24 +142,33 @@ function comparableSourceStatus(status = []) {
   }));
 }
 
-async function storeCache(result, fallbackSourceVersion) {
+// `builtFrom` holds the versions current when the projection's build started.
+// A queue mutation during the build (a drop, a dismissal) bumps them, and
+// stamping the store-time versions would serve that older projection as
+// current until the next rebuild. Such a projection keeps its start versions,
+// so the next read sees the mismatch and waits for a fresh build.
+async function storeCache(result, fallbackSourceVersion, builtFrom = null, state = cacheState()) {
   const projection = result && !Array.isArray(result) && typeof result === "object"
     ? result
     : { items: result };
   const nextItems = normalizedItems(projection.items);
   let stored;
-  writeChain = writeChain.catch(() => {}).then(async () => {
-    const current = await readCache();
+  state.writeChain = state.writeChain.catch(() => {}).then(async () => {
+    const current = await readCache(state);
     const nextSourceStatus = Array.isArray(projection.sourceStatus) ? projection.sourceStatus : [];
     const changed = !current.builtAt
       || JSON.stringify({ items: current.items, sourceStatus: comparableSourceStatus(current.sourceStatus) })
         !== JSON.stringify({ items: nextItems, sourceStatus: comparableSourceStatus(nextSourceStatus) });
     const currentGlobalVersion = getUpNextVersion();
     const cachedVersion = Number(current.upNextVersion || 0);
-    const historyVersion = getDataVersion();
-    const upNextVersion = changed
-      ? (currentGlobalVersion > cachedVersion ? currentGlobalVersion : bumpUpNextVersion())
-      : Math.max(cachedVersion || 1, currentGlobalVersion);
+    const outdated = Boolean(builtFrom)
+      && (builtFrom.upNextVersion !== currentGlobalVersion || builtFrom.historyVersion !== getDataVersion());
+    const historyVersion = outdated ? builtFrom.historyVersion : getDataVersion();
+    const upNextVersion = outdated
+      ? builtFrom.upNextVersion
+      : changed
+        ? (currentGlobalVersion > cachedVersion ? currentGlobalVersion : bumpUpNextVersion())
+        : Math.max(cachedVersion || 1, currentGlobalVersion);
     const now = Date.now();
     const next = {
       version: CACHE_VERSION,
@@ -142,43 +179,51 @@ async function storeCache(result, fallbackSourceVersion) {
       items: nextItems,
       sourceStatus: nextSourceStatus,
     };
-    await fs.mkdir(DATA_DIR, { recursive: true });
-    await fs.writeFile(TEMP_FILE, JSON.stringify(next), "utf8");
-    await fs.rename(TEMP_FILE, CACHE_FILE);
+    const cacheFile = path.join(state.directory, "up-next-cache.json");
+    const tempFile = `${cacheFile}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2)}.tmp`;
+    await fs.mkdir(state.directory, { recursive: true });
+    await fs.writeFile(tempFile, JSON.stringify(next), "utf8");
+    try {
+      await replaceCacheFile(tempFile, cacheFile);
+    } catch (error) {
+      await fs.rm(tempFile, { force: true }).catch(() => {});
+      throw error;
+    }
     // Keep serving exactly what was built. Forcing a re-read ran our own write
     // back through normalizeCache, so the next rebuild never compared equal and
     // every rebuild bumped the Up Next version. Another process's later write
     // still changes the mtime and is picked up.
-    memoryCache = next;
-    memoryMtimeMs = await fs.stat(CACHE_FILE).then((stat) => stat.mtimeMs, () => 0);
+    state.memoryCache = next;
+    state.memoryMtimeMs = await fs.stat(cacheFile).then((stat) => stat.mtimeMs, () => 0);
     stored = { ...next, changed };
   });
-  await writeChain;
+  await state.writeChain;
   if (stored?.changed) queueAutomaticUpNextSync("Up Next projection changed");
   return stored;
 }
 
-function buildAndStore(build) {
-  const requestedVersion = getUpNextVersion();
-  if (buildInFlight) {
+function buildAndStore(build, state = cacheState()) {
+  const builtFrom = { upNextVersion: getUpNextVersion(), historyVersion: getDataVersion() };
+  const requestedVersion = `${builtFrom.upNextVersion}:${builtFrom.historyVersion}`;
+  if (state.buildInFlight) {
     // A manual queue change can arrive while a projection is already being
     // built. Do not let the caller receive that older projection and stamp it
     // as current; wait for it to finish, then build against the new queue
     // generation.
-    if (buildInFlightVersion !== requestedVersion) {
-      return buildInFlight.then(() => buildAndStore(build));
+    if (state.buildInFlightVersion !== requestedVersion) {
+      return state.buildInFlight.then(() => buildAndStore(build, state));
     }
-    return buildInFlight;
+    return state.buildInFlight;
   }
-  buildInFlightVersion = requestedVersion;
-  buildInFlight = Promise.resolve()
+  state.buildInFlightVersion = requestedVersion;
+  state.buildInFlight = Promise.resolve()
     .then(() => build())
-    .then((result) => storeCache(result, getUpNextFeedSourceVersion()))
+    .then((result) => storeCache(result, getUpNextFeedSourceVersion(), builtFrom, state))
     .finally(() => {
-      buildInFlight = null;
-      buildInFlightVersion = 0;
+      state.buildInFlight = null;
+      state.buildInFlightVersion = "";
     });
-  return buildInFlight;
+  return state.buildInFlight;
 }
 
 // Complete an explicit queue mutation before acknowledging it to another device.
@@ -214,14 +259,14 @@ function currentPublicSourceStatus() {
 
 // `force` skips the provider-feed throttle. It is used when the served snapshot
 // predates the latest watch history, where a rebuild must always follow.
-function queueBackgroundRebuild(build, { force = false } = {}) {
-  if (!force && Date.now() - lastRevalidateAt < REVALIDATE_MIN_INTERVAL_MS) return false;
-  lastRevalidateAt = Date.now();
+function queueBackgroundRebuild(build, { force = false } = {}, state = cacheState()) {
+  if (!force && Date.now() - state.lastRevalidateAt < REVALIDATE_MIN_INTERVAL_MS) return false;
+  state.lastRevalidateAt = Date.now();
   // Start on a later timer turn rather than a promise microtask. A stale
   // dashboard response should finish before the provider-backed projection
   // can begin its synchronous cache assembly and compete with sibling APIs.
   const timer = setTimeout(() => {
-    buildAndStore(build)
+    buildAndStore(build, state)
       .then((result) => {
         console.log(`Up Next cache background rebuild complete: ${result.items.length} item${result.items.length === 1 ? "" : "s"}${result.changed ? ", cache updated" : ", unchanged"}.`);
       })
@@ -242,15 +287,16 @@ export async function getUpNextCacheSnapshot(build, {
   revalidate = false,
   allowStale = false,
 } = {}) {
-  if (refresh) return publicSnapshot(await buildAndStore(build));
+  const state = cacheState();
+  if (refresh) return publicSnapshot(await buildAndStore(build, state));
 
-  const cache = await readCache();
+  const cache = await readCache(state);
   if (!cache.builtAt) {
     if (allowStale) {
-      queueBackgroundRebuild(build, { force: true });
+      queueBackgroundRebuild(build, { force: true }, state);
       return publicSnapshot(cache, true, currentPublicSourceStatus());
     }
-    return publicSnapshot(await buildAndStore(build));
+    return publicSnapshot(await buildAndStore(build, state));
   }
 
   const sourceVersion = getUpNextFeedSourceVersion();
@@ -265,15 +311,15 @@ export async function getUpNextCacheSnapshot(build, {
     if (allowStale) {
       // Always rebuild here: the throttle below is for provider-feed staleness,
       // and skipping it would leave an already-watched episode in the rail.
-      queueBackgroundRebuild(build, { force: true });
+      queueBackgroundRebuild(build, { force: true }, state);
       return publicSnapshot(cache, true, currentPublicSourceStatus());
     }
-    return publicSnapshot(await buildAndStore(build));
+    return publicSnapshot(await buildAndStore(build, state));
   }
   if (!stale) return publicSnapshot(cache);
   if (revalidate) {
-    queueBackgroundRebuild(build);
+    queueBackgroundRebuild(build, {}, state);
     return publicSnapshot(cache, true, currentPublicSourceStatus());
   }
-  return publicSnapshot(await buildAndStore(build));
+  return publicSnapshot(await buildAndStore(build, state));
 }

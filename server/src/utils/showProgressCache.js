@@ -1,16 +1,26 @@
 import fs from "node:fs";
 import path from "node:path";
-import { DATA_DIR } from "../paths.js";
+import { getActiveDataDir } from "./userContext.js";
 import { db, bumpDataVersion } from "../db.js";
 import { getTmdbDetails, getTmdbShowSeasonLists } from "./tmdbGateway.js";
 import { readSeasonSource } from "./seasonSource.js";
 import { translatedWatchedCount } from "./showSeasonTranslation.js";
 
-const CACHE_FILE_PATH = path.join(DATA_DIR, "tv_progress_cache.json");
+const cacheStates = new Map();
 
-let progressCache = {};
-const pendingShowUpdates = new Set();
-let progressFlushPromise = null;
+function cacheState(dataDir = getActiveDataDir()) {
+  const directory = path.resolve(dataDir);
+  let state = cacheStates.get(directory);
+  if (!state) {
+    state = { directory, progressCache: {}, pendingShowUpdates: new Set(), progressFlushPromise: null, loaded: false, cacheMtimeMs: 0 };
+    cacheStates.set(directory, state);
+  }
+  return state;
+}
+
+function cacheFilePath(state = cacheState()) {
+  return path.join(state.directory, "tv_progress_cache.json");
+}
 // Bump whenever progress classification or total episode calculation changes,
 // so existing shows are rebuilt instead of retaining stale counts indefinitely.
 const PROGRESS_CACHE_SCHEMA_VERSION = 3; // trusted user-scoped library-history rows now count as watched
@@ -107,7 +117,7 @@ function isPlektTrackedWatchRow(row = {}) {
  * at all yet - e.g. shows watched before this cache existed, or added outside
  * the incremental queueShowProgressUpdate() call sites.
  */
-function findUncachedShowTitles() {
+function findUncachedShowTitles(progressCache = cacheState().progressCache) {
   const rows = db.prepare(`
     SELECT show_title, title, sync_action, sync_dispatch_telemetry, watch_provenance
     FROM watch_history
@@ -123,21 +133,25 @@ function findUncachedShowTitles() {
 }
 
 export async function initShowProgressCache() {
-  if (fs.existsSync(CACHE_FILE_PATH)) {
+  const state = cacheState();
+  state.loaded = true;
+  const cacheFile = cacheFilePath(state);
+  if (fs.existsSync(cacheFile)) {
     try {
-      const data = fs.readFileSync(CACHE_FILE_PATH, "utf8");
-      progressCache = JSON.parse(data);
-      const total = Object.keys(progressCache).length;
+      const data = fs.readFileSync(cacheFile, "utf8");
+      state.progressCache = JSON.parse(data);
+      state.cacheMtimeMs = fs.statSync(cacheFile).mtimeMs;
+      const total = Object.keys(state.progressCache).length;
       // Some shows have no resolvable episode total at all (a provider URI where
       // the title should be, or metadata that simply lacks one). Retrying those
       // on every boot re-spent the same failing lookups forever, so a show whose
       // total was checked recently waits for the retry interval.
       const totalsRetryCutoff = Date.now() - MISSING_TOTAL_RETRY_MS;
-      const missingTotals = Object.values(progressCache)
+      const missingTotals = Object.values(state.progressCache)
         .filter((s) => !s.total_episodes && Number(s.total_checked_at || 0) <= totalsRetryCutoff)
         .map((s) => s.title);
-      const staleSchema = Object.values(progressCache).filter((s) => (s.schema_version || 1) < PROGRESS_CACHE_SCHEMA_VERSION).map((s) => s.title);
-      const uncached = findUncachedShowTitles();
+      const staleSchema = Object.values(state.progressCache).filter((s) => (s.schema_version || 1) < PROGRESS_CACHE_SCHEMA_VERSION).map((s) => s.title);
+      const uncached = findUncachedShowTitles(state.progressCache);
       const toQueue = new Set([...missingTotals, ...staleSchema, ...uncached]);
       console.log(`[ShowProgressCache] Loaded ${total} shows from cache file.`);
       if (toQueue.size) {
@@ -152,14 +166,36 @@ export async function initShowProgressCache() {
       console.error("[ShowProgressCache] Failed to load cache file, rebuilding...", e);
     }
   }
-  await rebuildShowProgressCache();
+  await rebuildShowProgressCache(state);
 }
 
 /**
  * Gets cached progress details for a show key.
  */
 export function getCachedShowProgress(showKey) {
-  return progressCache[showKey] || null;
+  const state = cacheState();
+  const cacheFile = cacheFilePath(state);
+  try {
+    const currentMtimeMs = fs.statSync(cacheFile).mtimeMs;
+    if (state.loaded && currentMtimeMs !== state.cacheMtimeMs) {
+      state.loaded = false;
+      state.progressCache = {};
+    }
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    if (state.loaded && state.cacheMtimeMs !== 0) {
+      state.loaded = false;
+      state.cacheMtimeMs = 0;
+      state.progressCache = {};
+    }
+  }
+  if (!state.loaded) {
+    state.loaded = true;
+    setImmediate(() => {
+      initShowProgressCache().catch((error) => console.error("[ShowProgressCache] Tenant cache initialization failed:", error));
+    });
+  }
+  return state.progressCache[showKey] || null;
 }
 
 /**
@@ -168,24 +204,27 @@ export function getCachedShowProgress(showKey) {
  * background recalculation.
  */
 export function clearCachedShowProgress(showTitle) {
+  const state = cacheState();
   const showKey = canonicalTitleKey(showTitle) || normalizeKeyPart(showTitle);
-  delete progressCache[showKey];
+  delete state.progressCache[showKey];
 }
 
 /**
  * Queues a show title for progress update.
  */
 export function queueShowProgressUpdate(showTitle) {
+  const state = cacheState();
   const title = String(showTitle || "").trim();
   if (title) {
-    pendingShowUpdates.add(title);
+    state.pendingShowUpdates.add(title);
   }
 }
 
 /**
  * Calculates show progress for a single show and updates cache in-place.
  */
-async function calculateAndSetShowProgress(showTitle) {
+async function calculateAndSetShowProgress(showTitle, state = cacheState()) {
+  const progressCache = state.progressCache;
   const showKey = canonicalTitleKey(showTitle) || normalizeKeyPart(showTitle);
 
   // Titles reach this function already run through showTitleFrom(), which strips
@@ -277,41 +316,44 @@ async function calculateAndSetShowProgress(showTitle) {
  * Flushes all pending queued updates to the cache and writes the cache file.
  */
 export async function flushShowProgressUpdates() {
-  if (progressFlushPromise) return progressFlushPromise;
-  if (pendingShowUpdates.size === 0) return;
+  const state = cacheState();
+  if (state.progressFlushPromise) return state.progressFlushPromise;
+  if (state.pendingShowUpdates.size === 0) return;
   // The database handle can close before the deferred startup refresh runs
   // (e.g. the test suite's throwaway DB) - drop the queue instead of crashing.
   if (!db.open) {
-    pendingShowUpdates.clear();
+    state.pendingShowUpdates.clear();
     return;
   }
 
-  progressFlushPromise = (async () => {
+  const flushPromise = (async () => {
     const calculationStartedAt = performance.now();
     const processedTitles = new Set();
     // Drain again when an update arrives while an earlier title is awaiting
     // metadata. Concurrent callers join this promise, so no update is lost and
     // each caller retains the durable-await contract.
-    while (pendingShowUpdates.size) {
-      const titles = [...pendingShowUpdates];
-      pendingShowUpdates.clear();
+    while (state.pendingShowUpdates.size) {
+      const titles = [...state.pendingShowUpdates];
+      state.pendingShowUpdates.clear();
       titles.forEach((title) => processedTitles.add(title));
       console.log(`[ShowProgressCache] Updating progress for ${titles.length} shows: ${titles.join(", ")}`);
       for (const title of titles) {
         if (!db.open) return;
-        await calculateAndSetShowProgress(title);
+        await calculateAndSetShowProgress(title, state);
       }
     }
 
     const calculationMs = performance.now() - calculationStartedAt;
     try {
       const serializationStartedAt = performance.now();
-      const serialized = JSON.stringify(progressCache, null, 2);
+      const serialized = JSON.stringify(state.progressCache, null, 2);
       const serializationMs = performance.now() - serializationStartedAt;
       const writeStartedAt = performance.now();
-      const tempPath = `${CACHE_FILE_PATH}.${process.pid}.${Date.now()}.tmp`;
+      const cacheFile = cacheFilePath(state);
+      const tempPath = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
       fs.writeFileSync(tempPath, serialized, "utf8");
-      fs.renameSync(tempPath, CACHE_FILE_PATH);
+      fs.renameSync(tempPath, cacheFile);
+      state.cacheMtimeMs = fs.statSync(cacheFile).mtimeMs;
       const writeMs = performance.now() - writeStartedAt;
       console.log(`[ShowProgressCache] Saved updated progress cache to file (${processedTitles.size} shows; calculate ${calculationMs.toFixed(1)}ms, serialize ${serializationMs.toFixed(1)}ms, write ${writeMs.toFixed(1)}ms).`);
     } catch (e) {
@@ -321,18 +363,20 @@ export async function flushShowProgressUpdates() {
     // are visible without waiting for an unrelated watch event.
     bumpDataVersion();
   })();
+  state.progressFlushPromise = flushPromise;
   try {
-    await progressFlushPromise;
+    await flushPromise;
   } finally {
-    progressFlushPromise = null;
+    if (state.progressFlushPromise === flushPromise) state.progressFlushPromise = null;
   }
 }
 
 /**
  * Full rebuild of the cache file from database.
  */
-export async function rebuildShowProgressCache() {
-  if (progressFlushPromise) await progressFlushPromise;
+export async function rebuildShowProgressCache(state = cacheState()) {
+  state.loaded = true;
+  if (state.progressFlushPromise) await state.progressFlushPromise;
   console.log("[ShowProgressCache] Rebuilding TV show progress cache from scratch...");
   const tempCache = {};
   
@@ -389,14 +433,16 @@ export async function rebuildShowProgressCache() {
     };
   }
   
-  progressCache = tempCache;
+  state.progressCache = tempCache;
   try {
-    const dir = path.dirname(CACHE_FILE_PATH);
+    const cacheFile = cacheFilePath(state);
+    const dir = path.dirname(cacheFile);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(CACHE_FILE_PATH, JSON.stringify(progressCache, null, 2), "utf8");
-    console.log(`[ShowProgressCache] Rebuilt and saved ${Object.keys(progressCache).length} shows to cache file.`);
+    fs.writeFileSync(cacheFile, JSON.stringify(state.progressCache, null, 2), "utf8");
+    state.cacheMtimeMs = fs.statSync(cacheFile).mtimeMs;
+    console.log(`[ShowProgressCache] Rebuilt and saved ${Object.keys(state.progressCache).length} shows to cache file.`);
   } catch (e) {
     console.error("[ShowProgressCache] Failed to save rebuilt progress cache:", e);
   }

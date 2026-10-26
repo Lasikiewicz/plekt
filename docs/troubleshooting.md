@@ -233,5 +233,5 @@ coordinate fallback.
 | Database inspection | `sqlite3 data/plekt.db` |
 | Run the background worker on demand | `POST /api/cron-sync` (streams a log) |
 | Frontend debug logs | `logDebug(...)` calls throughout `public/app.js` (and the in-app Logs panel) |
-| Which file owns a feature | The file map in [architecture.md](architecture.md) |
+| Which file owns a feature | The "Where to look first" table in [architecture.md](architecture.md#where-to-look-first), then the file map ([server](file-map-server.md), [public](file-map-public.md), [repository](file-map-repo.md)) |
 | Security controls | [security-checklist.md](security-checklist.md) |

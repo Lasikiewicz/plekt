@@ -10,11 +10,12 @@ import { loadWatchBackupRuntime } from "./watchHistoryBackups.js";
 import { releaseDateForSourceItem, resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem, watchedAtForEmbyLikeItem } from "./watchDates.js";
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { buildWatchProvenance } from "./watchProvenance.js";
-import { earliestTraktWatchedAt } from "./mediaForceSync.js";
+import { earliestTrackerWatchedAt } from "./mediaForceSync.js";
 import { findWatchedByAnyMediaKey, getCachedHistory, getPlaystateForMedia, insertWatchRecord, invalidateHistoryDerivedCaches, mediaToWatchRecord, updateWatchTelemetry, upsertPlaystateForMedia } from "./dataRepo.js";
 import { librarySeriesItemId, withSeriesIdentity } from "./seriesIdentity.js";
 import { enqueueManualWatchReview } from "./manualWatchReview.js";
 import { addTimingHistoryRow, recordSyncHistory } from "./syncHistoryTelemetry.js";
+import { checkIncomingEpisodeSourceMismatch } from "./sourceMismatch.js";
 
 // A library-history endpoint exposes the server's current played snapshot; it
 // does not prove another viewing occurred. A canonical Plembfin playstate can
@@ -157,7 +158,8 @@ export function plexHistoryItemMatchesConfiguredUser(item = {}, { username = "",
   return accountScoped && accountId != null;
 }
 
-export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = console.log, traktWatchedDateIndex = null) {
+export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = console.log, trackerWatchedDateIndex = null) {
+  const sourceMismatchRunKey = `plex:${Date.now()}`;
   if (isAuthoritativeRestoreActive()) return 0;
   if (!watchedPlayedSyncEnabled()) {
     logger("Plex watched library sync is disabled.");
@@ -313,6 +315,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         // above can fall through to the episode's own ids.
         media.seriesItemId = librarySeriesItemId(item, "plex");
         media = await withSeriesIdentity(media, config);
+        await checkIncomingEpisodeSourceMismatch(media, { runKey: sourceMismatchRunKey }).catch(() => null);
       }
 
       media.runtimeMinutes = runtimeMinutesForSourceItem(item, "plex");
@@ -386,9 +389,9 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
           continue;
         }
         logger(`Plex: detected new watched item: ${media.title} (watched at ${media.watched_at}; ${dateChoice.reason})`);
-        const traktWatchedAt = watchDate.manualMark ? null : earliestTraktWatchedAt(traktWatchedDateIndex, media);
-        const effectiveWatchedAt = traktWatchedAt != null && traktWatchedAt < Date.parse(media.watched_at)
-          ? new Date(traktWatchedAt).toISOString()
+        const trackerWatchedAt = watchDate.manualMark ? null : earliestTrackerWatchedAt(trackerWatchedDateIndex, media);
+        const effectiveWatchedAt = trackerWatchedAt != null && trackerWatchedAt < Date.parse(media.watched_at)
+          ? new Date(trackerWatchedAt).toISOString()
           : media.watched_at;
         if (effectiveWatchedAt !== media.watched_at) {
           logger(`Plex: ${media.title} reported ${media.watched_at}, but Trakt has an earlier watch - using Trakt's date instead.`);
@@ -441,7 +444,8 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
   return syncedCount;
 }
 
-export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = console.log, traktWatchedDateIndex = null) {
+export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = console.log, trackerWatchedDateIndex = null) {
+  const sourceMismatchRunKey = `emby:${Date.now()}`;
   if (isAuthoritativeRestoreActive()) return 0;
   if (!watchedPlayedSyncEnabled()) {
     logger("Emby watched library sync is disabled.");
@@ -480,6 +484,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         seriesItemId: librarySeriesItemId(item, "emby"),
         isValid: true,
       }, config);
+      await checkIncomingEpisodeSourceMismatch(media, { runKey: sourceMismatchRunKey }).catch(() => null);
       const { watchedAt, reason: watchedAtReason } = watchedAtForEmbyLikeItem(item);
       const manualMark = !watchedAt && watchedAtReason === "marked without playback";
       if (!watchedAt && !manualMark) {
@@ -541,9 +546,9 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
           continue;
         }
         logger(`Emby: detected new watched item: ${media.title} (${dateChoice.reason} ${media.watched_at})`);
-        const traktWatchedAt = !watchedAt ? null : earliestTraktWatchedAt(traktWatchedDateIndex, media);
-        const effectiveWatchedAt = traktWatchedAt != null && traktWatchedAt < Date.parse(media.watched_at)
-          ? new Date(traktWatchedAt).toISOString()
+        const trackerWatchedAt = !watchedAt ? null : earliestTrackerWatchedAt(trackerWatchedDateIndex, media);
+        const effectiveWatchedAt = trackerWatchedAt != null && trackerWatchedAt < Date.parse(media.watched_at)
+          ? new Date(trackerWatchedAt).toISOString()
           : media.watched_at;
         if (effectiveWatchedAt !== media.watched_at) {
           logger(`Emby: ${media.title} reported ${media.watched_at}, but Trakt has an earlier watch - using Trakt's date instead.`);
@@ -595,7 +600,8 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
   return syncedCount;
 }
 
-export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger = console.log, traktWatchedDateIndex = null) {
+export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger = console.log, trackerWatchedDateIndex = null) {
+  const sourceMismatchRunKey = `jellyfin:${Date.now()}`;
   if (isAuthoritativeRestoreActive()) return 0;
   if (!watchedPlayedSyncEnabled()) {
     logger("Jellyfin watched library sync is disabled.");
@@ -634,6 +640,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         seriesItemId: librarySeriesItemId(item, "jellyfin"),
         isValid: true,
       }, config);
+      await checkIncomingEpisodeSourceMismatch(media, { runKey: sourceMismatchRunKey }).catch(() => null);
       if (await isRecentOutboundJellyfinNextUpNudge({ ...media, itemId: item.Id }, loopStore).catch(() => false)) {
         logger(`Jellyfin: ignored watched-library echo from a Next Up ordering nudge: ${media.title}`);
         continue;
@@ -699,9 +706,9 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
           continue;
         }
         logger(`Jellyfin: detected new watched item: ${media.title} (${dateChoice.reason} ${media.watched_at})`);
-        const traktWatchedAt = !watchedAt ? null : earliestTraktWatchedAt(traktWatchedDateIndex, media);
-        const effectiveWatchedAt = traktWatchedAt != null && traktWatchedAt < Date.parse(media.watched_at)
-          ? new Date(traktWatchedAt).toISOString()
+        const trackerWatchedAt = !watchedAt ? null : earliestTrackerWatchedAt(trackerWatchedDateIndex, media);
+        const effectiveWatchedAt = trackerWatchedAt != null && trackerWatchedAt < Date.parse(media.watched_at)
+          ? new Date(trackerWatchedAt).toISOString()
           : media.watched_at;
         if (effectiveWatchedAt !== media.watched_at) {
           logger(`Jellyfin: ${media.title} reported ${media.watched_at}, but Trakt has an earlier watch - using Trakt's date instead.`);

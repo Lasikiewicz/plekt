@@ -1,7 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.1.1.0.8";
-import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.1.1.0.9";
+import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.1.1.0.9";
+import { renderDroppedStats } from "./dropped-title-views.js?v=2.1.1.0.9";
 
 let _cb = {};
 
@@ -488,6 +489,7 @@ export function renderStats() {
   const report = selectedStatsReport();
   const periodLabel = statsPeriodLabel(report?.period || "all");
   renderStatsKpis(report);
+  renderDroppedStats();
   renderStatsLeaderboard(elements.statsLeaderboard, statsFilteredRows(report), { report, periodLabel });
   renderStatsMoviesTvSplit(elements.statsMoviesTvSplit, report);
   renderStatsPlatformRows(elements.sourceRanking, report?.sourceBreakdown || state.stats.sourceBreakdown || []);

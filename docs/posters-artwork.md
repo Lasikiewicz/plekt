@@ -69,11 +69,17 @@ The first candidate that downloads successfully goes through `cacheArtworkFromUr
 - body limits (10 MB), content-type checks, 12s timeout
 - resized with **sharp** to webp - poster 340w/q80, backdrop 1600w/q82, profile
   780w/q82, logo 800w/q90 (falls back to the original bytes if sharp fails)
-- newly fetched artwork is written to
+- newly fetched artwork is written atomically (`<path>.<pid>.<rand>.tmp` then renamed) to
   `data/media/posters|backdrops|profiles|logos/<sha256>.<ext>` and served at
-  `/media/...`
-- metadata recorded in the `poster_cache` table keyed by
-  SHA-256(`mediaKey[:variant]`)
+  `/media/...`. In single-user mode `<sha256>` hashes `mediaKey[:variant]`; once multi-user
+  mode is active (`usesSharedArtworkNaming()`), it hashes `variant + "\n" + sourceUrl` (or
+  image bytes for `data:` uploads) so every user shares one `data/media/` folder without a
+  collision across different sources, and an already-cached file on disk is reused without
+  downloading again.
+- metadata recorded in the active user's `poster_cache` table keyed by
+  SHA-256(`mediaKey[:variant]`). Non-admin `clear-cache` and `wipe-data` clear only that
+  user's own `poster_cache` rows and leave the shared files in `data/media/` untouched;
+  deleting shared artwork files is an admin-only action.
 
 When an existing cache row is first read or written after this identifier change,
 its database ID is re-keyed to SHA-256. Its stored image path remains unchanged, so
@@ -150,7 +156,7 @@ recovered upstream host is still picked up promptly.
 - `bindPosterImageErrorHandler` swaps a broken `<img>` back to the fallback path.
 - `configuredImageUrl` builds direct media-server image URLs for contexts where the
   server URL is known and same-origin rules allow it (the CSP `img-src` is extended at
-  runtime with configured server origins - see [architecture.md](architecture.md)).
+  runtime with configured server origins - see [architecture-flows.md](architecture-flows.md#security-headers)).
 - **`isCachedStorageImageUrl()` returns `true` only for `/media/posters/` and
   `/media/backdrops/` URLs. TMDB `image.tmdb.org` URLs are NOT treated as cached.**
   Code that decides whether artwork still needs caching must use this helper.

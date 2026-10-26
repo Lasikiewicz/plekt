@@ -79,8 +79,11 @@ function checkRoutedHandlersAuthenticate() {
     "handleLogout",
     "handleAuthStatus",
     "handleAuthClaim",
+    // Calendar clients cannot send login cookies; this route authenticates
+    // with its private, revocable feed token instead.
+    "handleCalendarFeed",
   ]);
-  const allowedChecks = ["requireAdmin(", "resolveAdminPrincipal(", "verifyWebhookToken("];
+  const allowedChecks = ["requireAdmin(", "requireInstallAdmin(", "resolveAdminPrincipal(", "verifyWebhookToken("];
   const offenders = [];
   const missing = [];
   for (const handler of routedHandlers) {
@@ -102,7 +105,7 @@ function checkRoutedHandlersAuthenticate() {
     if (offenders.length) {
       console.error("Routed handlers without an auth guard found:");
       for (const offender of offenders) console.error(`  ${offender}`);
-      console.error("Add requireAdmin(), resolveAdminPrincipal(), verifyWebhookToken(), or document the handler in the public whitelist.");
+      console.error("Add requireAdmin(), requireInstallAdmin(), resolveAdminPrincipal(), verifyWebhookToken(), or document the handler in the public whitelist.");
     }
     process.exit(1);
   }

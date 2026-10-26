@@ -133,3 +133,15 @@ test("rows whose ids are proven for no show still converge by title", async () =
   const titleOnly = result.mediaKeys.filter((key) => !key.includes(ORIGINAL.imdb_id));
   assert.ok(titleOnly.length >= 1, `title-only alias not converged: ${result.mediaKeys}`);
 });
+
+// Verified live (Simkl canary, 23 October): an import of Beauty and the Beast
+// (1991) matched the 2017 remake's watch by title, so it recorded no watch and
+// set the 1991 playstate to the remake's date.
+test("the ingest dedupe does not treat a same-title remake's watch as this film's", async () => {
+  await insert({ title: "Beauty and the Beast", media_type: "movie", watched_at: "2017-02-27T20:33:00.000Z", source: "trakt_import", imdb_id: "tt2771200", tmdb_id: "321612" });
+  const movie = (ids) => ({ title: "Beauty and the Beast", type: "movie", source: "simkl_import", isValid: true, ids });
+  assert.equal(repo.findWatchedByAnyMediaKeySync(movie({ imdb: "tt0101414", tmdb: "10020", tvdb: "226" })), null);
+  assert.ok(repo.findWatchedByAnyMediaKeySync(movie({ imdb: "tt2771200" })), "remake watch not found by its own id");
+  assert.ok(repo.findWatchedByAnyMediaKeySync(movie({})), "id-less lookup no longer matches by title");
+  assert.ok(repo.findWatchedByAnyMediaKeySync(movie({ tvdb: "226" })), "a movie TVDB id alone does not prove another film");
+});

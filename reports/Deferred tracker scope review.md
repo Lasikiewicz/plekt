@@ -1,0 +1,43 @@
+# Keep New Tracker Work Beyond v2.2.0
+
+**Recommendation: add no new tracker or watchlist feature to v2.2.0.** Every candidate adds decisions or dependencies beyond the release work already assigned, while the closest-looking options—Simkl watchlist sync and a user-uploaded export—still need product rules and sample-file validation. Trakt’s official policy permits user-authorized list management and user-requested migration, but that permission does not supply Plekt’s sync semantics or a verified import schema. MyAnimeList has unresolved anime progress mapping; MDBList’s current API is broader than the old plan assumed, but its app approval, terms and episode-level history remain unclear. Streaming availability reuses TMDB data, but introduces region, offer type, attribution and freshness rules. This is a scope review only; it does not authorize implementation.
+
+**Decision (26 October 2026):** The user accepted the recommendation. No new tracker or watchlist implementation is selected for v2.2.0.
+
+## Existing v2.2.0 work makes another importer poor release scope
+
+Plekt already has watch-history CSV export/import and Netflix-history import assigned to v2.2.0. The current CSV plan is limited to Plekt’s own history format, while the deferred watchlist plan requires separate backup-safe preview and commit behavior, ID matching, deduplication and an explicit replace choice. A new watchlist importer would therefore expand the release contract instead of being a small extension. ([Plekt watch-history CSV plan](../plan/csv-export-import.md), [deferred watchlist design](../plan/active/deferred-tracker-work/step2-watchlist-migration-and-availability.md))
+
+| Candidate | User value | Main dependency or decision | v2.2.0 fit |
+| --- | --- | --- | --- |
+| Simkl watchlist sync | Keep watch status and lists aligned | Status mapping, remote removals, new provider modeling and conflict behavior | Defer; medium feature |
+| Trakt watchlist sync | Add another established tracker | OAuth, list direction/removal semantics and shared watchlist model | Defer; overlaps broader sync design |
+| MyAnimeList adapter | Support anime-list users | Anime-only capabilities and safe progress semantics for specials, split seasons and unknown totals | Defer; large adapter |
+| MDBList connection | Import or sync lists, history and ratings | Confirm app registration/terms and episode-level history coverage | Defer; Phase 0 evidence incomplete |
+| Trakt or IMDb file import | Migrate existing user data | Select one source and validate an actual export before defining fields | Defer; narrowest future candidate |
+| Preferred streaming services | Filter by services a user pays for | Region, subscription versus rent/buy, missing-data behavior and attribution | Defer; multi-surface feature |
+| JustWatch or Reelgood integration | Import lists or show availability | No documented self-service consumer export found; partner/business access applies | Defer; contract or permission gate |
+
+## A Trakt archive is the narrowest future import candidate
+
+Trakt supports OAuth-authorized watchlist reads, additions and removals, and its policy permits user-directed management of a person’s own lists. Its documented limits require paced requests and the policy bars scraping and bulk harvesting. This makes direct sync technically possible, but it still needs a product decision about list states, direction and deletion behavior. ([Trakt Sync API](https://trakt.docs.apiary.io/#reference/sync/get-watchlist/get-watchlist), [Trakt API Use Policy](https://developer.trakt.tv/docs/api-use-policy), [Trakt Rate Limits](https://developer.trakt.tv/docs/rate-limiting))
+
+A one-time Trakt archive import is narrower than ongoing sync: Trakt’s policy endorses user-requested migration from its data export, and Simkl documents an upload flow for a Trakt ZIP containing history, watchlist and ratings. However, Trakt’s exact archive structure and retained identifiers were not verified from Trakt’s own help, and no actual user export was available. IMDb documents CSV export for ratings and lists but not a watchlist export schema; its watch history and check-ins are separate data. **Do not promise an IMDb or Trakt parser until a representative user export is inspected.** ([Trakt API Use Policy](https://developer.trakt.tv/docs/api-use-policy), [Simkl Trakt importer](https://simkl.com/apps/import/trakt/), [IMDb Lists FAQ](https://help.imdb.com/article/imdb/track-movies-tv/faq-for-the-list-feature/GNQMN47VZSE7KW38), [IMDb Ratings FAQ](https://help.imdb.com/article/imdb/track-movies-tv/faq-for-imdb-ratings/G67Y87TFYYP6TWAV), [IMDb Watchlist FAQ](https://help.imdb.com/article/imdb/track-movies-tv/faq-for-the-watchlist-feature/G9PA556494DM8YBA))
+
+## Tracker APIs are feasible but not quick closures
+
+Simkl has the closest existing integration path: its API supports status-based watchlists, activity-gated reads and batched writes. Yet remote deletion notifications require fetching and diffing the current IDs, and the plan calls for new provider representation and remote-scope handling. These are data and conflict rules, not just endpoint wiring. ([Simkl Sync guide](https://api.simkl.org/guides/sync), [Simkl Add to Watchlist](https://api.simkl.org/api-reference/simkl/add-to-list), [Simkl API rules](https://api.simkl.org/api-rules))
+
+MDBList’s current docs expose authenticated watchlist, watched-history and rating endpoints, correcting the plan’s older uncertainty that it might be list-only. But the review could not confirm episode-level history coverage or settle third-party integration terms; developer app registration is required, and MDBList’s October 2026 updates say Trakt sync is no longer available. Treat MDBList as a candidate for a refreshed Phase 0 investigation, not as a release-ready tracker. ([MDBList API docs](https://api.mdblist.com/docs/), [MDBList Authentication](https://api.mdblist.com/docs/authentication/), [MDBList Terms](https://mdblist.com/static/legal.html), [MDBList product updates](https://mdblist.com/new-features/))
+
+MyAnimeList is more clearly out of scope: it is anime-only and the existing design must avoid inventing episode-level watches from a simple watched-episode count. Specials, split cours, unknown episode totals and progress semantics need explicit behavior and deterministic coverage. The API’s exact current rate and authorization limits were not independently confirmed in this review. ([MAL API v2 reference](https://myanimelist.net/apiconfig/references/api/v2), [MAL auth reference](https://myanimelist.net/apiconfig/references/auth), [Plekt MAL design](../plan/active/deferred-tracker-work/step1-deferred-tracker-capabilities.md))
+
+## Availability filtering needs product and data rules
+
+TMDB supplies region-specific streaming, rental and purchase offers, and its discovery endpoints can filter by region, provider and offer type. A saved-service filter is technically plausible, but needs user preferences, explicit unknown-data behavior, freshness rules and JustWatch/TMDB attribution. TMDB’s terms also distinguish non-commercial use from commercial use. That is broader than a quick release close. ([TMDB TV Watch Providers](https://developer.themoviedb.org/reference/tv-series-watch-providers), [TMDB Discover TV](https://developer.themoviedb.org/reference/discover-tv), [TMDB FAQ](https://developer.themoviedb.org/docs/faq), [TMDB API Terms](https://www.themoviedb.org/api-terms-of-use?language=en-CA))
+
+JustWatch’s documented partner API and data export require a contract and partner credentials; its consumer help did not show a self-service personal-list export. Reelgood documents business API and data products, not a supported consumer watchlist export. Do not scrape either service or assume business data access is available to Plekt. ([JustWatch Content Partner API](https://apis.justwatch.com/docs/api/), [JustWatch Data Export](https://apis.justwatch.com/docs/data_export/), [JustWatch Terms](https://support.justwatch.com/article/just-watchs-terms-of-use), [Reelgood API documentation](https://data.reelgood.com/api-docs/api-documentation/))
+
+## Conclusion
+
+Keep all new tracker and watchlist implementation outside v2.2.0. If a future release selects one migration feature, start with a user-provided Trakt archive because it avoids OAuth and ongoing state reconciliation; first inspect a real archive and agree on duplicate, date and identity handling. Before considering MDBList, confirm legal/app-registration requirements and episode-level history. Recheck provider terms before any implementation because these APIs, limits and partner rules can change.

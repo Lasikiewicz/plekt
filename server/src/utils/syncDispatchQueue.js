@@ -7,6 +7,9 @@ import { provenanceTelemetryLines } from "./watchProvenance.js";
 import { dispatchGroupsForRows, getCachedHistory, invalidateHistoryDerivedCaches, updateWatchSyncRetry, updateWatchTelemetry, upsertPlaystateForMedia } from "./dataRepo.js";
 import { recordSyncHistory, isTargetSynced, targetTelemetryLine, traktTelemetryLine } from "./syncHistoryTelemetry.js";
 import { runWithConcurrency } from "./scheduledConcurrency.js";
+import { syncPendingTrackerWriteIntents } from "./trackerIntentWorker.js";
+import { trackerRetryRecordIds } from "./trackerWriteIntents.js";
+import { trackerProviderIds } from "./trackers/registry.js";
 
 // Automatic re-dispatch backoff for records whose sync targets keep failing.
 // Attempt N waits SYNC_RETRY_BACKOFF_MS[N-1] (last entry repeats) before the
@@ -69,7 +72,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
     logger("Pending watched dispatch sync is disabled.");
     return 0;
   }
-  let syncedCount = 0;
+  let syncedCount = await syncPendingTrackerWriteIntents(logger);
   try {
     // History is already cached in memory. Inspect the complete canonical set
     // so older imports are repaired too; the outbound batch limit below still
@@ -78,6 +81,10 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
 
     const activeTargets = getActiveTargetsForConfig(config);
     const includeTrakt = traktRetryActive();
+    // Durable intents also schedule a retry when the telemetry line alone
+    // would not (an interrupted send, or an intent-recorded transient failure).
+    const intentRetryIds = includeTrakt ? trackerRetryRecordIds() : new Set();
+    const needsTrakt = (row, telemetry, source) => traktNeedsRetry(telemetry, source) || intentRetryIds.has(String(row.id));
     const toRetry = [];
     const now = Date.now();
 
@@ -98,7 +105,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
           needsSync = true;
         }
       }
-      if (!isPending && includeTrakt && traktNeedsRetry(telemetry, dispatchSource)) needsSync = true;
+      if (!isPending && includeTrakt && needsTrakt(row, telemetry, dispatchSource)) needsSync = true;
 
       if (needsSync && syncRetryEligible(row, now)) {
         toRetry.push(row);
@@ -160,7 +167,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       const targetsStillNeeded = activeTargets.filter(
         (target) => !isTargetSynced(row.sync_dispatch_telemetry || "", target, dispatchSource)
       );
-      const retryTrakt = includeTrakt && traktNeedsRetry(row.sync_dispatch_telemetry || "", dispatchSource);
+      const retryTrakt = includeTrakt && needsTrakt(row, row.sync_dispatch_telemetry || "", dispatchSource);
       if (retryTrakt) {
         targetsStillNeeded.push("trakt");
         // The failed write may have reached Trakt before its response was
@@ -191,10 +198,10 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       // prior confirmed line forward instead of letting it drop out of the
       // telemetry, which would otherwise make allSyncedNow below regress to
       // false and re-queue an already-finished target forever.
-      // Trakt is carried forward too whenever an explicit target list left it
-      // out, so a confirmed or terminal Trakt result survives a local retry.
+      // Trackers are carried forward too whenever an explicit target list left
+      // them out, so a confirmed or terminal tracker result survives a local retry.
       const carriedTargets = activeTargets.filter((target) => !targetsStillNeeded.includes(target));
-      if (media.syncTargets && !targetsStillNeeded.includes("trakt")) carriedTargets.push("trakt");
+      if (media.syncTargets) carriedTargets.push(...trackerProviderIds().filter((provider) => !targetsStillNeeded.includes(provider)));
       const carriedForwardLines = carriedTargets
         .map((target) => targetTelemetryLine(row.sync_dispatch_telemetry, target))
         .filter(Boolean);

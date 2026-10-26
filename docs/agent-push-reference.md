@@ -111,8 +111,9 @@ For every selected changed file, check whether the corresponding doc **and** the
 | SPA routing / state / module layout | `docs/frontend.md` | - |
 | Scripts / CI workflows / Docker / release pipeline | `docs/development.md` | 🚀 Getting Started |
 | New feature or setting | `docs/architecture.md` + the matching feature doc | 🌟 Key Features / 🔧 Full Setup Guide |
-| New env variable | `docs/architecture.md` | ⚙️ Configuration Reference |
-| New file, or a file moved/renamed | file map in `docs/architecture.md` | - |
+| New env variable | README Configuration Reference (+ `docs/architecture-flows.md` for conventions) | ⚙️ Configuration Reference |
+| New file, or a file moved/renamed | the matching `docs/file-map-*.md` file, and `npm run code-index` for source files | - |
+| New, removed or renamed route or export | `npm run code-index` (regenerates `docs/code-index.md`; `docs:check` fails until it is current) | - |
 | Any server-side breaking change | `docs/troubleshooting.md` | relevant setup section |
 | Overall architecture change | `docs/architecture.md` + `docs/README.md` | 🛠️ Architecture |
 | Docker / deployment change | `docs/development.md` | 🚀 Getting Started |

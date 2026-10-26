@@ -237,11 +237,13 @@ function cachedSeasonPosterUrl(rawPoster, tmdbId = "") {
 // does not parse a full TV details blob for every show.
 export function getCanonicalSeasonPosterUrls(item = {}) {
   const identity = showArtworkIdentity(item);
-  if (!identity.tmdb_id && !identity.tvdb_id) return new Map();
-  const rows = selectCachedTvSeasonPostersStmt.all({
-    tmdb_id: identity.tmdb_id,
-    tvdb_id: identity.tvdb_id,
-  });
+  const hasProviderIdentity = Boolean(identity.tmdb_id || identity.tvdb_id || identity.imdb_id);
+  const rows = hasProviderIdentity
+    ? selectCachedTvSeasonPostersStmt.all({
+      tmdb_id: identity.tmdb_id,
+      tvdb_id: identity.tvdb_id,
+    })
+    : [];
   const posters = new Map();
   for (const row of rows) {
     if (row.season_number == null) continue;
@@ -251,7 +253,11 @@ export function getCanonicalSeasonPosterUrls(item = {}) {
     if (posterUrl) posters.set(seasonNumber, posterUrl);
   }
   // A chosen season poster outranks the provider art cached above.
-  for (const identityKey of mediaArtworkIdentityKeys(item, { includeTitle: false })) {
+  const identityKeys = mediaArtworkIdentityKeys(item, { includeTitle: false });
+  const lookupKeys = identityKeys.length
+    ? identityKeys
+    : mediaArtworkIdentityKeys(item, { includeTitle: true });
+  for (const identityKey of lookupKeys) {
     for (const row of selectSeasonArtworkByKeyStmt.all(identityKey)) {
       if (row.poster_url) posters.set(Number(row.season_number), row.poster_url);
     }

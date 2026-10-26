@@ -1,3 +1,5 @@
+import { getTrackerAdapter, isTrackerProvider, trackerProviderIds } from "./trackers/registry.js";
+
 const MAX_REASON_LENGTH = 900;
 const MAX_EXAMPLES = 8;
 const MAX_RESTORE_ISSUES = 5_000;
@@ -19,7 +21,7 @@ function text(value, fallback = "") {
 
 function providerLabel(provider) {
   const key = String(provider || "").trim().toLowerCase();
-  if (key === "trakt") return "Trakt";
+  if (isTrackerProvider(key)) return getTrackerAdapter(key).label;
   if (key === "plex") return "Plex";
   if (key === "emby") return "Emby";
   if (key === "jellyfin") return "Jellyfin";
@@ -32,7 +34,7 @@ function restoreIssueProvider(issue = {}) {
 
 function isExpectedRestoreAvailabilitySkip(issue = {}) {
   const provider = restoreIssueProvider(issue);
-  if (provider === "trakt") return false;
+  if (isTrackerProvider(provider)) return false;
   if (issue.expectedSkip === true) return true;
   const detail = [issue.reason, issue.lastError, issue.detail]
     .map((value) => String(value || ""))
@@ -64,13 +66,20 @@ function idPart(...values) {
   return runKey(...values).replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 100) || "latest";
 }
 
-function parseTraktRejection(reason) {
+// The tracker named by a "<Label> rejected N restored plays" restore failure.
+export function trackerForRejection(reason) {
+  const label = String(reason || "").match(/(\S+) rejected \d+ restored play/i)?.[1]?.toLowerCase() || "";
+  return trackerProviderIds().find((provider) => provider === label || getTrackerAdapter(provider).label.toLowerCase() === label) || "";
+}
+
+function parseTrackerRejection(reason) {
   // Restore issue updates use normal singular/plural grammar, while older
   // failures used the literal "play(s)" wording. Accept all three forms so
-  // the attention item keeps its Trakt-specific actions as issues are
+  // the attention item keeps its tracker-specific actions as issues are
   // resolved one at a time.
-  const match = String(reason || "").match(/Trakt rejected (\d+) restored play(?:\(s\)|s?) after (\d+) retries/i);
-  if (!match) return null;
+  const provider = trackerForRejection(reason);
+  const match = String(reason || "").match(/rejected (\d+) restored play(?:\(s\)|s?) after (\d+) retries/i);
+  if (!provider || !match) return null;
   const examplesMatch = String(reason || "").match(/\(for example:\s*(.*?)\)\s*$/i);
   const examples = examplesMatch
     ? examplesMatch[1]
@@ -80,6 +89,7 @@ function parseTraktRejection(reason) {
       .slice(0, MAX_EXAMPLES)
     : [];
   return {
+    provider,
     rejectedCount: Number(match[1]) || 0,
     retryCount: Number(match[2]) || 0,
     examples,
@@ -142,7 +152,13 @@ function localHrefForRestoreIssue(issue = {}) {
   return title ? `/search?q=${encodeURIComponent(title)}` : "";
 }
 
-function restoreIssueItems(result = {}, trakt = null, runId = "", reason = "") {
+// Older restore results kept rejected plays under the tracker's own key.
+export function trackerRejectedItems(result = {}) {
+  const provider = trackerProviderIds().find((id) => Array.isArray(objectValue(result[id]).rejectedItems));
+  return provider ? result[provider].rejectedItems : [];
+}
+
+function restoreIssueItems(result = {}, tracker = null, runId = "", reason = "") {
   const value = objectValue(result);
   const persisted = Array.isArray(value.restoreIssues)
     ? value.restoreIssues
@@ -150,13 +166,11 @@ function restoreIssueItems(result = {}, trakt = null, runId = "", reason = "") {
       ? value.restoreItems
       : Array.isArray(value.rejectedItems)
         ? value.rejectedItems
-        : Array.isArray(value.trakt?.rejectedItems)
-          ? value.trakt.rejectedItems
-          : [];
-  const parsedCount = Number(value.restoreIssueCount || trakt?.rejectedCount || 0);
+        : trackerRejectedItems(value);
+  const parsedCount = Number(value.restoreIssueCount || tracker?.rejectedCount || 0);
   const rawItems = persisted.length
     ? persisted
-    : (trakt?.examples || []).map((title, index) => ({
+    : (tracker?.examples || []).map((title, index) => ({
       key: `restore-example:${idPart(`${runId}-${index}-${title}`)}`,
       title,
       sourceTitle: title,
@@ -165,7 +179,7 @@ function restoreIssueItems(result = {}, trakt = null, runId = "", reason = "") {
     }));
   const normalizedItems = rawItems.slice(0, MAX_RESTORE_ISSUES).map((raw, index) => {
     const input = typeof raw === "string" ? { title: raw } : objectValue(raw);
-    const provider = text(input.provider || input.target || (trakt ? "trakt" : "")).toLowerCase();
+    const provider = text(input.provider || input.target || tracker?.provider).toLowerCase();
     const title = text(input.sourceTitle || input.title, "Unknown media").slice(0, 400);
     const titleCoordinates = episodeCoordinatesFromTitle(title);
     const type = String(input.type || input.mediaType || "").toLowerCase() === "movie"
@@ -195,9 +209,9 @@ function restoreIssueItems(result = {}, trakt = null, runId = "", reason = "") {
       sourceIds: objectValue(input.sourceIds),
       reason: text(
         input.lastError || input.reason,
-        provider && provider !== "trakt"
+        provider && !isTrackerProvider(provider)
           ? `${providerLabel(provider)} did not confirm the restored state.`
-          : reason || "Trakt could not match this restored play.",
+          : reason || `${provider ? providerLabel(provider) : "The tracker"} could not match this restored play.`,
       ),
       candidate: input.candidate === true,
     };
@@ -206,17 +220,18 @@ function restoreIssueItems(result = {}, trakt = null, runId = "", reason = "") {
     // Media-server restore issues may only retain the playstate media key
     // when the matching watch-history row was not available during the
     // restore pass. That key is still enough for the repair route to reload
-    // the canonical playstate and retry the affected target. Trakt repairs
-    // still require the source watch-history row because its retry logic
+    // the canonical playstate and retry the affected target. Tracker repairs
+    // still require the source watch-history row because their retry logic
     // re-resolves that row's provider identity.
-    const hasRepairSource = item.provider === "trakt"
+    const isTracker = isTrackerProvider(item.provider);
+    const hasRepairSource = isTracker
       ? Boolean(item.sourceRowId)
       : Boolean(item.sourceRowId || item.sourcePlaystateKey || item.sourceMediaKey);
     item.canRepair = hasRepairSource
       && !item.candidate
       && item.type !== "unknown"
-      && (item.provider === "trakt" || ["plex", "emby", "jellyfin"].includes(item.provider));
-    item.repairLabel = item.provider && item.provider !== "trakt"
+      && (isTracker || ["plex", "emby", "jellyfin"].includes(item.provider));
+    item.repairLabel = item.provider && !isTracker
       ? `Retry on ${providerLabel(item.provider)}`
       : "Retry this play";
     return item;
@@ -256,11 +271,12 @@ function recommendationsFor(reason, { source = "sync", provider = "", requiresMa
       "If the item is intentionally unavailable on that app, skip the issue to let the remaining restore targets complete.",
     ];
   }
-  if (provider === "trakt" && /rejected .*restored play|could not match|not_found/.test(lower)) {
+  if (isTrackerProvider(provider) && /rejected .*restored play|could not match|not_found/.test(lower)) {
+    const tracker = providerLabel(provider);
     return [
-      "Check the listed titles on Trakt and confirm their series, season, and episode numbering.",
-      "For split or combined episodes, confirm the canonical mapping used by Trakt and rerun the restore.",
-      "If the items do not exist on Trakt, skip this issue to accept the partial Trakt replay.",
+      `Check the listed titles on ${tracker} and confirm their series, season, and episode numbering.`,
+      `For split or combined episodes, confirm the canonical mapping used by ${tracker} and rerun the restore.`,
+      `If the items do not exist on ${tracker}, skip this issue to accept the partial ${tracker} replay.`,
     ];
   }
   if (source === "restore" && /no matching item|not found|did not confirm|projection/.test(lower)) {
@@ -306,64 +322,68 @@ function restoreAttention(runtime = {}) {
   const kind = runKey(runtime.restoreSyncKind, result.restoreKind, "restore");
   const runId = runKey(runtime.restoreSyncRunId, result.runId, result.finishedAt);
   const reason = failureReason(result);
-  const trakt = parseTraktRejection(reason);
-  const restoreIssues = restoreIssueItems(result, trakt, runId, reason);
-  const targetIssues = restoreIssues.items.filter((issue) => issue.provider && issue.provider !== "trakt");
+  const rejection = parseTrackerRejection(reason);
+  const restoreIssues = restoreIssueItems(result, rejection, runId, reason);
+  const targetIssues = restoreIssues.items.filter((issue) => issue.provider && !isTrackerProvider(issue.provider));
   const requiresMatch = restoreIssues.items.some(restoreIssueRequiresMatch);
-  const storedTraktIssues = restoreIssues.items.filter((issue) => issue.provider === "trakt");
-  const hasTraktIssues = Boolean(trakt || storedTraktIssues.length);
+  const storedTrackerIssues = restoreIssues.items.filter((issue) => isTrackerProvider(issue.provider));
+  const trackers = [...new Set([rejection?.provider, ...storedTrackerIssues.map((issue) => issue.provider)].filter(Boolean))];
   const expectedSkipCount = restoreIssues.expectedSkipCount;
   const providers = [...new Set(restoreIssues.items.map((issue) => issue.provider).filter(Boolean))];
-  const traktOnly = hasTraktIssues && targetIssues.length === 0;
-  const traktSummary = trakt || (storedTraktIssues.length ? {
-    rejectedCount: storedTraktIssues.length,
-    retryCount: Number(result.trakt?.retryCount) || 0,
-    examples: storedTraktIssues.slice(0, MAX_EXAMPLES).map((issue) => issue.title),
+  // One tracker rejecting part of its replay gets that tracker's actions;
+  // anything mixed is reported as a projection failure.
+  const trackerOnly = trackers.length === 1 && targetIssues.length === 0;
+  const tracker = trackerOnly ? trackers[0] : "";
+  const trackerName = providerLabel(tracker);
+  const trackerSummary = rejection || (storedTrackerIssues.length ? {
+    rejectedCount: storedTrackerIssues.length,
+    retryCount: Number(objectValue(result[tracker]).retryCount) || 0,
+    examples: storedTrackerIssues.slice(0, MAX_EXAMPLES).map((issue) => issue.title),
   } : null);
-  const id = traktOnly
-    ? `restore:${idPart(runId)}:trakt-rejected`
+  const id = trackerOnly
+    ? `restore:${idPart(runId)}:${tracker}-rejected`
     : `restore:${idPart(runId)}:projection-failed`;
   const operationLabel = kind === "backup_restore" ? "Authoritative watch-history restore" : "Authoritative watch-state restore";
   const providerSummary = providers.map((provider) => {
     const count = restoreIssues.items.filter((issue) => issue.provider === provider).length;
     return `${count} ${providerLabel(provider)}`;
   }).join(", ");
-  const explanation = traktOnly
-    ? `${operationLabel} is still paused because Trakt rejected ${traktSummary.rejectedCount} restored play${traktSummary.rejectedCount === 1 ? "" : "s"}. This can happen when a source represents a split, combined, or special episode differently from Trakt (for example, two parts versus one longer episode), so Plekt cannot confirm those records are the same plays. Normal sync is fenced so it cannot overwrite the partially restored state while this issue is unresolved.`
+  const explanation = trackerOnly
+    ? `${operationLabel} is still paused because ${trackerName} rejected ${trackerSummary.rejectedCount} restored play${trackerSummary.rejectedCount === 1 ? "" : "s"}. This can happen when a source represents a split, combined, or special episode differently from ${trackerName} (for example, two parts versus one longer episode), so Plekt cannot confirm those records are the same plays. Normal sync is fenced so it cannot overwrite the partially restored state while this issue is unresolved.`
     : targetIssues.length
-      ? `${operationLabel} is still paused because ${providerSummary || "one or more connected apps"} did not confirm every restored item. ${expectedSkipCount ? `${expectedSkipCount} item${expectedSkipCount === 1 ? " was" : "s were"} absent from a connected library and was recorded as an expected skip. ` : ""}${requiresMatch ? "At least one failed item no longer has enough saved row data for a direct retry; fix its local match and run the restore again to capture a fresh item-level repair. " : ""}Other targets and Trakt may already have completed; normal sync remains fenced until each outstanding item is repaired or skipped.`
+      ? `${operationLabel} is still paused because ${providerSummary || "one or more connected apps"} did not confirm every restored item. ${expectedSkipCount ? `${expectedSkipCount} item${expectedSkipCount === 1 ? " was" : "s were"} absent from a connected library and was recorded as an expected skip. ` : ""}${requiresMatch ? "At least one failed item no longer has enough saved row data for a direct retry; fix its local match and run the restore again to capture a fresh item-level repair. " : ""}Other targets and trackers may already have completed; normal sync remains fenced until each outstanding item is repaired or skipped.`
     : `${operationLabel} is still paused because this failure means the connected projections are not known to be complete. Normal sync is fenced so it cannot overwrite the partially restored state while this issue is unresolved.`;
 
   return {
     id,
     source: "restore",
-    kind: traktOnly ? "restore_trakt_rejections" : "restore_projection_failures",
+    kind: trackerOnly ? "restore_tracker_rejections" : "restore_projection_failures",
     severity: "blocking",
-    title: traktOnly ? "Trakt rejected part of the restored watch history" : `${operationLabel} needs attention`,
-    summary: traktOnly
-      ? `${traktSummary.rejectedCount} restored Trakt play${traktSummary.rejectedCount === 1 ? "" : "s"} could not be accepted after ${traktSummary.retryCount} retries.`
+    title: trackerOnly ? `${trackerName} rejected part of the restored watch history` : `${operationLabel} needs attention`,
+    summary: trackerOnly
+      ? `${trackerSummary.rejectedCount} restored ${trackerName} play${trackerSummary.rejectedCount === 1 ? "" : "s"} could not be accepted after ${trackerSummary.retryCount} retries.`
       : targetIssues.length
         ? `${restoreIssues.issueCount} restored item${restoreIssues.issueCount === 1 ? "" : "s"} still need attention${providerSummary ? ` (${providerSummary})` : ""}.${expectedSkipCount ? ` ${expectedSkipCount} expected availability skip${expectedSkipCount === 1 ? "" : "s"} omitted.` : ""}`
         : reason,
     explanation,
     recommendations: recommendationsFor(reason, {
       source: "restore",
-      provider: traktOnly ? "trakt" : targetIssues.length === 1 ? targetIssues[0].provider : "the affected app",
+      provider: trackerOnly ? tracker : targetIssues.length === 1 ? targetIssues[0].provider : "the affected app",
       requiresMatch,
     }),
     canSkip: true,
-    skipLabel: traktOnly ? "Skip all remaining and resume sync" : "Skip and resume sync",
+    skipLabel: trackerOnly ? "Skip all remaining and resume sync" : "Skip and resume sync",
     createdAt: Number(result.finishedAt || runtime.restoreSyncStartedAt || 0) || null,
     context: {
       restoreKind: kind,
       runId,
       ...(providers.length ? { providers } : {}),
-      ...(traktOnly ? {
-        provider: "trakt",
-        rejectedCount: traktSummary.rejectedCount,
-        retryCount: traktSummary.retryCount,
-        examples: traktSummary.examples,
-        issueCount: restoreIssues.issueCount || traktSummary.rejectedCount,
+      ...(trackerOnly ? {
+        provider: tracker,
+        rejectedCount: trackerSummary.rejectedCount,
+        retryCount: trackerSummary.retryCount,
+        examples: trackerSummary.examples,
+        issueCount: restoreIssues.issueCount || trackerSummary.rejectedCount,
         issueItems: restoreIssues.items,
         issueItemsComplete: restoreIssues.complete,
         ...(expectedSkipCount ? { expectedSkipCount } : {}),
@@ -449,7 +469,7 @@ function isSkipped(item, runtime = {}) {
 }
 
 export function buildSyncAttentionItems(runtime = {}, onboarding = {}) {
-  const items = [];
+  const items = [...(runtime.trackerWriteAttention || [])];
   const restore = restoreAttention(runtime);
   if (restore) items.push(restore);
 
@@ -459,8 +479,11 @@ export function buildSyncAttentionItems(runtime = {}, onboarding = {}) {
     const item = initialImportAttention(provider, objectValue(entry));
     if (item) items.push(item);
   }
-  const trakt = initialImportAttention("trakt", objectValue(backgroundImports.trakt));
-  if (trakt) items.push(trakt);
+  const trackers = objectValue(backgroundImports.trackers);
+  for (const provider of trackerProviderIds()) {
+    const tracker = initialImportAttention(provider, objectValue(trackers[provider]));
+    if (tracker) items.push(tracker);
+  }
   const push = pushSyncAttention(onboarding);
   if (push) items.push(push);
 

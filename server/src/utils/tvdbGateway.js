@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { db, parseJson, toJson } from "../db.js";
 import { fetchWithTimeout } from "./outbound.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
+import { readSharedTvdbToken, writeSharedTvdbToken } from "./sharedMetadataStore.js";
 
 // Shared TVDB v4 project key - intentionally public: TVDB issues these for
 // open-source apps to embed, and rate-limits them upstream. Operators can swap
@@ -258,8 +259,17 @@ async function effectiveApiKey() {
 async function getToken({ forceRefresh = false, lane = "enrichment" } = {}) {
   const apiKey = await effectiveApiKey();
   const keyHash = secretFingerprint(apiKey);
+  const sharedToken = readSharedTvdbToken();
+  if (!forceRefresh && sharedToken?.tvdbToken && sharedToken.tvdbTokenKeyHash === keyHash && fresh(sharedToken.tvdbTokenIssuedAtMs, TOKEN_LIFETIME_MS)) {
+    return sharedToken.tvdbToken;
+  }
   const runtime = await loadRuntimeState().catch(() => ({}));
   if (!forceRefresh && runtime.tvdbToken && runtime.tvdbTokenKeyHash === keyHash && fresh(runtime.tvdbTokenIssuedAtMs, TOKEN_LIFETIME_MS)) {
+    writeSharedTvdbToken({
+      tvdbToken: runtime.tvdbToken,
+      tvdbTokenKeyHash: runtime.tvdbTokenKeyHash,
+      tvdbTokenIssuedAtMs: runtime.tvdbTokenIssuedAtMs,
+    });
     return runtime.tvdbToken;
   }
   await throttle({ lane });
@@ -281,7 +291,10 @@ async function getToken({ forceRefresh = false, lane = "enrichment" } = {}) {
     error.status = 502;
     throw error;
   }
-  await setRuntimeState({ tvdbToken: token, tvdbTokenKeyHash: keyHash, tvdbTokenIssuedAtMs: Date.now() });
+  const issuedAtMs = Date.now();
+  const tokenState = { tvdbToken: token, tvdbTokenKeyHash: keyHash, tvdbTokenIssuedAtMs: issuedAtMs };
+  writeSharedTvdbToken(tokenState);
+  await setRuntimeState(tokenState);
   return token;
 }
 

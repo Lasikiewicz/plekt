@@ -10,6 +10,7 @@ Rules that hold regardless of which skill is running:
   request pages in connected Chrome, compare status/votes/comments with the ignored local
   snapshot, and draft (never post) replies a maintainer needs. If a provider asks for login,
   stop at that provider and tell the user which session needs attention.
+- Before any remote push, inspect `plan/bugs.md`. Any unchecked bug or follow-up blocks develop, alpha, and main pushes until resolved and verified/closed; deferral does not clear the gate. The pre-push hook enforces this.
 - Never bypass a hook with `--no-verify`, and never bypass the changelog rebuild.
 - The `.githooks/post-commit`, `post-merge`, and `post-rewrite` hooks regenerate the ignored
   `plan/updates.md` ledger from committed history since `origin/main`. Refresh it with

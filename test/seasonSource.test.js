@@ -36,7 +36,7 @@ test("resolveSeasonSource: per-show override beats saved source, which beats the
 });
 
 test("normalizeStoredConfig gives a metadata.seasonSource of tvdb when nothing is stored", () => {
-  assert.deepEqual(normalizeStoredConfig({}).metadata, { seasonSource: "tvdb" });
+  assert.deepEqual(normalizeStoredConfig({}).metadata, { seasonSource: "tvdb", anidbEnabled: false });
   assert.equal(normalizeStoredConfig({ metadata: { seasonSource: "nope" } }).metadata.seasonSource, "tvdb");
   assert.equal(normalizeStoredConfig({ metadata: { seasonSource: "tmdb" } }).metadata.seasonSource, "tmdb");
 });

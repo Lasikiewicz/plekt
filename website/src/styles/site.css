@@ -5238,15 +5238,15 @@ html:root .simple-feature-group-title {
 
 .simple-home-comparison-table {
   width: 100%;
-  min-width: 64rem;
+  min-width: 46rem;
   table-layout: fixed;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .simple-home-comparison-table th,
 .simple-home-comparison-table td {
-  padding: 0.72rem 0.85rem;
+  padding: 0.5rem 0.4rem;
   border-bottom: 1px solid var(--line-soft);
   text-align: center;
   vertical-align: middle;
@@ -5272,12 +5272,14 @@ html:root .simple-feature-group-title {
 
 .simple-home-comparison-table thead th:first-child {
   z-index: 2;
+  width: 20rem;
+  max-width: 20rem;
   background: var(--surface-soft);
 }
 
 .simple-home-comparison-table tbody th {
-  width: 14rem;
-  max-width: 14rem;
+  width: 20rem;
+  max-width: 20rem;
   color: var(--text);
   font-weight: 550;
   white-space: normal;
@@ -5286,7 +5288,7 @@ html:root .simple-feature-group-title {
 
 .simple-home-comparison-table td {
   color: var(--soft);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .simple-home-comparison-table tr:last-child th,
@@ -5323,8 +5325,9 @@ html:root .simple-feature-group-title {
   max-width: none;
   margin: 1rem 0 0;
   color: var(--muted);
-  font-size: 1rem;
+  font-size: 0.85rem;
   line-height: 1.6;
+  text-align: right;
 }
 
 .simple-home .screenshot-frame,
@@ -5726,6 +5729,155 @@ html:root .modern-home-intro .simple-home-preview .simple-section-heading > p {
   margin: 0.8rem 0 0;
   font-size: clamp(1rem, 1.2vw, 1.1rem);
   line-height: 1.55;
+}
+
+html:root .modern-home-intro .simple-home-quickstart {
+  display: grid;
+  gap: 1rem;
+  margin: clamp(1.5rem, 3vw, 2.5rem) 0;
+  padding: clamp(1rem, 2.4vw, 1.75rem);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--panel);
+}
+
+html:root .simple-home-quickstart .simple-eyebrow {
+  display: block;
+  margin-bottom: 0.4rem;
+  color: var(--accent-strong);
+}
+
+.quickstart-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.quickstart-heading h2 {
+  margin: 0;
+}
+
+.quickstart-heading > p {
+  max-width: 38ch;
+  margin: 0 0 0.1rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.quickstart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(15rem, 0.75fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.quickstart-compose,
+.quickstart-steps {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+}
+
+.quickstart-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+}
+
+.quickstart-copy-button {
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  color: var(--text);
+  background: var(--button-surface);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+}
+
+.quickstart-copy-button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.quickstart-compose pre {
+  max-height: 19rem;
+  margin: 0;
+  overflow: auto;
+  color: var(--soft);
+  font-family: var(--font-mono);
+  font-size: 0.71rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.quickstart-copy-status {
+  display: block;
+  min-height: 1.1rem;
+  margin-top: 0.45rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.quickstart-steps ol {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding-left: 1.35rem;
+}
+
+.quickstart-steps li {
+  padding-left: 0.2rem;
+  color: var(--muted);
+}
+
+.quickstart-steps li code {
+  display: block;
+  margin-top: 0.3rem;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  overflow-wrap: anywhere;
+}
+
+.quickstart-steps > p:not(.simple-eyebrow) {
+  margin: 1rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 0.83rem;
+  line-height: 1.5;
+}
+
+.quickstart-steps a:not(.simple-text-link) {
+  color: var(--text);
+  text-decoration-color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+
+.quickstart-steps .simple-text-link {
+  display: inline-block;
+  margin-top: 0.6rem;
+}
+
+@media (max-width: 760px) {
+  .quickstart-heading,
+  .quickstart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .quickstart-heading {
+    display: grid;
+    align-items: start;
+    gap: 0.65rem;
+  }
 }
 
 html:root .modern-home-intro .screenshot-frame img {

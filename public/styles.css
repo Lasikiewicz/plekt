@@ -7,7 +7,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.1.1.0.8") format("woff2");
+  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.1.1.0.9") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -16,7 +16,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.1.1.0.8") format("woff2");
+  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.1.1.0.9") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -25,7 +25,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.1.1.0.8") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.1.1.0.9") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -34,7 +34,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.1.1.0.8") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.1.1.0.9") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -71,19 +71,22 @@
   --text: #f8fafc;
   --soft: #e2e8f0;
   --muted: #94a3b8;
-  --blue: #e5a00d;
+  --blue: #10b981;
   --green: #10b981;
   --yellow: #eab308;
   --red: #f43f5e;
   --field: #0d1115;
-  --accent: #e5a00d;
+  --accent: #10b981;
   --surface: #141b22;
   --surface-hover: #1e2936;
   --text-primary: #f1f5f9;
-  --nav-active-border: #8a5c12;
-  --nav-active-bg: #2a2013;
-  --nav-active-text: #ffe4b0;
+  --nav-active-border: #087c59;
+  --nav-active-bg: #10251f;
+  --nav-active-text: #a7f3d0;
   --radius: 8px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 12px;
   --poster-radius: 8px;
   --library-poster-radius: var(--poster-radius);
   --space-1: 0.25rem;
@@ -219,8 +222,8 @@
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  border-color: rgba(229, 160, 13, 0.42);
-  box-shadow: 0 0 0 1px rgba(229, 160, 13, 0.12), 0 0 22px rgba(229, 160, 13, 0.12);
+  border-color: rgba(16, 185, 129, 0.42);
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.12), 0 0 22px rgba(16, 185, 129, 0.12);
 }
 
 .media-detail-page .immersive-episode-row.is-loading-data::before {
@@ -234,7 +237,7 @@
     transparent 20%,
     rgba(255, 247, 214, 0.04) 34%,
     rgba(255, 247, 214, 0.3) 47%,
-    rgba(229, 160, 13, 0.12) 54%,
+    rgba(16, 185, 129, 0.12) 54%,
     transparent 70%
   );
   transform: translate3d(-125%, 0, 0);
@@ -764,6 +767,13 @@ h2 {
 
 #explorerPanel {
   position: relative;
+}
+
+/* The Dropped-only view swaps panels with the hidden attribute; their display rules would otherwise win. */
+#explorerPanel[hidden],
+#explorerDroppedPanel[hidden],
+#historyPanel[hidden] {
+  display: none;
 }
 
 .media-detail-loader {
@@ -2646,6 +2656,13 @@ html.light-mode .auth-panel .field {
 
 .explorer-hide-toggle span {
   white-space: nowrap;
+}
+
+/* In the desktop navbar each checkbox sits before its own text; the mobile panel keeps it on the right. */
+@media (min-width: 761px) {
+  .explorer-hide-toggle > .explorer-hide-checkbox {
+    order: -1;
+  }
 }
 
 .explorer-hide-checkbox {
@@ -5499,6 +5516,29 @@ details[open] .tool-accordion-chevron::before {
   gap: var(--space-3) !important;
 }
 
+@media (max-width: 640px) {
+  .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary.accordion-header {
+    flex-direction: column !important;
+    gap: var(--space-2);
+  }
+
+  .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary.accordion-header > span:not(.status-pill) {
+    max-width: 100%;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip;
+  }
+
+  .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) .sync-tool-summary-title {
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+}
+
+#traktConnectionPanel details:not([open]) > summary .accordion-chevron {
+  transform: none !important;
+}
+
 #syncTuningForm > .settings-actions,
 .sync-panel .settings-actions {
   margin-top: 0 !important;
@@ -5533,7 +5573,7 @@ details[open] .tool-accordion-chevron::before {
 #syncToolsContent,
 #syncHistoryContent,
 #migrationContent,
-#tautulliImportContent,
+#oneTimeImportsContent,
 #seerrContent,
 #accountContent,
 #refreshMetadataContent {
@@ -5940,7 +5980,8 @@ html.light-mode #syncTuningFields .settings-modal-field:focus-within {
   outline-offset: 2px;
 }
 
-.settings-choice-option input[type="radio"] {
+.settings-choice-option input[type="radio"],
+.settings-choice-option input[type="checkbox"] {
   flex: 0 0 auto;
   width: 1rem;
   height: 1rem;
@@ -6090,6 +6131,7 @@ details.sync-tool-details[open] > summary {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
+  flex: 0 0 auto !important;
 }
 
 .help-read-more {
@@ -6699,6 +6741,11 @@ details.sync-tool-details[open] > summary {
     max-height: calc(100vh - 1rem);
     min-width: 0;
   }
+
+  .initial-sync-modal { width: 100%; max-height: calc(100vh - 1rem); }
+  .initial-sync-dialog-body { max-height: calc(100vh - 5rem); }
+  .initial-sync-destinations { grid-template-columns: minmax(0, 1fr); }
+  .initial-sync-item-heading { align-items: flex-start; }
 
   .confirm-modal-overlay {
     padding: 0.5rem;
@@ -9058,6 +9105,10 @@ details.sync-tool-details[open] > summary {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  .changelog-heading-tabs .changelog-channel-tabs {
+    width: 100%;
+  }
+
   .settings-pane .settings-row-main > .settings-card > .section-heading.changelog-heading.sync-static-heading > span {
     justify-self: start;
     text-align: left;
@@ -9876,9 +9927,15 @@ html.light-mode .poster-overflow-btn {
 
 .poster-overflow-item:hover,
 .poster-overflow-item:focus-visible {
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
+}
+
+.poster-overflow-item:disabled {
+  color: var(--muted);
+  cursor: wait;
+  opacity: 0.55;
 }
 
 .poster-overflow-item-danger {
@@ -12883,7 +12940,7 @@ html.light-mode .global-search input {
 
 .global-search input:focus {
   outline: none;
-  border-bottom-color: #e5a00d;
+  border-bottom-color: #10b981;
 }
 
 #globalSearchDropdown {
@@ -12997,7 +13054,7 @@ html.light-mode .global-search input {
 .search-column-title {
   font-size: 0.85rem;
   font-weight: 800;
-  color: var(--accent, #e5a00d);
+  color: var(--accent, #10b981);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border-bottom: 1px solid var(--line);
@@ -13316,7 +13373,7 @@ html.light-mode .global-search input {
 }
 
 .session-dot {
-  background: #e5a00d;
+  background: #10b981;
   box-shadow: none;
 }
 
@@ -13387,6 +13444,66 @@ html.light-mode .global-search input {
   padding: var(--space-3) 0;
 }
 
+.sidebar-build-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.sidebar-project-links {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+body.hide-sidebar-links .sidebar-project-links {
+  display: none;
+}
+
+.sidebar-project-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  color: var(--muted);
+  border-radius: 0.35rem;
+}
+
+.sidebar-project-link:hover {
+  color: var(--text);
+}
+
+.sidebar-sponsor {
+  color: #db61a2;
+}
+
+.sidebar-website-icon {
+  width: 24px;
+  height: 24px;
+  filter: grayscale(1);
+}
+
+.sidebar-website-letter {
+  fill: #fff;
+}
+
+html.light-mode .sidebar-website-letter {
+  fill: #0b0f12;
+}
+
+.sidebar-sponsor:hover {
+  color: #bf3989;
+}
+
+.sidebar-project-link:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .app-version {
   border: 0;
   background: transparent;
@@ -13409,7 +13526,7 @@ html.light-mode .global-search input {
 }
 
 /* Two adjacent <button> elements rendered as one seamless pill - the dismiss
-   "x" reads as sitting inside the "Complete onboarding" button, but stays a
+   "x" reads as sitting inside the "Finish Setup" button, but stays a
    real, independently-focusable/clickable control rather than an illegal
    nested <button>. */
 .sidebar-onboarding-cta {
@@ -13507,6 +13624,93 @@ html.light-mode .global-search input {
   outline-offset: -3px;
   border-radius: 4px;
 }
+
+.initial-sync-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  width: calc(100% - 1.3rem);
+  min-width: 0;
+  margin: 0.2rem 0.65rem 0.08rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
+  border-radius: 5px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+}
+
+.initial-sync-chip.hidden { display: none; }
+.initial-sync-chip:hover,
+.initial-sync-chip:focus-visible {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.initial-sync-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.initial-sync-chip[data-status="interrupted"],
+.initial-sync-chip[data-status="partial"] {
+  color: var(--yellow);
+  border-color: color-mix(in srgb, var(--yellow) 38%, var(--line));
+  background: color-mix(in srgb, var(--yellow) 8%, transparent);
+}
+.initial-sync-chip[data-status="failed"] {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 38%, var(--line));
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+}
+.initial-sync-chip-dot { width: 0.42rem; height: 0.42rem; flex: 0 0 auto; border-radius: 50%; background: currentColor; }
+
+.initial-sync-modal {
+  width: min(760px, 92vw);
+  max-height: min(820px, 90vh);
+  overflow: hidden;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.initial-sync-modal .modal-head h2 { margin: 0; font-size: 1rem; }
+.initial-sync-dialog-body {
+  min-height: 0;
+  max-height: calc(90vh - 6rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--space-1) var(--space-1) 0;
+}
+.initial-sync-summary { margin: 0 0 0.35rem; color: var(--text); font-weight: 750; }
+.initial-sync-explanation,
+.initial-sync-empty,
+.initial-sync-truncated {
+  margin: 0 0 var(--space-3);
+  color: var(--muted);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.initial-sync-section-title { margin: var(--space-3) 0 var(--space-2); font-size: 0.82rem; font-weight: 750; }
+.initial-sync-destinations { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: var(--space-2); }
+.initial-sync-destination,
+.initial-sync-item {
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-2);
+}
+.initial-sync-destination-heading,
+.initial-sync-item-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-2); }
+.initial-sync-destination-heading h3 { min-width: 0; margin: 0; font-size: 0.8rem; overflow-wrap: anywhere; }
+.initial-sync-status-label,
+.initial-sync-item-heading > span { flex: 0 0 auto; color: var(--muted); font-size: 0.68rem; font-weight: 650; }
+.initial-sync-destination-count { margin: var(--space-1) 0 0; color: var(--text); font-size: 0.78rem; font-weight: 700; }
+.initial-sync-destination-detail,
+.initial-sync-item-meta,
+.initial-sync-item-detail { margin: 0.2rem 0 0; color: var(--muted); font-size: 0.72rem; line-height: 1.4; overflow-wrap: anywhere; }
+.initial-sync-items { display: grid; gap: 0.35rem; max-height: 34vh; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.initial-sync-item { padding: 0.55rem 0.65rem; border-radius: 5px; }
+.initial-sync-item-heading strong { min-width: 0; color: var(--text); font-size: 0.76rem; overflow-wrap: anywhere; }
+.initial-sync-truncated { margin-bottom: var(--space-2); font-size: 0.72rem; }
 
 .sidebar-sync-attention-button[data-attention-tone="error"] {
   color: var(--red);
@@ -13700,15 +13904,15 @@ html.light-mode .global-search input {
 }
 
 .sidebar-appearance-text-size > summary:hover {
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .sidebar-appearance-text-size[open] > summary {
-  border-left-color: #e5a00d;
-  background: rgba(229, 160, 13, 0.12);
-  color: #e5a00d;
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 html.light-mode .sidebar-appearance-text-size > summary {
@@ -13796,16 +14000,16 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
 }
 
 .sidebar-appearance-list-item:hover {
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .sidebar-appearance-list-item.active,
 .sidebar-appearance-list-item:has(input:checked) {
-  border-left-color: #e5a00d;
-  background: rgba(229, 160, 13, 0.12);
-  color: #e5a00d;
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 .sidebar-appearance-list-item.active svg,
@@ -13814,7 +14018,7 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
 }
 
 .sidebar-appearance-list-item input:focus-visible {
-  outline: 2px solid #e5a00d;
+  outline: 2px solid #10b981;
   outline-offset: -2px;
 }
 
@@ -13901,16 +14105,16 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
 
 .nav-tab:hover {
   border-color: transparent;
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .nav-tab.active {
   border-color: transparent;
-  border-left-color: #e5a00d;
-  background: rgba(229, 160, 13, 0.12);
-  color: #e5a00d;
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 .topbar .nav-tab {
@@ -14410,7 +14614,7 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
    closed behind the poster without reflowing them. The open width follows
    the dashboard's per-state card widths below. */
 #timeline-view .dashboard-row-compact {
-  --compact-poster-width: 10.25rem;
+  --compact-poster-width: 11rem;
   --compact-open-width: 385px;
 }
 
@@ -14428,14 +14632,36 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
 }
 
 #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card:not(.dashboard-card-open) {
-  flex-basis: calc(var(--compact-poster-width) + 2px);
+  /* Let the height-limited 2:3 poster determine the folded card width. Using
+     the maximum poster width leaves a blank strip when the row is shorter. */
+  flex-basis: auto;
+  position: relative;
   cursor: pointer;
 }
 
+/* The poster can be narrower than its maximum when the dashboard row is
+   height-limited. Keep the detail column hidden until the folded card opens,
+   so it cannot peek out past the poster's right edge. */
+#timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card:not(.dashboard-card-open) > .history-card-details {
+  position: absolute;
+  inset: 0 auto 0 100%;
+  visibility: hidden;
+}
+
+#timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card.dashboard-card-open > .history-card-details {
+  position: static;
+  visibility: visible;
+}
+
 #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card > .history-card-poster-wrapper {
-  flex: 0 0 var(--compact-poster-width);
-  width: var(--compact-poster-width);
+  /* Width follows the stretched card height at 2:3 so the full poster stays
+     in view; the variable only caps Safari runaway growth and the fold width. */
+  flex: 0 0 auto;
+  width: auto;
+  max-width: var(--compact-poster-width);
+  min-width: 0;
   align-self: stretch;
+  aspect-ratio: 2 / 3;
 }
 
 #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card > .history-card-details {
@@ -14444,24 +14670,13 @@ body:has(#sidebarAppearanceMediaGroup:not(.hidden)) .sidebar-appearance-list-ite
   min-width: 0;
 }
 
-/* Phones stack the poster over the text, so a folded card just hides it. */
+/* Phones keep the same sideways fold with a smaller poster and open card.
+   8.5rem is exact 2:3 for the 12.75rem-tall mobile cards. */
 @media (max-width: 640px) {
-  #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card,
-  #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card:not(.dashboard-card-open) {
-    flex-basis: clamp(128px, 40vw, 176px);
-  }
-
-  #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card > .history-card-poster-wrapper {
-    flex: 0 0 auto;
-    width: 100%;
-  }
-
-  #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card > .history-card-details {
-    width: auto;
-  }
-
-  #timeline-view .dashboard-row-compact :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card:not(.dashboard-card-open) > .history-card-details {
-    display: none;
+  #timeline-view .dashboard-row-compact,
+  #timeline-view[data-dash-state] .dashboard-row-compact {
+    --compact-poster-width: 8.5rem;
+    --compact-open-width: min(21rem, calc(100vw - 3rem));
   }
 }
 
@@ -14733,6 +14948,22 @@ html.light-mode #timeline-view .part-watched-app-badge {
   to { opacity: 0; transform: translate3d(12px, 0, 0) scale(0.97); }
 }
 
+/* A dropped card dissolves block by block through an animated SVG mask (poster-menu.js), then stays hidden until the rail repaints. */
+.dashboard-up-next-card.dropped-card-scrub,
+.shared-media-card.dropped-card-scrub,
+#explorerDroppedPanel .explorer-history-card.dropped-card-scrub {
+  pointer-events: none;
+  -webkit-mask: var(--dropped-card-mask) 0 0 / 100% 100% no-repeat;
+  mask: var(--dropped-card-mask) 0 0 / 100% 100% no-repeat;
+}
+
+.dashboard-up-next-card.dropped-card-gone,
+.shared-media-card.dropped-card-gone,
+#explorerDroppedPanel .explorer-history-card.dropped-card-gone {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 @media (max-width: 480px) {
   .dashboard-part-watched-card .history-card-actions {
     grid-template-columns: 1fr;
@@ -14748,14 +14979,17 @@ html.light-mode #timeline-view .part-watched-app-badge {
   }
 }
 
-/* Keep a fixed poster column at desktop widths. Safari can derive an automatic
-   flex basis from a landscape episode still, then let the poster grow with the
-   card's wrapping text until the details are squeezed out. */
+/* Size the poster from the card height at 2:3 so the full artwork stays in
+   view. Cap width so Safari cannot take a landscape still's intrinsic size as
+   the flex basis and squeeze the details out. */
 @media (min-width: 641px) {
   #timeline-view .dashboard-history-card-row .dashboard-history-page-card > .history-card-poster-wrapper {
-    flex: 0 0 10rem;
-    width: 10rem;
-    min-width: 10rem;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
+    max-width: 11rem;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
   }
 }
 
@@ -14763,23 +14997,27 @@ html.light-mode #timeline-view .part-watched-app-badge {
   .page-shell[data-active-view="dashboard"] .dashboard-history-card-row .dashboard-history-page-card,
   #timeline-view[data-dash-state="2"] .dashboard-history-card-row .dashboard-history-page-card,
   #timeline-view[data-dash-state="3"] .dashboard-history-card-row .dashboard-history-page-card {
-    flex: 0 0 clamp(128px, 40vw, 176px);
-    flex-direction: column;
+    flex: 0 0 min(21rem, calc(100vw - 3rem));
+    flex-direction: row;
+    height: 12.75rem;
+    min-height: 12.75rem;
     /* The generic <= 600px .history-page-card rule sets flex-start, which
        sizes the details to their text and clips it past the card edge. */
     align-items: stretch;
-    padding: 0.5rem;
-    gap: 0.5rem;
+    padding: 0;
+    gap: 0;
   }
 
   #timeline-view #tvHistoryRow .dashboard-part-watched-card,
   #timeline-view #movieHistoryRow .dashboard-part-watched-card {
-    flex: 0 0 clamp(128px, 40vw, 176px);
+    flex-basis: min(21rem, calc(100vw - 3rem));
   }
 
   .page-shell[data-active-view="dashboard"] .dashboard-history-card-row .history-card-poster-wrapper {
-    width: 100%;
-    height: auto;
+    /* 8.5rem × 12.75rem = 2:3, so the full poster fits the mobile card. */
+    flex: 0 0 8.5rem;
+    width: 8.5rem;
+    height: 100%;
     max-height: none;
   }
 
@@ -14997,8 +15235,8 @@ html.light-mode #timeline-view .part-watched-app-badge {
 }
 
 .field:focus {
-  border-color: #e5a00d;
-  box-shadow: 0 0 0 2px rgba(229, 160, 13, 0.18);
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18);
 }
 
 .now-playing-grid {
@@ -15129,7 +15367,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
 
 .history-action-pill {
   max-width: 100%;
-  border-color: rgba(229, 160, 13, 0.55);
+  border-color: rgba(16, 185, 129, 0.55);
   background: rgba(20, 20, 20, 0.8);
   color: #d8b566;
   padding: 0.14rem 0.36rem;
@@ -15472,7 +15710,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
 
   .nav-tab:hover,
   .nav-tab.active {
-    border-left-color: #e5a00d;
+    border-left-color: #10b981;
     border-bottom-color: transparent;
   }
 
@@ -15487,7 +15725,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
   }
 
   .settings-tab.active {
-    border-left-color: #e5a00d;
+    border-left-color: #10b981;
   }
 
   .sidebar-sub-menu {
@@ -15509,13 +15747,13 @@ html.light-mode #timeline-view .part-watched-app-badge {
   .sidebar-sub-menu .settings-tab:hover,
   .sidebar-sub-menu .backups-sub-tab:hover,
   .sidebar-sub-menu .help-menu-item:hover {
-    border-left-color: #e5a00d;
+    border-left-color: #10b981;
   }
 
   .sidebar-sub-menu .settings-tab.active,
   .sidebar-sub-menu .backups-sub-tab.active,
   .sidebar-sub-menu .help-menu-item.active {
-    border-left-color: #e5a00d;
+    border-left-color: #10b981;
   }
 
   .sidebar-sub-menu .help-menu-group {
@@ -15540,7 +15778,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
   }
 
   .sidebar-sub-menu .settings-group-parent.active {
-    border-left-color: #e5a00d;
+    border-left-color: #10b981;
   }
 
   .sidebar-sub-menu .settings-group-child {
@@ -15554,7 +15792,7 @@ html.light-mode #timeline-view .part-watched-app-badge {
   }
 
   .sidebar-sub-menu .settings-group-child.active {
-    border-left-color: #e5a00d;
+    border-left-color: #10b981;
     opacity: 1;
   }
 
@@ -15667,10 +15905,12 @@ html.light-mode #timeline-view .part-watched-app-badge {
   body .page-topbar-actions .explorer-controls > .explorer-view-toggle,
   body .page-topbar-actions .explorer-controls > #explorerHideWatchedLabel,
   body .page-topbar-actions .explorer-controls > #explorerHideEndedLabel,
+  body .page-topbar-actions .explorer-controls > #explorerDroppedOnlyLabel,
   body .explorer-controls > .compact-field,
   body .explorer-controls > .explorer-view-toggle,
   body .explorer-controls > #explorerHideWatchedLabel,
-  body .explorer-controls > #explorerHideEndedLabel {
+  body .explorer-controls > #explorerHideEndedLabel,
+  body .explorer-controls > #explorerDroppedOnlyLabel {
     display: none !important;
   }
 
@@ -15679,10 +15919,12 @@ html.light-mode #timeline-view .part-watched-app-badge {
   body .page-topbar-actions .explorer-controls > .explorer-view-toggle.active-mobile-panel,
   body .page-topbar-actions .explorer-controls > #explorerHideWatchedLabel.active-mobile-panel,
   body .page-topbar-actions .explorer-controls > #explorerHideEndedLabel.active-mobile-panel,
+  body .page-topbar-actions .explorer-controls > #explorerDroppedOnlyLabel.active-mobile-panel,
   body .explorer-controls > .compact-field.active-mobile-panel,
   body .explorer-controls > .explorer-view-toggle.active-mobile-panel,
   body .explorer-controls > #explorerHideWatchedLabel.active-mobile-panel,
-  body .explorer-controls > #explorerHideEndedLabel.active-mobile-panel {
+  body .explorer-controls > #explorerHideEndedLabel.active-mobile-panel,
+  body .explorer-controls > #explorerDroppedOnlyLabel.active-mobile-panel {
     display: flex !important;
     width: 100% !important;
     margin-top: 0.5rem !important;
@@ -16547,16 +16789,16 @@ html.light-mode #timeline-view .part-watched-app-badge {
 
 .sidebar-scrollable .sidebar-sub-menu .settings-group-child:hover {
   border-color: transparent;
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .sidebar-scrollable .sidebar-sub-menu .settings-group-child.active {
   border-color: transparent;
-  border-left-color: #e5a00d;
-  background: rgba(229, 160, 13, 0.12);
-  color: #e5a00d;
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-child {
@@ -16584,16 +16826,16 @@ html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-child.acti
 
 .sidebar-scrollable .sidebar-sub-menu .settings-group-parent:hover {
   border-color: transparent;
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 .sidebar-scrollable .sidebar-sub-menu .settings-group-parent.active {
   border-color: transparent;
-  border-left-color: #e5a00d;
-  background: rgba(229, 160, 13, 0.12);
-  color: #e5a00d;
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 html.light-mode .sidebar-scrollable .sidebar-sub-menu .settings-group-parent:hover {
@@ -18508,7 +18750,7 @@ html.light-mode .pill-toggle.active {
 .history-mini-card-episode {
   font-size: 0.84rem;
   font-weight: 700;
-  color: #e5a00d;
+  color: #10b981;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -19691,7 +19933,8 @@ details[open] > .tool-section-summary::before {
   width: auto;
 }
 
-.history-filter-toggle .explorer-view-btn {
+.history-filter-toggle .explorer-view-btn,
+.history-view-toggle .explorer-view-btn {
   width: auto;
   padding: 0 0.7rem;
   font-size: 0.81rem;
@@ -19705,6 +19948,51 @@ details[open] > .tool-section-summary::before {
   grid-template-columns: repeat(auto-fill, minmax(var(--history-poster-width, 86px), 1fr));
   gap: var(--space-3);
   width: 100%;
+}
+
+/* Watch History day view: one box per calendar day, posters newest first inside it */
+.history-day-list {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.history-day-box {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 12px);
+  background: var(--brand-menu);
+}
+
+.history-day-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.history-day-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.history-day-count {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .history-day-box {
+    padding: 0.6rem;
+  }
 }
 
 .history-grid-card {
@@ -20021,14 +20309,6 @@ details[open] > .tool-section-summary::before {
   min-width: 0;
 }
 
-.up-next-checking-status {
-  flex: 0 0 auto;
-  color: var(--muted, #9b9b9b);
-  font-size: 0.68rem;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
 .history-card-episode {
   font-size: 0.88rem;
   font-weight: 700;
@@ -20112,16 +20392,16 @@ details[open] > .tool-section-summary::before {
 }
 
 /* Card text weights on the dashboard, History and library cards. */
-:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .meta-label {
+:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card) .meta-label {
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 
-:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .history-card-meta-row .meta-value {
+:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card) .history-card-meta-row .meta-value {
   font-weight: 600;
 }
 
-:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, #explorerPanel .explorer-history-card) .history-card-episode {
+:is(#timeline-view .dashboard-history-page-card, #history-view .history-list .history-page-card, :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card) .history-card-episode {
   font-weight: 600;
 }
 
@@ -20409,7 +20689,7 @@ html.light-mode .global-search input:focus {
 }
 
 html.light-mode .global-search input:focus {
-  border-bottom-color: #e5a00d;
+  border-bottom-color: #10b981;
 }
 
 html.light-mode .button-primary {
@@ -20821,7 +21101,7 @@ html.light-mode .theme-toggle-label--dark {
 }
 
 .sidebar-appearance-theme .theme-toggle-button:focus-visible {
-  outline: 2px solid #e5a00d;
+  outline: 2px solid #10b981;
   outline-offset: -2px;
   border-radius: 0;
 }
@@ -20861,16 +21141,16 @@ html.light-mode .theme-toggle-label--dark {
 }
 
 .sidebar-appearance-theme .theme-toggle-button:hover .theme-toggle-label {
-  border-left-color: rgba(229, 160, 13, 0.55);
+  border-left-color: rgba(16, 185, 129, 0.55);
   background: rgba(255, 255, 255, 0.05);
   color: #fff;
 }
 
 html:not(.light-mode) .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--dark,
 html.light-mode .sidebar-appearance-theme #themeToggleButton .theme-toggle-label--light {
-  border-left-color: #e5a00d;
-  background: rgba(229, 160, 13, 0.12);
-  color: #e5a00d;
+  border-left-color: #10b981;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
 }
 
 html:not(.light-mode) .sidebar-appearance-theme .theme-toggle-label--dark svg,
@@ -23397,6 +23677,61 @@ html.light-mode .personal-media-dialog-head .icon-button:hover {
   overflow-y: hidden;
 }
 
+#timeline-view #upNextPanel .up-next-loading-tiles {
+  display: flex;
+  flex: 0 0 auto;
+  min-width: 0;
+  gap: var(--space-3);
+  width: max-content;
+}
+
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton {
+  display: flex;
+  flex: 0 0 clamp(14rem, 18vw, 20rem);
+  min-width: 0;
+  height: 100%;
+  gap: 0.85rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-lg, 0.75rem);
+  background: var(--panel, rgba(255, 255, 255, 0.04));
+}
+
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-poster,
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details span {
+  background: linear-gradient(100deg, var(--skeleton-base) 30%, var(--skeleton-sheen) 50%, var(--skeleton-base) 70%);
+  background-size: 220% 100%;
+  animation: up-next-tile-shimmer 1.25s ease-in-out infinite;
+}
+
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-poster {
+  flex: 0 0 38%;
+  height: 100%;
+  border-radius: 0.55rem;
+}
+
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.7rem;
+}
+
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details span {
+  display: block;
+  height: 0.65rem;
+  border-radius: 999px;
+}
+
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details span:first-child { width: 88%; height: 0.85rem; }
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details span:nth-child(2) { width: 64%; }
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details span:nth-child(3) { width: 78%; }
+#timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton-details span:nth-child(4) { width: 48%; }
+
+@keyframes up-next-tile-shimmer {
+  to { background-position: -220% 0; }
+}
+
 #timeline-view #upNextPanel .shared-media-card {
   height: 100%;
 }
@@ -23462,6 +23797,12 @@ html.light-mode .shared-media-card {
     overflow-y: visible;
   }
 
+  #timeline-view #upNextPanel .up-next-loading-tiles { flex: 0 0 auto; }
+  #timeline-view :is(#upNextPanel, #nowPlayingGrid) .up-next-skeleton {
+    flex-basis: min(88vw, 26rem);
+    height: 13rem;
+  }
+
   #timeline-view #upNextPanel .shared-media-card {
     height: auto;
     width: min(88vw, 26rem);
@@ -23493,6 +23834,11 @@ html.light-mode .shared-media-card {
   .discover-feed-row .shared-media-card--discover {
     flex-basis: min(88vw, 26rem);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #timeline-view #upNextPanel .up-next-skeleton-poster,
+  #timeline-view #upNextPanel .up-next-skeleton-details span { animation: none; }
 }
 
 html.light-mode .watch-date-close {
@@ -23724,7 +24070,28 @@ html.light-mode .settings-segmented-control .sidebar-segmented-btn:hover {
 .settings-row-help > .settings-card,
 .settings-row-help > article,
 .settings-row-help > section {
-  height: 100%;
+  height: auto;
+  max-height: none;
+  min-height: 0;
+  align-self: flex-start;
+  box-sizing: border-box;
+}
+
+.settings-row-help > article.help-collapsed,
+.settings-row-help > section.help-collapsed,
+.settings-row-help > .settings-card.help-collapsed {
+  height: var(--help-match-height, auto) !important;
+  max-height: var(--help-match-height, none) !important;
+  min-height: var(--help-match-height, 0px) !important;
+  overflow: hidden !important;
+}
+
+.settings-row-help > article.help-expanded,
+.settings-row-help > section.help-expanded,
+.settings-row-help > .settings-card.help-expanded {
+  height: auto !important;
+  max-height: none !important;
+  min-height: var(--help-match-height, 0px) !important;
 }
 
 .settings-card {
@@ -25397,20 +25764,6 @@ html.light-mode .settings-group-section:focus-visible {
 }
 
 /* ── Guided setup (/setup) ─────────────────────────────────────────────── */
-.dashboard-setup-checklist { display: grid; gap: var(--space-3); padding: var(--space-4); }
-.dashboard-setup-checklist-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
-.dashboard-setup-checklist-title { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
-.dashboard-setup-checklist-title h2 { margin: 0; font-size: 1rem; }
-.dashboard-setup-checklist-title p { margin: 0; color: var(--muted); font-size: 0.78rem; }
-.dashboard-setup-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
-.dashboard-setup-action { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: var(--space-3); min-height: 4rem; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); color: var(--text); text-decoration: none; transition: border-color 150ms ease, background 150ms ease, transform 150ms ease; }
-.dashboard-setup-action:hover, .dashboard-setup-action:focus-visible { border-color: var(--line-strong); background: var(--panel-3); transform: translateY(-1px); }
-.dashboard-setup-action-number { display: inline-grid; place-items: center; width: 1.8rem; height: 1.8rem; border: 1px solid var(--line-strong); border-radius: 50%; color: var(--muted); font-size: 0.7rem; font-weight: 800; }
-.dashboard-setup-action-copy { display: grid; gap: var(--space-1); min-width: 0; }
-.dashboard-setup-action-copy b { font-size: 0.86rem; }
-.dashboard-setup-action-copy span { color: var(--muted); font-size: 0.80rem; line-height: 1.35; }
-.dashboard-setup-action-arrow { color: var(--muted); font-size: 1rem; transition: transform 150ms ease, color 150ms ease; }
-.dashboard-setup-action:hover .dashboard-setup-action-arrow, .dashboard-setup-action:focus-visible .dashboard-setup-action-arrow { color: var(--text); transform: translateX(2px); }
 
 /* The setup view is a three-row flex column filling the visible page-shell
    height: logo, the onboarding box, and the footer bar. The logo/footer rows
@@ -25446,7 +25799,7 @@ html.light-mode .settings-group-section:focus-visible {
 #setupPageRoot {
   display: contents;
 }
-.setup-brand { display: flex; flex: 1 1 0; min-height: 5rem; align-items: center; justify-content: center; width: 100%; max-width: 1100px; margin: 0 auto; }
+.setup-brand { display: flex; flex: 1 1 0; min-height: 5rem; align-items: center; justify-content: center; width: 100%; max-width: 1280px; margin: 0 auto; }
 .setup-brand-logo { height: 5.5rem; width: auto; object-fit: contain; }
 .setup-footer-bar {
   /* Transparent spacer/centering region only - flex-grow on an element that
@@ -25481,7 +25834,7 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-footer-bar .app-version:disabled { cursor: default; }
 .setup-footer-bar .app-version:disabled:hover { color: var(--muted); text-decoration: none; }
 .setup-restore-backup-button { width: 100%; text-align: center; justify-content: center; }
-.setup-shell { display: grid; flex: 0 0 auto; width: 100%; gap: var(--space-4); max-width: 1100px; margin: 0 auto; font-size: 1.05rem; }
+.setup-shell { display: grid; flex: 0 0 auto; width: 100%; gap: var(--space-4); max-width: 1280px; margin: 0 auto; font-size: 1.05rem; }
 .setup-shell .section-heading h2 { font-size: 1.3rem; }
 .setup-shell .section-heading span { color: var(--muted); font-size: 0.9rem; font-weight: 700; }
 .setup-header-actions { display: flex; align-items: center; gap: var(--space-3); }
@@ -25512,6 +25865,7 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-step-body > *,
 .setup-server-rows > * { min-width: 0; }
 .setup-step-body .settings-card-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-4); }
+.setup-step-body .setup-tracker-grid { grid-template-columns: minmax(0, 1fr); }
 .setup-step-body .settings-card { padding: var(--space-4); gap: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); }
 .setup-step-body .settings-card b { font-size: 1.05rem; }
 /* Overrides .settings-card's shared justify-content: space-between, which
@@ -25522,6 +25876,11 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-overview-item-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .setup-overview-item p { margin: 0; }
 .setup-overview-intro { text-align: center; }
+.setup-overview-claim { display: grid; gap: var(--space-3); width: 100%; margin: 0; }
+.setup-overview-claim-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.setup-overview-claim-heading h3 { margin: 0; font-size: 1.08rem; }
+.setup-overview-claim-intro { margin: 0; max-width: none; text-align: left; }
+.setup-overview-claim .setup-claim-panel { width: 100%; }
 .setup-options-fields { display: grid; gap: var(--space-3); }
 .setup-step-body .setup-options-card {
   min-height: 0;
@@ -25623,7 +25982,7 @@ html.light-mode .settings-group-section:focus-visible {
 .setup-server-name-group {display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; }
 .setup-server-type-icon { width: 1.25rem; height: 1.25rem; object-fit: contain; flex: 0 0 auto; }
 .setup-step-body .setup-server-rows { grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
-.setup-step-body .setup-server-row { padding: var(--space-3) !important; gap: var(--space-3) !important; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.setup-step-body .setup-server-row { padding: var(--space-4) !important; gap: var(--space-3) !important; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 html .setup-step-body .setup-server-row > * { margin-top: 0 !important; margin-bottom: 0 !important; }
 html .setup-step-body .setup-server-row > .setup-server-row-actions { margin-top: var(--space-1) !important; }
 .setup-step-body .setup-server-row > * { grid-column: 1 / -1; }
@@ -25636,18 +25995,20 @@ html .setup-step-body .setup-server-row > .setup-server-row-actions { margin-top
 .setup-step-body .setup-server-row .guide-callout { margin: 0 !important; padding: var(--space-2) !important; }
 .setup-step-body .setup-server-row .setup-server-row-title .badge-success { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--green); }
 .setup-step-body .setup-server-row .setup-import-status-line { justify-self: end; }
-.setup-step-body .setup-server-row > .setup-toggle-box { grid-column: auto; }
-.setup-step-body .setup-server-row :is(p, label, span:not(.badge), b:not(.setup-server-name)) { font-size: 0.9rem !important; line-height: 1.35 !important; }
+.setup-step-body .setup-server-row .setup-server-toggles { grid-column: 1 / -1; }
+.setup-step-body .setup-server-row :is(.setup-server-detail, .setup-import-status-line) { font-size: 0.9rem !important; line-height: 1.35 !important; }
 .setup-step-body .setup-server-row .guide-callout { margin-top: var(--space-2) !important; padding: var(--space-2) var(--space-3) !important; }
-.setup-step-body .setup-server-row .guide-callout b { margin-bottom: 0 !important; }
+.setup-step-body .setup-server-row .guide-callout b { margin-bottom: 0 !important; font-size: 0.85rem !important; }
+.setup-step-body .setup-server-row .guide-callout p { font-size: 0.82rem !important; line-height: 1.4 !important; }
 .setup-step-body .setup-server-row .setup-import-toggle-label { margin: 0; }
 .setup-server-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); }
 .setup-step-body .setup-server-row .settings-choice-option:has(input:checked) { border: 1px solid color-mix(in srgb, var(--blue), transparent 45%) !important; box-shadow: none !important; }
 .setup-trakt-sync-note { text-align: center; }
 .setup-trakt-sync-note.is-complete { color: var(--green); }
 .setup-server-row-meta { margin-right: auto; }
-.setup-step-body .setup-server-row .setup-toggle-box { min-height: 0; padding: var(--space-1) var(--space-2); align-items: flex-start; gap: var(--space-1); }
-.setup-step-body .setup-server-row .setup-toggle-box .settings-choice-option-description { margin: 0; }
+.setup-step-body .setup-server-row .setup-toggle-box { min-height: 4.2rem; padding: var(--space-2) var(--space-3); align-items: flex-start; gap: var(--space-2); }
+.setup-step-body .setup-server-row .setup-toggle-box .settings-choice-option-title { font-size: 0.82rem !important; line-height: 1.3 !important; }
+.setup-step-body .setup-server-row .setup-toggle-box .settings-choice-option-description { margin: 0; font-size: 0.75rem !important; line-height: 1.35 !important; }
 .setup-server-row-actions .setup-import-status-line { margin: 0; }
 .setup-server-name { text-transform: capitalize; font-size: 1.15rem; }
 .setup-server-detail { font-size: 0.95rem; overflow-wrap: anywhere; }
@@ -25656,8 +26017,6 @@ html .setup-step-body .setup-server-row > .setup-server-row-actions { margin-top
 .setup-import-status-line.is-error { color: var(--red, #ef4444); }
 .setup-step-intro { max-width: 75ch; margin: 0 auto; text-align: center; }
 .setup-step-intro:has(+ .setup-webhook-rows) { max-width: none; }
-.setup-claim-step { display: grid; gap: var(--space-5); width: 100%; max-width: 48rem; margin: 0 auto; }
-.setup-claim-step > .setup-step-intro { max-width: 58ch; margin: 0 auto; text-align: center; }
 .setup-claim-form-host { width: 100%; max-width: none; margin: 0; }
 .setup-claim-panel {
   display: grid;
@@ -25727,7 +26086,7 @@ html .setup-step-body .setup-server-row > .setup-server-row-actions { margin-top
 .setup-shell { background: var(--brand-menu) !important; }
 /* Setup follows the Settings surface depth: the wizard shell is the parent (left-menu tone),
    its cards are children (main tone), and fields inside those cards flip back to the left-menu tone. */
-html .setup-shell :is(.settings-card, .settings-modal-field, .setup-claim-panel, .setup-import-list, .setup-import-row, .setup-review-list, .setup-review-lead) {
+html .setup-shell :is(.settings-card, .settings-modal-field, .setup-claim-panel, .setup-import-list, .setup-import-row, .setup-review-list, .setup-review-lead, .setup-one-time-imports-host .sync-tool-details) {
   background: var(--brand-main) !important;
   background-image: none !important;
 }
@@ -25768,28 +26127,72 @@ details.sync-tool-details:has(.webhook-guide-content)[open] > summary,
 .setup-metadata-heading { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); }
 .setup-metadata-badges { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .setup-metadata-actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: 0; }
-.setup-metadata-optional { margin-top: var(--space-3); }
+.setup-metadata-optional { margin-top: var(--space-3); width: 100%; }
 .setup-metadata-optional-intro { margin-top: var(--space-2); max-width: 75ch; font-size: 0.92rem; }
-.setup-metadata-optional-grid { margin-top: var(--space-2); }
+.setup-metadata-optional-grid { margin-top: var(--space-2); width: 100%; }
 .setup-metadata-provider-desc { font-size: 0.88rem; }
 .setup-metadata-provider-status { font-size: 0.95rem; }
 .setup-metadata-titlerow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
 .setup-metadata-provider-status { color: var(--muted); }
 .setup-metadata-provider-status.is-ok { color: var(--green); }
 .setup-step-body .setup-metadata-core-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.setup-step-body .setup-metadata-optional-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.setup-step-body .setup-seerr-grid { grid-template-columns: minmax(0, 1fr); }
 html .setup-shell .settings-choice-option:has(input:checked) {
   border-color: color-mix(in srgb, var(--blue), transparent 40%);
   box-shadow: none;
 }
-.setup-step-body .setup-metadata-core-grid .setup-metadata-card { grid-template-columns: minmax(0, 1fr); }
-.setup-step-body .setup-metadata-core-grid .setup-metadata-card .setup-metadata-actions { align-self: end; }
+.setup-step-body .setup-metadata-core-grid .setup-metadata-card,
+.setup-step-body .setup-seerr-grid .setup-metadata-card { grid-template-columns: minmax(0, 1fr); }
+.setup-step-body .setup-metadata-core-grid .setup-metadata-card .setup-metadata-actions,
+.setup-step-body .setup-seerr-grid .setup-metadata-card .setup-metadata-actions { align-self: end; }
 .setup-step-body .setup-metadata-core-grid .setup-metadata-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; width: 100%; justify-self: stretch; }
-.setup-step-body .setup-metadata-core-grid .setup-metadata-actions > * { width: 100%; box-sizing: border-box; justify-content: center; text-align: center; }
-@media (max-width: 760px) {
-  .setup-step-body .setup-metadata-core-grid { grid-template-columns: minmax(0, 1fr); }
+.setup-step-body .setup-seerr-grid .setup-metadata-actions { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; width: 100%; justify-self: stretch; }
+.setup-step-body .setup-metadata-core-grid .setup-metadata-actions > *,
+.setup-step-body .setup-seerr-grid .setup-metadata-actions > * { width: 100%; box-sizing: border-box; justify-content: center; text-align: center; }
+.setup-step-body .setup-metadata-optional-grid > .settings-card {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
 }
-.setup-trakt-card { display: grid; gap: var(--space-2); }
+.setup-step-body .setup-metadata-optional-grid .button-ghost { width: 100%; justify-content: center; text-align: center; box-sizing: border-box; }
+@media (max-width: 760px) {
+  .setup-step-body .setup-metadata-core-grid,
+  .setup-step-body .setup-metadata-optional-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.setup-trakt-card { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; justify-content: stretch; gap: var(--space-3); }
+.setup-trakt-card > .setup-trakt-heading,
+.setup-trakt-card > p,
+.setup-trakt-card .tracker-full-sync { grid-column: 1 / -1; }
+.setup-trakt-card .setup-tracker-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); min-width: 0; }
+.setup-trakt-card .tracker-extras { display: contents; }
+.setup-trakt-card > p,
+.setup-trakt-card > .tracker-extras { margin: 0; }
+.setup-tracker-choice-box { display: grid; gap: var(--space-2); min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--brand-menu); }
+.setup-tracker-choice-box .tracker-initial-sync { margin: 0; }
+.setup-tracker-choice-box .checkbox-label,
+.setup-tracker-choice-box .field-label { margin: 0; }
+.setup-tracker-choice-box .checkbox-label > span { min-width: 0; }
+.setup-tracker-choice-box .setup-import-toggle-label,
+.setup-tracker-choice-box .tracker-date-preference { font-size: 1rem; font-weight: 400; line-height: 1.5; }
+.setup-import-review-action { justify-content: flex-end; margin-top: var(--space-1); }
+.setup-tracker-options .tracker-initial-sync { margin: 0; font-size: 0.88rem; }
+.tracker-date-preference { display: flex; align-items: flex-start; gap: var(--space-2); margin: 0 0 var(--space-3); }
+.tracker-date-preference > span { min-width: 0; }
+.setup-trakt-card .tracker-full-sync { grid-column: 1 / -1; gap: var(--space-2); padding-top: var(--space-3); border-top: 1px solid var(--line-subtle); }
+.setup-trakt-card .tracker-full-sync > p { max-width: 72rem; line-height: 1.5; }
+.setup-trakt-card .tracker-full-sync .settings-actions { justify-content: flex-end; margin-top: var(--space-1); }
+.setup-trakt-card .tracker-full-sync .tracker-completion-status { margin-right: auto; }
 .setup-trakt-heading { display: flex; justify-content: space-between; align-items: center; }
+.setup-trakt-card:has([data-setup-tracker-connect]) .setup-trakt-date-pref { grid-column: 1 / -1; }
+.setup-trakt-card [data-setup-tracker-connect] { grid-column: 1 / -1; justify-self: end; width: auto; min-width: 10rem; }
+@media (max-width: 640px) {
+  .setup-trakt-card .setup-tracker-options { grid-template-columns: minmax(0, 1fr); }
+  .setup-trakt-card > .setup-trakt-heading,
+  .setup-trakt-card > p,
+  .setup-trakt-card .tracker-full-sync { grid-column: auto; }
+}
 .setup-trakt-flow { text-align: center; }
 .setup-trakt-code { margin: 0; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.1em; }
 .setup-trakt-waiting { font-size: 0.95rem; }
@@ -25798,6 +26201,137 @@ html .setup-shell .settings-choice-option:has(input:checked) {
 .setup-trakt-sync-note { font-size: 0.92rem; }
 .webhook-option-list span { color: var(--muted); }
 .setup-import-note { font-size: 0.92rem; text-align: center; }
+.setup-one-time-imports { display: grid; gap: var(--space-3); margin-top: var(--space-4); width: 100%; }
+.setup-one-time-imports-host { display: block; width: 100%; min-width: 0; }
+/* #oneTimeImportsContent is the single borrowed Settings wrapper, so the
+   side-by-side card grid has to live on it — not on the host. */
+.setup-one-time-imports-host #oneTimeImportsContent {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  width: 100%;
+  align-items: start;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details {
+  display: grid;
+  align-content: start;
+  gap: 0;
+  margin: 0;
+  min-width: 0;
+  padding: 0 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: var(--radius);
+  background: var(--brand-main) !important;
+  background-image: none !important;
+  overflow: hidden;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details[open] {
+  grid-column: 1 / -1;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details > summary.accordion-header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "title status"
+    "desc desc"
+    "action action";
+  align-items: center !important;
+  justify-content: stretch !important;
+  gap: var(--space-3) !important;
+  padding: var(--space-4) !important;
+  background: transparent !important;
+  background-image: none !important;
+  border: 0 !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-summary-title {
+  grid-area: title;
+  min-width: 0;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-summary-title b {
+  font-size: 1.05rem !important;
+}
+html .setup-shell .setup-one-time-imports-host .accordion-chevron {
+  display: none !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details > summary.accordion-header > .status-pill {
+  grid-area: status;
+  justify-self: end;
+  margin: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--muted) !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details > summary.accordion-header > .status-pill.status-success,
+html .setup-shell .setup-one-time-imports-host .sync-tool-details > summary.accordion-header > .status-pill.status-ready,
+html .setup-shell .setup-one-time-imports-host .sync-tool-details > summary.accordion-header > .status-pill.status-ok {
+  color: var(--green) !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details > summary.accordion-header > span:not(.status-pill):not(.sync-tool-summary-title) {
+  grid-area: desc;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details:not([open]) > summary.accordion-header::after {
+  grid-area: action;
+  content: "Open";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--brand-menu);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details[open] > summary.accordion-header {
+  border-bottom: 1px solid var(--line-subtle) !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details[open] > summary.accordion-header::after {
+  content: "Hide";
+  grid-area: action;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 2.4rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--brand-menu);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  box-sizing: border-box;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details .tool-item-row,
+html .setup-shell .setup-one-time-imports-host .sync-tool-details .tautulli-import-panel {
+  background: transparent !important;
+  background-image: none !important;
+}
+html .setup-shell .setup-one-time-imports-host .sync-tool-details .field,
+html .setup-shell .setup-one-time-imports-host .sync-tool-details select,
+html .setup-shell .setup-one-time-imports-host .sync-tool-details textarea,
+html .setup-shell .setup-one-time-imports-host .sync-tool-details input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"]) {
+  background: var(--brand-menu) !important;
+  background-image: none !important;
+}
+@media (max-width: 760px) {
+  .setup-one-time-imports-host #oneTimeImportsContent { grid-template-columns: minmax(0, 1fr); }
+}
 .setup-import-list { display: grid; border: 1px solid var(--line-subtle); border-radius: var(--radius); overflow: hidden; }
 .setup-import-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3); background: var(--panel-2); }
 .setup-import-row + .setup-import-row { border-top: 1px solid var(--line-subtle); }
@@ -25826,8 +26360,9 @@ html .setup-shell .settings-choice-option:has(input:checked) {
 .setup-backup-label-line { display: inline-flex; align-items: baseline; gap: 0.25em; white-space: nowrap; }
 .setup-backup-passphrase .muted-copy { font-size: 0.78rem; font-weight: 400; }
 .setup-backup-remember { min-height: 1.25rem; }
-.setup-step-body details.settings-card.setup-backup-remote { display: block; min-height: 0; padding: var(--space-4) !important; }
-.setup-backup-remote > summary { padding: 0 !important; cursor: pointer; list-style: none; }
+.setup-step-body details.settings-card.setup-backup-remote,
+.setup-step-body .settings-card.setup-backup-card { display: block; min-height: 0; padding: var(--space-4) var(--space-5) !important; }
+.setup-backup-remote > summary { padding: var(--space-1) 0 !important; cursor: pointer; list-style: none; }
 html .setup-shell .setup-backup-remote .setup-backup-remote { background: var(--brand-menu) !important; background-image: none !important; }
 html .setup-shell .setup-backup-remote .setup-backup-remote :is(.field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) { background: var(--brand-main) !important; background-image: none !important; }
 .setup-backup-heading .badge-success { border: 0 !important; background: transparent !important; padding: 0 !important; color: var(--green); }
@@ -25860,11 +26395,42 @@ html .setup-shell .setup-backup-remote .setup-backup-remote :is(.field, select, 
 .setup-review-copy span { color: var(--muted); font-size: 0.88rem; line-height: 1.45; }
 .setup-review-row > .badge { flex-shrink: 0; }
 .setup-actions { display: flex; justify-content: space-between; gap: var(--space-2); padding-top: var(--space-2); border-top: 1px solid var(--line-subtle, var(--line)); }
+.setup-continue-group { display: flex; align-items: center; justify-content: flex-end; gap: var(--space-3); min-width: 0; }
+.setup-import-continue-note { margin: 0; font-size: 0.85rem; text-align: right; }
 .setup-actions button { font-size: 0.92rem; }
 .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 0.85rem; border: 1px solid var(--line-subtle, var(--line)); color: var(--muted); }
 .badge-success { color: var(--green); border-color: color-mix(in srgb, var(--green), transparent 45%); }
 .badge-warning { color: var(--yellow); border-color: color-mix(in srgb, var(--yellow), transparent 45%); }
 .badge-error { color: var(--red); border-color: color-mix(in srgb, var(--red), transparent 45%); }
+
+/* Setup wizard status labels match Settings: plain text, no pill chrome. */
+.setup-step-body .badge,
+.setup-shell .badge {
+  border: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+}
+.setup-step-body .badge-success,
+.setup-shell .badge-success {
+  color: var(--green) !important;
+}
+.setup-step-body .badge-warning,
+.setup-shell .badge-warning {
+  color: var(--yellow, #f59e0b) !important;
+}
+.setup-step-body .badge-error,
+.setup-shell .badge-error {
+  color: var(--red, #f43f5e) !important;
+}
+.setup-step-body .badge:not(.badge-success):not(.badge-warning):not(.badge-error),
+.setup-shell .badge:not(.badge-success):not(.badge-warning):not(.badge-error) {
+  color: var(--muted) !important;
+}
 
 @media (max-width: 60rem) {
   .setup-progress {
@@ -26260,8 +26826,50 @@ html.light-mode .settings-modal-foot {
 }
 
 .trakt-connected-summary {
-  margin-top: var(--space-3);
-  padding-bottom: var(--space-2);
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  text-align: right;
+}
+.accordion-header > .trakt-connected-summary > b { font-size: 0.85rem; white-space: nowrap; }
+.accordion-header > .trakt-connected-summary > span { font-size: 0.78rem; white-space: nowrap; }
+.accordion-header > .trakt-connected-summary > small { display: none; }
+@media (max-width: 760px) {
+  .accordion-header > .trakt-connected-summary { flex-direction: column; align-items: flex-end; gap: 0; }
+  .accordion-header > .trakt-connected-summary > b,
+  .accordion-header > .trakt-connected-summary > span { white-space: normal; }
+}
+
+.tracker-extras {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.tracker-extras .tracker-initial-sync,
+.tracker-full-sync p {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.tracker-full-sync {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+}
+
+.tracker-full-sync small {
+  color: var(--text-muted, var(--muted));
+  overflow-wrap: anywhere;
 }
 
 .trakt-sync-progress {
@@ -26806,7 +27414,7 @@ html.light-mode .settings-help-body code {
 .settings-pane .settings-row-main #syncIssuesContent,
 .settings-pane .settings-row-main #syncMatchReportContent,
 .settings-pane .settings-row-main #syncHistoryContent,
-.settings-pane .settings-row-main #tautulliImportContent,
+.settings-pane .settings-row-main #oneTimeImportsContent,
 .settings-pane .settings-row-main #seerrContent,
 .settings-pane .settings-row-main #accountContent,
 .settings-pane .settings-row-main #webhookSetupGuides,
@@ -26814,6 +27422,13 @@ html.light-mode .settings-help-body code {
   margin-top: 0 !important;
   padding: var(--space-3) !important;
   gap: var(--space-2) !important;
+}
+
+.settings-pane .settings-row-main > .settings-card > #oneTimeImportsHome {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 0 !important;
 }
 
 .settings-pane .settings-row-main #syncTuningContent #syncTuningFields {
@@ -26859,7 +27474,7 @@ html.light-mode .settings-help-body code {
   min-width: 0;
 }
 
-.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > span {
+.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > span:not(.status-pill) {
   grid-column: 1;
   grid-row: 2;
   max-width: none !important;
@@ -26868,6 +27483,47 @@ html.light-mode .settings-help-body code {
   font-weight: 400 !important;
   line-height: 1.45;
   text-align: left !important;
+}
+
+.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > .status-pill {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: end !important;
+  align-self: center !important;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 0 !important;
+  font-size: 0.82rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  pointer-events: none;
+}
+
+.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > .status-pill:is(.status-ready, .status-success) {
+  color: var(--green) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > .status-pill.status-muted {
+  color: var(--muted) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > .status-pill.status-warning {
+  color: var(--yellow, #f59e0b) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary > .status-pill.status-error {
+  color: var(--red, #f43f5e) !important;
+  background: transparent !important;
+  border-color: transparent !important;
 }
 
 .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary:focus-visible {
@@ -26906,6 +27562,10 @@ html.light-mode .settings-help-body code {
 @media (max-width: 760px) {
   .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary {
     grid-template-columns: 1fr !important;
+  }
+
+  .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category) > summary:has(> .status-pill) {
+    grid-template-columns: minmax(0, 1fr) auto !important;
   }
 }
 
@@ -27214,7 +27874,7 @@ html.light-mode #restore-remote {
 
 /* Account fields are action rows like Sync Tuning, rather than a three-column
    form that compresses as the main settings column narrows. */
-.settings-pane #adminCredentialsForm {
+.settings-pane :is(#adminCredentialsForm, #userPasswordForm) {
   display: flex !important;
   flex-direction: column !important;
   gap: var(--space-2) !important;
@@ -27225,7 +27885,8 @@ html.light-mode #restore-remote {
 }
 
 .settings-pane #adminCredentialsForm > .field-label,
-.settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label {
+.settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label,
+.settings-pane #userPasswordForm .admin-credentials-grid > .field-label {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(12rem, 18rem) !important;
   align-items: center !important;
@@ -27242,7 +27903,9 @@ html.light-mode #restore-remote {
 .settings-pane #adminCredentialsForm > .field-label:hover,
 .settings-pane #adminCredentialsForm > .field-label:focus-within,
 .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:hover,
-.settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:focus-within {
+.settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label:focus-within,
+.settings-pane #userPasswordForm .admin-credentials-grid > .field-label:hover,
+.settings-pane #userPasswordForm .admin-credentials-grid > .field-label:focus-within {
   border-color: var(--blue) !important;
 }
 
@@ -27254,20 +27917,35 @@ html.light-mode #restore-remote {
   width: 100%;
 }
 
+.settings-pane #userPasswordForm .admin-credentials-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: var(--space-2) !important;
+  min-width: 0;
+  width: 100%;
+}
+
 @media (max-width: 900px) {
-  .settings-pane #adminCredentialsForm .admin-credentials-grid {
+  .settings-pane #adminCredentialsForm .admin-credentials-grid,
+  .settings-pane #userPasswordForm .admin-credentials-grid {
     grid-template-columns: 1fr !important;
   }
 }
 
 .settings-pane #adminCredentialsForm .admin-credentials-grid .field,
-.settings-pane #adminCredentialsForm > .field-label .field {
+.settings-pane #adminCredentialsForm > .field-label .field,
+.settings-pane #userPasswordForm .admin-credentials-grid .field {
   width: 100% !important;
   min-width: 0;
   margin: 0 !important;
 }
 
 .settings-pane #adminCredentialsStatus {
+  margin: 0 !important;
+  padding: var(--space-1) 0 !important;
+}
+
+.settings-pane #userPasswordStatus {
   margin: 0 !important;
   padding: var(--space-1) 0 !important;
 }
@@ -27340,6 +28018,10 @@ html.light-mode #restore-remote {
   box-shadow: none !important;
 }
 
+.settings-pane .settings-row-help .help-read-more.hidden {
+  display: none !important;
+}
+
 @media (max-width: 760px) {
   .settings-pane .settings-row-main > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) > .section-heading,
   .settings-pane .settings-row-help > :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel) > .section-heading {
@@ -27355,7 +28037,8 @@ html.light-mode #restore-remote {
   }
 
   .settings-pane #adminCredentialsForm > .field-label,
-  .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label {
+  .settings-pane #adminCredentialsForm .admin-credentials-grid > .field-label,
+  .settings-pane #userPasswordForm .admin-credentials-grid > .field-label {
     grid-template-columns: 1fr !important;
     align-items: stretch !important;
   }
@@ -28540,6 +29223,7 @@ html.light-mode #restore-remote {
   }
 
   .sync-attention-actions {
+    flex: 0 0 auto;
     align-items: stretch;
     flex-direction: column;
   }
@@ -30035,10 +30719,18 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
   margin-top: 0.15rem;
 }
 
-.manual-watch-review-actions button {
+.manual-watch-review-actions button,
+.manual-watch-review-actions a {
   min-height: 2rem;
   padding: 0.4rem 0.7rem;
   font-size: 0.76rem;
+}
+
+.manual-watch-review-actions a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .manual-watch-review-show {
@@ -30490,7 +31182,8 @@ html.light-mode .manual-watch-review-season {
     flex-direction: column;
   }
 
-  .manual-watch-review-actions button {
+  .manual-watch-review-actions button,
+  .manual-watch-review-actions a {
     width: 100%;
   }
 
@@ -31970,8 +32663,7 @@ body .page-topbar-actions #upcomingTopbarControls .action-pill,
 
 /* Upcoming mobile header final cascade ----------------------------------
    This follows the older shared page-control rules above, so the Upcoming
-   layout keeps one clear touch row at every phone width: Search, month
-   navigation, then Today. */
+   layout keeps its search, month, Today and Subscribe actions in one touch row. */
 @media (max-width: 760px) {
   body #upcomingTopbarControls:not(.hidden) {
     display: flex !important;
@@ -31981,8 +32673,8 @@ body .page-topbar-actions #upcomingTopbarControls .action-pill,
 
   body #upcomingTopbarControls .page-action-primary {
     display: grid !important;
-    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem !important;
-    grid-template-areas: "search month today" !important;
+    grid-template-columns: 2.75rem minmax(0, 1fr) 2.75rem 2.75rem !important;
+    grid-template-areas: "search month today feed" !important;
     width: 100% !important;
     min-width: 0 !important;
     gap: 0.35rem !important;
@@ -32029,8 +32721,18 @@ body .page-topbar-actions #upcomingTopbarControls .action-pill,
     padding-inline: 0 !important;
   }
 
+  body #upcomingTopbarControls #upcomingCalendarFeedButton {
+    grid-area: feed !important;
+    width: 100% !important;
+    min-width: 2.75rem !important;
+    min-height: 2.75rem !important;
+    justify-content: center !important;
+    padding-inline: 0 !important;
+  }
+
   body #upcomingTopbarControls .upcoming-search-trigger .upcoming-search-label,
-  body #upcomingTopbarControls #upcomingTodayButton .upcoming-today-label {
+  body #upcomingTopbarControls #upcomingTodayButton .upcoming-today-label,
+  body #upcomingTopbarControls #upcomingCalendarFeedButton .upcoming-feed-label {
     display: none !important;
   }
 
@@ -32486,13 +33188,13 @@ body #statsTopbarControls .stats-filter-field .field {
 
 /* Movies and TV reuse the dashboard's history tile markup and theme styling.
    Keep the alternate compact, list, and overview modes under their own rules. */
-.page-shell [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+.page-shell [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 24.0625rem), 1fr));
   justify-content: stretch;
   align-items: stretch;
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > :is(.movie-card, .folder-card):is(:not(.page-card-mode-compact *), .page-card-open) {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > :is(.movie-card, .folder-card):is(:not(.page-card-mode-compact *), .page-card-open) {
   box-sizing: border-box;
   display: flex;
   min-width: 0;
@@ -32508,13 +33210,13 @@ body #statsTopbarControls .stats-filter-field .field {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.14);
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) {
   position: relative;
   isolation: isolate;
   text-decoration: none;
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) > .history-card-poster-wrapper {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) > .history-card-poster-wrapper {
   box-sizing: border-box;
   width: auto;
   height: 100%;
@@ -32527,7 +33229,7 @@ body #statsTopbarControls .stats-filter-field .field {
   box-shadow: none;
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) .history-page-poster {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) .history-page-poster {
   display: block;
   width: 100%;
   height: 100%;
@@ -32537,37 +33239,37 @@ body #statsTopbarControls .stats-filter-field .field {
   box-shadow: none;
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) > .history-card-details {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) > .history-card-details {
   min-width: 0;
   min-height: 0;
   flex: 1 1 auto;
   padding: 0.65rem;
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) .history-card-title {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open) .history-card-title {
   font-size: 1rem;
   font-weight: 850;
 }
 
-.page-shell [data-view-panel="explorer"] #explorerPanel .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open):hover .history-card-poster-wrapper {
+.page-shell [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card:is(:not(.page-card-mode-compact *), .page-card-open):hover .history-card-poster-wrapper {
   transform: none;
 }
 
 /* In the Explorer's poster-only grid, preserve the clicked tile's poster size
    while its card opens across three grid tracks. */
-.page-shell [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open {
+.page-shell [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open {
   height: auto;
   min-height: 0;
 }
 
-.page-shell [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-poster-wrapper {
+.page-shell [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-poster-wrapper {
   width: var(--page-card-open-poster-width, 10rem);
   height: var(--page-card-open-poster-height, 15rem);
   flex: 0 0 var(--page-card-open-poster-width, 10rem);
 }
 
 @media (max-width: 760px) {
-  .page-shell [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+  .page-shell [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
     grid-template-columns: minmax(0, 1fr);
   }
 }
@@ -32688,14 +33390,14 @@ body #statsTopbarControls .stats-filter-field .field {
    richer card details are enabled. Keep List and Overview cards as their own
    layouts, and leave the explicit Posters only control available. */
 @media (max-width: 760px) {
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
     grid-template-columns: repeat(auto-fill, minmax(min(10rem, 100%), 1fr));
     justify-content: stretch;
     justify-items: center;
     align-items: start;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) {
     box-sizing: border-box;
     width: 100%;
     max-width: 10rem;
@@ -32705,7 +33407,7 @@ body #statsTopbarControls .stats-filter-field .field {
     align-items: stretch;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-poster-wrapper {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-poster-wrapper {
     box-sizing: border-box;
     width: 100%;
     height: auto;
@@ -32714,24 +33416,24 @@ body #statsTopbarControls .stats-filter-field .field {
     border-radius: var(--poster-radius) var(--poster-radius) 0 0;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-page-poster {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-page-poster {
     width: 100%;
     height: 100%;
     aspect-ratio: 2 / 3;
     object-fit: cover;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-details {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-details {
     box-sizing: border-box;
     flex: 0 0 auto;
     padding: 0.45rem 0.25rem 0.2rem;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) :is(.history-card-summary, .history-card-meta, .history-card-footer) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) :is(.history-card-summary, .history-card-meta, .history-card-footer) {
     display: none;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-title {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-title {
     display: -webkit-box;
     overflow: hidden;
     -webkit-box-orient: vertical;
@@ -32750,7 +33452,7 @@ body #statsTopbarControls .stats-filter-field .field {
 
 /* Movies and TV cards show the title's summary under the title (in place of
    the episode line on TV); explorer.js fills it in once TMDB details load. */
-.page-shell #explorerPanel .explorer-history-card .history-card-summary {
+.page-shell :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-summary {
   display: -webkit-box;
   margin: 0.2rem 0 0;
   overflow: hidden;
@@ -32761,13 +33463,13 @@ body #statsTopbarControls .stats-filter-field .field {
   -webkit-line-clamp: 3;
 }
 
-.page-shell #explorerPanel .explorer-history-card .history-card-summary:empty {
+.page-shell :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-summary:empty {
   display: none;
 }
 
 /* App Used matches the dashboard's plain badge. The older .movie-card span
    rules would otherwise resize, recolour and fill it on the Movies page. */
-.page-shell #explorerPanel .explorer-history-card .history-card-apps .source-badge {
+.page-shell :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-apps .source-badge {
   background: transparent;
   gap: var(--space-1);
   padding-inline: var(--space-1);
@@ -32776,7 +33478,7 @@ body #statsTopbarControls .stats-filter-field .field {
   font-weight: 850;
 }
 
-.page-shell #explorerPanel .explorer-history-card .history-card-apps .source-badge span {
+.page-shell :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-apps .source-badge span {
   color: inherit;
   font-size: inherit;
   font-weight: inherit;
@@ -33042,27 +33744,27 @@ body #statsTopbarControls .stats-filter-field .field {
   background: var(--brand-main);
 }
 
-html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
   background: var(--brand-menu) !important;
   background-image: none !important;
 }
 
-html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
   background: var(--brand-main) !important;
   background-image: none !important;
 }
 
-html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
   background: var(--brand-menu) !important;
   background-image: none !important;
 }
 
-html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
   background: var(--brand-main) !important;
   background-image: none !important;
 }
 
-html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
+html #settings-view :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) :is(.settings-card, .sync-panel, .logs-panel, .backup-settings-panel, .tool-section-card, .settings-group-section, .service-card, .about-page-card, .backup-type-card, .restore-upload-panel, .drop-zone, .webhook-secret-box, .webhook-endpoint-container, .copy-block, .settings-disclosure, .settings-help-disclosure, details.settings-modal-optional-fields, details.issue-category, details.sync-match-report, details.sync-tool-details, .sync-history-card, .sync-issue-card, .sync-job-card, .watch-backup-row, .settings-modal-field:not(#syncTuningFields .settings-modal-field), .admin-credentials-grid > .field-label, .settings-choice-option, .settings-segmented-control, .sync-health-metric, .sync-health-dest-row, .sync-preview-warning-card, .diagnostic-result-card, .tracker-full-sync-preview, .tracker-preview-metric, .tracker-preview-group, .tracker-preview-item, .field, select, textarea, input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"])) {
   background: var(--brand-menu) !important;
   background-image: none !important;
 }
@@ -33151,7 +33853,7 @@ html:root:not(.light-mode) #timeline-view .history-card-meta-row .meta-value.his
 
 html:root .source-plex,
 html:root .media-app-link--plex {
-  --modern-provider: #e5a00d;
+  --modern-provider: #10b981;
 }
 
 html:root .source-emby,
@@ -33172,16 +33874,16 @@ html:root .media-app-link--plembfin {
 /* App Used badges only: the Watch Now app links keep the plain text colour. */
 html:root:not(.light-mode) #timeline-view .source-badge:not([class*="media-app-link--"]),
 html:root:not(.light-mode) #history-view .history-list .source-badge,
-html:root:not(.light-mode) #explorerPanel .explorer-history-card .source-badge:not([class*="media-app-link--"]) {
+html:root:not(.light-mode) :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .source-badge:not([class*="media-app-link--"]) {
   color: color-mix(in srgb, var(--modern-provider, var(--soft)), #ffffff 35%);
 }
 
 /* Keep provider branding on the icon while the app name stays neutral. */
-html:root :is(#timeline-view, #history-view, #explorerPanel) .source-badge:not([class*="media-app-link--"]) > span:last-child {
+html:root :is(#timeline-view, #history-view, :is(#explorerPanel, #explorerDroppedPanel)) .source-badge:not([class*="media-app-link--"]) > span:last-child {
   color: var(--soft);
 }
 
-html:root .page-shell #explorerPanel .explorer-history-card .history-card-apps .source-badge > span:last-child {
+html:root .page-shell :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-apps .source-badge > span:last-child {
   color: var(--soft);
 }
 
@@ -33650,8 +34352,19 @@ html:root #nowPlayingGrid .live-now-card .stream-indicator:not(.is-paused)::afte
 }
 
 /* Phones: two features no longer fit side by side, so each takes most of the
-   row like the live cards and the second peeks in from the right. */
+   row like the live cards and the second peeks in from the right. The live
+   cards take the features' wider poster and height so both look the same. */
 @media (max-width: 640px) {
+  html:root #nowPlayingGrid .live-now-card {
+    min-width: min(24rem, calc(100% - 1.75rem));
+    min-height: 14rem;
+  }
+
+  html:root #nowPlayingGrid .live-now-card .now-poster-large-wrapper {
+    flex: 0 0 clamp(7.5rem, 34vw, 9rem);
+    width: clamp(7.5rem, 34vw, 9rem);
+  }
+
   #timeline-view #nowPlayingGrid .modern-idle-feature {
     min-width: min(24rem, calc(100% - 1.75rem));
     min-height: 14rem;
@@ -33721,9 +34434,9 @@ html:root:not(.light-mode) .topnav .nav-tab {
 
 html:root:not(.light-mode) .topnav .nav-tab.active {
   border-left-color: transparent;
-  background: linear-gradient(90deg, rgba(229, 160, 13, 0.24) 0%, rgba(229, 160, 13, 0.05) 100%);
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.24) 0%, rgba(16, 185, 129, 0.05) 100%);
   box-shadow: inset 3px 0 0 var(--accent);
-  color: #f5c451;
+  color: #10b981;
 }
 
 /* Light ------------------------------------------------------------------- */
@@ -33825,15 +34538,15 @@ html:root.light-mode #timeline-view .history-card-meta-row .meta-value.history-c
 /* Provider colours darkened, where dark lightens them, so they read on white. */
 html:root.light-mode #timeline-view .source-badge:not([class*="media-app-link--"]),
 html:root.light-mode #history-view .history-list .source-badge,
-html:root.light-mode #explorerPanel .explorer-history-card .source-badge:not([class*="media-app-link--"]) {
+html:root.light-mode :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .source-badge:not([class*="media-app-link--"]) {
   color: color-mix(in srgb, var(--modern-provider, var(--soft)), #000000 28%);
 }
 
-html:root.light-mode :is(#timeline-view, #history-view, #explorerPanel) .source-badge:not([class*="media-app-link--"]) > span:last-child {
+html:root.light-mode :is(#timeline-view, #history-view, :is(#explorerPanel, #explorerDroppedPanel)) .source-badge:not([class*="media-app-link--"]) > span:last-child {
   color: var(--soft);
 }
 
-html:root.light-mode .page-shell #explorerPanel .explorer-history-card .history-card-apps .source-badge > span:last-child {
+html:root.light-mode .page-shell :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-apps .source-badge > span:last-child {
   color: var(--soft);
 }
 
@@ -34098,7 +34811,7 @@ html:root .page-shell .shared-media-card .shared-media-card-rating {
 /* Movies and TV library cards share the dashboard history card appearance.
    The surface rules name [data-view-panel="explorer"] and .history-page-card to
    outrank the cards-mode layout rule above (radius, border and background). */
-html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card {
+html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .history-page-card.explorer-history-card {
   position: relative;
   isolation: isolate;
   border: 1px solid rgba(255, 255, 255, 0.07);
@@ -34107,7 +34820,7 @@ html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] 
   transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
-html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card:hover {
+html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .history-page-card.explorer-history-card:hover {
   border-color: var(--accent);
   background: linear-gradient(180deg, rgba(38, 46, 57, 0.9) 0%, rgba(18, 23, 30, 0.9) 100%);
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4);
@@ -34116,8 +34829,8 @@ html:root .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] 
   outline-offset: -1px;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::before,
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::after {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card::before,
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card::after {
   content: "";
   position: absolute;
   inset: 0;
@@ -34125,42 +34838,42 @@ html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-hist
   pointer-events: none;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::before {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card::before {
   background: var(--modern-art, none) center 30% / cover no-repeat;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::after {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card::after {
   opacity: var(--modern-art-shade, 0);
   background: linear-gradient(90deg, rgba(12, 16, 22, 0.94) 0%, rgba(12, 16, 22, 0.84) 55%, rgba(12, 16, 22, 0.66) 100%);
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card > .history-card-poster-wrapper,
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card > .history-card-poster-wrapper .history-card-poster-link {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card > .history-card-poster-wrapper,
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card > .history-card-poster-wrapper .history-card-poster-link {
   border-radius: 0;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card:hover .history-card-poster-wrapper {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card:hover .history-card-poster-wrapper {
   transform: none;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .meta-label {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .meta-label {
   color: rgba(148, 163, 184, 0.72);
   font-size: var(--fs-card-label);
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .history-card-meta-row .meta-value {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-meta-row .meta-value {
   color: var(--text);
   font-weight: 600;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .history-card-episode {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-episode {
   color: var(--accent);
   font-weight: 600;
 }
 
-html:root .page-shell[data-active-view="explorer"] #explorerPanel .history-card-meta-row .meta-value.history-card-watch-count {
+html:root .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .history-card-meta-row .meta-value.history-card-watch-count {
   display: inline-flex;
   align-items: center;
   border: 1px solid rgba(56, 189, 248, 0.35);
@@ -34172,27 +34885,27 @@ html:root .page-shell[data-active-view="explorer"] #explorerPanel .history-card-
   font-weight: 700;
 }
 
-html:root.light-mode .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card {
+html:root.light-mode .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .history-page-card.explorer-history-card {
   border-color: rgba(15, 23, 42, 0.09);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.92) 100%);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
 }
 
-html:root.light-mode .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] #explorerPanel .history-page-card.explorer-history-card:hover {
+html:root.light-mode .page-shell[data-active-view="explorer"] [data-view-panel="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .history-page-card.explorer-history-card:hover {
   border-color: var(--accent);
   background: linear-gradient(180deg, #ffffff 0%, rgba(248, 250, 252, 0.96) 100%);
   box-shadow: 0 3px 6px rgba(15, 23, 42, 0.14);
 }
 
-html:root.light-mode .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card::after {
+html:root.light-mode .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card::after {
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.86) 55%, rgba(255, 255, 255, 0.7) 100%);
 }
 
-html:root.light-mode .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .meta-label {
+html:root.light-mode .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .meta-label {
   color: rgba(71, 85, 105, 0.8);
 }
 
-html:root.light-mode .page-shell[data-active-view="explorer"] #explorerPanel .explorer-history-card .history-card-meta-row .meta-value.history-card-watch-count {
+html:root.light-mode .page-shell[data-active-view="explorer"] :is(#explorerPanel, #explorerDroppedPanel) .explorer-history-card .history-card-meta-row .meta-value.history-card-watch-count {
   border-color: rgba(2, 132, 199, 0.3);
   background: rgba(14, 165, 233, 0.1);
   color: #0369a1;
@@ -34451,7 +35164,7 @@ html:root.light-mode .settings-pane .settings-row-main :is(details.sync-tool-det
 
 html:root .settings-pane .settings-row-main :is(details.sync-tool-details, details.sync-match-report, details.issue-category, .sync-history-card):is(:hover, :focus-within) {
   border-width: 1px !important;
-  border-color: rgba(229, 160, 13, 0.4) !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
   outline-color: transparent;
 }
 
@@ -34552,9 +35265,7 @@ html:root #timeline-view #nowPlayingGrid .modern-idle-feature {
   overflow: visible;
 }
 
-/* On phone dashboards, each recently watched rail card is portrait-led. Keep
-   its title, episode, watch date, and app badge together under the poster so
-   short headers do not leave a tall blank gap before the metadata. */
+/* Keep phone history metadata together beside its poster. */
 @media (max-width: 640px) {
   #timeline-view :is(#tvHistoryRow, #movieHistoryRow) > .dashboard-history-page-card > .history-card-details {
     justify-content: flex-start;
@@ -35237,7 +35948,8 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
   }
 
   body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideWatchedLabel,
-  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideEndedLabel {
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideEndedLabel,
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerDroppedOnlyLabel {
     display: flex !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -35263,7 +35975,12 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     grid-row: 4 !important;
   }
 
-  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > :is(#explorerHideWatchedLabel, #explorerHideEndedLabel)[style*="display: none"] {
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerDroppedOnlyLabel {
+    grid-column: 1 !important;
+    grid-row: 5 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > :is(#explorerHideWatchedLabel, #explorerHideEndedLabel, #explorerDroppedOnlyLabel)[style*="display: none"] {
     display: none !important;
   }
 
@@ -35362,7 +36079,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
 /* On phones, library cards follow Discover's poster-above-details layout;
    desktop keeps its horizontal poster-and-details cards. */
 @media (max-width: 760px) {
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     justify-content: stretch !important;
     justify-items: stretch !important;
@@ -35371,7 +36088,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     gap: 0.75rem !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) {
     width: 100% !important;
     max-width: none !important;
     height: auto !important;
@@ -35385,7 +36102,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     scroll-margin-top: calc(var(--right-topbar-height) + var(--space-3)) !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-poster-wrapper {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-poster-wrapper {
     width: 100% !important;
     height: auto !important;
     max-height: none !important;
@@ -35395,14 +36112,14 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     border-radius: var(--poster-radius) var(--poster-radius) 0 0 !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-page-poster {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-page-poster {
     width: 100% !important;
     height: 100% !important;
     aspect-ratio: 2 / 3 !important;
     object-fit: cover !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-details {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) > .history-card-details {
     display: flex !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -35414,7 +36131,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     padding: 0.65rem !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-summary {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-summary {
     display: -webkit-box !important;
     margin: 0.2rem 0 0 !important;
     overflow: hidden !important;
@@ -35422,7 +36139,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     -webkit-line-clamp: 3 !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) :is(.history-card-meta, .history-card-footer) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) :is(.history-card-meta, .history-card-footer) {
     display: flex !important;
     min-width: 0 !important;
     flex-wrap: wrap !important;
@@ -35431,7 +36148,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     font-size: 0.68rem !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-title {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"]:not(.page-card-mode-compact) :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card:not(.page-card-open) .history-card-title {
     display: -webkit-box !important;
     overflow: hidden !important;
     font-size: 0.95rem !important;
@@ -35442,11 +36159,11 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
 
   /* Folded library posters open across the row on phones, with the details
      beside the poster and clear of the sticky title. */
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) {
     padding-block-start: var(--space-3) !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open {
     grid-column: 1 / -1 !important;
     justify-self: stretch !important;
     width: 100% !important;
@@ -35460,7 +36177,7 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     scroll-margin-top: calc(var(--right-topbar-height) + var(--space-3)) !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-poster-wrapper {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-poster-wrapper {
     width: var(--page-card-open-poster-width, 10rem) !important;
     height: var(--page-card-open-poster-height, 15rem) !important;
     max-height: none !important;
@@ -35470,14 +36187,14 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
     border-radius: var(--poster-radius) 0 0 var(--poster-radius) !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open .history-page-poster {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open .history-page-poster {
     width: 100% !important;
     height: 100% !important;
     aspect-ratio: 2 / 3 !important;
     object-fit: cover !important;
   }
 
-  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact #explorerPanel .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-details {
+  .page-shell[data-active-view="explorer"] [data-view-panel="explorer"].page-card-mode-compact :is(#explorerPanel, #explorerDroppedPanel) .movie-grid:not(.explorer-list-view, .explorer-overview-view) > .explorer-history-card.page-card-open > .history-card-details {
     display: flex !important;
     width: auto !important;
     min-width: 0 !important;
@@ -35549,6 +36266,17 @@ html:root .page-shell .page-topbar-actions .explorer-view-btn.active {
   body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerHideEndedLabel {
     grid-column: 1 / -1 !important;
     grid-row: 6 !important;
+  }
+
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > #explorerDroppedOnlyLabel {
+    grid-column: 1 / -1 !important;
+    grid-row: 7 !important;
+  }
+
+  /* The filter toggles use the Card view / Poster view text size. */
+  body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-hide-toggle > span {
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
   }
 
   body.page-controls-options-active #topbarControlsPanel #explorerTopbarControls > .explorer-view-toggle,
@@ -36279,4 +37007,937 @@ body.person-detail-active #pageTopbarActions {
     display: flex;
     margin-inline: auto;
   }
+}
+.netflix-import-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.settings-pane .settings-row-main details.sync-tool-details > .tool-item-row.netflix-import-panel > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.netflix-obtain-steps {
+  display: grid;
+  gap: 0.4rem;
+  overflow-wrap: anywhere;
+  font-size: 0.92rem;
+  line-height: 1.35;
+}
+
+.settings-pane .settings-row-main .netflix-obtain-steps.tautulli-step-note {
+  font-size: 0.92rem !important;
+  line-height: 1.35 !important;
+}
+
+.netflix-obtain-steps p {
+  margin: 0;
+}
+
+.netflix-obtain-steps ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.netflix-import-panel > .field-label {
+  display: grid;
+  gap: 8px;
+}
+
+.netflix-file-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.netflix-file-field > .field-label {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.netflix-file-picker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--field);
+}
+
+.netflix-file-picker input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.netflix-file-picker:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.netflix-file-picker label {
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.netflix-file-picker > span {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.netflix-profile-choice {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.netflix-profile-choice legend {
+  padding: 0;
+  font-weight: 600;
+}
+
+.netflix-profile-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 8px;
+}
+
+.netflix-profile-list label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.netflix-profile-list label span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.netflix-profile-list label:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+}
+
+.netflix-profile-list input {
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.netflix-profile-list label:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.netflix-review-list {
+  display: grid;
+  gap: 12px;
+}
+
+.netflix-import-actions {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.netflix-review-group {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color, rgba(148, 163, 184, .24));
+  border-radius: var(--radius);
+}
+
+.netflix-review-card {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+.netflix-review-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.netflix-review-card-head > :first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.netflix-media-type {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.netflix-match-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.netflix-match-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-content: start;
+  align-items: start;
+  gap: 8px 9px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.netflix-match-option:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+
+.netflix-match-option:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.netflix-match-option > input {
+  grid-row: span 2;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.netflix-match-option-label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.netflix-match-option-label strong {
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+
+.netflix-match-option-label > span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.netflix-catalog-links {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.netflix-catalog-links a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.netflix-catalog-links a:hover {
+  color: var(--text-primary, #f8fafc);
+}
+
+.netflix-show-candidates {
+  margin-block: 4px;
+}
+
+.netflix-review-group h4 {
+  margin: 0;
+}
+
+.netflix-year-matched > summary {
+  cursor: pointer;
+  font-weight: 650;
+  list-style: none;
+}
+
+.netflix-year-matched > summary::-webkit-details-marker {
+  display: none;
+}
+
+.netflix-year-matched[open] > summary {
+  margin-bottom: 8px;
+}
+
+.netflix-review-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(220px, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.netflix-review-group,
+.netflix-review-row > * {
+  min-width: 0;
+}
+
+.netflix-review-row .field {
+  width: 100%;
+  max-width: 100%;
+}
+
+.netflix-show-choice {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.netflix-show-episodes > summary {
+  cursor: pointer;
+  padding-block: 6px;
+}
+
+.netflix-season-suggestions {
+  margin-top: 12px;
+  overflow-wrap: anywhere;
+}
+
+.netflix-season-suggestions h5 {
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .netflix-review-row {
+    grid-template-columns: 1fr;
+  }
+  .netflix-review-group .sync-tool-button {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+.settings-row.one-time-imports-row {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  align-items: start;
+}
+
+.settings-row.one-time-imports-row > .settings-row-main,
+.settings-row.one-time-imports-row > .settings-row-help {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.settings-pane .settings-row-main > .tool-item-row.netflix-import-panel {
+  padding-bottom: 0 !important;
+  border-bottom: 0 !important;
+}
+
+#netflixImportProgress[hidden],
+#netflixImportStatus[hidden],
+#netflixImportSummary[hidden] {
+  display: none !important;
+}
+
+.netflix-summary-counts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: 0.65rem;
+}
+
+.netflix-summary-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel-3);
+}
+
+.netflix-summary-box strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.netflix-summary-box span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 900px) {
+  .settings-row.one-time-imports-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.upcoming-feed-button {
+  white-space: nowrap;
+}
+
+.upcoming-feed-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 34rem);
+  max-width: 34rem;
+  max-height: min(42rem, 88vh);
+  gap: 0;
+  padding: 1rem;
+  overflow: auto;
+  background: var(--panel-3);
+}
+
+.upcoming-feed-modal .modal-head {
+  align-items: flex-start;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.upcoming-feed-modal .confirm-modal-body {
+  padding: 0.9rem 0 0;
+}
+
+.upcoming-feed-description {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.upcoming-feed-type-fieldset {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.upcoming-feed-type-fieldset legend {
+  margin-bottom: var(--space-2);
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.upcoming-feed-type-grid .settings-choice-option {
+  min-height: 4.2rem;
+}
+
+.upcoming-feed-url-fields {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.upcoming-feed-url-fields label {
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.upcoming-feed-url {
+  width: 100%;
+  min-width: 0;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 540px) {
+  .upcoming-feed-type-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* Settings > Users: the admin's controls inside one user's box, one row per control. */
+.users-stats-panel {
+  gap: var(--space-3) !important;
+}
+
+.users-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  gap: var(--space-2) var(--space-3);
+  margin: 0;
+}
+
+.users-stat {
+  min-width: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--brand-main);
+}
+
+.users-stat dt {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.users-stat dd {
+  margin: var(--space-1) 0 0;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.users-stats-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.settings-pane #addUserForm .users-add-user-grid > .field-label {
+  box-sizing: border-box;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--brand-menu);
+  transition: border-color 160ms ease;
+}
+
+.settings-pane #addUserForm .users-add-user-grid > .field-label:focus-within {
+  border-color: var(--blue);
+}
+
+.users-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.users-add-user-row {
+  margin-top: var(--space-2);
+}
+
+details.sync-tool-details > .tool-item-row.user-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+.user-options-shell {
+  position: relative;
+}
+
+.user-options-details > summary.accordion-header {
+  min-height: 3.5rem;
+  align-items: center !important;
+  gap: var(--space-3);
+}
+
+.user-options-heading-actions {
+  position: static;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.user-options > .user-option-instance-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.user-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--brand-menu);
+  min-width: 0;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.user-options-grid > .user-option:hover,
+.user-options-grid > .user-option:focus-within {
+  border-color: var(--blue);
+  background: var(--panel-3);
+}
+
+.settings-card .user-options-grid > form.user-option {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: space-between !important;
+  gap: var(--space-3) !important;
+}
+
+.user-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.user-option-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.user-option-copy > b {
+  font-size: 0.86rem;
+}
+
+.user-option-copy > span,
+.user-confirm > p,
+.user-confirm-check {
+  color: var(--muted);
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.user-option-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.user-option-actions > .field {
+  width: min(12rem, 100%);
+  max-width: 100%;
+}
+
+html #settings-view .settings-row-main .user-options-grid :is([data-user-rename-form], [data-user-password-form]) .field:not(#syncTuningFields):not(#syncTuningFields):not(#syncTuningFields):not(#syncTuningFields) {
+  background: var(--brand-main) !important;
+  background-image: none !important;
+}
+
+.user-option-card > .user-option-actions {
+  margin-top: auto;
+}
+
+.user-options-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.user-confirm {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.user-confirm.hidden {
+  display: none;
+}
+
+.user-confirm > p {
+  margin: 0;
+}
+
+.user-confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.user-options > .user-action-status {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.user-options > .user-action-status:not(:empty) {
+  padding: 0 var(--space-1);
+}
+
+.user-options > .user-action-status:empty {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .user-options-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .user-options-details > summary.accordion-header {
+    align-items: center !important;
+    flex-direction: row !important;
+  }
+
+  .user-options-heading-actions {
+    flex-wrap: wrap;
+  }
+}
+
+/* The signed-in account sits above Version; administrators can open its switcher. */
+.sidebar-current-user-wrap,
+.sidebar-current-user-button,
+.sidebar-current-user-static {
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.sidebar-current-user-wrap {
+  position: relative;
+  display: grid;
+  width: calc(100% - var(--space-3));
+  max-width: 13rem;
+}
+
+.sidebar-current-user-button,
+.sidebar-current-user-static {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 0.35rem var(--space-2);
+  overflow: hidden;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-current-user-button {
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sidebar-current-user-button:hover,
+.sidebar-current-user-button:focus-visible,
+.sidebar-current-user-button.active {
+  color: var(--text);
+  background: var(--panel-2);
+}
+
+.sidebar-current-user-button > span,
+.sidebar-current-user-static {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-current-user-button > span {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.sidebar-current-user-list {
+  position: absolute;
+  z-index: var(--z-dropdown, 50);
+  bottom: calc(100% + var(--space-2));
+  left: 0;
+  width: min(14rem, calc(100vw - var(--space-6)));
+  max-height: min(60vh, 24rem);
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--brand-menu);
+  box-shadow: 0 0.6rem 1.8rem rgb(0 0 0 / 28%);
+}
+
+.sidebar-current-user-list .sidebar-switch-user-error {
+  padding: var(--space-2);
+}
+
+.sidebar-switch-user-list.hidden {
+  display: none;
+}
+
+.sidebar-switch-user-list {
+  display: grid;
+  gap: 0;
+}
+
+.sidebar-switch-user-item {
+  font-family: inherit;
+  justify-content: space-between;
+}
+
+.sidebar-switch-user-item > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-switch-user-item:disabled {
+  cursor: default;
+}
+
+.sidebar-switch-user-item:disabled:not(.active) {
+  opacity: 0.55;
+}
+
+.sidebar-switch-user-note {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sidebar-switch-user-error {
+  margin: 0;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.78rem;
+}
+
+.sidebar-switch-user-error:empty {
+  display: none;
+}
+
+/* Foot of the setup page: the users as the app's own secondary buttons. */
+.setup-switch-user {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  margin: 1rem auto 0;
+}
+
+.setup-switch-user > .muted-copy {
+  margin: 0;
+}
+
+.setup-switch-user-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.setup-switch-user-list .button-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.account-user-only {
+  display: none !important;
+}
+
+/* Non-admin users cannot access Settings > Users. */
+html.non-admin-user [data-settings-group-parent="users"],
+html.non-admin-user [data-settings-path^="/settings/users"],
+html.supervised-child [data-settings-group-parent="users"],
+html.supervised-child [data-settings-path^="/settings/users"] {
+  display: none !important;
+}
+
+html.non-admin-user .account-admin-only {
+  display: none !important;
+}
+
+html.non-admin-user .account-user-only {
+  display: revert !important;
+}
+
+html.non-admin-user #adminCredentialsForm {
+  display: none !important;
+}
+
+html.non-admin-user #userPasswordForm {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: var(--space-3) !important;
+}
+
+html.elevated-admin .account-admin-only,
+html.elevated-admin #adminCredentialsForm {
+  display: none !important;
+}
+
+html.elevated-admin .account-user-only {
+  display: revert !important;
+}
+
+/* Generic settings-card form layout uses display:flex !important, so explicitly
+   preserve the browser's hidden state until auth confirms a non-admin account. */
+.settings-pane .settings-card #userPasswordForm[hidden] {
+  display: none !important;
+}
+
+/* Keep webhook setup instructions within their card on narrow screens. */
+.webhook-guide-content details.sync-tool-details,
+.webhook-guide-content details.sync-tool-details > .tool-item-row,
+.webhook-guide-content .webhook-plugin-setup,
+.webhook-guide-content .webhook-instruction-list,
+.webhook-guide-content .webhook-instruction-list > li {
+  min-width: 0;
+}
+
+.webhook-guide-content .webhook-plugin-setup,
+.webhook-guide-content .webhook-instruction-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.webhook-guide-content .webhook-instruction-list .copy-block {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+}
+
+.webhook-guide-content .copy-block pre {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }

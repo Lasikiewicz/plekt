@@ -26,6 +26,11 @@ The library merges pages by show provider identity, with title fallback when ids
 so shared poster artwork never collapses distinct shows. Initial and later-page loads show an
 animated loading indicator.
 
+Incoming episode events and scheduled watch-history items are checked against the other
+numbering source only when the episode title and stored coordinates conflict. A confirmed
+source mismatch appears in Manual Watch review; dismissals remain in effect until the show's
+TMDB or TVDB id changes. This review does not alter watch history or provider state.
+
 ## Data model
 
 A "show" is derived from `watch_history` rows with `media_type = "episode"`, grouped by

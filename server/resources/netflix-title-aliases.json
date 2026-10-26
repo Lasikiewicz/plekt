@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "entries": [
+    {
+      "mediaType": "movie",
+      "titles": ["Jackass 3.5: The Explicit Movie", "Jackass 3.5"],
+      "sources": ["https://www.netflix.com/fo-en/title/70181592"]
+    },
+    {
+      "mediaType": "movie",
+      "titles": ["Trolls Holiday Special", "Trolls Holiday"],
+      "sources": ["https://www.netflix.com/tudum/articles/animated-holiday-movies"]
+    },
+    {
+      "mediaType": "tv",
+      "titles": ["Charité at War", "Charité"],
+      "sources": ["https://www.netflix.com/gb/title/81081067", "https://www.ufa.de/produktionen/charite-serie"]
+    }
+  ]
+}

@@ -1,6 +1,6 @@
-import { readStoredAdminToken } from "./auth.js?v=2.1.1.0.8";
-import { readStoredDebugLogs } from "./logs.js?v=2.1.1.0.8";
-import { isDemoMode } from "./utils.js?v=2.1.1.0.8";
+import { readStoredAdminToken } from "./auth.js?v=2.1.1.0.9";
+import { readStoredDebugLogs } from "./logs.js?v=2.1.1.0.9";
+import { isDemoMode } from "./utils.js?v=2.1.1.0.9";
 
 const TOKEN_KEY = "adminToken";
 const LEGACY_UPPER_TOKEN_KEY = "ADMIN_TOKEN";
@@ -19,7 +19,7 @@ export const HIDE_ENDED_KEY_SHOWS = "plembfin:hideEnded:shows";
 export const HIDE_EPISODE_SPOILERS_KEY = "plembfin:hideEpisodeSpoilers";
 export const HISTORY_VIEW_KEY = "plembfin:historyView";
 export const HISTORY_FILTER_KEY = "plembfin:historyFilter";
-export const HISTORY_VIEW_MODES = ["grid", "list", "cards"];
+export const HISTORY_VIEW_MODES = ["grid", "list", "cards", "days"];
 export const HISTORY_FILTERS = ["all", "movies", "shows"];
 export const PERSONAL_MEDIA_VIEWS = ["watchlist", "ratings", "playlists"];
 export const PRIMARY_VIEWS = ["dashboard", "stats", "explorer", "upcoming", "discover", ...PERSONAL_MEDIA_VIEWS, "settings", "help", "search", "history", "syncActivity", "manualWatchReview", "setup"];
@@ -76,6 +76,7 @@ const initialState = {
   syncActivityLoading: false,
   manualWatchReviews: [],
   manualWatchReviewCount: 0,
+  manualWatchSourceMismatchCount: 0,
   manualWatchReviewLoading: false,
   manualWatchReviewLoaded: false,
   manualWatchReviewError: "",
@@ -227,7 +228,7 @@ const initialState = {
   explorerScrollArmed: false,
   posterHydrateScrollScheduled: false,
   historyViewSearch: "",
-  historyViewMode: HISTORY_VIEW_MODES.includes(localStorage.getItem(HISTORY_VIEW_KEY)) ? localStorage.getItem(HISTORY_VIEW_KEY) : "cards",
+  historyViewMode: HISTORY_VIEW_MODES.includes(localStorage.getItem(HISTORY_VIEW_KEY)) ? localStorage.getItem(HISTORY_VIEW_KEY) : "days",
   historyViewFilter: HISTORY_FILTERS.includes(localStorage.getItem(HISTORY_FILTER_KEY)) ? localStorage.getItem(HISTORY_FILTER_KEY) : "all",
   historyViewSearchTimer: undefined,
   historyViewRaw: [],

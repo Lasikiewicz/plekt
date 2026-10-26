@@ -356,8 +356,10 @@ function rowToReview(row, { includeWatchContext = true } = {}) {
     updated_at: Number(row.updated_at || 0),
     reviewed_at: Number(row.reviewed_at || 0) || null,
     media,
+    review_kind: media.reviewKind === "source_mismatch" ? "source_mismatch" : "manual_watch",
+    reason: text(media.reason),
   };
-  if (includeWatchContext && review.media_type === "episode") {
+  if (review.review_kind !== "source_mismatch" && includeWatchContext && review.media_type === "episode") {
     review.watch_context = manualWatchReviewWatchContext(review);
     Object.assign(review, reviewShowIdentity(review));
   }
@@ -409,6 +411,7 @@ export function listPendingManualWatchReviews({ includeWatchContext = true } = {
   const pending = [];
   for (const row of selectPendingReviewsStmt.all()) {
     const review = rowToReview(row, { includeWatchContext });
+    if (review.review_kind === "source_mismatch") { pending.push(review); continue; }
     if (reviewIsAlreadyWatched(review)) setManualWatchReviewStatus(review.id, "dismissed", RESOLVED_BY_LOCAL_STATE);
     else pending.push(review);
   }
@@ -446,6 +449,13 @@ export function countPendingManualWatchReviews() {
 }
 
 function reviewDisplayKey(review = {}) {
+  if (review.review_kind === "source_mismatch") {
+    const media = review.media || {};
+    const ids = media.showIds || media.show_ids || media.ids || {};
+    const identity = text(ids.tmdb || ids.tvdb || ids.imdb)
+      || canonicalTitleKey(review.show_title || media.showTitle || media.show_title || review.id);
+    return `source-mismatch:${identity}`;
+  }
   const type = text(review.media_type || review.media?.type || review.media?.media_type).toLowerCase();
   if (type !== "episode") return `review:${review.id || review.media_key || canonicalTitleKey(review.title || "unknown")}`;
 
@@ -574,6 +584,35 @@ export function enqueueManualWatchReview(media = {}, {
     return { queued: false, status: "already_watched", review };
   }
   return { queued: true, status: "pending", review };
+}
+
+// Source mismatch notifications share the inbox table and sidebar count, but
+// never enter the watched/unwatched decision guards above.
+const sourceMismatchByKeyStmt = db.prepare("SELECT * FROM manual_watch_reviews WHERE media_key = ?");
+export function enqueueSourceMismatchReview(media = {}, { fingerprint = "" } = {}) {
+  const ids = media.ids || {};
+  const tmdb = text(ids.tmdb || ids.tmdbId);
+  const tvdb = text(ids.tvdb || ids.tvdbId);
+  const mediaKey = `source-mismatch:${tmdb}:${tvdb}`;
+  const existing = sourceMismatchByKeyStmt.get(mediaKey);
+  const currentFingerprint = text(fingerprint) || `${tmdb}:${tvdb}`;
+  if (existing?.status === "dismissed" && existing.source_fingerprint === currentFingerprint) {
+    return { queued: false, status: "dismissed", review: rowToReview(existing) };
+  }
+  const now = Date.now();
+  const values = {
+    id: existing?.id || crypto.randomUUID(), media_key: mediaKey,
+    source: text(media.source) || "metadata", source_item_id: text(media.itemId) || null,
+    title: text(media.title) || "Episode source mismatch", media_type: "episode",
+    show_title: text(media.showTitle || media.show_title) || null,
+    episode_title: text(media.episodeTitle || media.episode_title) || null,
+    season: integerOrNull(media.season), episode: integerOrNull(media.episode),
+    release_date: null, observed_watched_at: null, source_fingerprint: currentFingerprint,
+    media_json: toJson({ ...serializableMedia(media), reviewKind: "source_mismatch", reason: "source_mismatch", mismatch: media.mismatch, showIds: media.showIds || ids }), updated_at: now,
+  };
+  if (existing) updateReviewStmt.run(values);
+  else insertReviewStmt.run({ ...values, created_at: now });
+  return { queued: true, status: "pending", review: getManualWatchReview(values.id) };
 }
 
 export function setManualWatchReviewStatus(id, status, decisionMode = null) {

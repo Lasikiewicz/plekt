@@ -16,12 +16,21 @@ checks at startup and shows a dismissable notice on the dashboard.
 - The notice returns until the webhook is fixed or dismissed; a dismissal is remembered per warning text.
   Status is served by `GET /api/webhook-port/status` (admin only).
 
-## Authentication
+## Authentication & per-user routing
 
-The webhook endpoint is at `/api/webhook` and requires the webhook secret. Media servers commonly use the compatibility query-token URL:
+The admin's webhook endpoint is at `/api/webhook`, so existing single-user Plex, Emby, and
+Jellyfin webhook configurations keep working unchanged. In a multi-user install, each
+non-admin user has their own isolated webhook endpoint at `/u/<name>/api/webhook` (and
+API-key integrations for that user similarly call `/u/<name>/api/*`).
+
+Each user has their own independent `webhookSecret` (`data/config.json` for the admin,
+`data/users/<name>/config.json` for a non-admin user). A valid secret for one user is
+rejected on another user's webhook path. Media servers commonly use the compatibility
+query-token URL:
 
 ```
 POST /api/webhook?token=<webhookSecret>
+POST /u/<name>/api/webhook?token=<webhookSecret>
 ```
 
 Header auth is preferred for custom automation clients that can set request headers:
@@ -38,10 +47,12 @@ configured before the rename keep working unchanged.
 setups can continue using the query-token URL above when custom headers are not
 available; access logs redact sensitive query parameters before writing to disk.
 
-`webhookSecret` is generated on first boot and stored in `data/config.json`. Copy the
-full URL (including token) from **Settings → Media servers → Webhooks** in the dashboard. You can
-rotate it independently via the "Rotate Secret" button without affecting the admin
-password or API key.
+`webhookSecret` is generated on first boot (or when the user is first created) and stored
+in that user's `config.json`. Copy the full URL (including `/u/<name>/api/webhook` when
+viewing a non-admin user, plus the token) from **Settings → Media servers → Webhooks** in
+the dashboard (`getWebhookPath()` in `public/modules/auth.js`). You can rotate it
+independently via the "Rotate Secret" button without affecting the password, API key, or
+any other user's webhook secret.
 
 > The `?token=` approach mirrors Sonarr/Radarr/Overseerr and remains the compatibility
 > method for webhook senders such as Plex, Emby, and Jellyfin when they cannot set
@@ -92,7 +103,10 @@ webhook back. `loopStore` (`server/src/utils/loopStore.js`) tracks
 recently-dispatched events keyed by platform + media identifier in the SQLite
 `loop_keys` table (a key/value store with per-row TTL, see `schema.sql`); an
 incoming webhook matching a recent dispatch is detected as an echo and dropped
-before it can trigger another round.
+before it can trigger another round. Up Next native rail refreshes and other
+Plekt outbound play/unplay marks are media-server and Plekt only: their echoed
+webhooks are consumed before any Simkl (or other non-polling tracker) event
+check, so they never spend tracker quota.
 
 Played callbacks caused by Plekt's own outbound mark are also dropped before
 the canonical-repair path, even when the item is already watched locally. This

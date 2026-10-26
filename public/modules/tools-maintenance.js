@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, platformName, formatDate, formatNumber } from "./utils.js?v=2.1.1.0.8";
-import { categorizeIssues } from "./sync.js?v=2.1.1.0.8";
-import { openFixMatchDialog } from "./edit-dialogs.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, platformName, formatDate, formatNumber } from "./utils.js?v=2.1.1.0.9";
+import { categorizeIssues } from "./sync.js?v=2.1.1.0.9";
+import { openFixMatchDialog } from "./edit-dialogs.js?v=2.1.1.0.9";
 
 let _setMessage = () => {};
 let _showConfirmModal = () => {};
@@ -1474,7 +1474,11 @@ async function clearCacheType(type) {
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `Cache clear failed with ${response.status}`);
     const label = type === "all" ? "all images" : type;
-    setMessage(`Cleared ${body.deleted} file${body.deleted !== 1 ? "s" : ""} (${fmtCacheBytes(body.freed)} freed) from ${label}.`, "success");
+    if (body.filesKept) {
+      setMessage(`Cleared cached ${label} entries for this user (shared files kept).`, "success");
+    } else {
+      setMessage(`Cleared ${body.deleted} file${body.deleted !== 1 ? "s" : ""} (${fmtCacheBytes(body.freed)} freed) from ${label}.`, "success");
+    }
     state.cacheStats = null;
     loadCacheStats().catch((error) => setMessage(error.message, "error"));
   } catch (error) {

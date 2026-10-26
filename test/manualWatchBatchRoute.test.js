@@ -12,6 +12,8 @@ const trackerConnectionRepo = await import("../server/src/utils/trackerConnectio
 const { handleManualWatch } = await import("../server/src/routes/sync.js");
 
 function resetState() {
+  db.prepare('DELETE FROM tracker_write_intents').run();
+  db.prepare("DELETE FROM settings WHERE id LIKE 'simkl-batch-budget:%'").run();
   db.prepare("DELETE FROM tracker_item_state").run();
   db.prepare("DELETE FROM tracker_connections").run();
   db.prepare("DELETE FROM watch_history").run();
@@ -110,4 +112,30 @@ test("manual show watch uses grouped Trakt writes instead of one pair per episod
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('manual bulk movie route gathers 100 Simkl writes and persists confirmed per-row outcomes',async()=>{
+  resetState();
+  trackerConnectionRepo.saveTrackerConnection({provider:'simkl',clientId:'offline',remoteUserId:'offline',accessToken:'fake',refreshToken:'fake',accessTokenExpiresAt:Date.now()+3600_000});
+  await saveMediaConfig({plex:{disabled:true},emby:{disabled:true},jellyfin:{disabled:true}});
+  const {simklTransport}=await import('../server/src/utils/trackers/simklTransport.js');
+  simklTransport.resetForTests();
+  const previous=globalThis.fetch,calls=[];let posted=[];
+  globalThis.fetch=async(url,init)=>{
+    const u=new URL(url);assert.equal(u.hostname,'api.simkl.com');calls.push([init.method,u.pathname]);
+    let data;
+    if(u.pathname==='/sync/history') {posted=JSON.parse(init.body).movies;data={added:{movies:posted.length,episodes:0},not_found:{}};}
+    else if(u.pathname==='/sync/activities')data={all:'2026-10-23T09:00:00Z'};
+    else {assert.equal(u.pathname,'/sync/watched');data=JSON.parse(init.body).map(({ids})=>({ids,result:true,list:'completed',last_watched_at:posted.find(m=>m.ids.tmdb===ids.tmdb).watched_at}));}
+    return Response.json(data,{headers:{'x-ratelimit-remaining':'400','x-ratelimit-limit':'500'}});
+  };
+  try {
+    const records=Array.from({length:100},(_,i)=>({media_type:'movie',title:`Bulk movie ${i}`,tmdb_id:String(900000+i),watched_at:'2026-10-22T12:00:00.000Z'}));
+    const http=requestResponse({records});await handleManualWatch(http.req,http.res);
+    assert.equal(http.status(),200);assert.equal(http.body().propagated,100,JSON.stringify(http.body()));
+    assert.equal(calls.length,4);assert.equal(posted.length,100);
+    const rows=db.prepare('SELECT sync_dispatch_telemetry FROM watch_history').all();
+    assert.equal(rows.length,100);
+    assert.ok(rows.every(r=>/simkl status: success/i.test(r.sync_dispatch_telemetry)),JSON.stringify(rows[0]));
+  } finally {globalThis.fetch=previous;}
 });

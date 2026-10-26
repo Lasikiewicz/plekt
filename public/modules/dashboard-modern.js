@@ -1,10 +1,10 @@
-import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.1.1.0.8";
-import { state } from "./state.js?v=2.1.1.0.8";
-import { artKey, requestArtKey } from "./card-art.js?v=2.1.1.0.8";
-import { ART_TOGGLE_EVENT, isArtEnabled } from "./appearance.js?v=2.1.1.0.8";
-import { nowPlayingOptions } from "./now-playing-options.js?v=2.1.1.0.8";
+import { episodeCode, escapeAttribute, escapeHtml, showName } from "./utils.js?v=2.1.1.0.9";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { artKey, requestArtKey } from "./card-art.js?v=2.1.1.0.9";
+import { ART_TOGGLE_EVENT, isArtEnabled } from "./appearance.js?v=2.1.1.0.9";
+import { nowPlayingOptions } from "./now-playing-options.js?v=2.1.1.0.9";
 // The same folded-poster behaviour on the Library and History pages.
-import "./page-card-open.js?v=2.1.1.0.8";
+import "./page-card-open.js?v=2.1.1.0.9";
 
 // Dashboard behaviour added with the Modern theme style (plan/archive/theme-styles/plan.md),
 // now the only style: compact rows, collapsed TV runs, the featured Up Next cards
@@ -362,7 +362,7 @@ export function sessionMatchesCardArt(session = {}, cardKey = "") {
 
 // --- Now Playing -----------------------------------------------------------
 // The section heading is hidden. While nothing plays, sync.js
-// renders an .idle-state placeholder in #nowPlayingGrid; features built from the first two Up Next cards are added beside it (CSS
+// renders an .idle-state placeholder in #nowPlayingGrid; features built from the first two Up Next cards or loading tiles are added beside it (CSS
 // hides the placeholder and those cards in the Up Next rail). sync.js removes every non-session
 // child when playback starts, which drops the features and returns the cards
 // to the rail; the live session cards take the same look, side by side.
@@ -373,12 +373,13 @@ const upNextPanel = hasDocument ? document.querySelector?.("#upNextPanel") : nul
 let featuredSourceHtml = "";
 let syncFrame = 0;
 
-// Rail cards copied into the panel carry data-featured-in-panel, which
-// styles.css hides in the rail. The attribute is outside the observer's
-// filter, so marking cards does not schedule another pass.
+// Real queue cards copied into the panel carry data-featured-in-panel, which
+// styles.css hides in the rail. Loading placeholders remain in both rows as
+// independent loading cues. The attribute is outside the observer's filter,
+// so marking cards does not schedule another pass.
 function markFeaturedSources(sources = []) {
   const featured = new Set(sources);
-  upNextPanel?.querySelectorAll(":scope > [data-featured-in-panel]").forEach((card) => {
+  upNextPanel?.querySelectorAll("[data-featured-in-panel]").forEach((card) => {
     if (!featured.has(card)) card.removeAttribute("data-featured-in-panel");
   });
   for (const card of featured) {
@@ -428,14 +429,19 @@ function syncIdleFeatureCard() {
   const slots = Math.max(0, options.itemCount - liveCount);
   const sessions = liveCount ? state.activeSessions || [] : [];
   const isPlaying = (card) => sessions.some((session) => sessionMatchesCardArt(session, card.getAttribute("data-art")));
+  const loadingCards = state.upNextLoading && !state.upNextItems.length
+    ? [...(upNextPanel?.querySelectorAll(":scope > .up-next-loading-tiles > .up-next-skeleton") || [])]
+    : [];
   const allRailCards = [...(upNextPanel?.querySelectorAll(":scope > [data-up-next-card-id]") || [])];
   const playing = allRailCards.filter(isPlaying);
   const railCards = allRailCards.filter((card) => !playing.includes(card));
   const isResume = (card) => card.getAttribute("data-up-next-queue-kind") === "resume";
-  const sources = [
-    ...(options.allowPartWatched ? railCards.filter(isResume) : []),
-    ...(options.allowUpNext ? railCards.filter((card) => !isResume(card)) : []),
-  ].slice(0, slots);
+  const sources = loadingCards.length
+    ? loadingCards.slice(0, slots)
+    : [
+      ...(options.allowPartWatched ? railCards.filter(isResume) : []),
+      ...(options.allowUpNext ? railCards.filter((card) => !isResume(card)) : []),
+    ].slice(0, slots);
   if (!sources.length) {
     removeIdleFeature(playing);
     return;

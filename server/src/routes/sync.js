@@ -44,8 +44,9 @@ import { watchedPlayedSyncEnabled } from "../utils/syncFlags.js";
 import { forceSyncMediaState, normalizeMediaForceSyncRequest } from "../utils/mediaForceSync.js";
 import { forceSyncLibraryState, normalizeLibraryForceSyncRequest } from "../utils/libraryForceSync.js";
 import { appendMediaForceSyncActivity, createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested, requestMediaForceSyncCancellation } from "../utils/mediaForceSyncActivity.js";
-import { dispatchTraktWatchStateBatch } from "../utils/trackerDispatcher.js";
+import { dispatchTrackerWatchBatch } from "../utils/trackerBulkDispatch.js"; import { checkTrackersAfterMediaEvent } from "../utils/trackerSync.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "../utils/watchProvenance.js";
+import { checkIncomingEpisodeSourceMismatch } from "../utils/sourceMismatch.js";
 import { releaseDateForItem, resolveWatchImportDate, runtimeMinutesForSourceItem } from "../utils/watchDates.js";
 import { watchImportMode } from "../utils/tuning.js";
 import { formatProviderOutcomeSummary, normalizeWatchSyncIntent, summarizeProviderOutcomes } from "../utils/watchSyncPolicy.js";
@@ -68,14 +69,8 @@ import { DISMISSED_TRAKT_NOT_FOUND_DETAIL } from "../utils/traktDismissals.js";
 import { traceLog } from "../utils/logVerbose.js";
 import { buildSyncMatchReport, unresolvedSyncMatchReport } from "../utils/syncMatchReport.js";
 import { inRowNumbering } from "../utils/showSeasonTranslation.js";
-import {
-  listUpNextDismissals,
-  recordUpNextDismissal,
-  restoreAllUpNextDismissals,
-  restoreUpNextDismissalsForMedia,
-  restoreUpNextDismissalsSupersededByUnwatch,
-  restoreUpNextDismissal,
-} from "../utils/upNextDismissals.js";
+import { listUpNextDismissals, recordUpNextDismissal, restoreAllUpNextDismissals, restoreUpNextDismissalsForMedia, restoreUpNextDismissalsSupersededByUnwatch, restoreUpNextDismissal } from "../utils/upNextDismissals.js";
+import { undropTitleForLivePlay } from "../utils/droppedTitles.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
 import {
   countPlaybackProgressRows,
@@ -1270,6 +1265,7 @@ function retryableSyncActivityTargets(entry = {}) {
 // single dispatch summary syncOrchestrator already scores.
 function statusFromTargetStates(targetStates = []) {
   if (!targetStates.length) return "skipped";
+  if(targetStates.some(t=>t.status==='cancelled'))return 'cancelled';
   const successCount = targetStates.filter((t) => String(t.status || "").toLowerCase() === "success").length;
   const failureCount = targetStates.filter((t) => ["error", "failed"].includes(String(t.status || "").toLowerCase())).length;
   if (successCount === targetStates.length) return "success";
@@ -2007,29 +2003,13 @@ export async function handleManualUnwatch(req, res) {
 }
 
 function mergeManualTrackerSummary(summary = {}, trackerResult = null) {
-  if (!trackerResult || (trackerResult.status === "skipped" && !trackerResult.dismissed)) return summary;
-
-  const trackerStatus = trackerResult.status === "failed" ? "error" : trackerResult.status === "not_found" ? "skipped" : trackerResult.status;
-  const targetStates = [
-    ...(Array.isArray(summary.targetStates) ? summary.targetStates : []),
-    { target: "trakt", status: trackerStatus, detail: trackerResult.detail || "" },
-  ];
-  const localStatus = summary.status || "unknown";
-  let status = localStatus;
-  if (trackerStatus === "success") {
-    status = localStatus === "error" ? "partial" : "success";
-  } else if (trackerStatus === "error") {
-    status = ["success", "partial"].includes(localStatus) ? "partial" : "error";
-  } else if (trackerStatus === "skipped") {
-    status = localStatus === "success" ? "partial" : localStatus;
-  }
-
-  const trackerDetails = trackerStatus === "success"
-    ? "Trakt marked watched in a grouped history request."
-    : trackerResult.detail || "Trakt did not accept this item.";
-  const details = localStatus === "skipped" && trackerStatus === "success"
-    ? trackerDetails
-    : [summary.details, trackerDetails].filter(Boolean).join("; ");
+  if(trackerResult?.status==='failed')return {...summary,status:'error',details:trackerResult.detail||'Tracker batch failed'};
+  const trackers=(trackerResult?.targetStates||[]).filter(t=>t.status!=='skipped'||t.dismissed)
+    .map(t=>({...t,status:t.status==='failed'?'error':t.status==='not_found'?'skipped':t.status}));
+  if(!trackers.length)return summary;
+  const targetStates=[...(summary.targetStates||[]),...trackers];
+  const status=statusFromTargetStates(targetStates);
+  const details=[summary.details,...trackers.map(t=>`${t.target}: ${t.detail||t.status}`)].filter(Boolean).join('; ');
   return { ...summary, skipped: status === "skipped", status, details, targetStates };
 }
 
@@ -2181,13 +2161,10 @@ export async function handleManualWatch(req, res) {
   let providerSummary = [];
   let providerOutcomes = [];
   if (syncTasks.length > 0) {
-    // A show-level mark can contain dozens or hundreds of episodes. Trakt's
-    // history endpoint accepts grouped season/episode payloads, so keep the
-    // media-server fan-out concurrent but move the tracker phase to one
-    // bounded batch. Single-item actions retain the normal per-item path.
-    const batchTraktWatch = watchedPlayedSyncEnabled() && !isAuthoritativeRestoreActive()
-      && syncTasks.length > 1
-      && syncTasks.every(({ media }) => String(media?.type || media?.mediaType || "").toLowerCase() === "episode");
+    // Collect trackers after LAN fan-out so six LAN workers cannot fragment a
+    // 100-item Simkl batch. Single-item actions retain the normal path.
+    const batchTrackerWatch = watchedPlayedSyncEnabled() && !isAuthoritativeRestoreActive()
+      && syncTasks.length > 1;
     const taskSummaries = new Array(syncTasks.length);
     // Every per-item target outcome, rolled up into one per-provider summary
     // for the response. A bulk mark-watched must be able to say "Plex: 12 sent,
@@ -2204,7 +2181,7 @@ export async function handleManualWatch(req, res) {
           const summary = await syncMediaPlaystate(task.media, config, loopStore, {
             trackDispatch: false,
             lane: records.length === 1 ? "interactive" : "sync",
-            includeTrackers: !batchTraktWatch,
+            includeTrackers: !batchTrackerWatch,
           }).catch((error) => ({
             skipped: false,
             status: "error",
@@ -2212,7 +2189,7 @@ export async function handleManualWatch(req, res) {
             targetStates: [],
           }));
 
-          if (batchTraktWatch) {
+          if (batchTrackerWatch) {
             taskSummaries[index] = summary;
             return;
           }
@@ -2237,7 +2214,7 @@ export async function handleManualWatch(req, res) {
           await recordSyncHistory(task.media, summary, "watched");
         } catch (error) {
           console.error("Manual watch sync failed:", error);
-          if (batchTraktWatch) {
+          if (batchTrackerWatch) {
             taskSummaries[index] = {
               skipped: false,
               status: "error",
@@ -2246,13 +2223,13 @@ export async function handleManualWatch(req, res) {
             };
           }
         } finally {
-          if (!batchTraktWatch) completeDispatchTracking(trackingReservation, task.media);
+          if (!batchTrackerWatch) completeDispatchTracking(trackingReservation, task.media);
         }
       }, MANUAL_SYNC_ITEM_CONCURRENCY);
 
-      if (batchTraktWatch) {
-        const trackerBatch = await dispatchTraktWatchStateBatch(
-          syncTasks.map(({ media }) => media),
+      if (batchTrackerWatch) {
+        const trackerBatch = await dispatchTrackerWatchBatch(
+          syncTasks.map(({ media },index) => ({...media,bulkTrackerSkip:Boolean(taskSummaries[index]?.deferred)})),
           "watched",
           { lane: "sync", canonicalReplay: true },
         ).catch((error) => ({
@@ -2556,7 +2533,7 @@ async function resolveUpNextProviderIds(provider, config, media, body, { lane = 
   return [...new Set((items || []).map((item) => String(item?.Id || "").trim()).filter(Boolean))];
 }
 
-async function hideUpNextAcrossProviders(config, media, body, { lane = "sync" } = {}) {
+export async function hideUpNextAcrossProviders(config, media, body, { lane = "sync" } = {}) {
   const definitions = [
     { provider: "plex", configured: Boolean(config.plex?.baseUrl && config.plex?.token), hide: (id) => hidePlexFromContinueWatching(config.plex, id, { lane }) },
     { provider: "emby", configured: Boolean(config.emby?.baseUrl && config.emby?.apiKey && config.emby?.userId), hide: (id) => hideEmbyFromResume(config.emby, id, { lane }) },
@@ -3261,7 +3238,6 @@ export async function handleWebhook(req, res) {
       reason: "Unsupported event or missing provider IDs",
     });
   }
-
   // While an authoritative restore is pushing fresh state to the apps, ignore inbound
   // webhooks â€” they are the apps echoing our own marks back and would re-record as
   // watched-today. Real user plays resume the moment the restore job finishes.
@@ -3337,6 +3313,13 @@ export async function handleWebhook(req, res) {
       propagated: false,
       skipped: true,
       reason: "Legacy Up Next rail seed playback is synthetic, not user playback",
+    });
+  }
+
+  if (media.phase === "completed" && media.type === "episode") {
+    await checkIncomingEpisodeSourceMismatch(media, { runKey: `webhook:${Date.now()}` }).catch((error) => {
+      console.warn("Incoming episode mismatch check skipped", error?.message || error);
+      return null;
     });
   }
 
@@ -3460,6 +3443,13 @@ export async function handleWebhook(req, res) {
     }
   }
 
+  // Throttled inbound check for trackers that never poll (Simkl). Only after
+  // Plekt outbound echoes are consumed: Up Next rail refresh, resume marks,
+  // unplayed flags, restore/sync-operation suppression and user mismatches.
+  // Those writes are media-server and Plekt only; they must not spend tracker
+  // quota. Library-added notifications also skip this check.
+  if (media.phase !== "added") checkTrackersAfterMediaEvent();
+
   // A server announcing new content is the moment a watch Plembfin already
   // holds can finally be applied there. Until the file exists, an outbound sync
   // has nothing to mark; this catches the item up without waiting for a manual
@@ -3546,7 +3536,7 @@ export async function handleWebhook(req, res) {
     await Promise.all(
       filteredEpisodes.map(async (ep) => {
         try {
-          const episodeMedia = {
+          let episodeMedia = {
             title: `${ep.SeriesName || media.title || "Unknown Show"} - S${String(ep.ParentIndexNumber ?? "?").padStart(2, "0")}E${String(ep.IndexNumber ?? "?").padStart(2, "0")}`,
             type: "episode",
             source: media.source,
@@ -3564,6 +3554,10 @@ export async function handleWebhook(req, res) {
             runtimeMinutes: runtimeMinutesForSourceItem(ep, media.source),
             isValid: true,
           };
+          if (episodeMedia.phase === "completed") {
+            episodeMedia = await withSeriesIdentity(episodeMedia, config);
+            await checkIncomingEpisodeSourceMismatch(episodeMedia, { runKey: `webhook:${media.source}:${media.itemId || Date.now()}` }).catch(() => null);
+          }
           episodeMedia.posterUrl = posterPathFromMedia(episodeMedia);
 
           const flagDateChoice = episodeMedia.playedFlagOnly
@@ -4026,6 +4020,27 @@ export async function handleWebhook(req, res) {
       }
     }
 
+    // Restore completed plays before dedupe; played flags still cannot restore.
+    if (await shouldSkipPostRestoreCompletedWebhook(media)) {
+      console.log("Webhook: skipped post-restore completed event without active playback evidence", {
+        source: media.source,
+        title: media.title,
+        type: media.type,
+      });
+      await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
+      return sendJson(res, {
+        ok: true,
+        inserted: false,
+        skipped: true,
+        reason: "Post-restore completed webhook without active playback evidence",
+      });
+    }
+    if (!media.playedFlagOnly) {
+      const record = mediaToWatchRecord(media, media.source);
+      const state = await getPlaystateForMedia(media).catch(() => null);
+      if (!(state?.state === "unwatched" && Number(state.updated_at || 0) >= (Date.parse(record.watched_at) || 0))) undropTitleForLivePlay(record);
+    }
+
     // Check if a recent watch record already exists (e.g., from full sync)
     // to avoid creating duplicates. Look for records watched in the last hour.
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -4082,21 +4097,6 @@ export async function handleWebhook(req, res) {
         today,
       });
       isRewatchOnNewDay = true;
-    }
-
-    if (await shouldSkipPostRestoreCompletedWebhook(media)) {
-      console.log("Webhook: skipped post-restore completed event without active playback evidence", {
-        source: media.source,
-        title: media.title,
-        type: media.type,
-      });
-      await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
-      return sendJson(res, {
-        ok: true,
-        inserted: false,
-        skipped: true,
-        reason: "Post-restore completed webhook without active playback evidence",
-      });
     }
 
     // getWatchRecordByMediaKey and getPlaystateForMedia above both key off

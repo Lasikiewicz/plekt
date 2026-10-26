@@ -1,5 +1,5 @@
 ---
-import { docsSidebarNav } from "../data/site.js";
+import { docsSidebarNav, site } from "../data/site.js";
 
 type DocsSidebarItem = {
   id?: string;
@@ -89,7 +89,7 @@ const hasCurrentChild = (item: DocsSidebarItem) => (item.children || []).some((c
       );
     })}
   </nav>
-  <a class="docs-source-link button-secondary" href="https://github.com/Lasikiewicz/plembfin/tree/main/docs" target="_blank" rel="noreferrer">Technical source docs</a>
+  <a class="docs-source-link button-secondary" href={site.repositoryDocs} target="_blank" rel="noreferrer">Technical source docs</a>
 </aside>
 
 <script>

@@ -13,6 +13,16 @@ set -e
 # commits individually, which can conflict with content the merge already
 # resolved. A merge-based pull is a no-op when upstream is already an
 # ancestor and a plain merge commit otherwise - never a replay.
+# The bug backlog is a hard gate for every remote branch. Check before any sync/pull.
+if [ ! -r plan/bugs.md ]; then
+  echo 'Cannot verify plan/bugs.md; refusing push.' >&2
+  exit 1
+fi
+if grep -Eq '^[[:space:]]*-[[:space:]]*\[[[:space:]]\]' plan/bugs.md; then
+  echo 'plan/bugs.md has unchecked bug/follow-up work; resolve and verify/close it before any remote push.' >&2
+  exit 1
+fi
+
 develop_push_sha=""
 
 while read -r local_ref local_sha remote_ref remote_sha; do

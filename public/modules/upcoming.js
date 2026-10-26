@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.1.1.0.8";
-import { posterMarkup, hydratePosters } from "./images.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.1.1.0.9";
+import { posterMarkup, hydratePosters } from "./images.js?v=2.1.1.0.9";
 
 let _cb = {};
 
@@ -16,6 +16,8 @@ const UPCOMING_INITIAL_FUTURE_MONTHS = 1;
 // How close to either end of the scroll container the user must get before the
 // next month is appended/prepended.
 const UPCOMING_EXTEND_THRESHOLD_PX = 400;
+const DEFAULT_CALENDAR_FEED_TYPES = ["tv", "movies"];
+let savedCalendarFeedTypes = [...DEFAULT_CALENDAR_FEED_TYPES];
 // How long after a programmatic jump to keep ignoring scroll events, so the
 // jump's own scrolling is never mistaken for the user browsing.
 const UPCOMING_ANCHOR_HOLD_MS = 250;
@@ -39,6 +41,18 @@ export function initUpcoming(callbacks) {
   elements.upcomingPrevButton?.addEventListener("click", () => shiftUpcomingMonth(-1));
   elements.upcomingNextButton?.addEventListener("click", () => shiftUpcomingMonth(1));
   elements.upcomingTodayButton?.addEventListener("click", () => goToToday());
+  elements.upcomingCalendarFeedButton?.addEventListener("click", () => openCalendarFeedDialog());
+  elements.upcomingCalendarFeedClose?.addEventListener("click", closeCalendarFeedDialog);
+  elements.upcomingCalendarFeedDialog?.addEventListener("click", (event) => {
+    if (event.target === elements.upcomingCalendarFeedDialog) closeCalendarFeedDialog();
+  });
+  elements.upcomingCalendarFeedDialog?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeCalendarFeedDialog();
+  });
+  elements.upcomingCalendarFeedRegenerate?.addEventListener("click", () => regenerateCalendarFeedUrl());
+  elements.upcomingCalendarFeedCopy?.addEventListener("click", () => copyCalendarFeedUrl());
+  elements.upcomingCalendarFeedIncludeTv?.addEventListener("change", handleCalendarFeedTypeChange);
+  elements.upcomingCalendarFeedIncludeMovies?.addEventListener("change", handleCalendarFeedTypeChange);
   elements.upcomingSearchInput?.addEventListener("input", () => {
     state.upcomingSearch = elements.upcomingSearchInput.value || "";
     renderUpcoming();
@@ -69,6 +83,144 @@ export function initUpcoming(callbacks) {
   // One handler drives poster hydration, the visible-month title, and the
   // range growth in both directions.
   scrollContainerEl()?.addEventListener("scroll", handleUpcomingScroll, { passive: true });
+}
+
+async function openCalendarFeedDialog() {
+  const dialog = elements.upcomingCalendarFeedDialog;
+  dialog?.classList.remove("hidden");
+  dialog?.focus();
+  setCalendarFeedUrl("", false);
+  const status = elements.upcomingCalendarFeedStatus;
+  if (status) status.textContent = "Loading your private calendar URL…";
+  try {
+    const response = await fetch("/api/calendar-feed/settings", { headers: authHeaders() });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || "Could not load calendar feed settings");
+    setCalendarFeedTypes(payload.types);
+    savedCalendarFeedTypes = getSelectedCalendarFeedTypes();
+    setCalendarFeedUrl(payload.url || "", payload.ready);
+    if (status) status.textContent = !payload.ready
+      ? payload.message || "Set PLEKT_PUBLIC_URL to your public internet origin first."
+      : payload.url
+      ? "Anyone with this URL can read the feed. Regenerating it immediately revokes the previous URL."
+      : "Generate a private URL to subscribe to this calendar.";
+  } catch (error) {
+    setCalendarFeedUrl("", false);
+    if (status) status.textContent = error.message || "Could not load calendar feed settings";
+  }
+}
+
+function closeCalendarFeedDialog() {
+  elements.upcomingCalendarFeedDialog?.classList.add("hidden");
+  elements.upcomingCalendarFeedButton?.focus();
+}
+
+function handleCalendarFeedTypeChange(event) {
+  const types = getSelectedCalendarFeedTypes();
+  const actionsHidden = elements.upcomingCalendarFeedActions?.classList.contains("hidden");
+  if (!types.length) {
+    event.currentTarget.checked = true;
+    if (!actionsHidden && elements.upcomingCalendarFeedStatus) {
+      elements.upcomingCalendarFeedStatus.textContent = "Select TV shows, movies, or both.";
+    }
+    return;
+  }
+  if (actionsHidden) return;
+  const hasUrl = Boolean(elements.upcomingCalendarFeedUrl?.value);
+  const changed = !sameCalendarFeedTypes(types, savedCalendarFeedTypes);
+  if (elements.upcomingCalendarFeedRegenerate) {
+    elements.upcomingCalendarFeedRegenerate.textContent = hasUrl
+      ? changed ? "Update URL" : "Regenerate URL"
+      : "Generate URL";
+  }
+  const status = elements.upcomingCalendarFeedStatus;
+  if (!status) return;
+  status.textContent = hasUrl && changed
+    ? "Selection changed. Update the URL to apply it; this immediately revokes the current URL."
+    : hasUrl
+      ? "Anyone with this URL can read the selected feed. Regenerating it immediately revokes the previous URL."
+      : "Generate a private URL to save this calendar selection.";
+}
+
+async function regenerateCalendarFeedUrl() {
+  const button = elements.upcomingCalendarFeedRegenerate;
+  const status = elements.upcomingCalendarFeedStatus;
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Generating a new private URL…";
+  try {
+    const types = getSelectedCalendarFeedTypes();
+    if (!types.length) throw new Error("Select TV shows, movies, or both.");
+    const response = await fetch("/api/calendar-feed/settings", {
+      method: "POST",
+      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ types }),
+    });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.error || payload.message || "Could not generate calendar feed URL");
+    setCalendarFeedTypes(payload.types || types);
+    savedCalendarFeedTypes = getSelectedCalendarFeedTypes();
+    setCalendarFeedUrl(payload.url || "", payload.ready);
+    if (status) status.textContent = "New URL generated with the selected content. The previous URL was revoked immediately.";
+  } catch (error) {
+    setCalendarFeedUrl("", false);
+    if (status) status.textContent = error.message || "Could not generate calendar feed URL";
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+function setCalendarFeedUrl(url, ready = true) {
+  const usable = ready === true;
+  const visibleUrl = usable ? String(url || "") : "";
+  if (elements.upcomingCalendarFeedUrl) elements.upcomingCalendarFeedUrl.value = visibleUrl;
+  elements.upcomingCalendarFeedUrlFields?.classList.toggle("hidden", !visibleUrl);
+  if (elements.upcomingCalendarFeedCopy) {
+    elements.upcomingCalendarFeedCopy.disabled = !visibleUrl;
+    elements.upcomingCalendarFeedCopy.classList.toggle("hidden", !visibleUrl);
+  }
+  elements.upcomingCalendarFeedActions?.classList.toggle("hidden", !usable);
+  if (elements.upcomingCalendarFeedRegenerate) {
+    const changed = !sameCalendarFeedTypes(getSelectedCalendarFeedTypes(), savedCalendarFeedTypes);
+    elements.upcomingCalendarFeedRegenerate.textContent = visibleUrl
+      ? changed ? "Update URL" : "Regenerate URL"
+      : "Generate URL";
+    elements.upcomingCalendarFeedRegenerate.disabled = !usable;
+  }
+}
+
+function setCalendarFeedTypes(types) {
+  const selected = Array.isArray(types)
+    ? DEFAULT_CALENDAR_FEED_TYPES.filter((type) => types.includes(type))
+    : [];
+  const effective = selected.length ? selected : [...DEFAULT_CALENDAR_FEED_TYPES];
+  if (elements.upcomingCalendarFeedIncludeTv) elements.upcomingCalendarFeedIncludeTv.checked = effective.includes("tv");
+  if (elements.upcomingCalendarFeedIncludeMovies) elements.upcomingCalendarFeedIncludeMovies.checked = effective.includes("movies");
+}
+
+function getSelectedCalendarFeedTypes() {
+  const types = [];
+  if (elements.upcomingCalendarFeedIncludeTv?.checked) types.push("tv");
+  if (elements.upcomingCalendarFeedIncludeMovies?.checked) types.push("movies");
+  return types;
+}
+
+function sameCalendarFeedTypes(left = [], right = []) {
+  return left.length === right.length && left.every((type) => right.includes(type));
+}
+
+async function copyCalendarFeedUrl() {
+  const input = elements.upcomingCalendarFeedUrl;
+  const status = elements.upcomingCalendarFeedStatus;
+  const url = input?.value || "";
+  if (!url) return;
+  try {
+    await navigator.clipboard.writeText(url);
+    if (status) status.textContent = "URL copied. Paste it into your calendar app.";
+  } catch {
+    input.focus();
+    input.select();
+    if (status) status.textContent = "Select the URL and copy it into your calendar app.";
+  }
 }
 
 function authHeaders() {

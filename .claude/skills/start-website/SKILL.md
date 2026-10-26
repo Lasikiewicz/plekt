@@ -43,3 +43,7 @@ This workflow is for local editing and testing only.
 
 If the user later says **"Push website live"**, switch to the separate website-only
 publishing workflow; starting the local site never implies publication.
+
+## Example request
+
+> Start the website

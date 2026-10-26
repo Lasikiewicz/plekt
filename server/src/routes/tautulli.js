@@ -6,6 +6,7 @@ import { loadMediaConfig, mergeIncomingConfig, publicMediaConfig } from "../util
 import { createTautulliClient, sanitizeTautulliError } from "../utils/tautulliClient.js";
 import { commitTautulliImport, filterTautulliRows, normalizeReviewDecisions, prepareTautulliImport, targetDefaults } from "../utils/tautulliImport.js";
 import { createWatchHistoryBackup, watchBackupStatus } from "../utils/watchHistoryBackups.js";
+import { withInitialInboundImport } from '../utils/initialSyncStore.js';
 
 const previewJobs = new Map();
 const PREVIEW_JOB_TTL_MS = 15 * 60 * 1000;
@@ -153,11 +154,12 @@ function startPreviewJob(config, body) {
   return job;
 }
 
-export async function handleTautulli(req, res, action = "") {
+export async function handleTautulli(req, res, action = "", inboundTracked=false) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (!(await requireAdmin(req, res))) return;
   const config = await loadMediaConfig();
   try {
+    if(action==='import'&&req.method==='POST'&&!inboundTracked)return await withInitialInboundImport('tautulli',()=>handleTautulli(req,res,action,true));
     if (action === "status" && req.method === "GET") {
       const backup = watchBackupStatus();
       return sendJson(res, {
@@ -225,6 +227,7 @@ export async function handleTautulli(req, res, action = "") {
     }
     return methodNotAllowed(res);
   } catch (error) {
+    if(inboundTracked)throw error;
     const status = Number(error?.status) >= 400 && Number(error?.status) < 500 ? Number(error.status) : 502;
     return sendJson(res, { ok: false, error: sanitizeTautulliError(error), code: error?.code || "TAUTULLI_REQUEST_FAILED" }, status);
   }

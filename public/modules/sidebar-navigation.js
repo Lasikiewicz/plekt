@@ -14,6 +14,15 @@ export function sidebarNavigationPath(target) {
   return `/${view}`;
 }
 
+export function sidebarUserPresentation(accounts = [], fallbackName = "", isNonAdmin = false) {
+  const users = Array.isArray(accounts) ? accounts : [];
+  const active = users.find((user) => user?.active);
+  return {
+    name: String(active?.name || fallbackName || ""),
+    canSwitch: !isNonAdmin && users.length > 1,
+  };
+}
+
 export function attachSidebarMiddleClickNavigation(sidebar, openWindow = window.open.bind(window)) {
   if (!sidebar) return;
 

@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.1.1.0.8";
-import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.1.1.0.9";
+import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.1.1.0.9";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -273,10 +273,10 @@ function isActive() {
 // dispatch as Plex here. Sync activity names trackers as well as servers, so it
 // resolves platforms itself.
 const PLATFORMS = {
-  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.1.1.0.8" },
-  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.1.1.0.8" },
-  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.1.1.0.8" },
-  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.1.1.0.8" },
+  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.1.1.0.9" },
+  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.1.1.0.9" },
+  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.1.1.0.9" },
+  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.1.1.0.9" },
   plembfin: { name: "Plekt", icon: "" },
 };
 
@@ -2081,7 +2081,7 @@ export function syncAttentionItemMarkup(item = {}) {
       <p class="sync-attention-summary">${escapeHtml(item.summary || "This operation did not complete.")}</p>
       <div class="sync-attention-detail-grid">
         <div>
-          <h4>Why this blocks completion</h4>
+          <h4>${escapeHtml(item.explanationHeading || "Why this blocks completion")}</h4>
           <p>${escapeHtml(item.explanation || "The sync cannot be considered complete until this issue is resolved or skipped.")}</p>
         </div>
         <div>
@@ -2095,7 +2095,7 @@ export function syncAttentionItemMarkup(item = {}) {
       <div class="sync-attention-item-footer">
         <span class="sync-attention-detected">Detected ${escapeHtml(attentionCreatedAt(item))}</span>
         <div class="sync-attention-actions">
-          <p>Skipping accepts this incomplete projection and lets normal sync resume; it does not create the missing remote records.</p>
+          <p>${escapeHtml(item.skipNote || "Skipping accepts this incomplete projection and lets normal sync resume; it does not create the missing remote records.")}</p>
           <button class="button-ghost sync-attention-skip" type="button" data-sync-attention-skip="${escapeAttribute(item.id)}" ${actionBusy ? "disabled" : ""} ${skipping ? 'aria-busy="true"' : ""}>${escapeHtml(skipLabel)}</button>
         </div>
       </div>
@@ -2270,7 +2270,7 @@ export function renderSyncAttention() {
   const badge = blockingCount ? `${blockingCount} attention` : `${count} to review`;
   const hasMatchIssues = items.some((item) => item.source === "match_report");
   const description = serverItems.length
-    ? "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below."
+    ? (serverItems.every((item) => item.source === "unknown_tracker") ? "Your restored data includes a tracker this version can't sync." : serverItems.every((item) => item.source === "tracker_write" || item.source === "unknown_tracker") ? "Plekt is holding tracker writes it could not confirm. Review each one below." : "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below.")
     : hasMatchIssues
       ? "Choose the correct title to resolve these matches."
       : clientOnly

@@ -130,3 +130,21 @@ test("a watched tracker transition supersedes a newer unwatched provider-id alia
   const after = await repo.queryShowDetail({ title: "Silo" });
   assert.equal(after.episodes[0].sync_action, "watched");
 });
+
+test("a Trakt date that differs only by its minute rounding is not a correction", async () => {
+  const media = {
+    title: "Rounded Movie", type: "movie", mediaType: "movie", ids: { tmdb: "rounded-trakt-date" },
+    source: "trakt", watched_at: "2020-04-23T23:32:51.000Z",
+  };
+  assert.equal((await applyWatchedTransition(media, config, createLoopStore(), { trackDispatch: false })).inserted, true);
+  const stored = () => db.prepare("SELECT watched_at FROM watch_history WHERE tmdb_id=?").get(media.ids.tmdb).watched_at;
+
+  const rounded = await applyWatchedTransition({ ...media, watched_at: "2020-04-23T23:32:00.000Z" }, config, createLoopStore(), { trackDispatch: false });
+  assert.equal(rounded.alreadyWatched, true, "Trakt reading back Plekt's own play without seconds changes nothing");
+  assert.equal(rounded.dateCorrected, undefined);
+  assert.equal(new Date(stored()).toISOString(), "2020-04-23T23:32:51.000Z");
+
+  const corrected = await applyWatchedTransition({ ...media, watched_at: "2020-04-24T20:00:00.000Z" }, config, createLoopStore(), { trackDispatch: false });
+  assert.equal(corrected.dateCorrected, true, "a real date change on Trakt is still applied");
+  assert.equal(new Date(stored()).toISOString(), "2020-04-24T20:00:00.000Z");
+});

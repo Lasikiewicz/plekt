@@ -66,3 +66,13 @@ test("provenance preserves a provider-only Trakt series override", () => {
     trakt: { tmdb_id: "329471", season: 1, episode: 1 },
   });
 });
+
+test("provenance keeps import source_title for later CSV dedupe", () => {
+  const normalized = normalizeWatchProvenance({
+    source: "netflix_import",
+    phase: "netflix",
+    source_title: "Last Christmas",
+    source_timestamp: "2024-12-12T12:00:00.000Z",
+  });
+  assert.equal(normalized.source_title, "Last Christmas");
+});

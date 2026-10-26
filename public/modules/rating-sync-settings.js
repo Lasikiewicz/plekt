@@ -1,8 +1,8 @@
-import { state } from "./state.js?v=2.1.1.0.8";
-import { escapeHtml } from "./utils.js?v=2.1.1.0.8";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { escapeHtml } from "./utils.js?v=2.1.1.0.9";
 
-const PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
-const PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin", trakt: "Trakt" };
+const PROVIDERS = ["plex", "emby", "jellyfin", "trakt", "simkl"];
+const PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin", trakt: "Trakt", simkl: "Simkl" };
 let callbacks = {};
 let status = null;
 let refreshTimer = null;
@@ -45,12 +45,15 @@ function renderProviderRows(config = currentConfig()) {
     const queueDetails = [
       pending ? `${pending} queued` : "",
       ...queueIssueDetails(entry.queue),
+      entry.issues?.some(item => item.status === "conflict") ? "Readback needs review" : "",
     ].filter(Boolean);
     const stateLabel = !entry.configured ? "Not connected" : queueDetails.length ? queueDetails.join(" · ") : config.enabled ? "Syncing" : "Available";
     const hold = entry.run?.cursor?.ratingHold;
     return `<div class="personal-rating-sync-provider">
       <strong>${escapeHtml(PROVIDER_LABELS[provider] || provider)}</strong>
       <small>${escapeHtml(entry.configured ? `${connection} · ${stateLabel}` : stateLabel)}</small>
+      ${entry.issues?.length ? `<details open><summary>Ratings need attention (${entry.issues.length})</summary><ul>${entry.issues.map(item => `<li><strong>${escapeHtml(item.title)}</strong>: ${escapeHtml(item.reason || item.status)}</li>`).join("")}</ul><small>Check the title on the provider before retrying a held write.</small></details>` : ""}
+      ${entry.queue?.held ? `<button type="button" class="button-ghost" data-rating-retry="${escapeHtml(provider)}">Retry held ratings</button>` : ""}
       ${hold ? `<div role="alert"><strong>Rating scan held for review</strong>
         <p>${Number(hold.missingCount)} of ${Number(hold.baselineCount)} ratings are missing on ${escapeHtml(PROVIDER_LABELS[provider])}. No ratings were cleared.</p>
         ${entry.run.last_error ? `<p>${escapeHtml(entry.run.last_error)}</p>` : ""}
@@ -85,7 +88,8 @@ function selectedConfig() {
 function queueIssueCount(queue = {}) {
   return Number(queue.failed || 0)
     + Number(queue.not_found ?? queue.notFound ?? 0)
-    + Number(queue.reauth_required ?? queue.reauthRequired ?? 0);
+    + Number(queue.reauth_required ?? queue.reauthRequired ?? 0)
+    + Number(queue.held || 0);
 }
 
 function queueIssueDetails(queue = {}) {
@@ -96,7 +100,13 @@ function queueIssueDetails(queue = {}) {
   if (failed) details.push(`${failed} failed`);
   if (notFound) details.push(`${notFound} not found`);
   if (reauthRequired) details.push(`${reauthRequired} need re-auth`);
+  if (queue.held) details.push(`${Number(queue.held)} held`);
   return details;
+}
+
+function providerIssueCount(providers = []) {
+  return providers.reduce((count, entry) => count + (entry.run?.status === "held" ? 1 : 0)
+    + (entry.issues || []).filter(item => item.status === "conflict").length, 0);
 }
 
 function setBusy(busy) {
@@ -116,13 +126,13 @@ function renderStatus(nextStatus = status) {
     if (ui.status) ui.status.textContent = "Disabled";
   } else {
     const pending = Number(nextStatus.queue?.pending || 0) + Number(nextStatus.queue?.processing || 0);
-    const issues = queueIssueCount(nextStatus.queue) + (nextStatus.providers || []).filter(entry => entry.run?.status === "held").length;
+    const issues = queueIssueCount(nextStatus.queue) + providerIssueCount(nextStatus.providers);
     if (ui.status) ui.status.textContent = issues
       ? `${issues} sync issue${issues === 1 ? "" : "s"}`
       : pending ? `${pending} queued` : "Two-way Active";
   }
   const configured = (nextStatus.providers || []).filter((entry) => entry.configured && entry.direction !== "off").length;
-  const issues = queueIssueCount(nextStatus.queue) + (nextStatus.providers || []).filter(entry => entry.run?.status === "held").length;
+  const issues = queueIssueCount(nextStatus.queue) + providerIssueCount(nextStatus.providers);
   if (ui.help) {
     ui.help.textContent = !config.enabled
       ? "Disabled: ratings stay in Plekt and are not sent to any provider."
@@ -130,7 +140,7 @@ function renderStatus(nextStatus = status) {
         ? "Some ratings need attention. Review the provider rows and run sync again."
         : configured
         ? `Plekt is syncing ratings across ${configured} connected service${configured === 1 ? "" : "s"}. Changes made anywhere are sent to the others.`
-        : "Connect at least one media server or Trakt to sync ratings.";
+        : "Connect at least one media server or watch tracker to sync ratings.";
   }
 }
 
@@ -243,6 +253,19 @@ export function initRatingSyncSettings(nextCallbacks = {}) {
   // Only meaningful while sync is on; a run with it off reconciles nothing.
   ui.syncNow?.addEventListener("click", () => { runSync(); });
   ui.providerRows?.addEventListener("click", async (event) => {
+    const retry = event.target.closest?.("[data-rating-retry]");
+    if (retry) {
+      if (ui.panel.hasAttribute("aria-busy")) return;
+      setBusy(true);
+      try {
+        const response = await fetch("/api/rating-sync/retry", { method: "POST", headers: { ...authHeaders(), "Content-Type": "application/json" }, body: JSON.stringify({ providers: [retry.dataset.ratingRetry] }) });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "Rating retry failed");
+        await refreshRatingSyncStatus();
+      } catch (error) { callbacks.setMessage?.(error.message, "error"); }
+      finally { setBusy(false); }
+      return;
+    }
     const button = event.target.closest?.("[data-rating-hold]");
     if (!button || ui.panel.hasAttribute("aria-busy")) return;
     setBusy(true);

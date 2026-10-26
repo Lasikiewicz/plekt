@@ -2,7 +2,7 @@
 interface Props { text: string }
 const { text } = Astro.props;
 const parts = text.split(/(https:\/\/[^\s<>]+)/g).map((value) => {
-  const match = value.match(/^(https:\/\/[^\s<>]*?)([.,;!?]*)$/);
+  const match = value.match(/^(https:\/\/[^\s<>]*?)([.,;!?)]*)$/);
   return match ? { href: match[1], suffix: match[2], text: value } : { text: value };
 });
 ---

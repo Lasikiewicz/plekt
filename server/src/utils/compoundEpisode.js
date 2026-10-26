@@ -1,4 +1,5 @@
 import { db, parseJson } from "../db.js";
+import { trackerProviderForSource } from "./trackers/registry.js";
 
 // TV databases do not agree on how to number a two-part episode. One source
 // may expose "S05E21" as a single long episode while another exposes the same
@@ -230,7 +231,7 @@ function groupKey(detail) {
 }
 
 function sourceLooksLikeTracker(row = {}) {
-  return String(row.source || "").toLowerCase().includes("trakt");
+  return Boolean(trackerProviderForSource(row.source));
 }
 
 function coordinateKey(season, episode) {

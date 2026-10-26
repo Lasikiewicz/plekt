@@ -1,4 +1,4 @@
-import { db, parseJson, toJson } from "../db.js";
+import { adminDb, db, parseJson, toJson } from "../db.js";
 import { assertSafeOutboundUrl, normalizeHttpUrl, configureOutboundGovernor } from "./outbound.js";
 import { applyTuningConfig, normalizePlexHistoricalWatchedSync, normalizeTuningSection, normalizeWatchImportMode, plexHistoricalWatchedSyncDefault, tuningClamps, tuningEnvDefaults, watchImportModeDefault, WATCH_IMPORT_MODES } from "./tuning.js";
 import { normalizeSyncRoles, validateSyncRolesSection, normalizeAuthority } from "./syncRoles.js";
@@ -8,16 +8,19 @@ import { activityGroupKeyFor, activityGroupMediaType, activityGroupTitleFromReco
 import { brandEnv } from "./brandEnv.js";
 import { normalizeSeasonSource } from "./seasonSource.js";
 import { retainedRestoreFailure } from "./restoreFailureNotice.js";
+import { isNonAdminTenantContext } from "./userContext.js";
+import { readSharedProviderKeysRow, writeSharedProviderKeysRow } from "./sharedMetadataStore.js";
 const SETTINGS_ID = "mediaConfig";
 const RUNTIME_ID = "main";
-export const RATING_SYNC_PROVIDERS = ["plex", "emby", "jellyfin", "trakt"];
+export const SHARED_PROVIDER_KEY_SECTIONS = Object.freeze(["tmdb", "fanart", "tvdb", "youtube", "omdb"]);
+export const RATING_SYNC_PROVIDERS = ["plex", "emby", "jellyfin", "trakt", "simkl"];
 export const RATING_SYNC_DIRECTIONS = ["off", "send", "receive", "bidirectional"];
 export const DEFAULT_RATING_SYNC = Object.freeze({
   enabled: false,
   intervalMinutes: 5,
   initialSyncMode: "import",
   conflictPolicy: "local_wins",
-  providers: Object.freeze({ plex: "bidirectional", emby: "bidirectional", jellyfin: "bidirectional", trakt: "bidirectional" }),
+  providers: Object.freeze({ plex: "bidirectional", emby: "bidirectional", jellyfin: "bidirectional", trakt: "bidirectional", simkl: "bidirectional" }),
 });
 // Watchlist sync is Plex-only. Plex has a real account-level watchlist that can
 // hold anything in its catalog, which is what a watchlist means: titles you do
@@ -349,7 +352,7 @@ export function normalizeStoredConfig(stored = {}) {
     watchlistSync: normalizeWatchlistSyncSection(stored.watchlistSync || {}),
     upNextSync: normalizeUpNextSyncSection(stored.upNextSync || {}),
     nowPlaying: normalizeNowPlayingSection(stored.nowPlaying || {}),
-    metadata: { seasonSource: normalizeSeasonSource(stored.metadata?.seasonSource) },
+    metadata: { seasonSource: normalizeSeasonSource(stored.metadata?.seasonSource), anidbEnabled: stored.metadata?.anidbEnabled === true },
   };
 }
 
@@ -358,10 +361,68 @@ const upsertSettingsStmt = db.prepare(
   `INSERT INTO settings (id, data, updated_at) VALUES (?, ?, ?)
    ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
 );
+const selectAdminSettingsStmt = adminDb.prepare("SELECT data, updated_at FROM settings WHERE id = ?");
+
+function extractProviderKeySections(source = {}) {
+  const normalized = normalizeStoredConfig(source);
+  return {
+    tmdb: { apiKey: normalized.tmdb.apiKey },
+    fanart: { apiKey: normalized.fanart.apiKey },
+    tvdb: { apiKey: normalized.tvdb.apiKey },
+    youtube: { apiKey: normalized.youtube.apiKey },
+    omdb: { apiKey: normalized.omdb.apiKey },
+  };
+}
+
+// Shared metadata API keys (TMDB, TVDB, Fanart, OMDb, YouTube) are configured
+// once at the install root and reused by every user's lookups in-process.
+// Resolve from whichever of shared_provider_keys and the admin DB's settings
+// row was updated more recently (so direct SQLite writes in single-user tests
+// and downgrades to single-user both keep working), then fall back to env vars.
+export function loadSharedProviderKeys() {
+  const adminRow = selectAdminSettingsStmt.get(SETTINGS_ID);
+  const adminParsed = parseJson(adminRow?.data, {}) || {};
+  const adminKeys = extractProviderKeySections(adminParsed);
+  const adminUpdatedAt = Number(adminRow?.updated_at || 0);
+
+  const sharedRow = readSharedProviderKeysRow();
+  const sharedKeys = sharedRow ? extractProviderKeySections(sharedRow.data) : null;
+  const sharedUpdatedAt = Number(sharedRow?.updatedAt || 0);
+
+  const envDefaults = extractProviderKeySections(envMediaConfig());
+  const useShared = Boolean(sharedKeys && sharedUpdatedAt >= adminUpdatedAt && (sharedUpdatedAt > 0 || !adminRow));
+  const primary = useShared ? sharedKeys : adminKeys;
+  const secondary = useShared ? adminKeys : (sharedKeys || {});
+
+  if (!useShared && adminRow && adminUpdatedAt > sharedUpdatedAt) {
+    writeSharedProviderKeysRow(adminKeys, adminUpdatedAt);
+  }
+
+  const resolved = {};
+  for (const section of SHARED_PROVIDER_KEY_SECTIONS) {
+    const apiKey = String(primary?.[section]?.apiKey || secondary?.[section]?.apiKey || envDefaults[section]?.apiKey || "").trim();
+    resolved[section] = { apiKey };
+  }
+  return resolved;
+}
+
+export function saveSharedProviderKeys(config = {}, updatedAt = Date.now()) {
+  const keys = extractProviderKeySections(config);
+  writeSharedProviderKeysRow(keys, updatedAt);
+  return keys;
+}
 
 export async function loadMediaConfig({ resolveConnections = true } = {}) {
   const row = selectSettingsStmt.get(SETTINGS_ID);
-  const merged = mergeEnvDefaults(parseJson(row?.data, {}) || {});
+  const stored = parseJson(row?.data, {}) || {};
+  const nonAdminTenant = isNonAdminTenantContext();
+  // Non-admin tenants never inherit the admin's PLEX_*/EMBY_*/JELLYFIN_* env
+  // credentials, but they do share the install-wide metadata provider API keys.
+  const merged = nonAdminTenant ? normalizeStoredConfig(stored) : mergeEnvDefaults(stored);
+  const sharedKeys = loadSharedProviderKeys();
+  for (const section of SHARED_PROVIDER_KEY_SECTIONS) {
+    merged[section] = { ...merged[section], apiKey: sharedKeys[section].apiKey };
+  }
   merged.publicBaseUrl = normalizePublicBaseUrl(envValue("PLEKT_PUBLIC_URL", "PLEMBFIN_PUBLIC_URL") || merged.publicBaseUrl);
   if (resolveConnections) {
     const plexConnection = getMediaConnection("plex");
@@ -444,10 +505,10 @@ export function publicMediaConfig(config = {}) {
     syncScope: normalized.syncScope,
     authority: normalized.authority,
     pacing: normalized.pacing,
-    ratingSync: normalized.ratingSync,
-    watchlistSync: normalized.watchlistSync,
-    upNextSync: normalized.upNextSync,
-    nowPlaying: normalized.nowPlaying,
+    ratingSync: normalizeRatingSyncSection(normalized.ratingSync),
+    watchlistSync: normalizeWatchlistSyncSection(normalized.watchlistSync),
+    upNextSync: normalizeUpNextSyncSection(normalized.upNextSync),
+    nowPlaying: normalizeNowPlayingSection(normalized.nowPlaying),
     metadata: normalized.metadata,
   };
 }
@@ -570,7 +631,21 @@ export async function mergeIncomingConfig(config = {}) {
 
 export async function saveMediaConfig(config) {
   const normalized = await mergeIncomingConfig(config);
-  upsertSettingsStmt.run(SETTINGS_ID, toJson(normalized), Date.now());
+  const now = Date.now();
+  if (isNonAdminTenantContext()) {
+    // Non-admin tenants never persist or overwrite install-wide metadata API
+    // keys; keep their settings row free of shared provider keys while reading
+    // the shared keys at load time.
+    const tenantStored = { ...normalized };
+    for (const section of SHARED_PROVIDER_KEY_SECTIONS) {
+      tenantStored[section] = { apiKey: "" };
+    }
+    upsertSettingsStmt.run(SETTINGS_ID, toJson(tenantStored), now);
+    applyTuningConfig(tenantStored.tuning);
+    return;
+  }
+  upsertSettingsStmt.run(SETTINGS_ID, toJson(normalized), now);
+  saveSharedProviderKeys(normalized, now);
   applyTuningConfig(normalized.tuning);
 }
 
@@ -849,7 +924,7 @@ export function activeAuthoritativeRestore(runtime = null) {
       kind: String(current.restoreSyncKind || "restore"),
       ownerId: String(current.restoreSyncRunId || ""),
       startedAt: Number(current.restoreSyncStartedAt || 0),
-      heartbeat: Number(current.restoreSyncHeartbeat || current.restoreSyncStartedAt || 0),
+      heartbeat: Number(current.restoreSyncHeartbeat || runtime.restoreSyncStartedAt || 0),
     };
   }
   return null;

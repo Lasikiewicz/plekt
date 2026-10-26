@@ -85,6 +85,9 @@ import {
   clearWatchArtworkUrls,
 } from "../utils/dataRepo.js";
 
+const USER_EDITABLE_CONFIG_SECTIONS = new Set([
+  "plex", "emby", "jellyfin", "seerr", "tautulli", "watchlistSync",
+]);
 
 function imagePath(path, params = {}) {
   const cleanPath = String(path || "").trim();
@@ -164,6 +167,7 @@ const APPEARANCE_DEFAULTS = {
   showReviews: true,
   showImages: true,
   showRelated: true,
+  hideLinks: false,
   textScale: 100,
 };
 
@@ -196,7 +200,8 @@ export async function handleAppearance(req, res) {
 
 export async function handleConfig(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  const principal = await requireAdmin(req, res);
+  if (!principal) return;
 
   if (req.method === "GET") {
     const runtime = await loadRuntimeState();
@@ -211,6 +216,15 @@ export async function handleConfig(req, res) {
 
   if (req.method === "POST") {
     const config = await readJson(req);
+    if (principal.role !== "admin") {
+      const requestedSections = Object.keys(config || {});
+      if (requestedSections.some((section) => !USER_EDITABLE_CONFIG_SECTIONS.has(section))) {
+        return sendJson(res, {
+          error: "Only the administrator can change shared application settings.",
+          code: "ADMIN_ONLY",
+        }, 403);
+      }
+    }
     // Validate the merged result (stored + incoming) so a save that leaves a key
     // field blank â€” because the browser never receives stored secrets â€” still
     // satisfies required-credential checks. Only sections present in the request

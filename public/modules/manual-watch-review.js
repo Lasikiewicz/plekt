@@ -1,9 +1,9 @@
-import { state } from "./state.js?v=2.1.1.0.8";
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.1.1.0.8";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.1.0.8";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.1.0.8";
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.1.1.0.8";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.1.1.0.9";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.1.1.0.9";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.1.1.0.9";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.1.1.0.9";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;
@@ -172,6 +172,10 @@ export function groupManualWatchReviews(reviews = []) {
   const groups = [];
   const byKey = new Map();
   for (const review of Array.isArray(reviews) ? reviews : []) {
+    if (review.review_kind === "source_mismatch") {
+      groups.push({ kind: "mismatch", key: `mismatch:${review.id}`, title: reviewShowTitle(review), reviews: [review] });
+      continue;
+    }
     if (!isEpisodeReview(review)) {
       groups.push({ kind: "movie", key: reviewGroupKey(review), title: review.title || "Unknown movie", reviews: [review] });
       continue;
@@ -766,6 +770,23 @@ function renderReviewCard(review, { eagerPoster = true } = {}) {
       </div>
     </article>
   `;
+}
+
+function renderSourceMismatchCard(review) {
+  const mismatch = review.media?.mismatch || {};
+  const otherSource = String(mismatch.otherSource || "other metadata source").toUpperCase();
+  const stored = mismatch.stored || {};
+  const incoming = mismatch.incoming || {};
+  const href = reviewShowHref(review);
+  return `
+    <article class="manual-watch-review-card source-mismatch-review-card" data-manual-watch-review-id="${escapeAttribute(review.id)}">
+      <div class="manual-watch-review-main">
+        <div class="manual-watch-review-heading"><div><h3>${escapeHtml(reviewShowTitle(review))}</h3><p class="manual-watch-review-episode">${escapeHtml(reviewEpisodeCode(review))} · ${escapeHtml(reviewEpisodeTitle(review))}</p></div><span class="status-pill status-warning">Fix Match Issue</span></div>
+        <p class="manual-watch-review-copy">Incoming episode numbering differs from the stored episode. ${escapeHtml(otherSource)} matches the incoming episode.</p>
+        <div class="manual-watch-review-meta"><span>Stored: S${String(stored.season ?? "?").padStart(2, "0")}E${String(stored.episode ?? "?").padStart(2, "0")}</span><span>Incoming: S${String(incoming.season ?? "?").padStart(2, "0")}E${String(incoming.episode ?? "?").padStart(2, "0")}</span></div>
+        <div class="manual-watch-review-actions"><a class="button-primary" href="${escapeAttribute(href)}" data-manual-watch-review-link="${escapeAttribute(href)}">Fix Match</a><button class="button-danger" type="button" data-manual-watch-review-action="dismiss">Dismiss</button></div>
+      </div>
+    </article>`;
 }
 
 export function manualWatchReviewNearbyLabel(direction, episode = null) {
@@ -1412,6 +1433,7 @@ function setSummaryVisibility() {
   const button = document.querySelector("#manualWatchReviewButton");
   const count = document.querySelector("#manualWatchReviewCount");
   const pending = Number(state.manualWatchReviewCount || 0);
+  const title = Number(state.manualWatchSourceMismatchCount || 0) > 0 ? "Fix Match Issue" : "Manual Watch review";
   const label = `${pending} item${pending === 1 ? "" : "s"} waiting`;
   if (count) {
     count.textContent = pending > 99 ? "99+" : String(pending);
@@ -1419,9 +1441,12 @@ function setSummaryVisibility() {
   }
   if (button) {
     button.classList.toggle("hidden", !state.token || pending <= 0);
+    const labelElement = button.querySelector(".manual-watch-review-nav-label");
+    if (labelElement) labelElement.textContent = title;
     button.setAttribute("aria-label", pending > 0
-      ? `Manual Watch review - ${label}`
-      : "Manual Watch review");
+      ? `${title} - ${label}`
+      : title);
+    button.title = title;
   }
 }
 
@@ -1608,6 +1633,11 @@ export function initManualWatchReview(callbacks = {}) {
       const action = button.dataset.manualWatchReviewAction;
       const mode = button.dataset.manualWatchReviewMode || "";
       const review = reviews[0];
+      if (review.review_kind === "source_mismatch") {
+        handleReviewAction(review.id, action, mode, card)
+          .catch((error) => reportManualWatchReviewFailure(error));
+        return;
+      }
       confirmManualWatchReviewAction({
         key: `review:${reviews.map((item) => item.id).join(",")}:${action}:${mode}`,
         action,
@@ -1677,7 +1707,9 @@ export function renderManualWatchReviewPage() {
     container.innerHTML = filteredOrderedGroups
       .map((group) => group.kind === "show"
         ? renderReviewShowGroup(group, query, { isTopmost: group.key === topGroupKey })
-        : renderReviewCard(group.reviews[0], { eagerPoster: group.key === topGroupKey }))
+        : group.kind === "mismatch"
+          ? renderSourceMismatchCard(group.reviews[0])
+          : renderReviewCard(group.reviews[0], { eagerPoster: group.key === topGroupKey }))
       .join("");
     bindRenderedReviewDetails(container);
     hydratePosters(container, { allowNetwork: true });
@@ -1703,6 +1735,7 @@ export async function loadManualWatchReview({ summaryOnly = false, refresh = fal
   if (!state.token) {
     state.manualWatchReviews = [];
     state.manualWatchReviewCount = 0;
+    state.manualWatchSourceMismatchCount = 0;
     if (manualWatchReviewCatalogTimer) clearTimeout(manualWatchReviewCatalogTimer);
     manualWatchReviewCatalogTimer = null;
     manualWatchReviewCatalogRequestSerial += 1;
@@ -1773,6 +1806,7 @@ export async function loadManualWatchReview({ summaryOnly = false, refresh = fal
           !pendingManualWatchReviewActions.has(String(review.id))
           && !suppressedManualWatchReviewIds.has(String(review.id))
         )));
+      state.manualWatchSourceMismatchCount = Math.max(Number(body.sourceMismatchCount) || 0, 0);
     }
     if (isLatestFullRequest) {
       state.manualWatchReviews = responseReviews.filter((review) => (
@@ -1950,7 +1984,9 @@ async function handleReviewAction(id, action, mode, card, watchedAt = "") {
   const optimistic = action === "defer" || !review ? [] : optimisticallyRemoveReviews([review]);
   if (optimistic.length) {
     renderManualWatchReviewPage();
-    _cb.setMessage?.("Decision removed from review; syncing in the background.", "muted");
+    _cb.setMessage?.(review?.review_kind === "source_mismatch"
+      ? "Fix Match issue dismissed. Watch state was not changed."
+      : "Decision removed from review; syncing in the background.", "muted");
   }
   try {
     const body = await postReviewAction(id, action, mode, watchedAt);
@@ -1959,7 +1995,9 @@ async function handleReviewAction(id, action, mode, card, watchedAt = "") {
     }
     _cb.setMessage?.(
       action === "dismiss"
-        ? "Manual watch review dismissed; marked unwatched across connected media apps."
+        ? review?.review_kind === "source_mismatch"
+          ? "Fix Match issue dismissed. No watch state was changed."
+          : "Manual watch review dismissed; marked unwatched across connected media apps."
         : action === "defer"
           ? "Manual watch review left pending."
           : `Watch decision saved (${policyLabel(mode)}) and sync queued.`,

@@ -327,7 +327,7 @@ test("liveUpdates reports an active onboarding import even without dispatch coun
   saveOnboardingState({
     backgroundImports: {
       servers: { emby: { enabled: true, status: "importing", itemCount: 3 } },
-      trakt: originalOnboarding.backgroundImports.trakt,
+      trackers: originalOnboarding.backgroundImports.trackers,
     },
   });
 
@@ -345,7 +345,7 @@ test("liveUpdates reports an active onboarding import even without dispatch coun
     saveOnboardingState({
       backgroundImports: {
         servers: { emby: { enabled: true, status: "complete", itemCount: 3 } },
-        trakt: originalOnboarding.backgroundImports.trakt,
+        trackers: originalOnboarding.backgroundImports.trackers,
       },
     });
     await new Promise((resolve) => setTimeout(resolve, 600));

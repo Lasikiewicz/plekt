@@ -8,13 +8,17 @@ import {
   completeOnboarding,
   restartOnboarding,
   CURRENT_ONBOARDING_VERSION,
+  trackerImportState,
 } from "../utils/onboardingStore.js";
 import { countTrackerItemStates, getTrackerConnection } from "../utils/trackerConnectionRepo.js";
 import { countWatchHistoryRows, countWatchHistoryRowsBySource } from "../utils/dataRepo.js";
 import { loadMediaConfig, publicMediaConfig, activeSyncOperation, loadRuntimeState } from "../utils/configStore.js";
 import { tvdbBuiltInAvailable } from "../utils/tvdbGateway.js";
 import { fanartBuiltInAvailable } from "../utils/fanartGateway.js";
-import { startServerImport, cancelServerImport, startTraktImport, cancelTraktImport } from "../utils/onboardingImportCoordinator.js";
+import { startServerImport, cancelServerImport, startTrackerImport, cancelTrackerImport } from "../utils/onboardingImportCoordinator.js";
+import { getTrackerAdapter, trackerProviderIds } from "../utils/trackers/registry.js";
+import { armInitialSync } from '../utils/initialOutwardSync.js';
+import { assertInitialImportsOpen } from '../utils/initialSyncStore.js';
 
 const MEDIA_SERVERS = ["plex", "emby", "jellyfin"];
 
@@ -32,7 +36,22 @@ function serverSummary(provider, config) {
   };
 }
 
-function checklistItems(state, { servers, trakt, tmdbConfigured, seerrConfigured, hasBackup, webhookAckCount }) {
+// The first-run tracker step lists only trackers whose sync is switched on
+// (the registry); a gated tracker joins automatically once it is enabled.
+function trackerSummary(provider) {
+  const connection = getTrackerConnection(provider);
+  return {
+    provider,
+    label: getTrackerAdapter(provider).label || provider,
+    connected: Boolean(connection && connection.status === "connected"),
+    username: connection?.username || "",
+    baselineComplete: Boolean(connection?.baselineComplete),
+    preferEarlierWatchedDate: connection?.preferEarlierWatchedDate !== false,
+    initialSync: connection?.initialSync || null,
+  };
+}
+
+function checklistItems(state, { servers, trackers, tmdbConfigured, seerrConfigured, hasBackup, webhookAckCount }) {
   const items = [];
   if (!tmdbConfigured) items.push({ id: "connect_tmdb", label: "Connect TMDB", href: "/settings/metadata" });
   for (const server of servers) {
@@ -43,8 +62,8 @@ function checklistItems(state, { servers, trakt, tmdbConfigured, seerrConfigured
       items.push({ id: `import_${server.provider}`, label: `Import watched status from ${server.serverName || server.provider}`, href: "/settings/sync-tools" });
     }
   }
-  if (!trakt.connected && (state.acknowledgements.traktSkipped || ["overview", "claim", "trakt"].includes(state.currentStep))) {
-    items.push({ id: "connect_trakt", label: "Connect Trakt", href: "/settings/import" });
+  if (!trackers.some((tracker) => tracker.connected) && (state.acknowledgements.trackersSkipped || ["overview", "claim", "trackers"].includes(state.currentStep))) {
+    items.push({ id: "connect_tracker", label: "Connect a watch tracker", href: "/settings/import" });
   }
   if (!seerrConfigured) items.push({ id: "configure_seerr", label: "Configure Seerr", href: "/settings/seerr" });
   if (!hasBackup) items.push({ id: "create_backup", label: "Create an encrypted backup", href: "/settings/backups" });
@@ -61,18 +80,13 @@ export async function handleSetupStatus(req, res) {
   const state = getOnboardingState();
   const config = publicMediaConfig(await loadMediaConfig({ resolveConnections: false }));
   const servers = MEDIA_SERVERS.map((provider) => serverSummary(provider, config));
-  const traktConnection = getTrackerConnection("trakt");
-  const trakt = {
-    connected: Boolean(traktConnection && traktConnection.status === "connected"),
-    username: traktConnection?.username || "",
-    baselineComplete: Boolean(traktConnection?.baselineComplete),
-  };
+  const trackers = trackerProviderIds().map(trackerSummary);
   const watchHistoryCount = await countWatchHistoryRows();
   const runtime = await loadRuntimeState();
 
   const items = checklistItems(state, {
     servers,
-    trakt,
+    trackers,
     tmdbConfigured: Boolean(config.tmdb?.configured),
     seerrConfigured: Boolean(config.seerr?.configured),
     hasBackup: false,
@@ -84,7 +98,6 @@ export async function handleSetupStatus(req, res) {
   // server counter is an in-memory value a process restart would lose.
   // Report what's actually on file for anything still "importing" instead,
   // so the UI shows real, moving progress rather than a stale number.
-  const traktImportState = state.backgroundImports.trakt;
   const serverImportStates = state.backgroundImports.servers || {};
   const liveServers = Object.fromEntries(
     Object.entries(serverImportStates).map(([provider, importState]) => [
@@ -97,9 +110,12 @@ export async function handleSetupStatus(req, res) {
   const backgroundImports = {
     ...state.backgroundImports,
     servers: liveServers,
-    trakt: traktImportState?.status === "importing"
-      ? { ...traktImportState, itemCount: countTrackerItemStates("trakt") }
-      : traktImportState,
+    trackers: Object.fromEntries(trackers.map(({ provider }) => {
+      const importState = trackerImportState(state, provider);
+      return [provider, importState.status === "importing"
+        ? { ...importState, itemCount: countTrackerItemStates(provider) }
+        : importState];
+    })),
   };
 
   return sendJson(res, {
@@ -118,10 +134,13 @@ export async function handleSetupStatus(req, res) {
       ctaDismissedAt: state.ctaDismissedAt,
     },
     servers,
-    trakt,
+    trackers,
     metadata: {
       tmdbConfigured: Boolean(config.tmdb?.configured),
       builtInAvailable: { tvdb: tvdbBuiltInAvailable(), fanart: fanartBuiltInAvailable() },
+    },
+    seerr: {
+      configured: Boolean(config.seerr?.configured),
     },
     options: {
       watchImportMode: config.tuning?.watchImportMode || null,
@@ -142,21 +161,29 @@ export async function handleSetupStep(req, res) {
   if (!(await requireAdmin(req, res))) return;
 
   const body = await readJson(req).catch(() => ({}));
+  if(body.startInitialSync===true) {
+    const state=getOnboardingState();
+    if(state.currentStep!=='imports'||state.runState!=='in_progress')return sendJson(res,{error:'Initial sync starts from Import & sync during setup',code:'INITIAL_SYNC_NOT_AVAILABLE'},409);
+    await armInitialSync();
+  }
   const patch = {};
   if (body.currentStep) patch.currentStep = String(body.currentStep).slice(0, 64);
   if (body.webhookAck && typeof body.webhookAck === "object") {
     const state = getOnboardingState();
     const provider = String(body.webhookAck.provider || "").trim();
+    const method = String(body.webhookAck.method || "").trim();
     if (provider) {
+      const acknowledgement = { acknowledgedAt: Date.now() };
+      if (method === "plugin" || method === "webhook") acknowledgement.method = method;
       patch.acknowledgements = {
         ...state.acknowledgements,
-        webhooks: { ...state.acknowledgements.webhooks, [provider]: { acknowledgedAt: Date.now() } },
+        webhooks: { ...state.acknowledgements.webhooks, [provider]: acknowledgement },
       };
     }
   }
-  if (body.traktSkipped !== undefined) {
+  if (body.trackersSkipped !== undefined) {
     const state = getOnboardingState();
-    patch.acknowledgements = { ...(patch.acknowledgements || state.acknowledgements), traktSkipped: Boolean(body.traktSkipped) };
+    patch.acknowledgements = { ...(patch.acknowledgements || state.acknowledgements), trackersSkipped: Boolean(body.trackersSkipped) };
   }
   const next = saveOnboardingState(patch);
   return sendJson(res, { ok: true, onboarding: next });
@@ -172,11 +199,24 @@ export async function handleSetupImport(req, res) {
   const target = String(body.target || "").trim();
   const action = String(body.action || "").trim();
   if (!["start", "cancel"].includes(action)) return sendJson(res, { error: "action must be start or cancel", code: "VALIDATION_FAILED" }, 400);
+  if(action==='start') {
+    try {assertInitialImportsOpen();}
+    catch(error) {return sendJson(res,{error:error.message,code:error.code},error.status);}
+  }
+  if(['netflix','tautulli'].includes(target)&&action==='cancel') {
+    const state=getOnboardingState(),oneTime=state.backgroundImports.oneTime||{};
+    saveOnboardingState({backgroundImports:{...state.backgroundImports,oneTime:Object.fromEntries(
+      Object.entries(oneTime).map(([key,entry])=>[key,entry.source===target&&entry.status==='failed'?{...entry,enabled:false,status:'cancelled'}:entry]))}});
+    return sendJson(res,{ok:true,cancelled:true});
+  }
 
-  if (target === "trakt") {
-    const result = action === "start" ? await startTraktImport() : cancelTraktImport();
-    writeAuditLog(`onboarding.import.trakt.${action}`, { ip: req.ip || req.socket?.remoteAddress });
+  if (trackerProviderIds().includes(target)) {
+    let result;
+    try {result=action==='start'?await startTrackerImport(target,{planId:body.planId,selectedIds:body.selectedIds}):cancelTrackerImport(target);}
+    catch(error) {return sendJson(res,{error:error.message,code:error.code||'TRACKER_IMPORT_FAILED'},error.status||409);}
+    writeAuditLog(`onboarding.import.${target}.${action}`, { ip: req.ip || req.socket?.remoteAddress });
     if (result?.code === "SYNC_LOCKED") return sendJson(res, { error: "A sync operation is already running.", code: "SYNC_LOCKED", retryable: true }, 409);
+    if(result?.code==='RESTORE_ACTIVE')return sendJson(res,{error:'A restore is active. Review the import after it finishes',code:result.code},409);
     return sendJson(res, { ok: true, ...result });
   }
   if (MEDIA_SERVERS.includes(target)) {
@@ -185,7 +225,7 @@ export async function handleSetupImport(req, res) {
     if (result?.code === "SYNC_LOCKED") return sendJson(res, { error: "A sync operation is already running.", code: "SYNC_LOCKED", retryable: true }, 409);
     return sendJson(res, { ok: true, ...result });
   }
-  return sendJson(res, { error: "target must be plex, emby, jellyfin, or trakt", code: "VALIDATION_FAILED" }, 400);
+  return sendJson(res, { error: "target must be a media server or a tracker that can sync", code: "VALIDATION_FAILED", targets: [...MEDIA_SERVERS, ...trackerProviderIds()] }, 400);
 }
 
 // No media server is actually required to finish setup - manually marking
@@ -203,6 +243,7 @@ export async function handleSetupComplete(req, res) {
   writeAuditLog("onboarding.completed", { ip: req.ip || req.socket?.remoteAddress });
   return sendJson(res, { ok: true, onboarding: next });
 }
+
 
 export async function handleSetupRestart(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);

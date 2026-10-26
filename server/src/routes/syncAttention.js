@@ -1,4 +1,6 @@
 import { requireAdmin } from "../utils/auth.js";
+import { cancelTrackerWriteIntent, trackerWriteAttentionItems } from "../utils/trackerWriteIntents.js";
+import { simklObservationAttentionItems, dismissSimklObservation } from "../utils/trackers/simklObservations.js";
 import { readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { writeAuditLog } from "../db.js";
@@ -13,6 +15,7 @@ import {
   touchSyncOperation,
 } from "../utils/configStore.js";
 import { getOnboardingState, saveOnboardingState } from "../utils/onboardingStore.js";
+import { readInitialSyncHeader, patchInitialSync } from '../utils/initialSyncStore.js';
 import {
   canonicalShowTitleKey,
   canonicalTitleKey,
@@ -28,9 +31,13 @@ import { createRestoreLookupCache } from "../utils/restoreLookupCache.js";
 import {
   syncAttentionItemIsAuthoritativeRestore,
   syncAttentionState,
+  trackerForRejection,
+  trackerRejectedItems,
 } from "../utils/syncAttention.js";
+import { getTrackerAdapter, isTrackerProvider, trackerProviderIds } from "../utils/trackers/registry.js";
 
 const RESTORE_WATERMARK_BUFFER_MS = 5_000;
+const TRACKER_RESTORE_RETRIES = { trakt: retryTraktRestoreItem };
 
 function objectValue(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -76,8 +83,7 @@ function rawPersistedRestoreIssues(result = {}) {
   if (Array.isArray(value.restoreIssues)) return value.restoreIssues;
   if (Array.isArray(value.restoreItems)) return value.restoreItems;
   if (Array.isArray(value.rejectedItems)) return value.rejectedItems;
-  if (Array.isArray(value.trakt?.rejectedItems)) return value.trakt.rejectedItems;
-  return [];
+  return trackerRejectedItems(value);
 }
 
 function restoreIssueKey(issue = {}) {
@@ -90,20 +96,20 @@ function restoreIssueProvider(issue = {}) {
 
 function restoreIssueCanRepair(issue = {}) {
   const provider = restoreIssueProvider(issue);
-  if (!["trakt", "plex", "emby", "jellyfin"].includes(provider) || issue.candidate === true) return false;
+  if (!(isTrackerProvider(provider) || ["plex", "emby", "jellyfin"].includes(provider)) || issue.candidate === true) return false;
   const type = String(issue.type || issue.mediaType || "").trim().toLowerCase();
   if (!["episode", "movie"].includes(type)) return false;
   const sourceRowId = String(issue.sourceRowId || "").trim();
   const sourcePlaystateKey = String(issue.sourcePlaystateKey || issue.mediaKey || "").trim();
   const sourceMediaKey = String(issue.sourceMediaKey || "").trim();
-  return provider === "trakt"
+  return isTrackerProvider(provider)
     ? Boolean(sourceRowId)
     : Boolean(sourceRowId || sourcePlaystateKey || sourceMediaKey);
 }
 
 function isExpectedRestoreAvailabilitySkip(issue = {}) {
   const provider = restoreIssueProvider(issue);
-  if (provider === "trakt") return false;
+  if (isTrackerProvider(provider)) return false;
   if (issue.expectedSkip === true) return true;
   const detail = [issue.reason, issue.lastError, issue.detail]
     .map((value) => String(value || ""))
@@ -117,7 +123,7 @@ function persistedRestoreIssues(result = {}) {
 
 function restoreRetryCount(result = {}) {
   const match = String(result.error || "").match(/after (\d+) retries/i);
-  return Math.max(Number(match?.[1]) || Number(result.trakt?.retryCount) || 3, 1);
+  return Math.max(Number(match?.[1]) || Number(trackerProviderIds().map((provider) => result[provider]?.retryCount).find(Number)) || 3, 1);
 }
 
 function restoreResultWithRemainingIssues(previous = {}, remaining = [], {
@@ -139,23 +145,25 @@ function restoreResultWithRemainingIssues(previous = {}, remaining = [], {
     ...(failedIssueKey ? { lastRestoreIssueError: failureReason, lastRestoreIssueKey: failedIssueKey, lastRestoreIssueAttemptAt: finishedAt } : {}),
   };
   if (remaining.length) {
-    const oldWasTraktFailure = /trakt rejected/i.test(String(old.error || ""))
-      || (old.trakt && typeof old.trakt === "object");
-    const traktIssues = remaining.filter((candidate) => {
+    const failedTracker = trackerForRejection(old.error)
+      || trackerProviderIds().find((provider) => old[provider] && typeof old[provider] === "object") || "";
+    const trackerIssues = remaining.filter((candidate) => {
       const provider = restoreIssueProvider(candidate);
-      return provider === "trakt" || (!provider && oldWasTraktFailure);
+      return isTrackerProvider(provider) || (!provider && failedTracker);
     });
-    const projectionIssues = remaining.filter((candidate) => !traktIssues.includes(candidate));
-    if (traktIssues.length && !projectionIssues.length) {
-      next.error = `Trakt rejected ${traktIssues.length} restored play${traktIssues.length === 1 ? "" : "s"} after ${restoreRetryCount(old)} retries`;
+    const issueTrackers = new Set(trackerIssues.map((candidate) => restoreIssueProvider(candidate) || failedTracker));
+    const projectionIssues = remaining.filter((candidate) => !trackerIssues.includes(candidate));
+    if (trackerIssues.length && !projectionIssues.length && issueTrackers.size === 1) {
+      const label = getTrackerAdapter([...issueTrackers][0]).label;
+      next.error = `${label} rejected ${trackerIssues.length} restored play${trackerIssues.length === 1 ? "" : "s"} after ${restoreRetryCount(old)} retries`;
     } else {
       next.error = `${remaining.length} restored item projection${remaining.length === 1 ? "" : "s"} still need attention`;
     }
-    if (old.trakt && typeof old.trakt === "object") {
-      next.trakt = {
-        ...old.trakt,
-        rejectedCount: traktIssues.length,
-        rejectedItems: traktIssues,
+    if (failedTracker && old[failedTracker] && typeof old[failedTracker] === "object") {
+      next[failedTracker] = {
+        ...old[failedTracker],
+        rejectedCount: trackerIssues.length,
+        rejectedItems: trackerIssues,
       };
     }
   } else {
@@ -360,7 +368,9 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
   }
 
   const provider = restoreIssueProvider(storedIssue)
-    || (item.kind === "restore_trakt_rejections" || /trakt rejected/i.test(String(previous.error || "")) ? "trakt" : "");
+    || (item.kind === "restore_tracker_rejections" ? String(item.context?.provider || "") : "")
+    || trackerForRejection(previous.error);
+  const providerName = isTrackerProvider(provider) ? getTrackerAdapter(provider).label : provider;
   if (!restoreIssueCanRepair(storedIssue) && !restoreIssueCanRepair(issue)) {
     return {
       status: 409,
@@ -371,9 +381,12 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
 
   let row = null;
   let repair;
-  if (provider === "trakt") {
+  if (isTrackerProvider(provider)) {
+    // Only Trakt has a restore replay, so only Trakt has a per-item retry.
+    const retryRestoreItem = TRACKER_RESTORE_RETRIES[provider];
+    if (!retryRestoreItem) return { status: 409, error: `${providerName} restore issues cannot be retried individually yet.` };
     if (!storedIssue.sourceRowId) {
-      return { status: 409, error: "This Trakt issue does not retain its source watch-history row." };
+      return { status: 409, error: `This ${providerName} issue does not retain its source watch-history row.` };
     }
     row = await getWatchRecordById(storedIssue.sourceRowId).catch(() => null);
     if (!row) return { status: 404, error: "The Plektwatch-history row for this issue no longer exists." };
@@ -381,7 +394,7 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
       return { status: 409, error: "This Plektwatch-history row is no longer watched, so it cannot be repaired as part of the restore." };
     }
     const rows = requireDb().prepare("SELECT * FROM watch_history WHERE sync_action IS NULL OR sync_action NOT IN ('unwatched', 'unplayed')").all();
-    repair = await retryTraktRestoreItem(row, { rows });
+    repair = await retryRestoreItem(row, { rows });
   } else if (["plex", "emby", "jellyfin"].includes(provider)) {
     const sourceKey = String(storedIssue.sourcePlaystateKey || storedIssue.sourceMediaKey || "").trim();
     const historyRow = restoreHistoryRowForIssue(storedIssue);
@@ -414,7 +427,7 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
     return { status: 409, error: "This restore issue does not identify a supported repair target." };
   }
   if (!repair.success) {
-    const reason = repair.error || (provider === "trakt" ? "Trakt could not accept this restored play." : `${provider} did not confirm the restored state.`);
+    const reason = repair.error || (isTrackerProvider(provider) ? `${providerName} could not accept this restored play.` : `${provider} did not confirm the restored state.`);
     const nextIssues = storedIssues.map((candidate) => restoreIssueKey(candidate) === key
       ? {
         ...candidate,
@@ -444,14 +457,14 @@ async function updateRestoreIssue(item, issue, runtime, resolution) {
     finishedAt: now,
   });
   const persisted = await persistRestoreIssueResult(item, runtime, nextResult, now);
-  if (!persisted.persisted) return { status: 409, error: "The restore owner changed after Trakt accepted this item. Refresh the sync page before taking another action." };
+  if (!persisted.persisted) return { status: 409, error: `The restore owner changed after ${providerName} accepted this item. Refresh the sync page before taking another action.` };
   return {
     ok: true,
     resolved: "repaired",
     released: persisted.released,
     message: persisted.released
       ? "The last restore issue was repaired and sync has resumed."
-      : `The item was repaired on ${provider === "trakt" ? "Trakt" : provider}; the remaining restore issues are still blocking sync.`,
+      : `The item was repaired on ${providerName}; the remaining restore issues are still blocking sync.`,
     media: repair.media,
   };
 }
@@ -567,13 +580,10 @@ function skipOnboardingAttention(item) {
   const onboarding = getOnboardingState();
   if (scope === "initial_import" && provider) {
     const servers = { ...onboarding.backgroundImports.servers };
-    if (provider === "trakt") {
-      saveOnboardingState({
-        backgroundImports: {
-          ...onboarding.backgroundImports,
-          trakt: { ...onboarding.backgroundImports.trakt, enabled: false, status: "skipped", completedAt: Date.now() },
-        },
-      });
+    if (isTrackerProvider(provider)) {
+      const trackers = { ...onboarding.backgroundImports.trackers };
+      trackers[provider] = { ...(trackers[provider] || {}), enabled: false, status: "skipped", completedAt: Date.now() };
+      saveOnboardingState({ backgroundImports: { ...onboarding.backgroundImports, trackers } });
     } else {
       servers[provider] = { ...(servers[provider] || {}), enabled: false, status: "skipped", completedAt: Date.now() };
       saveOnboardingState({ backgroundImports: { ...onboarding.backgroundImports, servers } });
@@ -581,6 +591,8 @@ function skipOnboardingAttention(item) {
     return { released: false, reason: `The ${provider} initial import was skipped.` };
   }
   if (scope === "initial_push") {
+    const initial=readInitialSyncHeader();
+    if(initial)patchInitialSync(initial.id,{status:'skipped',completedAt:Date.now(),error:''});
     saveOnboardingState({ pushSync: { ...onboarding.pushSync, status: "skipped", completedAt: Date.now() } });
     return { released: false, reason: "The initial push was skipped." };
   }
@@ -588,15 +600,22 @@ function skipOnboardingAttention(item) {
 }
 
 async function skipAttentionItem(item, runtime) {
+  if (item.source === "tracker_observation") return { released: false, reason: dismissSimklObservation(item.id.replace("simkl-observation-", "")) ? "Local history kept; no tracker write sent." : "The observation changed." };
   if (item.source === "restore") return skipRestoreAttention(item, runtime);
   if (item.source === "force_sync") return skipForceSyncAttention(item, runtime);
   if (item.source === "initial_import") return skipOnboardingAttention(item);
+  if (item.source === "tracker_write") {
+    return cancelTrackerWriteIntent(item.intentId)
+      ? { released: true, reason: "The tracker write was cancelled and will not be sent." }
+      : { released: false, reason: "The tracker write is no longer held." };
+  }
+  if (item.source === "unknown_tracker") return { released: false, reason: "The warning was hidden. The tracker data was kept." };
   return { released: false, reason: "The issue was acknowledged." };
 }
 
 async function currentAttention() {
   const runtime = await loadRuntimeState();
-  return { runtime, ...syncAttentionState(runtime, getOnboardingState()) };
+  return { runtime, ...syncAttentionState({ ...runtime, trackerWriteAttention: [...trackerWriteAttentionItems(), ...simklObservationAttentionItems()] }, getOnboardingState()) };
 }
 
 export async function handleSyncAttention(req, res) {

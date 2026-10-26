@@ -1,0 +1,10 @@
+feat: harden netflix matching and add initial outward sync
+
+- Import Netflix ViewingActivity from the personal-information ZIP with a profile picker, 5-minute minimum, and safer episode and show matching including country suffixes, dropped leading The, original-language titles and sourced editorial aliases
+- After first-run imports finish, start an add-only initial outward sync with a progress chip for destination counts and remaining or held items
+- Pace approved Simkl full-sync sends in durable daily slices that respect quota reserves and keep uncertain outcomes held for review
+- Keep Dropped titles and Up Next menus aligned with the poster overflow actions on Stats and dashboard cards
+- Refresh the website homepage and social preview card from a live dashboard capture
+
+site-impact: settings, getting-started, sync-tools, dashboard, stats
+Website review: Netflix import copy, initial sync chip, Simkl full-sync pacing, homepage and og-card changed; related guides and screenshots may be stale

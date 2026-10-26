@@ -3,6 +3,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { CODE_INDEX_PATH, generateCodeIndex } from "./generate-code-index.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -96,6 +97,29 @@ export function checkDocumentationConsistency({ packageJson, readme } = {}) {
   return { nodeMinimum };
 }
 
+// The tool-guard hook denies whole-file Reads over this size, and the index is
+// only useful if an agent can read it in one call.
+export const CODE_INDEX_MAX_BYTES = 60 * 1024;
+
+// docs/code-index.md is generated. It carries no line numbers, so it only goes
+// stale when a route, a source file or an export name changes.
+export function checkCodeIndex({ rootDir = root, committed } = {}) {
+  const failures = [];
+  const expected = generateCodeIndex({ rootDir });
+  const indexPath = path.join(rootDir, CODE_INDEX_PATH);
+  const current = committed ?? (fs.existsSync(indexPath) ? fs.readFileSync(indexPath, "utf8") : null);
+  if (current === null) {
+    failures.push(`${CODE_INDEX_PATH} is missing - run \`npm run code-index\``);
+  } else if (current.replace(/\r\n/g, "\n") !== expected) {
+    failures.push(`${CODE_INDEX_PATH} is out of date with the source - run \`npm run code-index\` and commit the result`);
+  }
+  const size = Buffer.byteLength(expected);
+  if (size > CODE_INDEX_MAX_BYTES) {
+    failures.push(`${CODE_INDEX_PATH} would be ${size} bytes, over the ${CODE_INDEX_MAX_BYTES}-byte whole-file Read limit - lower MAX_EXPORTS_PER_ROW in scripts/generate-code-index.js`);
+  }
+  return failures;
+}
+
 // Files whose release-procedure prose is read before someone changes the
 // promotion scripts. decisions.md is deliberately absent: its superseded entries
 // must keep the wording they were written with.
@@ -125,5 +149,12 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     process.exit(1);
   }
 
-  console.log(`Documentation consistency check passed (Node.js >=${nodeMinimum}, ${files.length} release docs scanned).`);
+  const codeIndexFailures = checkCodeIndex();
+  if (codeIndexFailures.length) {
+    console.error("Code index check failed:");
+    for (const failure of codeIndexFailures) console.error(`  - ${failure}`);
+    process.exit(1);
+  }
+
+  console.log(`Documentation consistency check passed (Node.js >=${nodeMinimum}, ${files.length} release docs scanned, code index current).`);
 }

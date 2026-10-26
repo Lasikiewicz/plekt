@@ -3,14 +3,35 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
-import { DB_PATH, ensureDataDirs } from "./paths.js";
+import { DATA_DIR, DB_PATH, DEFAULT_DATA_DIR, ensureDataDirs } from "./paths.js";
 import { repairPhantomWatchBursts } from "./utils/phantomWatchRepair.js";
 import { activityGroupKeyFor, activityItemKeyFor } from "./utils/syncActivityIdentity.js";
 import { persistedWatchDerivedFields } from "./utils/watchDerivedFields.js";
+import { migrateLegacyTrackerIntents } from "./utils/trackerIntentMigration.js";
+import { addHeldRatingStatus, rebuildRatingTablesWithoutProviderCheck } from "./utils/ratingProviderMigration.js";
+import { getUserContext, isNonAdminTenantContext } from "./utils/userContext.js";
+import { closeAllTenantDatabases, openTenantDatabase, registerTenantDatabaseInitializer } from "./utils/tenantDatabase.js";
+import {
+  closeAllSharedMetadataDatabases,
+  getSharedMetadataDb,
+  migrateProviderCachesFromAdmin,
+  sqlTargetsSharedProviderCache,
+} from "./utils/sharedMetadataStore.js";
 
+// A test that imports this module before pointing DATA_DIR at a temp folder
+// would read and write the developer's real database. Under the node test
+// runner, refuse to open the default data folder at all.
+export function assertNotRealDataDirUnderTest({ env = process.env, execArgv = process.execArgv, dataDir = DATA_DIR } = {}) {
+  const underTestRunner = Boolean(env.NODE_TEST_CONTEXT) || execArgv.includes("--test");
+  if (underTestRunner && path.resolve(dataDir) === path.resolve(DEFAULT_DATA_DIR)) {
+    throw new Error(`Refusing to open the real data folder (${DEFAULT_DATA_DIR}) under the test runner; set DATA_DIR to a temp folder before importing db.js`);
+  }
+}
+
+assertNotRealDataDirUnderTest();
 ensureDataDirs();
 
-export const db = new Database(DB_PATH);
+export const adminDb = new Database(DB_PATH);
 try { fs.chmodSync(DB_PATH, 0o600); } catch { /* non-POSIX FS (Windows, some Docker volumes) */ }
 
 // A journal_mode switch needs a momentary exclusive lock and can throw
@@ -21,10 +42,10 @@ try { fs.chmodSync(DB_PATH, 0o600); } catch { /* non-POSIX FS (Windows, some Doc
 function sleepSync(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
-function pragmaWithRetry(statement, { attempts = 20, delayMs = 50 } = {}) {
+function pragmaWithRetry(statement, { attempts = 20, delayMs = 50, database = adminDb } = {}) {
   for (let attempt = 0; ; attempt++) {
     try {
-      return db.pragma(statement);
+      return database.pragma(statement);
     } catch (error) {
       if (error?.code !== "SQLITE_BUSY" || attempt >= attempts - 1) throw error;
       sleepSync(delayMs);
@@ -38,7 +59,7 @@ pragmaWithRetry("foreign_keys = ON");
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const schema = fs.readFileSync(path.join(here, "schema.sql"), "utf8");
-db.exec(schema);
+adminDb.exec(schema);
 
 const migrations = [
   {
@@ -1701,6 +1722,64 @@ const migrations = [
       if (!columns.has("overridden_at")) database.exec("ALTER TABLE show_season_source ADD COLUMN overridden_at INTEGER");
     },
   },
+  {
+    id: 56,
+    up(database) {
+      const columns = database.pragma("table_info(tracker_item_state)").map((column) => column.name);
+      if (!columns.includes("last_outbound_intent_id")) database.exec("ALTER TABLE tracker_item_state ADD COLUMN last_outbound_intent_id TEXT");
+      migrateLegacyTrackerIntents(database);
+    },
+  },
+  {
+    id: 57,
+    up(database) {
+      // Bind each device-auth flow to the connection generation it started
+      // against. Legacy pending flows have no binding and are expired.
+      const columns = database.pragma("table_info(tracker_auth_flows)").map((column) => column.name);
+      if (!columns.length) return;
+      if (!columns.includes("expected_connection_id")) database.exec("ALTER TABLE tracker_auth_flows ADD COLUMN expected_connection_id TEXT");
+      database.prepare("UPDATE tracker_auth_flows SET status='expired',updated_at=? WHERE status='pending' AND expected_connection_id IS NULL").run(Date.now());
+    },
+  },
+  {
+    id: 58,
+    up(database) {
+      rebuildRatingTablesWithoutProviderCheck(database);
+    },
+  },
+  {
+    id: 59,
+    up(database) {
+      // Existing connections keep their history eligibility: they were
+      // connected when their rows were created.
+      const columns = database.pragma("table_info(tracker_connections)").map((column) => column.name);
+      if (!columns.length) return;
+      if (!columns.includes("connected_at")) database.exec("ALTER TABLE tracker_connections ADD COLUMN connected_at INTEGER");
+      if (!columns.includes("initial_sync_json")) database.exec("ALTER TABLE tracker_connections ADD COLUMN initial_sync_json TEXT");
+      if (!columns.includes("full_sync_json")) database.exec("ALTER TABLE tracker_connections ADD COLUMN full_sync_json TEXT");
+      database.exec("UPDATE tracker_connections SET connected_at=created_at WHERE connected_at IS NULL");
+    },
+  },
+  {
+    id: 60,
+    up(database) {
+      addHeldRatingStatus(database);
+    },
+  },
+  {
+    id: 61,
+    up(database) {
+      const stateColumns = new Set(database.pragma("table_info(dropped_title_tracker_state)").map((column) => column.name));
+      if (!stateColumns.size) return;
+      if (!stateColumns.has("connection_id")) database.exec("ALTER TABLE dropped_title_tracker_state ADD COLUMN connection_id TEXT NOT NULL DEFAULT ''");
+      if (!stateColumns.has("account_id")) database.exec("ALTER TABLE dropped_title_tracker_state ADD COLUMN account_id TEXT NOT NULL DEFAULT ''");
+      const cursorColumns = new Set(database.pragma("table_info(dropped_title_tracker_cursors)").map((column) => column.name));
+      if (cursorColumns.size && !cursorColumns.has("account_id")) database.exec("ALTER TABLE dropped_title_tracker_cursors ADD COLUMN account_id TEXT NOT NULL DEFAULT ''");
+      // Rows from an interrupted pre-fence build cannot be safely attributed
+      // to an account. Keep them for review, never replay them to a new login.
+      database.exec("UPDATE dropped_title_tracker_state SET write_status='unbound' WHERE connection_id='' OR account_id=''");
+    },
+  },
 ];
 
 function parseJsonValue(value, fallback) {
@@ -1713,90 +1792,103 @@ function parseJsonValue(value, fallback) {
   }
 }
 
-function runSchemaMigrations() {
-  db.exec("CREATE TABLE IF NOT EXISTS schema_migrations (id INTEGER PRIMARY KEY, applied_at INTEGER)");
-  const appliedStmt = db.prepare("SELECT id FROM schema_migrations WHERE id = ?");
-  const insertStmt = db.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)");
+function runSchemaMigrations(database = adminDb) {
+  database.exec("CREATE TABLE IF NOT EXISTS schema_migrations (id INTEGER PRIMARY KEY, applied_at INTEGER)");
+  const appliedStmt = database.prepare("SELECT id FROM schema_migrations WHERE id = ?");
+  const insertStmt = database.prepare("INSERT INTO schema_migrations (id, applied_at) VALUES (?, ?)");
   for (const migration of migrations) {
-    db.transaction(() => {
+    database.transaction(() => {
       // Recheck under an IMMEDIATE transaction. Two Plembfin processes may
       // start against the same database at exactly the same time.
       if (appliedStmt.get(migration.id)) return;
-      migration.up(db);
+      migration.up(database);
       insertStmt.run(migration.id, Date.now());
     }).immediate();
   }
 }
 
-try {
-  runSchemaMigrations();
-} catch (error) {
-  console.error("Schema migration failed", error);
-  throw error;
+function applyCompatibilityGuards(database = adminDb) {
+  try {
+    const watchCols = database.pragma("table_info(watch_history)").map((c) => c.name);
+    if (!watchCols.includes("logo_url")) database.exec("ALTER TABLE watch_history ADD COLUMN logo_url TEXT");
+    if (!watchCols.includes("backdrop_url")) database.exec("ALTER TABLE watch_history ADD COLUMN backdrop_url TEXT");
+    if (!watchCols.includes("watch_provenance")) database.exec("ALTER TABLE watch_history ADD COLUMN watch_provenance TEXT");
+    if (!watchCols.includes("sync_match_ignored_at")) database.exec("ALTER TABLE watch_history ADD COLUMN sync_match_ignored_at INTEGER");
+  } catch { /* column already exists */ }
+  try {
+    database.exec(`CREATE TABLE IF NOT EXISTS show_merge_history (
+      id TEXT PRIMARY KEY,
+      source_title TEXT NOT NULL,
+      target_title TEXT NOT NULL,
+      rows_json TEXT NOT NULL,
+      merged_at INTEGER NOT NULL,
+      reverted_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_show_merge_history_target ON show_merge_history(target_title, merged_at DESC);
+    CREATE TABLE IF NOT EXISTS deleted_watch_suppressions (
+      source TEXT NOT NULL,
+      identity_key TEXT NOT NULL,
+      watched_at TEXT NOT NULL,
+      deleted_at INTEGER NOT NULL,
+      PRIMARY KEY (source, identity_key, watched_at)
+    );
+    CREATE INDEX IF NOT EXISTS idx_deleted_watch_suppressions_date ON deleted_watch_suppressions(watched_at);`);
+  } catch { /* ignore */ }
 }
-
-// Compatibility guard for databases from before the migration table existed.
-try {
-  const watchCols = db.pragma("table_info(watch_history)").map(c => c.name);
-  if (!watchCols.includes("logo_url")) db.exec("ALTER TABLE watch_history ADD COLUMN logo_url TEXT");
-  if (!watchCols.includes("backdrop_url")) db.exec("ALTER TABLE watch_history ADD COLUMN backdrop_url TEXT");
-  if (!watchCols.includes("watch_provenance")) db.exec("ALTER TABLE watch_history ADD COLUMN watch_provenance TEXT");
-  if (!watchCols.includes("sync_match_ignored_at")) db.exec("ALTER TABLE watch_history ADD COLUMN sync_match_ignored_at INTEGER");
-} catch { /* column already exists */ }
 
 // The main schema is executed before legacy migrations. Keep the item-level
 // triggers out of schema.sql so an old watch_history table without newer
 // columns can still be upgraded, then install the richest trigger shape the
 // resulting table supports once migrations have completed.
-function installLiveChangeTriggers() {
-  db.transaction(() => {
-    const columnsFor = (table) => new Set(db.pragma(`table_info(${table})`).map((column) => column.name));
+function installLiveChangeTriggers(database = adminDb) {
+  database.transaction(() => {
+    const columnsFor = (table) => new Set(database.pragma(`table_info(${table})`).map((column) => column.name));
     const expr = (alias, column, columns) => columns.has(column) ? `${alias}.${column}` : "NULL";
     const triggerNames = [
       "watch_history", "playstate", "playback_progress", "personal_watchlist", "manual_watch_reviews",
     ].flatMap((table) => ["insert", "update", "delete"].map((event) => `trg_${table}_live_${event}`));
-    for (const name of triggerNames) db.exec(`DROP TRIGGER IF EXISTS ${name}`);
+    for (const name of triggerNames) database.exec(`DROP TRIGGER IF EXISTS ${name}`);
 
-  const createTriggers = ({ table, source, recordIdColumn = null, updateOldKeyDelete = false, mediaKeyColumn = "media_key" }) => {
-    const columns = columnsFor(table);
-    if (!columns.has("media_key") || !columns.has("media_type") || !columns.has("title")) return;
-    const insertEvent = (kind, alias) => `
-      INSERT INTO live_change_events (source_table, change_kind, media_key, record_id, media_type, title, show_title, season, episode, created_at)
-      VALUES ('${source}', '${kind}', ${mediaKeyColumn ? expr(alias, mediaKeyColumn, columns) : "NULL"}, ${recordIdColumn ? expr(alias, recordIdColumn, columns) : "NULL"}, ${expr(alias, "media_type", columns)}, ${expr(alias, "title", columns)}, ${expr(alias, "show_title", columns)}, ${expr(alias, "season", columns)}, ${expr(alias, "episode", columns)}, CAST(unixepoch('subsec')*1000 AS INTEGER));
-    `;
-    db.exec(`
-      CREATE TRIGGER trg_${table}_live_insert AFTER INSERT ON ${table} BEGIN
-        ${insertEvent("upsert", "NEW")}
-      END;
-      CREATE TRIGGER trg_${table}_live_update AFTER UPDATE ON ${table} BEGIN
-        ${insertEvent("upsert", "NEW")}
-        ${updateOldKeyDelete ? `${insertEvent("delete", "OLD")} WHERE COALESCE(OLD.media_key, '') <> COALESCE(NEW.media_key, '');` : ""}
-      END;
-      CREATE TRIGGER trg_${table}_live_delete AFTER DELETE ON ${table} BEGIN
-        ${insertEvent("delete", "OLD")}
-      END;
-    `);
-  };
+    const createTriggers = ({ table, source, recordIdColumn = null, updateOldKeyDelete = false, mediaKeyColumn = "media_key" }) => {
+      const columns = columnsFor(table);
+      if (!columns.has("media_key") || !columns.has("media_type") || !columns.has("title")) return;
+      const insertEvent = (kind, alias) => `
+        INSERT INTO live_change_events (source_table, change_kind, media_key, record_id, media_type, title, show_title, season, episode, created_at)
+        VALUES ('${source}', '${kind}', ${mediaKeyColumn ? expr(alias, mediaKeyColumn, columns) : "NULL"}, ${recordIdColumn ? expr(alias, recordIdColumn, columns) : "NULL"}, ${expr(alias, "media_type", columns)}, ${expr(alias, "title", columns)}, ${expr(alias, "show_title", columns)}, ${expr(alias, "season", columns)}, ${expr(alias, "episode", columns)}, CAST(unixepoch('subsec')*1000 AS INTEGER));
+      `;
+      database.exec(`
+        CREATE TRIGGER trg_${table}_live_insert AFTER INSERT ON ${table} BEGIN
+          ${insertEvent("upsert", "NEW")}
+        END;
+        CREATE TRIGGER trg_${table}_live_update AFTER UPDATE ON ${table} BEGIN
+          ${insertEvent("upsert", "NEW")}
+          ${updateOldKeyDelete ? `${insertEvent("delete", "OLD")} WHERE COALESCE(OLD.media_key, '') <> COALESCE(NEW.media_key, '');` : ""}
+        END;
+        CREATE TRIGGER trg_${table}_live_delete AFTER DELETE ON ${table} BEGIN
+          ${insertEvent("delete", "OLD")}
+        END;
+      `);
+    };
 
     const watchColumns = columnsFor("watch_history");
     if (watchColumns.has("id") && watchColumns.has("media_key") && watchColumns.has("media_type")) {
       const insertEvent = (kind, alias) => `
-      INSERT INTO live_change_events (source_table, change_kind, media_key, record_id, media_type, title, show_title, season, episode, created_at)
-      VALUES ('watch_history', '${kind}', ${expr(alias, "media_key", watchColumns)}, ${expr(alias, "id", watchColumns)}, ${expr(alias, "media_type", watchColumns)}, ${expr(alias, "title", watchColumns)}, ${expr(alias, "show_title", watchColumns)}, ${expr(alias, "season", watchColumns)}, ${expr(alias, "episode", watchColumns)}, CAST(unixepoch('subsec')*1000 AS INTEGER));
-    `;
-      db.exec(`
-      CREATE TRIGGER trg_watch_history_live_insert AFTER INSERT ON watch_history BEGIN
-        ${insertEvent("upsert", "NEW")}
-      END;
-      CREATE TRIGGER trg_watch_history_live_update AFTER UPDATE ON watch_history BEGIN
-        ${insertEvent("upsert", "NEW")}
         INSERT INTO live_change_events (source_table, change_kind, media_key, record_id, media_type, title, show_title, season, episode, created_at)
-        SELECT 'watch_history', 'delete', OLD.media_key, OLD.id, OLD.media_type, ${expr("OLD", "title", watchColumns)}, ${expr("OLD", "show_title", watchColumns)}, ${expr("OLD", "season", watchColumns)}, ${expr("OLD", "episode", watchColumns)}, CAST(unixepoch('subsec')*1000 AS INTEGER)
-        WHERE COALESCE(OLD.media_key, '') <> COALESCE(NEW.media_key, '');
-      END;
-      CREATE TRIGGER trg_watch_history_live_delete AFTER DELETE ON watch_history BEGIN
-        ${insertEvent("delete", "OLD")}
-      END;
+        VALUES ('watch_history', '${kind}', ${expr(alias, "media_key", watchColumns)}, ${expr(alias, "id", watchColumns)}, ${expr(alias, "media_type", watchColumns)}, ${expr(alias, "title", watchColumns)}, ${expr(alias, "show_title", watchColumns)}, ${expr(alias, "season", watchColumns)}, ${expr(alias, "episode", watchColumns)}, CAST(unixepoch('subsec')*1000 AS INTEGER));
+      `;
+      database.exec(`
+        CREATE TRIGGER trg_watch_history_live_insert AFTER INSERT ON watch_history BEGIN
+          ${insertEvent("upsert", "NEW")}
+        END;
+        CREATE TRIGGER trg_watch_history_live_update AFTER UPDATE ON watch_history BEGIN
+          ${insertEvent("upsert", "NEW")}
+          INSERT INTO live_change_events (source_table, change_kind, media_key, record_id, media_type, title, show_title, season, episode, created_at)
+          SELECT 'watch_history', 'delete', OLD.media_key, OLD.id, OLD.media_type, ${expr("OLD", "title", watchColumns)}, ${expr("OLD", "show_title", watchColumns)}, ${expr("OLD", "season", watchColumns)}, ${expr("OLD", "episode", watchColumns)}, CAST(unixepoch('subsec')*1000 AS INTEGER)
+          WHERE COALESCE(OLD.media_key, '') <> COALESCE(NEW.media_key, '');
+        END;
+        CREATE TRIGGER trg_watch_history_live_delete AFTER DELETE ON watch_history BEGIN
+          ${insertEvent("delete", "OLD")}
+        END;
       `);
     }
 
@@ -1811,11 +1903,161 @@ function installLiveChangeTriggers() {
 }
 
 try {
-  installLiveChangeTriggers();
+  runSchemaMigrations(adminDb);
+} catch (error) {
+  console.error("Schema migration failed", error);
+  throw error;
+}
+
+applyCompatibilityGuards(adminDb);
+
+try {
+  installLiveChangeTriggers(adminDb);
 } catch (error) {
   console.error("Live change trigger setup failed", error);
   throw error;
 }
+
+// Migrate any warm provider metadata caches from the admin DB into the
+// install-wide shared metadata store once on boot.
+try {
+  migrateProviderCachesFromAdmin(adminDb, DATA_DIR);
+} catch (error) {
+  console.warn("Shared metadata migration skipped:", error?.message || error);
+}
+
+registerTenantDatabaseInitializer((tenantDb) => {
+  runSchemaMigrations(tenantDb);
+  applyCompatibilityGuards(tenantDb);
+  installLiveChangeTriggers(tenantDb);
+});
+
+export function getActiveUserDb() {
+  if (isNonAdminTenantContext(DATA_DIR)) {
+    const context = getUserContext();
+    return openTenantDatabase(context.dataDir, { cacheKey: path.resolve(context.dataDir) });
+  }
+  return adminDb;
+}
+
+function createRoutedStatement(sql) {
+  const isShared = sqlTargetsSharedProviderCache(sql);
+  const baseDb = isShared ? getSharedMetadataDb(DATA_DIR) : adminDb;
+  const baseStmt = baseDb.prepare(sql);
+  const perDbStmts = new WeakMap();
+  perDbStmts.set(baseDb, baseStmt);
+  let pluckMode = false;
+  let rawMode = false;
+  let safeIntegersMode = null;
+
+  const configureStmt = (stmt) => {
+    if (pluckMode) stmt.pluck(true);
+    if (rawMode) stmt.raw(true);
+    if (safeIntegersMode !== null && typeof stmt.safeIntegers === "function") {
+      stmt.safeIntegers(safeIntegersMode);
+    }
+    return stmt;
+  };
+
+  const resolveStmt = () => {
+    if (isShared) return baseStmt;
+    const targetDb = getActiveUserDb();
+    if (targetDb === baseDb) return baseStmt;
+    let stmt = perDbStmts.get(targetDb);
+    if (!stmt) {
+      stmt = configureStmt(targetDb.prepare(sql));
+      perDbStmts.set(targetDb, stmt);
+    }
+    return stmt;
+  };
+
+  const wrapper = {
+    get(...args) { return resolveStmt().get(...args); },
+    all(...args) { return resolveStmt().all(...args); },
+    run(...args) { return resolveStmt().run(...args); },
+    iterate(...args) { return resolveStmt().iterate(...args); },
+    columns(...args) { return resolveStmt().columns(...args); },
+    bind(...args) { resolveStmt().bind(...args); return wrapper; },
+    pluck(toggle = true) {
+      pluckMode = Boolean(toggle);
+      baseStmt.pluck(toggle);
+      return wrapper;
+    },
+    raw(toggle = true) {
+      rawMode = Boolean(toggle);
+      baseStmt.raw(toggle);
+      return wrapper;
+    },
+    expand(toggle = true) {
+      baseStmt.expand(toggle);
+      return wrapper;
+    },
+    safeIntegers(toggle = true) {
+      safeIntegersMode = Boolean(toggle);
+      if (typeof baseStmt.safeIntegers === "function") baseStmt.safeIntegers(toggle);
+      return wrapper;
+    },
+    get source() { return baseStmt.source; },
+    get reader() { return baseStmt.reader; },
+    get database() { return isShared ? baseDb : getActiveUserDb(); },
+  };
+  return wrapper;
+}
+
+function createRoutedTransaction(fn) {
+  const baseTx = adminDb.transaction(fn);
+  const perDbTx = new WeakMap();
+  perDbTx.set(adminDb, baseTx);
+
+  const resolveTx = () => {
+    const targetDb = getActiveUserDb();
+    if (targetDb === adminDb) return baseTx;
+    let tx = perDbTx.get(targetDb);
+    if (!tx) {
+      tx = targetDb.transaction(fn);
+      perDbTx.set(targetDb, tx);
+    }
+    return tx;
+  };
+
+  const wrapped = (...args) => resolveTx()(...args);
+  wrapped.deferred = (...args) => resolveTx().deferred(...args);
+  wrapped.immediate = (...args) => resolveTx().immediate(...args);
+  wrapped.exclusive = (...args) => resolveTx().exclusive(...args);
+  return wrapped;
+}
+
+export const db = new Proxy(adminDb, {
+  get(target, prop) {
+    if (prop === "close") {
+      return () => {
+        closeAllSharedMetadataDatabases();
+        closeAllTenantDatabases();
+        if (target.open) return target.close();
+      };
+    }
+    if (prop === "prepare") {
+      return (sql) => createRoutedStatement(sql);
+    }
+    if (prop === "transaction") {
+      return (fn) => createRoutedTransaction(fn);
+    }
+    if (prop === "exec") {
+      return (sql) => {
+        if (sqlTargetsSharedProviderCache(sql) && !/CREATEs+TABLE/i.test(String(sql || ""))) {
+          return getSharedMetadataDb(DATA_DIR).exec(sql);
+        }
+        return getActiveUserDb().exec(sql);
+      };
+    }
+    if (prop === "pragma") {
+      return (statement, options) => getActiveUserDb().pragma(statement, options);
+    }
+    const active = getActiveUserDb();
+    const value = Reflect.get(active, prop, active);
+    return typeof value === "function" ? value.bind(active) : value;
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Shared derived-cache version. Each process keeps a fast local copy and polls
@@ -1848,7 +2090,31 @@ const LIVE_CHANGE_RETENTION_MS = 24 * 60 * 60 * 1000;
 const LIVE_CHANGE_MAX_ROWS = 20_000;
 let dataVersion = Number(selectHistoryVersion.get()?.version || 1);
 let lastDataVersionCheckAt = 0;
+const tenantDataVersions = new Map();
+
+function getTenantVersionEntry(dataDir) {
+  let entry = tenantDataVersions.get(dataDir);
+  if (!entry) {
+    entry = {
+      dataVersion: Number(selectHistoryVersion.get()?.version || 1),
+      lastCheckAt: Date.now(),
+    };
+    tenantDataVersions.set(dataDir, entry);
+  }
+  return entry;
+}
+
 export function getDataVersion() {
+  if (isNonAdminTenantContext(DATA_DIR)) {
+    const entry = getTenantVersionEntry(getUserContext().dataDir);
+    const checkedAt = Date.now();
+    if (checkedAt - entry.lastCheckAt >= CACHE_VERSION_POLL_MS) {
+      entry.lastCheckAt = checkedAt;
+      const shared = Number(selectHistoryVersion.get()?.version || 1);
+      if (shared > entry.dataVersion) entry.dataVersion = shared;
+    }
+    return entry.dataVersion;
+  }
   const checkedAt = Date.now();
   if (checkedAt - lastDataVersionCheckAt >= CACHE_VERSION_POLL_MS) {
     lastDataVersionCheckAt = checkedAt;
@@ -1905,6 +2171,21 @@ export function dataVersionTrigger(version) {
 }
 
 export function bumpDataVersion(reason = "") {
+  if (isNonAdminTenantContext(DATA_DIR)) {
+    const entry = getTenantVersionEntry(getUserContext().dataDir);
+    const sharedBeforeBump = Number(selectHistoryVersion.get()?.version || 1);
+    if (sharedBeforeBump > entry.dataVersion) {
+      entry.dataVersion = sharedBeforeBump;
+      entry.lastCheckAt = Date.now();
+      noteDataVersionTrigger(entry.dataVersion, reason);
+      return entry.dataVersion;
+    }
+    const row = bumpHistoryVersion.get(Date.now());
+    entry.dataVersion = Math.max(entry.dataVersion + 1, Number(row?.version || 1));
+    entry.lastCheckAt = Date.now();
+    noteDataVersionTrigger(entry.dataVersion, reason);
+    return entry.dataVersion;
+  }
   const sharedBeforeBump = Number(selectHistoryVersion.get()?.version || 1);
   // Canonical SQLite writes advance the version atomically via triggers. Adopt
   // that generation instead of double-bumping, which preserves the safe
@@ -1924,6 +2205,11 @@ export function bumpDataVersion(reason = "") {
 }
 
 export function refreshDataVersion() {
+  if (isNonAdminTenantContext(DATA_DIR)) {
+    const entry = getTenantVersionEntry(getUserContext().dataDir);
+    entry.lastCheckAt = 0;
+    return getDataVersion();
+  }
   lastDataVersionCheckAt = 0;
   return getDataVersion();
 }

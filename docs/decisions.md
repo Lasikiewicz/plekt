@@ -1464,6 +1464,13 @@ CodeQL #49 (stack trace exposure through the Trakt replace route) are push notes
 exact fingerprints match and each fix is still present (vite 8.3.3 or later in the website lockfile;
 the route's generic failure message). None of them is dismissed.
 
+**Update (user, 26 October 2026):** keep verified develop fixes as exact-fingerprint push notes
+until the next main scan. CodeQL #49 now tracks the current main instance at `ef11918693f1` and
+the fixed restore-conflict response. Dependabot #22, #24, #26, #28, #30, #31 and #32 are advisories
+against the retired Reddit app lockfile; #29 is fixed by `ip-address` 10.7.5 in develop, and #33
+is fixed by Astro 7.4.1 in the website lockfile. Do not dismiss these alerts. The push precheck
+must require the exact alert identity and verify the corresponding fix remains present.
+
 **Enforced by:** `reddit-app/README.md`, `knownSecurityAlertNote()` and the push precheck in
 `scripts/workflow-check.js`.
 
@@ -1495,3 +1502,103 @@ resume position for that item from any provider, which is the same "until a new 
 **Enforced by:** `showEmbyInResume` and `setEmbyProgress` in `server/src/utils/embyClient.js`;
 `test/embyProgress.test.js` (write unhides after storing; clear does not; failed unhide keeps the
 write).
+
+### 52. A tracker's automatic unwatch reaches every other tracker
+**Date:** 2026-10-21 | **Status:** Active
+
+**Context:** When a tracker's watched snapshot stops listing an item, Plekt infers an automatic
+unwatch. It already reaches Plex, Emby and Jellyfin. With more than one tracker connected (Simkl
+after Trakt), the open question was whether it also removes the play from the other trackers,
+where removal also deletes the remote play's date and rewatch count.
+
+**Decision:** The user chose "if it's unwatched on one it should be on all". Once the tracker's
+missing-item confirmation wait (`partitionPendingTrackerUnwatches`) and the automatic-unwatch
+burst guard (15 per 5 minutes in `watchStateTransitions.js`) pass, the unwatch fans out to every
+media server and every other connected tracker, like a media-server unwatch.
+
+**Rejected:** The earlier design kept automatic unwatches away from other trackers, held them in
+a `tracker_reconciliation_holds` table for 30 minutes and then asked in Sync Attention. Rejected
+for one consistent rule. Fan-out with review only when two or more other trackers still hold the
+item watched was also rejected.
+
+**Consequence to know:** a provider glitch that passes both guards also erases history on the
+other trackers, and Plekt does not restore it automatically. Do not weaken either guard without
+revisiting this entry.
+
+**Enforced by:** `applyUnwatchedTransition` in `server/src/utils/watchStateTransitions.js` and the
+tracker poll in `server/src/utils/trackerSync.js`; design record in the external tracker
+connections plan.
+
+### 53. Onboarding tracker imports share one wait before server pulls
+**Date:** 2026-10-21 | **Status:** Active
+
+**Context:** Tracker history supplies earlier watched dates for media-server imports. Several
+connected trackers must settle before those pulls can use all the available date anchors.
+
+**Decision:** Run chosen tracker baselines in parallel, with independent reconcile passes and
+progress. Media-server pulls wait for all importing trackers under one shared 30-minute cap.
+After the cap, server pulls proceed using the dates already available.
+
+**Rejected:** Sequential baselines or a separate 30-minute wait for each provider. Three trackers
+could otherwise leave first run waiting for 90 minutes, and one slow tracker would delay the rest.
+
+**Enforced by:** `trackerGateDecision`, `startServerImport` and `reconcileTrackerUntilSettled` in
+`server/src/utils/onboardingImportCoordinator.js`; `test/onboardingImportRecovery.test.js`.
+
+### 54. Netflix import: a reported title with ten times the votes may pick a same-named match
+**Date:** 2026-10-24 | **Status:** Active
+
+**Context:** After the hard-fact rules (show structure, film runtime against the bookmark,
+release before the watch), about 200 rows of a large Netflix history still had several TMDB
+titles of the same name. Most were Netflix originals or well-known licensed films beside obscure
+namesakes, and popularity had never been allowed to choose a match.
+
+**Decision:** "Netflix title + clear winner" (user decision). Auto-match only when exactly one
+remaining candidate fits an official Netflix report entry under its own title (a `(1999)` label
+or Netflix's premiere year agreeing within a year; an undated entry fits every namesake, so it
+singles out nothing) and that candidate has at least 50 TMDB votes and ten times the votes of
+every other remaining candidate. Everything else stays in review. A hand audit of 58 such
+titles found no wrong match.
+
+**Rejected:** Popularity alone (a remake or namesake can be the one watched, and accuracy beats
+completeness); report presence alone (an undated report title does not say which namesake it
+is); leaving every same-name row in review (about 70 more rows for each large history with no
+new risk shown in the audit).
+
+**Enforced by:** `clearReportedWinner` in `server/src/utils/netflixImport.js`,
+`reportedCandidates` in `server/src/utils/netflixCatalogue.js`, and the clear-winner tests in
+`test/netflixCatalogueMatching.test.js`.
+
+### 55. Netflix import: a renumbered Netflix season may map to one other TMDB season
+**Date:** 2026-10-24 | **Status:** Active (relaxes the explicit-season rule in docs/settings.md)
+
+**Context:** Netflix numbers some children's shows' seasons differently from TMDB. Mako Mermaids'
+Netflix seasons 2 and 3 are both TMDB season 2 and its Netflix season 4 is TMDB season 3;
+Justin Time GO! season 1 is TMDB season 3. An explicit Netflix season label had ruled out every
+episode in another season, so about 160 rows of one history stayed in review.
+
+**Decision:** "Learn the season map" (user decision). A Netflix season maps to another TMDB
+season only when at least three of its distinct titles (every segment of a combined row) each
+name exactly one TMDB episode across the whole show, all in that one season, and none of its
+titles names an episode in the labelled season. Rows that missed are then matched by title
+inside the mapped season only; Netflix's own episode numbers are not used there because they
+follow Netflix's numbering. A hand audit of the Mako Mermaids and Justin Time GO! rows found no
+wrong match.
+
+**Rejected:** Accepting any title unique across the show regardless of its season (repeated
+titles such as "The Siren", in two TMDB seasons, stay unresolved and one stray title would be
+enough); copying Netflix season or episode numbers (decision record in the Netflix plan: no
+sequence guessing); leaving every renumbered row in review.
+
+**Amended 2026-10-24 (user decision, kids' episode misses):** Dora the Explorer's Netflix
+seasons scatter across several TMDB seasons, so no three titles agree on one. A single title
+may now match in another season without a map, but more narrowly than the rejected "any unique
+title": TMDB must have the labelled season, nothing in it may match even loosely (leading
+article, filler words, `Pt.`/`Part`, `&`/`and`, show prefix), and the title must name exactly
+one episode across the show both exactly and loosely ("The Siren" and Fireman Sam's "When Fools
+Rush In" still stay in review). A season 0 special that is the show's only loose hit is accepted
+the same way. These matches never seed neighbour gap fill.
+
+**Enforced by:** `learnedNetflixSeason` and `looseEpisodeMatch` in
+`server/src/utils/netflixEpisodes.js` and the renumbered-season and single-title-miss tests in
+`test/netflixImport.test.js`.

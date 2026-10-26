@@ -1,5 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state, elements } from "./state.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state, elements } from "./state.js?v=2.1.1.0.9";
 
 export const APPEARANCE_DEFAULTS = {
   showLogoArt: true,
@@ -8,6 +8,7 @@ export const APPEARANCE_DEFAULTS = {
   showReviews: true,
   showImages: true,
   showRelated: true,
+  hideLinks: false,
   textScale: 100,
 };
 
@@ -133,6 +134,7 @@ export function applyAppearanceToBody(prefs) {
   document.body.classList.toggle("hide-reviews", !prefs.showReviews);
   document.body.classList.toggle("hide-images", !prefs.showImages);
   document.body.classList.toggle("hide-related", !prefs.showRelated);
+  document.body.classList.toggle("hide-sidebar-links", Boolean(prefs.hideLinks));
   applyTextScale(prefs.textScale);
 }
 
@@ -143,6 +145,7 @@ function populateAppearanceForm(prefs) {
   if (elements.appearShowReviews) elements.appearShowReviews.checked = prefs.showReviews;
   if (elements.appearShowImages) elements.appearShowImages.checked = prefs.showImages;
   if (elements.appearShowRelated) elements.appearShowRelated.checked = prefs.showRelated;
+  if (elements.appearHideLinks) elements.appearHideLinks.checked = Boolean(prefs.hideLinks);
 }
 
 // Card Art and Background Art are saved per browser, like light/dark, and shown

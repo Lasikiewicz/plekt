@@ -2,29 +2,34 @@ import { db } from "../db.js";
 
 const SETTINGS_ID = "onboarding";
 
-export const CURRENT_ONBOARDING_VERSION = 1;
+// Version 2 keys tracker imports by provider (backgroundImports.trackers) and
+// records one "skipped the tracker step" flag; version 1 had a Trakt singleton.
+export const CURRENT_ONBOARDING_VERSION = 2;
+
+export const DEFAULT_TRACKER_IMPORT = Object.freeze({
+  enabled: null,
+  status: "not_started",
+  startedAt: null,
+  completedAt: null,
+  itemCount: null,
+  error: null,
+});
 
 const DEFAULT_STATE = {
   version: 0,
   accountClaimed: false,
   runState: "not_started",
+  initialSyncEligible: false,
   startedAt: null,
   completedAt: null,
   currentStep: "overview",
   acknowledgements: {
     webhooks: {},
-    traktSkipped: false,
+    trackersSkipped: false,
   },
   backgroundImports: {
     servers: {},
-    trakt: {
-      enabled: null,
-      status: "not_started",
-      startedAt: null,
-      completedAt: null,
-      itemCount: null,
-      error: null,
-    },
+    trackers: {},
   },
   pushSync: {
     status: "not_started",
@@ -57,17 +62,35 @@ function writeRaw(state) {
   upsertStmt.run(SETTINGS_ID, JSON.stringify(state), Date.now());
 }
 
+// Folds version 1 keys forward so an in-progress first run survives the
+// upgrade: the backgroundImports.trakt singleton becomes trackers.trakt, the
+// traktSkipped flag becomes trackersSkipped, and a saved "trakt" step becomes
+// the "trackers" step.
 function mergeState(stored) {
-  return {
+  const { trakt: legacyTrakt, ...storedImports } = stored?.backgroundImports || {};
+  const trackers = { ...(storedImports.trackers || {}) };
+  if (legacyTrakt && typeof legacyTrakt === "object" && !trackers.trakt) trackers.trakt = legacyTrakt;
+  const { traktSkipped, ...storedAcknowledgements } = stored?.acknowledgements || {};
+  const acknowledgements = { ...DEFAULT_STATE.acknowledgements, ...storedAcknowledgements };
+  if (traktSkipped === true && storedAcknowledgements.trackersSkipped === undefined) acknowledgements.trackersSkipped = true;
+  const merged = {
     ...DEFAULT_STATE,
     ...stored,
-    acknowledgements: { ...DEFAULT_STATE.acknowledgements, ...(stored?.acknowledgements || {}) },
+    acknowledgements,
     backgroundImports: {
-      servers: { ...(stored?.backgroundImports?.servers || {}) },
-      trakt: { ...DEFAULT_STATE.backgroundImports.trakt, ...(stored?.backgroundImports?.trakt || {}) },
+      ...storedImports,
+      servers: { ...(storedImports.servers || {}) },
+      trackers,
     },
     pushSync: { ...DEFAULT_STATE.pushSync, ...(stored?.pushSync || {}) },
   };
+  if(stored?.initialSyncEligible===undefined)merged.initialSyncEligible=stored?.accountClaimed===true&&stored?.runState==='in_progress'&&!stored?.completedAt&&!stored?.version;
+  if (merged.currentStep === "trakt") merged.currentStep = "trackers";
+  return merged;
+}
+
+export function trackerImportState(state, provider) {
+  return { ...DEFAULT_TRACKER_IMPORT, ...(state?.backgroundImports?.trackers?.[provider] || {}) };
 }
 
 export function getOnboardingState() {
@@ -90,35 +113,26 @@ export function recoverInterruptedBackgroundImports() {
   const recoveredAt = Date.now();
   const recovered = [];
   const servers = { ...state.backgroundImports.servers };
+  const trackers = { ...state.backgroundImports.trackers };
 
-  for (const [provider, entry] of Object.entries(servers)) {
-    if (entry?.status !== "importing") continue;
-    servers[provider] = {
-      ...entry,
-      enabled: false,
-      status: "cancelled",
-      completedAt: recoveredAt,
-      error: INTERRUPTED_IMPORT_MESSAGE,
-    };
-    recovered.push(provider);
-  }
-
-  let trakt = state.backgroundImports.trakt;
-  if (trakt?.status === "importing") {
-    trakt = {
-      ...trakt,
-      enabled: false,
-      status: "cancelled",
-      completedAt: recoveredAt,
-      error: INTERRUPTED_IMPORT_MESSAGE,
-    };
-    recovered.push("trakt");
+  for (const group of [servers, trackers]) {
+    for (const [provider, entry] of Object.entries(group)) {
+      if (entry?.status !== "importing") continue;
+      group[provider] = {
+        ...entry,
+        enabled: false,
+        status: "cancelled",
+        completedAt: recoveredAt,
+        error: INTERRUPTED_IMPORT_MESSAGE,
+      };
+      recovered.push(provider);
+    }
   }
 
   if (!recovered.length) return { state, recovered };
   return {
     state: saveOnboardingState({
-      backgroundImports: { ...state.backgroundImports, servers, trakt },
+      backgroundImports: { ...state.backgroundImports, servers, trackers },
     }),
     recovered,
   };
@@ -139,8 +153,9 @@ export function claimAccount() {
       ...state,
       accountClaimed: true,
       runState: "in_progress",
+      initialSyncEligible: true,
       startedAt: state.startedAt || Date.now(),
-      currentStep: "trakt",
+      currentStep: "trackers",
     };
     writeRaw(next);
     return true;
@@ -197,6 +212,7 @@ export function detectAndMarkPristineInstall({ authManagedInApp = false } = {}) 
 export function completeOnboarding(patch = {}) {
   return saveOnboardingState({
     runState: "completed",
+    initialSyncEligible: false,
     completedAt: Date.now(),
     version: CURRENT_ONBOARDING_VERSION,
     ...patch,
@@ -207,7 +223,7 @@ export function restartOnboarding() {
   return saveOnboardingState({
     runState: "in_progress",
     currentStep: "overview",
-    acknowledgements: { webhooks: {}, traktSkipped: false },
+    acknowledgements: { webhooks: {}, trackersSkipped: false },
     checklistDismissedAt: null,
     ctaDismissedAt: null,
   });

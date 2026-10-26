@@ -14,22 +14,34 @@ Reference for `data/plembfin.db`. The full authoritative schema is in
 | `up_next_provider_items` | Latest generation of provider Resume/Continue Watching/Next Up observations, keyed by provider feed and native item ID | scheduled provider feed sync | unified Up Next builder, source-ledger mutation lookup |
 | `up_next_provider_feed_state` | Per-provider/feed generation, completion, freshness, count, cursor, retry, and redacted error state | scheduled provider feed sync | Up Next cache/status response |
 | `up_next_library_items` | Last library-confirmed native item id per Up Next library lookup (30-day window); a live "missing" deletes the row | Up Next library lookup | the same lookup, only while that provider cannot answer, so a restart during an outage keeps the cards it proved |
+| `dropped_titles` | Shows and movies dropped on purpose: one row per title with show/movie id and title aliases, title snapshot and `dropped_at`. Permanent and uncapped (unlike Up Next dismissals); never changes watch history. Included in full and portable backups; cleared by the Watch History and factory wipes | `droppedTitles.js` | Up Next projection filter |
+| `dropped_title_tracker_state` | Per-provider dropped-title intents, un-drop tombstones, previous Simkl status, identity aliases and connection/account fence; failures retain local state | dropped-title tracker sync | conflict resolution and outbound retries |
+| `dropped_title_tracker_cursors` | Last validated dropped-list activity and account-bound snapshot cursor | dropped-title tracker sync | complete-snapshot change detection |
 | `playstate` | Per-item watched/unwatched state for sync targets | sync orchestrator | sync orchestrator |
-| `manual_watch_reviews` | Deduplicated provider watched flags awaiting an administrator date decision | scheduled library sync, Manual Watch review page | Manual Watch review page |
+| `manual_watch_reviews` | Provider watched flags awaiting an administrator date decision, plus source mismatch notices with separate dismiss handling | scheduled library sync, incoming episode mismatch checks, Manual Watch review page | Manual Watch review page |
 | `sync_history` | Permanent log of sync dispatch results, with `activity_group_key` for grouped movie/show activity and `activity_item_key` for latest-result selection per movie/episode | sync outcome changes | sync-history and sync-activity endpoints |
 | `runtime_state` | Single-row JSON blob - last cron time, force-sync state/log, `nowPlayingRefresh` signal | scheduler, force-sync, webhooks | dashboard polling |
 | `restore_reports` | A completed authoritative restore's full result and log, keyed by run id | restore job | restore status view, on request |
 | `cache_versions` | Monotone cross-process cache generations (`history` for canonical watch state, `progress` for resume positions, `discover` for changed TMDB feed snapshots, `up_next` for changed dashboard queue snapshots) | SQLite triggers and explicit invalidation | every web/worker process |
 | `scheduler_lease` | Current worker leader, fencing generation, heartbeat and tick time | worker coordinator | health and worker coordination |
 | `background_jobs` / `background_job_logs` | Durable cron/force-sync queue, state, results and ordered logs | web enqueues; leader claims | sync APIs and worker |
-| `settings` | Single-row JSON blob - Plex/Emby/Jellyfin/TMDB/TVDB connection settings | config endpoint | everything that talks to servers |
+| `settings` | JSON rows for connection settings and internal account-scoped Simkl batch quota reservations | config endpoint; Simkl batch budget | server clients; restart-safe batch holds |
+| `initial_sync_items` | Per-job/destination/item initial outward-sync payload and durable status/detail; compact job header is `settings.initial-outward-sync` | first-run outward coordinator | Initial sync screen and startup interruption recovery |
+| `anidb_metadata_cache` | Versioned descriptive anime payloads by namespaced AID, with last successful fetch time; cleared by the AniDB cache button | AniDB gateway | AniDB enrich/preview routes |
+| `anidb_matches` | User-confirmed anime matches by media key (TMDB or TVDB id) to AID; kept when the AniDB cache is cleared | AniDB matches route | AniDB enrich route |
+| `anidb_request_state` | Per-AID next permitted request time and safe error code, retained when payload cache is cleared | AniDB gateway | AniDB gateway |
+| `anidb_provider_state` | Singleton persistent next request time, cooldown and fenced request lease shared by web/worker processes | AniDB gateway | AniDB gateway |
 | `media_auth_devices` | Stable per-provider client identities used by managed account connections | media auth routes | Plex/Emby/Jellyfin authentication clients |
 | `media_auth_flows` | Expiring, browser-bound account authorization attempts | media auth routes | media auth polling/completion |
 | `media_connections` | Active encrypted provider token and verified remote identity | media auth routes | runtime media-server config adapter |
-| `tracker_connections` | Encrypted Trakt OAuth connection plus initial-sync policy/cursor state | tracker auth routes | scheduled tracker sync and outbound dispatcher |
-| `tracker_auth_flows` | Expiring Trakt device-code authorization attempts | tracker auth routes | tracker auth polling/completion |
+| `tracker_connections` | Encrypted Trakt OAuth connection plus initial-sync policy/cursor state. The row `id` is the connection generation: token refresh and same-account re-auth keep it; a different account or a reconnect after disconnect gets a new one and clears that provider's item state, play ledger, write intents and rating source/queue/run rows. `connected_at` is when the current generation was connected (older backlog rows are not sent to it); `initial_sync_json` and `full_sync_json` hold durable first-import and optional full-sync progress, reset with the generation (migration 59) | tracker auth routes | scheduled tracker sync and outbound dispatcher (fenced to the generation they started on) |
+| `tracker_auth_flows` | Expiring Trakt/Simkl device-code authorization attempts; `expected_connection_id` (migration 57) binds completion to the generation present at start (`''` for none), and legacy pending flows without it are expired. Simkl polling claims and increased intervals are persisted; terminal failures retire the flow as expired | tracker auth routes | tracker auth polling/completion |
 | `tracker_item_state` | Last observed Trakt state/timestamp and echo-suppression markers per canonical item | tracker sync/dispatcher | Trakt change detection |
 | `tracker_play_history` | Dedup ledger of individually-imported Trakt plays, keyed by Trakt history id | tracker sync | rewatch/multi-play import |
+| `simkl_full_sync_runs`, `simkl_full_sync_items` | One approved, paced Simkl full-sync send (connection/account, status `queued`/`running`/`waiting_quota`/`completed`/`review`/`cancelled`, next permitted attempt, worker lease, backup/policy/pacing state; at most one active per connection and account) and its selected items with per-item outcome. No credentials. Intents it creates use logical key `simkl-full-sync:<run>:<item>` and are excluded from the ordinary intent worker | `simklFullSyncStore.js`, `simklFullSyncRunner.js` | Settings full sync, Initial sync, scheduler tick; cleared by both wipe scopes |
+| `tracker_write_intents` | Durable outbound tracker writes (per watch record, action and date) with destination account, attempts, status, remote acknowledgement and 30-day lazy cleanup after settling; `tracker_item_state.last_outbound_intent_id` points at the latest | Trakt client send wrapper, upgrade migration 56 | pending dispatch queue, history correlation, Sync Attention |
+| `tracker_observation_cursors` | Simkl activity cursor and activity envelope, scoped to connection generation/account; committed atomically with observations | gated Simkl observation repository | delta reads, restart recovery |
+| `tracker_observations` | Durable Simkl watched/rating/review inbox; pending, observed, applied, review or dismissed; deltas merge and never delete omissions | gated Simkl observation repository | shared watched transitions, Sync Attention; account replacement/disconnect clears the account's rows |
 | `personal_rating_sources` | Last per-provider personal-rating observation, snapshot generation, conflict status, and outbound echo markers | rating snapshot/queue worker | rating reconciliation and status |
 | `personal_rating_sync_queue` | Durable latest-intent personal-rating writes with leases, retries, and outcomes | local rating actions, rating push/reconcile | rating queue worker and status |
 | `personal_rating_sync_runs` | Per-provider baseline/import generation and scan counters | rating snapshot worker | rating status and missing-row safety |
@@ -64,6 +76,54 @@ Reference for `data/plembfin.db`. The full authoritative schema is in
 | `audit_log` | Security-relevant event log (login, credential change, rotation) | `writeAuditLog()` in `db.js` | ops/debugging only |
 | `diagnostic_log` | Captured console output, bounded ring buffer of 20,000 rows | `diagnosticLogger.js` | Settings → Logs panel |
 | `schema_migrations` | Ordered migration ledger (`id`, `applied_at`) | `db.js` at startup | startup only |
+
+## Cache versions and derived caches
+
+`better-sqlite3` opens `data/plembfin.db` in WAL mode and applies `schema.sql` on
+boot. All database access uses prepared statements.
+
+**Cross-process memoization:** derived caches are keyed by monotone versions in
+`cache_versions`, polled at most every 500 ms. SQLite triggers advance `history` in the
+same transaction as canonical watch-state writes; Discover and Up Next cache writes
+advance their separate generations only when the completed derived payload changes.
+`bumpDataVersion()`
+also supports file-backed derived changes. Provider Up Next feed generations contribute
+to the source version used by the queue cache; the next read reloads from SQLite. This
+keeps each process's in-memory memoization coherent; persistent file-backed caches use
+atomic replacement and re-read their on-disk snapshot when another process updates it.
+
+Gotcha: `getCachedHistory()`, `getCachedMovies()`, and `getCachedShows()` rebuild full
+history-derived result sets after invalidation. That is acceptable for current local
+install sizes, but large datasets should move hot paths to indexed SQL with
+`LIMIT`/`OFFSET` before adding more full-table caches. `PLEKT_DEBUG_CACHE_REBUILDS=1`
+reports what each rebuild actually costs and which caller's invalidation caused it.
+
+**Background warm-up** (`server/src/utils/cacheWarmup.js`): so a page request does not pay
+those rebuilds, the process that serves the UI polls the history version once a second and,
+after startup and once changes have been quiet for 5 seconds (at least every 60 seconds
+while they keep arriving), calls the same getters the main pages use: full history, the
+dashboard preview, the History page artwork index, TV Shows, Movies, Stats, and the
+scheduled-show list behind Upcoming. It is single-flight, yields between caches, abandons
+the run if the version moves, and never calls a provider. Before each cache it waits while
+API requests are still arriving (any request other than `/api/ping` in the last 50 ms, for
+at most 1 second), so page loads go first. The builds themselves also yield: the per-show
+grouping pass (`groupShowRowsYielding()` in `dataRepo.js`, used by the show caches, the
+dashboard preview, and the artwork index) runs in 25 ms slices, and the tvdb-to-TMDB
+lookup in `mediaArtwork.js` reads tvdb ids with SQLite `json_extract` and parses a show's
+cached details only when that show is looked up. No single step blocks the server for more
+than about 150 ms on a 9,000-row library (it was about 550 ms). Each run logs one
+`[cache-warmup]` line with the version, per-cache milliseconds, and whether it was
+abandoned. It changes only when caches are built, never what they contain.
+
+Scale behavior: `getCachedHistory()` is uncapped, and the dashboard preview, Stats, and TV
+Shows library therefore describe the full history. `MAX_HISTORY_LIMIT` remains an API
+pagination safety bound, not a derived-cache ceiling. Full rebuild cost grows with library
+size; measured guidance is in [capacity.md](capacity.md).
+
+Concurrent readers share one in-flight `getCachedShows()` rebuild per show-set variant,
+and an empty result is cached by version just like a non-empty result. This keeps a burst
+of history invalidations from multiplying the synchronous per-show work that feeds the TV
+Shows and Upcoming views.
 
 ## Why resume positions have their own generation
 
@@ -145,7 +205,20 @@ JSON blob with:
 - `forceSyncLog` - streamed log text from the last force-sync run
 - `lastCronAt` - epoch ms of the last successful scheduled tick
 
-## `settings` (single row)
+## `settings`
+
+Internal `simkl-batch-budget:<hash>` rows contain only a reservation owner and reset
+timestamp. The hash scopes the client/account without storing credentials or raw
+account IDs. Atomic acquisition prevents another batch process from probing during
+the hold. Reservations survive backup/restore; expired holds admit a fresh check,
+and an old owner cannot release a newer reservation. These rows are separate from
+the media configuration object.
+
+`tracker-full-sync-plan:<provider>` stores one private preview with account/generation,
+state fingerprints, typed item actions, one-hour expiry and a one-time apply claim.
+The connection's `full_sync_json` exposes the public item list, progress and backup
+result. Plans contain history metadata but no credentials. Changing accounts, state,
+policies or mappings invalidates approval; a consumed plan cannot be replayed.
 
 JSON blob with provider mode and non-secret connection configuration, legacy manual
 Plex URL/token, Emby/Jellyfin URL/API key/user ID, TMDB key, Fanart.tv key, YouTube key,
@@ -207,8 +280,9 @@ Season posters chosen in the Edit Images "Season Posters" tab:
 - `season_number` - season the poster belongs to (`0` for Specials)
 - `poster_url`, `poster_source`, `updated_at` - as in `media_artwork`
 
-Primary key `(identity_key, season_number)`. `getCanonicalSeasonPosterUrls` returns these
-ahead of the cached TMDB/TVDB season art, so Up Next, Recently watched and the upcoming
+Primary key `(identity_key, season_number)`. Provider identity keys are used when available;
+title is the fallback for shows without provider ids. `getCanonicalSeasonPosterUrls` returns
+these ahead of the cached TMDB/TVDB season art, so Up Next, Recently watched and the upcoming
 calendar pick them up. Saved through `POST /api/update-watch` with `artwork_scope: "season"`
 and `season_number`; the watch row's own `poster_url` is not changed.
 
@@ -231,6 +305,12 @@ source, queue, and run tables. The Ratings page reads the canonical records, whi
 `poster_url` remains the episode's own artwork.
 
 ## Personal rating sync tables
+
+The `provider` column of all three rating sync tables is free text (migration 58 rebuilt them
+without the old `CHECK (provider IN ...)` lists). `personalRatingRepository.js` checks every
+write against the media servers plus the registry's rating-capable trackers, and rows for any
+other provider (from a restore or a downgrade) are kept but never claimed, retried, listed or
+counted.
 
 `personal_rating_sources` stores the latest observation for each provider/media key,
 including the provider item ID, remote rated/unrated state, snapshot generation,

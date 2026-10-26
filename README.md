@@ -80,7 +80,11 @@ None of these talk to each other - they all talk to Plekt.
 - **Force Sync** - Flexible on-demand sync per-title (with season scoping) or library-wide with comprehensive live progress logging; confirmed plans report partially applied results with missing titles instead of counting unmatched items as done. Title pushes finish local media servers before draining a paced, retrying Trakt queue, and cancellation finishes the current history item before skipping queued items
 - **Instant state restoration** - Automatically synchronizes watch history to newly added media and rebuilt server libraries
 - **Cross-platform resume** - Pause playback on one server and pick up right where you left off on another
+- **Theme-aware interface** - Dark mode uses Plekt's logo green for navigation and settings accents.
+
+- **Dropped titles** - Drop or un-drop a show or movie from its detail page or an Up Next card’s three-dot menu. History and resume progress stay intact. Dropped-only library/history views and a separate current-title count in Stats make intentional drops easy to find. A completed live play after the drop restores the title; historical imports and played flags leave it dropped. Drops sync both ways with Trakt (shows) and Simkl (shows and movies), with safe list restoration on un-drop.
 - **Rewatch tracking** - Full multi-watch history logging with smart deduplication that preserves authentic repeat viewings
+- **Mobile dashboard cards** - Compact lower rows with larger posters; posters-only history cards expand their details to the right.
 - **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plekt-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history; desktop gives the four sections equal height and reserves matching space for their titles and card-rail sliders, while phones show taller, wider featured Up Next cards with larger posters
 - **Sync Activity hub** - Live grouped activity by movie/show, with all resume checkpoints and destination results preserved behind each row, clear reasons for skipped destinations, unresolved cross-platform matches with per-item Fix match actions, targeted retry for actual failed destinations (only the newest unresolved result per movie/episode is retried, individually or all at once as a background job that survives closing the tab; expected missing-library skips are excluded), show-wide Fix Match and retry-all controls for Trakt mismatches, dismiss controls for shows Trakt does not contain, blocked-restore repair grouped by show with Fix Match and skip controls, and downloadable group logs
 - **Rich analytics & stats** - In-depth all-time and period reports, top shows, and platform playback distribution; on desktop, the top-ten leaderboard and monthly activity chart use the available page height
@@ -88,20 +92,23 @@ None of these talk to each other - they all talk to Plekt.
 - **Cache-first media detail pages** - Reuse the latest local history snapshot on reload so known artwork, summaries, watched rows, and watch dates stay visible while provider metadata refreshes; cast profiles switch between Movies and TV Shows with boxed Year and Genre filters, and center the portrait and profile details on phones; pages without actions hide the empty action row while keeping the page title visible; on phones, the Options menu stays beside the detail title; metadata, availability, service links, and ratings share a table on every screen size
 - **Paged media libraries** - Movies and TV Shows load more cards as you scroll without rebuilding the cards already on screen, preserve separate titles when poster artwork is shared, and show a loading indicator while fetching; Posters only expands a selected card in place at the current poster size, with details beside the poster on phones; Next Airing shows the TV library as a dated list; saved TV pages revalidate after 30 minutes when reopened
 - **Season navigation** - Show pages open the latest regular season at the top; season links select the requested season, with Season 1 opening at the page top and other seasons scrolling into view after loading.
-- **Personal Rating Sync** - One-toggle, two-way rating sync with every connected Plex, Emby, Jellyfin, and Trakt account through an isolated durable queue, with Plekt as the conflict authority; scans missing at least two ratings and over 20% of a provider's rated baseline pause for review with approve/dismiss controls that preserve ratings until approved
+- **Personal Rating Sync** - One-toggle, two-way rating sync with connected Plex, Emby, Jellyfin, Trakt, and Simkl accounts through an isolated durable queue, with Plekt as the conflict authority; Simkl uses stored library-check observations and holds unsafe rating writes. Scans missing at least two ratings and over 20% of a provider's rated baseline pause for review with approve/dismiss controls that preserve ratings until approved
 - **Plex Watchlist Sync** - One-toggle, two-way sync between Plekt and the Plex account watchlist, with safe first-run union, durable retries, a Sync now action, and a plain-language explanation of anything Plex refuses
 - **Upcoming episodes calendar** - Air date schedule for upcoming and past releases, pre-cached for instant loading; same-day episodes are grouped by show with a View more control
+- **Private calendar feed** - Subscribe from a calendar app to upcoming episodes, movie release dates or both for titles in your library; both are selected by default, and the **Subscribe** button on Upcoming generates or revokes the private URL
 - **Discover hub** - Personalized recommendations from your watch history plus cached trending, now-playing, airing-today, and genre feeds paint immediately from saved data, exclude titles you have already watched, and refresh live through the update stream with direct TMDB detail navigation; cards match the width used on other media pages
-- **Live Trakt sync** - Two-way Trakt integration with seamless device authorization, per-play history import, and resilient sync protection; translated episode mapping applies to batch marks and restore replay, and show replacement preserves Trakt-only plays or refuses conflicting targets before writing
-- **Seerr integration** - Discover and request movies and TV shows directly from detail pages via Overseerr or Jellyseerr
+- **External tracker sync** - Trakt and Simkl use device authorization and encrypted tokens, with independent connection/import controls. Trakt preserves per-play history and translated episode mapping; show replacement preserves Trakt-only plays or refuses conflicting targets before writing
+  Simkl uses explicit user/media-event checks, persisted activity cursors and baseline/delta observations, with durable watched writes confirmed by provider readback. Eligible concurrent writes share batches of up to 100 with a quota reserve; uncertain outcomes stay held without automatic resend. Ratings that could create watched/list state, unresolved anime/special identity, list-destructive unwatches, paid rewatches and automatic absence reconciliation remain blocked. Plekt retains its full local history independently of provider limits.
+  Bulk manual watched actions gather Simkl writes into chunks of up to 100, independently of LAN concurrency, and queued captured intents gather up to 100 per run with individual watch-row outcomes. Single watches remain immediate. Batch preflights respect the known quota reserve; failed or invalid preflights save a hold until quota reset, surviving restarts. Four requests apply per chunk; unrelated sequential watches can form separate chunks. Manual full sync requires a one-hour item preview with deselection, fresh-state rechecks and a verified backup. First-run selected history imports start on Continue without a separate preview approval, retaining the backup and freshness guards. Selected imports propagate to their listed media-server destinations; dates already on a destination are preserved. Simkl selected sends show request estimates and retain the quota reserve. Sends audited as missing from Simkl's current progress remain held for review and skipped by later previews. Incremental checks read a separate ratings delta only when rating activity changes, so rating-only edits and explicit clears are captured. After first-run imports finish, the add-only initial outward pass exposes per-destination progress and remaining or held items above Sync / Idle.
+- **Seerr integration** - Discover and request movies and TV shows directly from detail pages via Overseerr or Jellyseerr; opening Settings skips automatic Seerr capability requests
 - **Movie collections** - Explore related franchise entries, sequels, prequels, and spin-offs from movie detail pages and collection search results
 - **Direct server deep links** - Quick one-click links to jump directly to any title in Plex, Emby, or Jellyfin
 - **Automated backups** - Built-in daily local backups with optional scheduled offsite backups to Backblaze B2; interrupted restore fences recover after a three-minute stale heartbeat, while failure notices remain until dismissed
-- **Guided first-run setup** - A one-time account claim replaces the old generated-password dead end, followed by a resumable `/setup` wizard that connects media servers, adds metadata, configures webhooks, optionally connects Trakt, and tunes watch and Up Next sync
+- **Guided first-run setup** - A one-time account claim replaces the old generated-password dead end, followed by a resumable `/setup` wizard that offers enabled watch trackers together, connects media servers, adds metadata, configures webhooks, and tunes watch and Up Next sync. Continue on Import & sync starts an add-only initial outward pass after selected imports finish; its progress chip shows destination counts and remaining items, with interrupted or uncertain sends kept for review
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
 - **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, and HMAC session signing
 - **High-performance artwork cache** - Fast local caching for high-resolution posters, backdrops, and logos from TMDB, TheTVDB, and Fanart.tv; metadata is warmed in the background as media is discovered or a TV show is rematched so the dashboard stays cache-first
-- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings, and per show in Fix Match, where your stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB
+- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings, and per show in Fix Match, where your stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB; optional AniDB titles and descriptions for anime you confirm, movies uniquely linked by Wikidata, or shows TheTVDB clearly links, with episode numbering unchanged
 - **Unified multi-source search** - Blazingly fast search across your local libraries, TMDB movies/shows/collections, and TheTVDB with local media prioritized
 - **Progressive Web App (PWA)** - Installable directly on iOS, Android, macOS, and Windows with a native app experience
 
@@ -118,6 +125,9 @@ behind the page. Both are on by default; turning one off also stops that artwork
 Settings help panels share the background treatment of their main sections. These choices
 are saved in your browser and restored when you reopen Plekt.
 On a phone, open the navigation drawer to reach them.
+When the sidebar Appearance panel is open, the build/version button appears above the Light/Dark choices; when it is closed, the button returns to the sidebar footer.
+The **Hide Links** checkbox hides all project links, including GitHub Sponsors, from the bottom
+of the sidebar. This preference is saved with your Plekt appearance settings.
 
 The **Appearance** menu on movie and TV detail pages controls which optional sections,
 such as cast, trailers, and reviews, are shown.
@@ -255,6 +265,8 @@ It runs in an isolated demo mode on a dedicated Oracle Cloud Compute instance;
 actions are simulated in the browser, media-provider integrations are disabled,
 and the fixed bundled artwork and metadata catalogue is served without contacting
 live media or metadata services.
+The demo sends `X-Robots-Tag: noindex` and serves a `robots.txt` that disallows crawling;
+self-hosted installs do not receive that header.
 Each **Force to main** publishes the multi-architecture release image and deploys the
 exact released version to this OCI demo. Portainer is used only for local testing.
 If the demo needs a catch-up refresh without another promotion, run the **Deploy Public
@@ -421,7 +433,8 @@ and enter the device code. Plekt uses its built-in Trakt app credentials, so no
 personal API key or Trakt VIP subscription is required. Leave **Import watch history
 from Trakt** selected if you want existing plays imported. Connecting Trakt before the
 media servers lets Plekt prefer its earlier watched dates when server dates were
-reset by a library rebuild or rescan.
+reset by a library rebuild or rescan. Selected history imports start after you press
+Continue on the Trackers stage.
 
 **3. Metadata.** Add a free TMDB key from
 [themoviedb.org](https://www.themoviedb.org/settings/api). TMDB supplies posters,
@@ -508,6 +521,11 @@ http://<YOUR_HOST>:5056/api/webhook?token=<your-secret>
 > Use the full URL with `?token=` for servers that can't set custom headers. Rotating
 > the secret means updating it everywhere it's used.
 
+When an incoming episode disagrees with the stored numbering, Plekt checks the other
+metadata source and shows confirmed issues in Manual Watch review as **Fix Match Issue**.
+Dismissal lasts until the show's TMDB or TVDB id changes. These notices never change watch
+history or media-server state on their own.
+
 **Plex** - no setup required. Plekt connects to your Plex Media Server's WebSocket
 notification channel automatically to capture watched and unwatched changes in real
 time, and polls playback progress as a backstop - every 10 seconds while something's
@@ -556,11 +574,51 @@ manual Back Up Now button.
 **Settings → Sync → Sync Tools → Full Sync Watchstates** afterward to replay everything
 to a newly connected server.
 
-**From Tautulli (one-time):** open **Settings → Connections → Tautulli Watch-History
-Importer**, configure the Tautulli URL/API key, select one user, preview completed
+**From Tautulli (one-time):** open **Settings → Connections → One time imports**,
+configure the Tautulli URL/API key, select one user, preview completed
 history, and choose the media-server targets. Plekt creates a local watch-history
 backup before importing, keeps Tautulli unchanged, and merges same-day plays already
 represented by Trakt or another source while preserving rewatches on different days.
+
+**From Netflix (one-time):** under **Settings → Connections → One time imports**, upload
+`ViewingActivity.csv` from the Netflix personal-information download (Account → Security &
+privacy → Download your personal information, then `CONTENT_INTERACTION/ViewingActivity.csv` in
+the ZIP). It covers every profile on the account, so tick the profiles you used before the
+preview (a single profile with usable titles is selected automatically); trailers and views under 5 minutes are left out. Separate summary boxes show the preview counts, with review instructions below. Blank titles, Netflix's `Unknown Title`
+placeholders (including `(Episode N)` suffixes), and episode rows with no show name are skipped
+before the preview and its counts. Preview exact TMDB matches (series rows resolve episode titles to season/episode,
+stripping Netflix `Season N:` / `Limited Series:` labels), review unmatched titles (episodes
+are grouped by show) in selectable cards. Skip is selected by default for review rows; candidate
+cards link to TMDB and TVDB search, and movie/show type is shown on each item. Choose matches or
+leave rows skipped before committing. Choosing a show does not select its episodes: match the
+episodes, then select the ones to include; unselected episodes stay skipped. Only episodes in the
+CSV are imported. Ambiguous shows use distinct episode-title evidence across the file rather
+than popularity or watch year; ties remain in review, and explicit seasons constrain matches.
+Titles first released after the watch year are ruled out, combined `A / B` rows import every
+segment when each names one episode (allowing show prefixes and filler words to differ;
+incomplete or ambiguous bundles stay in review), and a bare `Episode N` beside labelled later seasons is
+read as season 1.
+Nested series labels and volume labels are supported too. Distinct episode evidence can
+identify a spin-off or a longer provider title; search suggestions alone never choose a show.
+Episode matching also treats `Grandad` and `Granddad` as equivalent spellings; bundled rows still require a unique match for every segment in the allowed season.
+Verified episode aliases recover alternate and censored You Me Her titles and two Peppa Pig bundles,
+only when the current TMDB show, episode ID and canonical title agree with the recorded evidence.
+Exact original-language TMDB titles and sourced Netflix/producer aliases also recover
+translated or differently labelled titles while retaining ambiguous namesakes for review.
+Charité at War matches Charité season 2 through the existing multi-title season evidence.
+An exact row registry also recovers verified specials and known release-order differences
+(the Modi special, Big Al, two LEGO Friends episodes and one SpongeBob bundle). Every target
+must retain its recorded provider ID, canonical title and air date; coordinates come from current metadata.
+Reversed segment order matches only a unique, complete provider bundle. Explicit CSV episodes
+can expose a wrong exact namesake, allowing a recorded Netflix alias to be considered instead.
+Choose a show once to rematch its unresolved episodes, with safely linked TVDB titles as a
+fallback. Review season suggestions together, skip whole show groups, or skip incomplete rows
+in one action; these controls only update the preview until you confirm the import.
+Official Netflix report title aliases also help failed searches and colon parsing; they never
+exclude an unlisted title or automatically choose a same-named remake.
+Plekt backs up history first and queues selected watches for connected
+services; Plex follows the historical-sync setting and tracker writes use their configured
+spacing.
 
 **Live Trakt sync (ongoing):** Settings → Connections → Trakt → **Connect Trakt**, authorize
 with the displayed device code - no Trakt VIP or personal API credentials needed. Once connected,
@@ -599,7 +657,8 @@ is in [`.env.example`](.env.example).
 | `WEBHOOK_SECRET` | _generated_ | Secret for webhook auth; rotatable independently of `API_KEY`. |
 | `SESSION_SECRET` | _generated_ | Signing secret for the session cookie. |
 | `PLEKT_CREDENTIAL_KEY` | _generated file_ | Optional external credential-vault key (64 hex chars or base64url). Keep with disaster-recovery material. |
-| `PLEKT_PUBLIC_URL` | _none_ | Fixed public origin for provider return links (`http(s)://host`, no path). |
+| `PLEKT_PUBLIC_URL` | _none_ | Fixed internet-reachable public origin for provider return links and calendar feed URLs (`http(s)://host`, no path). Local hostnames and private IP addresses are not shown as feed URLs. |
+| `PLEKT_PUBLISHED_PORT` | _none_ | Host port Plekt is published on (5056 in the compose files); used by the startup webhook port advisory, which is skipped when unset. |
 | `PLEKT_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS to enable the `Secure` cookie flag and HSTS. |
 | `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` | _built-in_ | Optional replacement for the bundled Trakt app. Both required together. |
@@ -720,7 +779,7 @@ after they pass; the retried push must still pass the complete build gate.
 
 ## Community
 
-- **[Support Plekt](https://github.com/sponsors/Lasikiewicz)** - help keep the complete self-hosted application free, private, and maintained. Sponsorship does not unlock features or change roadmap priority.
+- **[Support Plekt](https://github.com/sponsors/Lasikiewicz)** - use the heart below the build in the sidebar footer, beside the GitHub and plekt.net links, to sponsor Plekt and help keep the complete self-hosted application free, private, and maintained. Sponsorship does not unlock features or change roadmap priority.
 - **[Discord](https://discord.gg/7ZmEGKcRC5)** - chat with other users, get help, and follow along with development.
 - **[r/plekt](https://www.reddit.com/r/plekt/)** - discussions, feature requests, and release announcements on Reddit.
 

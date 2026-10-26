@@ -19,6 +19,7 @@ import {
 } from "./upNextRepository.js";
 import { createUpNextLibraryEpisodeLookup, createUpNextLibraryLookup, topUpUpNextLibraryLookups } from "./upNextLibraryLookup.js";
 import { createUpNextDismissalFilter } from "./upNextDismissals.js";
+import { createDroppedTitleFilter } from "./droppedTitles.js";
 import { listManualUpNextShows } from "./upNextManual.js";
 import { compareCoordinates, episodeAfter, rewatchPosition, withUpNextLanes } from "./upNextRewatch.js";
 import { isDemoMode } from "./demoMode.js";
@@ -1485,11 +1486,10 @@ export async function buildUpNextProjection({
     });
   }
 
-  // Dismissals are applied after the merge so a dismissed card cannot come
-  // back under a second identity, and re-appear only when the item is genuinely
-  // played again: a newer real position outranks the dismissal, which mirrors
-  // what the browser-local map used to do before this moved server-side.
-  const dismissals = createUpNextDismissalFilter();
+  // Dismissals and drops apply after the merge so a card cannot come back under
+  // a second identity. A newer real position outranks a dismissal (as the old
+  // browser-local map did); a drop holds whatever the progress until un-dropped.
+  const dismissals = createUpNextDismissalFilter(), dropped = createDroppedTitleFilter();
   const merged = collapseUncertainEpisodeQueues(dropLonelyNewLanes(withUpNextLanes(mergeUpNextCandidates([
     ...canonicalResume,
     ...providerResume,
@@ -1497,7 +1497,7 @@ export async function buildUpNextProjection({
     ...resumeNativeNextUp,
     ...resumeNativeSecondary,
     ...localNextUp,
-  ]), [...localNextUp, ...authoritativeNextEpisodes, ...laneMarkers], episodeCoordinateMatches)).filter(isRegularUpNextEpisode).filter((candidate) => {
+  ]), [...localNextUp, ...authoritativeNextEpisodes, ...laneMarkers], episodeCoordinateMatches)).filter(isRegularUpNextEpisode).filter((candidate) => !dropped.isDropped(candidate)).filter((candidate) => {
     const dismissedAt = dismissals.dismissedAt(candidate);
     if (!dismissedAt) return true;
     const updatedAt = number(candidate.updated_at);

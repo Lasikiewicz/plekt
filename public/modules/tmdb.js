@@ -1,6 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.8";
-import { state } from "./state.js?v=2.1.1.0.8";
-import { showTitleFrom, slug } from "./utils.js?v=2.1.1.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.1.1.0.9";
+import { state } from "./state.js?v=2.1.1.0.9";
+import { showTitleFrom, slug } from "./utils.js?v=2.1.1.0.9";
+import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.1.1.0.9";
+export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.1.1.0.9";
 
 let _tmdbBatchQueue = [];
 let _tmdbBatchTimer = null;
@@ -25,12 +27,13 @@ function flushTmdbBatch() {
     body: JSON.stringify({ items: payload }),
   })
     .then((res) => res.json().then((body) => ({ ok: res.ok, status: res.status, body })))
-    .then(({ ok, status, body }) => {
+    .then(async ({ ok, status, body }) => {
       if (!ok) throw new Error(body?.error || `HTTP ${status}`);
       const results = Array.isArray(body?.results) ? body.results : [];
+      const enriched = await enrichAnidbDetails(payload, results.map((result) => result?.details || null));
       batch.forEach((item, index) => {
         const r = results[index];
-        item.resolve(r && r.details ? r.details : null);
+        item.resolve(enriched[index] || null);
       });
     })
     .catch((error) => {
@@ -48,10 +51,10 @@ function requestTmdbDetailsNow(request) {
     body: JSON.stringify({ items: [request] }),
   })
     .then((res) => res.json().then((body) => ({ ok: res.ok, status: res.status, body })))
-    .then(({ ok, status, body }) => {
+    .then(async ({ ok, status, body }) => {
       if (!ok) throw new Error(body?.error || `HTTP ${status}`);
       const result = Array.isArray(body?.results) ? body.results[0] : null;
-      return result && result.details ? result.details : null;
+      return (await enrichAnidbDetails([request], [result?.details || null]))[0];
     });
 }
 

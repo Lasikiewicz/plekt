@@ -49,6 +49,11 @@ in phases A to C is pre-approved; do it, record it in the step file, and keep go
 
 Read [candidate operations](../../../docs/agent-release-candidate.md) for steps 0–2,
 including the run templates and process ownership rules. From the main checkout:
+
+Before any command, read `plan/next-release-checks.md` and its checklist. An unchecked **Before Force to main**
+item, unresolved prior post-publication result, or missing plan/checklist blocks the release; stop
+before acquiring the lock.
+
 ```
 npm run release:precheck
 node scripts/release-lock.js acquire "force to main"
@@ -147,6 +152,12 @@ accepted leftovers, app URL/version and website URL including /changelog.
 
 ## 7–8. Push, demo, website
 
+Before the main push, check and record every item under **During Force to main, before publishing
+main** in `plan/active/next-release-checks/step1-checklist.md`; any open check blocks publication.
+A conditional item is complete only if its condition did not occur or its recovery was carried out.
+After publication, record results and carry unresolved items into the next run's preflight; they
+block its release lock.
+
 After approval, run `node scripts/workflow-check.js before-push main --record=<record.json>`,
 show `git log origin/main..HEAD --oneline`, then:
 ```
@@ -176,3 +187,7 @@ Missing work means STOP. Otherwise record old tip, locally
 Never push develop or merge/fold the release back. Release lock; update step/summary/todo
 each phase and run todo:check. Apply publication operations' rebrand checks unchanged.
 Then offer Announce release (drafts only); run it only on acceptance.
+
+## Example request
+
+> Force to main
