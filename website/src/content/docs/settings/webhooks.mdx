@@ -3,7 +3,7 @@ title: Webhooks
 description: Configure platform event senders and protect the webhook endpoint with its secret.
 category: Settings
 order: 5.3
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -33,8 +33,9 @@ Webhooks contains the sender setup guides and the secret used to authenticate in
 Use the platform-specific setup guidance for Plex, Emby, or Jellyfin. Configure the sender to
 reach the Plekt host and include the authentication value exactly as shown by the app.
 
-Plex normally uses Plekt's realtime WebSocket notification channel. Emby and Jellyfin use their
-webhook integrations for playback events, with scheduled polling providing reconciliation.
+Plex normally uses Plekt's realtime WebSocket notification channel. Emby and Jellyfin can
+send playback events through their Plekt plugin or webhook alternative, with scheduled
+polling providing reconciliation. Configure only one event sender per server.
 
 After configuring a sender, play a short portion of a known title and confirm both a new
 History row and a Sync Activity result.

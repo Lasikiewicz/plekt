@@ -4,7 +4,8 @@
   "changes": {
     "added": [],
     "changed": [
-      "public/assets/og-card.png"
+      "public/assets/home-dashboard-dark.jpg",
+      "public/assets/home-dashboard.jpg"
     ],
     "removed": [],
     "unreferenced": [
@@ -73,7 +74,7 @@
   "docs": [
     {
       "slug": "appearance",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/appearance-dashboard-dark.png",
         "public/assets/app-captures/appearance-dashboard-light.png",
@@ -83,7 +84,7 @@
     },
     {
       "slug": "concepts",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/history-dark.png",
         "public/assets/app-captures/history-light.png",
@@ -99,7 +100,7 @@
     },
     {
       "slug": "dashboard",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/dashboard-dark.png",
         "public/assets/app-captures/dashboard-history-movies-dark.png",
@@ -121,7 +122,7 @@
     },
     {
       "slug": "discover",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/discover-dark.png",
         "public/assets/app-captures/discover-light.png"
@@ -129,7 +130,7 @@
     },
     {
       "slug": "getting-started",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/dashboard-dark.png",
         "public/assets/app-captures/dashboard-light.png",
@@ -141,20 +142,22 @@
     },
     {
       "slug": "guides",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": []
     },
     {
       "slug": "history-search",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/history-dark.png",
+        "public/assets/app-captures/history-days-dark.png",
+        "public/assets/app-captures/history-days-light.png",
         "public/assets/app-captures/history-light.png"
       ]
     },
     {
       "slug": "integrations",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-connections-seerr-dark.png",
         "public/assets/app-captures/settings-connections-seerr-light.png",
@@ -180,7 +183,7 @@
     },
     {
       "slug": "libraries",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/library-poster-menu-dark.png",
         "public/assets/app-captures/library-poster-menu-light.png",
@@ -190,12 +193,12 @@
     },
     {
       "slug": "manual-watch-review",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": []
     },
     {
       "slug": "media-details",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/fix-match-focus-dark.png",
         "public/assets/app-captures/fix-match-focus-light.png",
@@ -231,7 +234,7 @@
     },
     {
       "slug": "movies",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/library-poster-menu-dark.png",
         "public/assets/app-captures/library-poster-menu-light.png",
@@ -243,7 +246,7 @@
     },
     {
       "slug": "movies/media-page",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/fix-match-focus-dark.png",
         "public/assets/app-captures/fix-match-focus-light.png",
@@ -287,12 +290,12 @@
     },
     {
       "slug": "moving-to-port-5056",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": []
     },
     {
       "slug": "navigation",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/appearance-dashboard-dark.png",
         "public/assets/app-captures/appearance-dashboard-light.png",
@@ -304,7 +307,7 @@
     },
     {
       "slug": "operations",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/dashboard-dark.png",
         "public/assets/app-captures/dashboard-light.png",
@@ -326,7 +329,7 @@
     },
     {
       "slug": "playlists",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/media-action-row-dark.png",
         "public/assets/app-captures/media-action-row-light.png",
@@ -337,8 +340,13 @@
       ]
     },
     {
+      "slug": "portainer",
+      "sourceVersion": "2.2.0",
+      "screenshots": []
+    },
+    {
       "slug": "ratings",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/media-action-row-dark.png",
         "public/assets/app-captures/media-action-row-light.png",
@@ -354,7 +362,7 @@
     },
     {
       "slug": "safe-daily-workflows",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/dashboard-dark.png",
         "public/assets/app-captures/dashboard-light.png",
@@ -364,7 +372,7 @@
     },
     {
       "slug": "settings",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-index-focused-dark.png",
         "public/assets/app-captures/settings-index-focused-light.png"
@@ -372,7 +380,7 @@
     },
     {
       "slug": "settings/about",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-about-dark.png",
         "public/assets/app-captures/settings-about-light.png"
@@ -380,7 +388,7 @@
     },
     {
       "slug": "settings/backup",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-backup-local-dark.png",
         "public/assets/app-captures/settings-backup-local-light.png",
@@ -390,12 +398,12 @@
     },
     {
       "slug": "settings/changelog",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": []
     },
     {
       "slug": "settings/connections",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-connections-seerr-dark.png",
         "public/assets/app-captures/settings-connections-seerr-light.png",
@@ -407,7 +415,7 @@
     },
     {
       "slug": "settings/general",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-general-account-dark.png",
         "public/assets/app-captures/settings-general-account-light.png",
@@ -419,7 +427,7 @@
     },
     {
       "slug": "settings/logs",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-logs-controls-dark.png",
         "public/assets/app-captures/settings-logs-controls-light.png"
@@ -427,7 +435,7 @@
     },
     {
       "slug": "settings/media-servers",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-media-servers-emby-dark.png",
         "public/assets/app-captures/settings-media-servers-emby-light.png",
@@ -439,7 +447,7 @@
     },
     {
       "slug": "settings/metadata",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-metadata-providers-dark.png",
         "public/assets/app-captures/settings-metadata-providers-light.png",
@@ -453,7 +461,7 @@
     },
     {
       "slug": "settings/restore",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-restore-focused-dark.png",
         "public/assets/app-captures/settings-restore-focused-light.png",
@@ -465,7 +473,7 @@
     },
     {
       "slug": "settings/sync",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-sync-tools-dark.png",
         "public/assets/app-captures/settings-sync-tools-light.png",
@@ -479,7 +487,7 @@
     },
     {
       "slug": "settings/tools",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-tools-database-repairs-dark.png",
         "public/assets/app-captures/settings-tools-database-repairs-light.png",
@@ -491,7 +499,7 @@
     },
     {
       "slug": "settings/webhooks",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-webhooks-secret-dark.png",
         "public/assets/app-captures/settings-webhooks-secret-light.png",
@@ -501,7 +509,7 @@
     },
     {
       "slug": "stats",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/stats-dark.png",
         "public/assets/app-captures/stats-light.png"
@@ -509,12 +517,12 @@
     },
     {
       "slug": "sync-plex-with-trakt",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": []
     },
     {
       "slug": "sync-tools",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-logs-controls-dark.png",
         "public/assets/app-captures/settings-logs-controls-light.png",
@@ -530,7 +538,7 @@
     },
     {
       "slug": "troubleshooting",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/dashboard-dark.png",
         "public/assets/app-captures/dashboard-light.png",
@@ -572,7 +580,7 @@
     },
     {
       "slug": "tv-shows",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/tv-spoilers-off-dark.png",
         "public/assets/app-captures/tv-spoilers-off-light.png",
@@ -582,7 +590,7 @@
     },
     {
       "slug": "tv-shows/media-page",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/media-action-row-dark.png",
         "public/assets/app-captures/media-action-row-light.png",
@@ -622,7 +630,7 @@
     },
     {
       "slug": "upcoming",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/upcoming-dark.png",
         "public/assets/app-captures/upcoming-light.png"
@@ -630,12 +638,12 @@
     },
     {
       "slug": "upgrading-from-plembfin",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": []
     },
     {
       "slug": "watch-history-before-library-rebuild",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-backup-local-dark.png",
         "public/assets/app-captures/settings-backup-local-light.png",
@@ -645,7 +653,7 @@
     },
     {
       "slug": "watch-progress-not-syncing",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/settings-webhooks-setup-dark.png",
         "public/assets/app-captures/settings-webhooks-setup-light.png",
@@ -655,7 +663,7 @@
     },
     {
       "slug": "watchlist",
-      "sourceVersion": "2.1.1",
+      "sourceVersion": "2.2.0",
       "screenshots": [
         "public/assets/app-captures/media-action-row-dark.png",
         "public/assets/app-captures/media-action-row-light.png",
@@ -697,8 +705,8 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-dark.png",
-      "bytes": 1580523,
-      "sha256": "075d3aec08c4c10486262462579863c07e72cbe17ab073dfb44c28fe8e957eb9",
+      "bytes": 1498393,
+      "sha256": "f79ca1df672989d5f5e1650f3834d91b8c91625b5bd15efbe3c47d85dcbe7b2f",
       "dimensions": {
         "width": 1396,
         "height": 950
@@ -714,8 +722,8 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-history-movies-dark.png",
-      "bytes": 345662,
-      "sha256": "e8c900b8a0142bb92fabf04abc8f6817d7bb5ea163db1ad881c349c86da119fb",
+      "bytes": 333645,
+      "sha256": "f63e9709479049ba63cb5731094915e2e0d4a2394af2287cf20e466a7e1f4f66",
       "dimensions": {
         "width": 1187,
         "height": 229
@@ -726,8 +734,8 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-history-movies-light.png",
-      "bytes": 325952,
-      "sha256": "468a60f54b409d7966eeaad9e9d513910e5808355211bc62a3bf3e0e76c93cbc",
+      "bytes": 314616,
+      "sha256": "751d57c92a0993de4d20363ca09a6065240c94b843be45c7ca8330c58ead00b0",
       "dimensions": {
         "width": 1187,
         "height": 229
@@ -738,8 +746,8 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-history-tv-dark.png",
-      "bytes": 350784,
-      "sha256": "3a645401aa7c8eda486dd106ab6b6c9c3b8e2b79969e5ea2410739f7b411cc9d",
+      "bytes": 335504,
+      "sha256": "b8da541363c7f54614f605f2697588010be57fdc1075705464769ed894e10e71",
       "dimensions": {
         "width": 1187,
         "height": 229
@@ -750,8 +758,8 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-history-tv-light.png",
-      "bytes": 323760,
-      "sha256": "7b67fa550a102838a2b90e89df4ec17b07aa0f5f8cf3b8e496d56526ba7e0e5c",
+      "bytes": 313508,
+      "sha256": "74f2a6fa6d4a0fcfa94a44e87daded96d4b081139e29e5dc7e2cecde96b2aa1f",
       "dimensions": {
         "width": 1187,
         "height": 229
@@ -782,8 +790,8 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-light.png",
-      "bytes": 1489915,
-      "sha256": "85b0a5792bc778d430592b38f519475432177ccba012b1fe457cacc2b817a7f8",
+      "bytes": 634418,
+      "sha256": "34a24234a540710a7604c95f748f8a2f2e00a8e62891b344ed413de0ae963364",
       "dimensions": {
         "width": 1396,
         "height": 950
@@ -799,11 +807,11 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-up-next-dark.png",
-      "bytes": 371255,
-      "sha256": "4dfa165e5d212798f96b691cb13901646f1d13b3cd31c7aa9955bc8caa08b819",
+      "bytes": 387412,
+      "sha256": "38e10da36e15e3d7aa63b6741ad37d623d097e729be9c4ad11f8267ed6b92fea",
       "dimensions": {
-        "width": 1231,
-        "height": 216
+        "width": 1247,
+        "height": 232
       },
       "referencedBy": [
         "dashboard",
@@ -836,11 +844,11 @@
     },
     {
       "path": "public/assets/app-captures/dashboard-up-next-light.png",
-      "bytes": 354051,
-      "sha256": "832567b42ac37ac899f4b5cd383b6ede8fb76eabe7d45be9b90e6814905dbffd",
+      "bytes": 365060,
+      "sha256": "e458d4737e6e8e1e98f433df256cbfab831d37dbd08480c01c848c89afb4b0a8",
       "dimensions": {
-        "width": 1231,
-        "height": 216
+        "width": 1247,
+        "height": 232
       },
       "referencedBy": [
         "dashboard",
@@ -849,8 +857,8 @@
     },
     {
       "path": "public/assets/app-captures/discover-dark.png",
-      "bytes": 1027503,
-      "sha256": "771810403cee26f7d2379b9fbe53d6eccfc135b5da9f77cf1b67899dc61eb84d",
+      "bytes": 1063983,
+      "sha256": "8f2fdbdbdff503ffc3b37a65eae2a4c6b38d6077cca62ba088eada77aaf29150",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -862,8 +870,8 @@
     },
     {
       "path": "public/assets/app-captures/discover-light.png",
-      "bytes": 983960,
-      "sha256": "4feb9e4a4a3536820ccdfd56db39f5eae95c6f21dafccc8c18b48f467246c4bf",
+      "bytes": 1018361,
+      "sha256": "ce175c7cd06af23892746b01e229cd01e47f66324cbedd4fea2fd7c304cde9e8",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -875,8 +883,8 @@
     },
     {
       "path": "public/assets/app-captures/fix-match-dark.png",
-      "bytes": 201153,
-      "sha256": "f01e9c93474bbac2fe4a6f18a1b2ac82fd5201d0920cc1e0a25815ac2462624c",
+      "bytes": 202478,
+      "sha256": "81ae1dc991368df893d38aae86a926747ad41e96d9d66dafbd33e3046ae161a6",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -887,8 +895,8 @@
     },
     {
       "path": "public/assets/app-captures/fix-match-focus-dark.png",
-      "bytes": 158872,
-      "sha256": "bbcc9dbf313b7636993f389547ba662f12df7f7bc0865d0396c0d7b5275a6376",
+      "bytes": 158993,
+      "sha256": "d6477fc436b4b4316a52c5858d1f24d19fb1730c83284d5017c489f5886d3b8a",
       "dimensions": {
         "width": 1320,
         "height": 642
@@ -925,8 +933,8 @@
     },
     {
       "path": "public/assets/app-captures/global-search-dark.png",
-      "bytes": 54654,
-      "sha256": "9f826a22b31906bb53d89c47ce105f5d0661c8f1df10f40172505ed9779335bd",
+      "bytes": 54693,
+      "sha256": "6341236cbf1efbc139432e7569dea841290e49f7f33f94b62275bd3c37207bea",
       "dimensions": {
         "width": 900,
         "height": 358
@@ -937,8 +945,8 @@
     },
     {
       "path": "public/assets/app-captures/global-search-light.png",
-      "bytes": 54644,
-      "sha256": "882bb321fda511a37a622494b248a1ef3a3d9ad6bebda9dceb29a3a6e33eac2c",
+      "bytes": 54614,
+      "sha256": "32892c7a43d60e708fefee0701f76b0f61f7cbb37615fa598eb0ac8725eaa96c",
       "dimensions": {
         "width": 900,
         "height": 358
@@ -949,8 +957,8 @@
     },
     {
       "path": "public/assets/app-captures/history-dark.png",
-      "bytes": 1020588,
-      "sha256": "0ded2b7cb58ba276b2670c1a6fa002e61dd07d55da9c773c3c301672a5dbcea8",
+      "bytes": 4470,
+      "sha256": "47fa1e4f3df881fa1fd23039158e924ce675979a9208718fe3f23232141d5324",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -961,9 +969,33 @@
       ]
     },
     {
+      "path": "public/assets/app-captures/history-days-dark.png",
+      "bytes": 179963,
+      "sha256": "d49d2087431cb3cc7511fcfa7445b7da68d9fcf1124ec6c56984693054d721b4",
+      "dimensions": {
+        "width": 1231,
+        "height": 224
+      },
+      "referencedBy": [
+        "history-search"
+      ]
+    },
+    {
+      "path": "public/assets/app-captures/history-days-light.png",
+      "bytes": 171990,
+      "sha256": "5c10128279ce84fdd8e44e748f7a37f25264a5ddb63dcc1149bc89f39f24c419",
+      "dimensions": {
+        "width": 1231,
+        "height": 224
+      },
+      "referencedBy": [
+        "history-search"
+      ]
+    },
+    {
       "path": "public/assets/app-captures/history-light.png",
-      "bytes": 962759,
-      "sha256": "090d310788881f10cb05f00729f01fecb28a84220154a35d8147331681f63a84",
+      "bytes": 629822,
+      "sha256": "35cc138663004ad93ba0bfd9fe35619ac099e103f0b51ce04e0562a3d2e2f9f6",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -975,8 +1007,8 @@
     },
     {
       "path": "public/assets/app-captures/library-poster-menu-dark.png",
-      "bytes": 480063,
-      "sha256": "9f100997fba3cb78bf66e0f55fefb7ec7b815fbf20ba1ee82d2fda92d679ee76",
+      "bytes": 444844,
+      "sha256": "413a2b5f95d4e55d3e443a4bfb71f35ee47734544ce230005d207c57a9e72f64",
       "dimensions": {
         "width": 722,
         "height": 546
@@ -989,8 +1021,8 @@
     },
     {
       "path": "public/assets/app-captures/library-poster-menu-light.png",
-      "bytes": 463758,
-      "sha256": "51df18fa8a4fc67c5f997b4fe19176a503f5558ac68c7b1e424874833c3ad155",
+      "bytes": 425074,
+      "sha256": "84640c24303c2cf57f63341b6f0a4d399e0408d461b2e2038cfd4b7fef9ad048",
       "dimensions": {
         "width": 722,
         "height": 546
@@ -1003,10 +1035,10 @@
     },
     {
       "path": "public/assets/app-captures/media-action-row-dark.png",
-      "bytes": 6023,
-      "sha256": "b2fed08d4197ed295bf5d5d57c389cf7f76923f92ef6e71f45de1f72311afc68",
+      "bytes": 8263,
+      "sha256": "997b807439c92a9a24c13359e3b442f3b1dd5a9fecacb1fdfcfbefcb477de9f0",
       "dimensions": {
-        "width": 320,
+        "width": 609,
         "height": 62
       },
       "referencedBy": [
@@ -1020,10 +1052,10 @@
     },
     {
       "path": "public/assets/app-captures/media-action-row-light.png",
-      "bytes": 6023,
-      "sha256": "d4527518b7867fdd83c75f97e750ced10e3a4d1cbc60e48614d142900d70582f",
+      "bytes": 8223,
+      "sha256": "5a8e7bba49dc02d219dc02067335f5d236c48bc87a23088250e3648e70551472",
       "dimensions": {
-        "width": 320,
+        "width": 609,
         "height": 62
       },
       "referencedBy": [
@@ -1077,8 +1109,8 @@
     },
     {
       "path": "public/assets/app-captures/media-appearance-dark.png",
-      "bytes": 837349,
-      "sha256": "2893c199aebc588d524a1e64f690526ecbf25c8c8bc5353c762fc7e0dc7159ea",
+      "bytes": 838825,
+      "sha256": "83d7232738c02cf12db79d1566317cd86df3091feba39c75e44a0f56b5bc950d",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -1093,8 +1125,8 @@
     },
     {
       "path": "public/assets/app-captures/media-appearance-light.png",
-      "bytes": 836442,
-      "sha256": "e16a1fbd3a7f49cb36fae4b120c1e224259a56f06322157a6135534b8cbd16af",
+      "bytes": 839041,
+      "sha256": "b77ef7912a92a7faab9d37a8f64e1ff139f3bfac033febac907145fa4e001501",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -1109,8 +1141,8 @@
     },
     {
       "path": "public/assets/app-captures/media-cast-focus-dark.png",
-      "bytes": 245136,
-      "sha256": "89b9f60ea0307b168ad0b9d4349951bc51f5b532f03c09d5a08437ae46b3b5c7",
+      "bytes": 245190,
+      "sha256": "98004e3dc43c2695910c1e3f20e19777de40e370ec1032967f29ab42be7f4c2e",
       "dimensions": {
         "width": 1231,
         "height": 189
@@ -1122,8 +1154,8 @@
     },
     {
       "path": "public/assets/app-captures/media-cast-focus-light.png",
-      "bytes": 244117,
-      "sha256": "3c34c87fc11cbf1213c42fcfab11c9c10ed7edf09909fdb400089af8a6362edd",
+      "bytes": 244176,
+      "sha256": "8cf53998e301cdbfdb5a3d4b52f3a29b7f9a9ea9a46ab93d88c4433abb5fabd8",
       "dimensions": {
         "width": 1231,
         "height": 189
@@ -1135,8 +1167,8 @@
     },
     {
       "path": "public/assets/app-captures/media-collections-focus-dark.png",
-      "bytes": 150373,
-      "sha256": "1833ad5433a89a619ecff17bb505cec920f21873b0cef99ef375814c6e41453e",
+      "bytes": 150370,
+      "sha256": "c6891ea78cca0ab7d861dc5152683ac1db9ba06aedd85212dadd03ebdfbc392a",
       "dimensions": {
         "width": 1231,
         "height": 236
@@ -1148,8 +1180,8 @@
     },
     {
       "path": "public/assets/app-captures/media-collections-focus-light.png",
-      "bytes": 152622,
-      "sha256": "79229d127a8aa166ab47f88eef5b98431cded257996487ff41bc6b256651344b",
+      "bytes": 152645,
+      "sha256": "d206e694869cc4949e8202613867c15108f8b62275d5e4c07d939e68782b0f00",
       "dimensions": {
         "width": 1231,
         "height": 236
@@ -1161,8 +1193,8 @@
     },
     {
       "path": "public/assets/app-captures/media-collections-recommendations-focus-dark.png",
-      "bytes": 575289,
-      "sha256": "ab8d5cdbe44fd1ce170555b9e04340e9842bc6cdc2078499c929f5a130b5009c",
+      "bytes": 576537,
+      "sha256": "6f642b48f122a8d31eca17e4fd62905648a60144112e02d121a6204f9ac3048e",
       "dimensions": {
         "width": 1108,
         "height": 600
@@ -1174,8 +1206,8 @@
     },
     {
       "path": "public/assets/app-captures/media-collections-recommendations-focus-light.png",
-      "bytes": 588324,
-      "sha256": "16b05cf83a998fe579fc0754d56311cd7ed777c4c3045c056682daddeed0ee5a",
+      "bytes": 589933,
+      "sha256": "0f51c633db78ce22834a54698dd6380a3306e957aad0cdddcafb1ee8f5008326",
       "dimensions": {
         "width": 1108,
         "height": 600
@@ -1187,8 +1219,8 @@
     },
     {
       "path": "public/assets/app-captures/media-detail-overview-dark.png",
-      "bytes": 349650,
-      "sha256": "8cd212117824ab7463d49bed56d25de251ce5a4f2b3cbece58d0306640dab47a",
+      "bytes": 350681,
+      "sha256": "96df2a57a8d0e8820fee5a6f7f8eda846d543d35bf0b121079a0adce7453fc16",
       "dimensions": {
         "width": 1247,
         "height": 331
@@ -1202,8 +1234,8 @@
     },
     {
       "path": "public/assets/app-captures/media-detail-overview-light.png",
-      "bytes": 349259,
-      "sha256": "96cde02309d484dcdfcb39cafac43e05dc3263e6d81742a7be8a77f802e6139b",
+      "bytes": 351482,
+      "sha256": "3c0a99baa11a6c5f05cbf8129b4685b194051adb31848e06385964ea771209ca",
       "dimensions": {
         "width": 1247,
         "height": 331
@@ -1227,8 +1259,8 @@
     },
     {
       "path": "public/assets/app-captures/media-edit-images-focus-dark.png",
-      "bytes": 510613,
-      "sha256": "710d02d8c093d1fa919b193fcffd03e596064bda63c50748f16294cb9746030f",
+      "bytes": 510563,
+      "sha256": "a7a8c961fa29a103d02b02a1a2318b576dc57dbf8b9b6307265c10166071c4bd",
       "dimensions": {
         "width": 1411,
         "height": 520
@@ -1265,8 +1297,8 @@
     },
     {
       "path": "public/assets/app-captures/media-header-dark.png",
-      "bytes": 349650,
-      "sha256": "8cd212117824ab7463d49bed56d25de251ce5a4f2b3cbece58d0306640dab47a",
+      "bytes": 350681,
+      "sha256": "96df2a57a8d0e8820fee5a6f7f8eda846d543d35bf0b121079a0adce7453fc16",
       "dimensions": {
         "width": 1247,
         "height": 331
@@ -1277,8 +1309,8 @@
     },
     {
       "path": "public/assets/app-captures/media-header-light.png",
-      "bytes": 349291,
-      "sha256": "ee696375fabe7064149214b0e8838e2c81b4338684ff2cc14fb56fd38f5eeba7",
+      "bytes": 351482,
+      "sha256": "3c0a99baa11a6c5f05cbf8129b4685b194051adb31848e06385964ea771209ca",
       "dimensions": {
         "width": 1247,
         "height": 331
@@ -1289,8 +1321,8 @@
     },
     {
       "path": "public/assets/app-captures/media-images-focus-dark.png",
-      "bytes": 295187,
-      "sha256": "9fe7dc19f8a4d3b43cc6df3eb9b22d4245a4921620d271c67ba933e928dfe1f8",
+      "bytes": 295375,
+      "sha256": "ea916e7f082d15c61f676068e04045d76942a3ff6ed3851eb83bf5ba7b208990",
       "dimensions": {
         "width": 1231,
         "height": 146
@@ -1302,8 +1334,8 @@
     },
     {
       "path": "public/assets/app-captures/media-images-focus-light.png",
-      "bytes": 296106,
-      "sha256": "0bed823b97f7a6a0a390577469f4dd743cd2e8e8519dc4a4b292a3ac0cb7e47d",
+      "bytes": 296184,
+      "sha256": "0e79b67d8872acf2afc54a06e852ce074a8953c0842493ffe772a903ad8f7156",
       "dimensions": {
         "width": 1231,
         "height": 146
@@ -1325,8 +1357,8 @@
     },
     {
       "path": "public/assets/app-captures/media-info-focus-dark.png",
-      "bytes": 43076,
-      "sha256": "e947a4f74c6a7e6d22b08aa2b13445a40e8ca7e8610fa6bd99b1ced619ad0c05",
+      "bytes": 43070,
+      "sha256": "a5d39d45ff345690b6d02e33f01aa2c1f8f74bd5600d1bd5e01405745217f3f3",
       "dimensions": {
         "width": 1199,
         "height": 581
@@ -1389,8 +1421,8 @@
     },
     {
       "path": "public/assets/app-captures/media-recommendations-focus-dark.png",
-      "bytes": 342282,
-      "sha256": "da253535abbd774697c464f198e5cffc746c7f22c9b21ff12067136554f3745c",
+      "bytes": 342490,
+      "sha256": "f1cb6a2719b92c53be942970b87c628dee6807ce0701b92f3f40b8a27cb3e8e6",
       "dimensions": {
         "width": 1231,
         "height": 196
@@ -1401,8 +1433,8 @@
     },
     {
       "path": "public/assets/app-captures/media-recommendations-focus-light.png",
-      "bytes": 349818,
-      "sha256": "0d220f94a508e61fd85f3a26d3b4e52006dd3e782a7c5d4dd3e0574142a9f677",
+      "bytes": 350154,
+      "sha256": "f8baf08998f4d8be8090ae583a8d65df3aa4d85669db843884af96aecb1be912",
       "dimensions": {
         "width": 1231,
         "height": 196
@@ -1413,8 +1445,8 @@
     },
     {
       "path": "public/assets/app-captures/media-sections-dark.png",
-      "bytes": 840287,
-      "sha256": "406f05be64b43eefcf7d7a63cf0232ea797dcbf18ff55acc6d5522004ffaacc3",
+      "bytes": 840420,
+      "sha256": "e6f01d972e937202a517db0f06d9a6d9cc31d7cc3db2be1fa7148f231c66131f",
       "dimensions": {
         "width": 1231,
         "height": 612
@@ -1426,8 +1458,8 @@
     },
     {
       "path": "public/assets/app-captures/media-sections-light.png",
-      "bytes": 840742,
-      "sha256": "bdbc99586669fb66cc123e0d08da52a72cdbcbfb159b5592b2c091ae9b5eae6f",
+      "bytes": 840979,
+      "sha256": "973969d42b40ce78fb487af5dce5db6e263389bffea3f20f259c3921d2f6c5aa",
       "dimensions": {
         "width": 1231,
         "height": 612
@@ -1459,8 +1491,8 @@
     },
     {
       "path": "public/assets/app-captures/media-tools-focus-dark.png",
-      "bytes": 4593,
-      "sha256": "ba131318128937ff1f837eff91077a72bf532ee6d5167fe2e38fecb6e43561fd",
+      "bytes": 4626,
+      "sha256": "6e8c372b91ac273cd00c0941ea3c6147b7cb91e7b6b72e2d7ea9b117f5ee8d4e",
       "dimensions": {
         "width": 126,
         "height": 152
@@ -1507,8 +1539,8 @@
     },
     {
       "path": "public/assets/app-captures/media-trailers-focus-dark.png",
-      "bytes": 290693,
-      "sha256": "12d6571bf05bc85a94f79533c3ad9a659f205799acdde54a25660d55635812af",
+      "bytes": 290673,
+      "sha256": "4f6f2fa1096dadf473dd556fcbfb040cf5c7017dd906bba3b1d0f26babbc04cc",
       "dimensions": {
         "width": 1231,
         "height": 260
@@ -1520,8 +1552,8 @@
     },
     {
       "path": "public/assets/app-captures/media-trailers-focus-light.png",
-      "bytes": 291112,
-      "sha256": "898e175ebda92185167b04ad0d5a8483e1324406335da5c4d871e5d851cad50d",
+      "bytes": 291217,
+      "sha256": "be61cf094302447e0df2d9506d11abb9fbf0ec12215f848202b1a46d8ef1ae65",
       "dimensions": {
         "width": 1231,
         "height": 260
@@ -1533,8 +1565,8 @@
     },
     {
       "path": "public/assets/app-captures/media-watch-status-dark.png",
-      "bytes": 28129,
-      "sha256": "3a55263980c65cce388262f29c8b24d968fa3fd9e2fd041df8e9f9856c829111",
+      "bytes": 28119,
+      "sha256": "b462e0eed6b07e48aa2dbe59936f2282a6db61a56fa9a3eee53669c66540944e",
       "dimensions": {
         "width": 604,
         "height": 69
@@ -1546,8 +1578,8 @@
     },
     {
       "path": "public/assets/app-captures/media-watch-status-light.png",
-      "bytes": 28155,
-      "sha256": "1de8e5462aa67df2daf42b61dbf6209ae1235ee8760f541e7bd845b6cd81c800",
+      "bytes": 28145,
+      "sha256": "a64bc67d9482043f8af54c669eb47a2d9d57f05a7f231f66fff3cbb6a33578b9",
       "dimensions": {
         "width": 604,
         "height": 69
@@ -1559,8 +1591,8 @@
     },
     {
       "path": "public/assets/app-captures/movie-detail-page-dark.png",
-      "bytes": 2399685,
-      "sha256": "d872362152126db5a1c9a8ab53beac259b0a8a133c7f1ff53c455fd0d80a53af",
+      "bytes": 2405732,
+      "sha256": "7bb34603f203717b069fff397366087965ed06091b4d194dbd41b1e6ee91fa00",
       "dimensions": {
         "width": 1440,
         "height": 1676
@@ -1571,8 +1603,8 @@
     },
     {
       "path": "public/assets/app-captures/movie-detail-page-light.png",
-      "bytes": 2384435,
-      "sha256": "a6dfdc80393fcc389d79b150478d96188ed7813a57c93188b95f32a89299bebd",
+      "bytes": 1984344,
+      "sha256": "ca7cebaa3adee7a67c95554575bc51f4e6b6fe288429497b2a601a099e6af75d",
       "dimensions": {
         "width": 1440,
         "height": 1676
@@ -1583,8 +1615,8 @@
     },
     {
       "path": "public/assets/app-captures/movies-dark.png",
-      "bytes": 1164972,
-      "sha256": "5941965e406f8478435a19f17598f0ca324b14377de337bd8c421ee3b901da26",
+      "bytes": 1090920,
+      "sha256": "d4eb4096871b1866eaedaea0b0935f19aca032be7e8d05edf2dca949e40a57ba",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -1596,8 +1628,8 @@
     },
     {
       "path": "public/assets/app-captures/movies-light.png",
-      "bytes": 1111355,
-      "sha256": "371217d798bbdc79c8d30a22e5e6a3e1df8eaf46f7281dc2abd2cdaed6429209",
+      "bytes": 1031662,
+      "sha256": "15b686548885416b1ae7175044ad56a1d063b097a39338de98a43b52387e3c90",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -1609,8 +1641,8 @@
     },
     {
       "path": "public/assets/app-captures/now-playing-dark.png",
-      "bytes": 339108,
-      "sha256": "cc4995404468d443c7f71c0a230e05bfe2ea2e137b28bba74ca7e791f4eb6a6f",
+      "bytes": 279253,
+      "sha256": "f801b67298cf8918573622479448f2d3fac1bafe2401de8c75ed2a06d6e29a48",
       "dimensions": {
         "width": 1231,
         "height": 162
@@ -1622,8 +1654,8 @@
     },
     {
       "path": "public/assets/app-captures/now-playing-light.png",
-      "bytes": 325620,
-      "sha256": "b902a3cc4b40adcd4bfcc135289e0bc56ea6efe80d2a973e4af94af16f45882b",
+      "bytes": 261149,
+      "sha256": "db638dd84737ee97c9f20980303f70edb43d453689fccedce11d959dd9c0489c",
       "dimensions": {
         "width": 1231,
         "height": 162
@@ -1635,8 +1667,8 @@
     },
     {
       "path": "public/assets/app-captures/now-playing-options-dark.png",
-      "bytes": 353647,
-      "sha256": "6931a104a4aa611dde0e87cb142ed82c7bbf71e458c715419d769bbf06aa54a3",
+      "bytes": 282055,
+      "sha256": "0b00fa3b17f3fe04c89c4b08e6e2f029366e7bce707dec16ef2fb4139a019cf3",
       "dimensions": {
         "width": 1255,
         "height": 194
@@ -1647,8 +1679,8 @@
     },
     {
       "path": "public/assets/app-captures/now-playing-options-light.png",
-      "bytes": 339742,
-      "sha256": "2f2e68776a03a6873a208c7993c4dca15d158d44bf0c8a9d6e5700cee34a5455",
+      "bytes": 263751,
+      "sha256": "9fcbab95eec2cd8df40b093575e20583a83f504f8e46995a994c2de42483bbc7",
       "dimensions": {
         "width": 1255,
         "height": 194
@@ -1659,8 +1691,8 @@
     },
     {
       "path": "public/assets/app-captures/playlists-cards-dark.png",
-      "bytes": 199688,
-      "sha256": "6a97af8885252752e7d40207f5fad17b83f2fac03b1fd71bc1ec3d78fc826331",
+      "bytes": 199582,
+      "sha256": "f3f29769aa9652110dc9cff331280120e45d6fe81f5026768d88f0fde7521155",
       "dimensions": {
         "width": 1216,
         "height": 124
@@ -1671,8 +1703,8 @@
     },
     {
       "path": "public/assets/app-captures/playlists-cards-light.png",
-      "bytes": 188473,
-      "sha256": "6e09fea2d91afb12fe632935e356a4dd7c72f67ddd62017e71913114efb76541",
+      "bytes": 188391,
+      "sha256": "e08fc4bd9436ab010efa733e3e65dea4e095b73f0089dbf2c3c473b112825e03",
       "dimensions": {
         "width": 1216,
         "height": 124
@@ -1683,8 +1715,8 @@
     },
     {
       "path": "public/assets/app-captures/playlists-dark.png",
-      "bytes": 630053,
-      "sha256": "9944a4e72597a27b9688affafb29c68aa97eb8373259ba24fd0578f61186ab2b",
+      "bytes": 613688,
+      "sha256": "ebd13682af35ec0513bf6e1fc5a14d79d91db65c693732e61c32eb66c042764c",
       "dimensions": {
         "width": 889,
         "height": 623
@@ -1695,8 +1727,8 @@
     },
     {
       "path": "public/assets/app-captures/playlists-light.png",
-      "bytes": 599154,
-      "sha256": "d85ce5c61f5376b92e1edb9f850a2a512d407f98d2a8f6680730ebb406f3148d",
+      "bytes": 583152,
+      "sha256": "902a98e794174da0d19a09aff1b6388cd62031c6aca4c9ff96d4376a51b5bd48",
       "dimensions": {
         "width": 889,
         "height": 623
@@ -1707,8 +1739,8 @@
     },
     {
       "path": "public/assets/app-captures/ratings-cards-dark.png",
-      "bytes": 643143,
-      "sha256": "893ea4f3e826fdbeb5ca77ccab1199fc6f1adfc96799d1bf31bc8c6cdc934e38",
+      "bytes": 1114922,
+      "sha256": "3dd81283cfaaf1218f1f3237bbe0594ac49727511243b13bdd172da70d829939",
       "dimensions": {
         "width": 1231,
         "height": 629
@@ -1719,8 +1751,8 @@
     },
     {
       "path": "public/assets/app-captures/ratings-cards-light.png",
-      "bytes": 624865,
-      "sha256": "bc7b25d220240ad47cd1bf4ec359f32f5811861c181fe540c955c065573db51e",
+      "bytes": 1072354,
+      "sha256": "9b1ca7607f0b76ee24dbb70be2226bfa4ba2746bad6230d8a110098429b128c1",
       "dimensions": {
         "width": 1231,
         "height": 629
@@ -1731,8 +1763,8 @@
     },
     {
       "path": "public/assets/app-captures/ratings-dark.png",
-      "bytes": 670913,
-      "sha256": "649e426b2d14733751ab2c510375284c0051f126acb86c6b74000e68045135b2",
+      "bytes": 1150391,
+      "sha256": "efc4330546d55b838fb8f7d580b3fcc2ad1da4005931fe8d863de70ae98e56cf",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -1767,8 +1799,8 @@
     },
     {
       "path": "public/assets/app-captures/ratings-light.png",
-      "bytes": 652741,
-      "sha256": "3ffed9e37f0e367d7f20ebb1e7b24bd7854ef8e2c015b0ca2fbec0717c2e502e",
+      "bytes": 1106184,
+      "sha256": "bca6b36cfa075d50aed98a36f72468b040ba2f0dbb512e872375769692792fd0",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -1779,8 +1811,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-about-dark.png",
-      "bytes": 34881,
-      "sha256": "382e4a62ed58babcfc90bd93545020f069ba93fe2f5dbf7ec26d8b2ed495349d",
+      "bytes": 34902,
+      "sha256": "71163600b6f86adfb3f718f7c988fed75852f0051eab3357d9b47950f0c44fce",
       "dimensions": {
         "width": 1231,
         "height": 517
@@ -1791,8 +1823,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-about-light.png",
-      "bytes": 32525,
-      "sha256": "3f0a55f8f986b69391b864f18ceedc0da584fe7742aeff5636ad46d7d27e5fad",
+      "bytes": 32630,
+      "sha256": "efb3004affc5480e73461bcc396c5c30c3446c7e10876cc4124d01a576168924",
       "dimensions": {
         "width": 1231,
         "height": 517
@@ -1823,11 +1855,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-backup-local-dark.png",
-      "bytes": 12577,
-      "sha256": "7d3d4f426d5b0d0f1b0e0d11498786bcbcbdd721781e6262ac8241342c1e786c",
+      "bytes": 9875,
+      "sha256": "bc4b27086da623c056ba0e64b1c69752b81c74b3149002a41e86452728f24aaa",
       "dimensions": {
         "width": 733,
-        "height": 176
+        "height": 167
       },
       "referencedBy": [
         "operations",
@@ -1837,11 +1869,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-backup-local-light.png",
-      "bytes": 12120,
-      "sha256": "5976cbc994242038b7ecc155d3f0df3b1645201314540cf8c46ebf92ab06018d",
+      "bytes": 11497,
+      "sha256": "4a7a34260e29aae05fe7fffd0f5fdec89c8f32f070754f7cf633c9f8c4ee82aa",
       "dimensions": {
         "width": 733,
-        "height": 176
+        "height": 167
       },
       "referencedBy": [
         "operations",
@@ -1851,11 +1883,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-backup-remote-dark.png",
-      "bytes": 17498,
-      "sha256": "80fd1cc33f623b2e40f8865928383f1bd3f864fc4cb377f150e0d70be7aebdf1",
+      "bytes": 13444,
+      "sha256": "0e22e3de9aaf97972df5f5921fc8d417f6b64f673966e321ae058b4eb85a48d4",
       "dimensions": {
         "width": 733,
-        "height": 240
+        "height": 227
       },
       "referencedBy": [
         "operations",
@@ -1864,11 +1896,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-backup-remote-light.png",
-      "bytes": 16471,
-      "sha256": "f2c1c65fa93d80bc49131ca803736aa598b525046d03e762a187e52b5ed7a734",
+      "bytes": 15631,
+      "sha256": "530eb222ce3df62ec63d2a4fbc82c5bf44f2806ab7ee557a597f1dee1f76bdb5",
       "dimensions": {
         "width": 733,
-        "height": 240
+        "height": 227
       },
       "referencedBy": [
         "operations",
@@ -1897,11 +1929,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-connections-seerr-dark.png",
-      "bytes": 13341,
-      "sha256": "476447fcc8b416d5ca704007811c29c87d9ba5bf29ef778c0ce657756490c196",
+      "bytes": 11398,
+      "sha256": "dc9f13788b65c9df8968ff210db6ea35470323318969ff414f5a756cf785abc7",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -1910,11 +1942,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-connections-seerr-light.png",
-      "bytes": 12442,
-      "sha256": "aa8fe3988bd8512197818271ba2addaa2e1778245bc64945ddbacec3d766e12a",
+      "bytes": 10960,
+      "sha256": "43d7f75bcd86cace4fb910c2ca53bbc9c7675da497e13062912f028cf04e6647",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -1923,11 +1955,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-connections-tautulli-dark.png",
-      "bytes": 13007,
-      "sha256": "c455a62b8bf19bb47325f3f2e78b0056f8f2bb3b5636b0f2783c26810db2dd49",
+      "bytes": 26162,
+      "sha256": "e011b65489061a3858976bc86fb1c305cfe6070a6bf3cd2067c771ac3345cd74",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 167
       },
       "referencedBy": [
         "integrations",
@@ -1936,11 +1968,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-connections-tautulli-light.png",
-      "bytes": 12471,
-      "sha256": "90e66a4e57642b5530b2216212d4d1d66ed37c059afca76777fc711e334f00ac",
+      "bytes": 25203,
+      "sha256": "2387d2f2e1b30b4d6d5cd13d716b422fca18c46001afc13f7e7193d2d80a4f93",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 167
       },
       "referencedBy": [
         "integrations",
@@ -1949,11 +1981,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-connections-trakt-dark.png",
-      "bytes": 42235,
-      "sha256": "6f63307981b855e1a87948d53802770449cb9430ed688396691de5f11c527af4",
+      "bytes": 27345,
+      "sha256": "36d98d836b21a4153f8d9fe56b50ab76289b98d651c9892aef1bd5293d68d14a",
       "dimensions": {
         "width": 1231,
-        "height": 236
+        "height": 167
       },
       "referencedBy": [
         "integrations",
@@ -1964,11 +1996,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-connections-trakt-light.png",
-      "bytes": 39426,
-      "sha256": "a1e75b5629422093815b57d3edf526623b5619b2a12c9d9cfc4316e7813ef111",
+      "bytes": 26287,
+      "sha256": "3c6e2b65be1c2b91cdd1d878123d0d03e7714276231d5abfffb6e053c62852a9",
       "dimensions": {
         "width": 1231,
-        "height": 236
+        "height": 167
       },
       "referencedBy": [
         "integrations",
@@ -1979,8 +2011,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-general-account-dark.png",
-      "bytes": 25885,
-      "sha256": "229f0e4d18fd933c98e6fbb0498a7589667143f53a32ef028501c370b9e050d1",
+      "bytes": 20655,
+      "sha256": "404d6c9b722a04e76fd700c1d0f8b09c27c479bc2e927ad430342179a1f7545f",
       "dimensions": {
         "width": 1231,
         "height": 198
@@ -1992,8 +2024,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-general-account-light.png",
-      "bytes": 24352,
-      "sha256": "ec7592c56e16a44e9b77711deb685d4787a53690278385eee7431ff47cd5a60b",
+      "bytes": 24162,
+      "sha256": "d89c1c4a57859b6af784449f566e93311c663802ab1ca2e71694353e1a2b412d",
       "dimensions": {
         "width": 1231,
         "height": 198
@@ -2015,11 +2047,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-general-integrity-dark.png",
-      "bytes": 26112,
-      "sha256": "9e5147e8c4a943d2de30267735c3c4834258748bcfe7b4a1da02a18ac1e10b9a",
+      "bytes": 20387,
+      "sha256": "ddd78dcdbf0be375fdb5be628be64a37641297a31b780e280c1efab67b48b198",
       "dimensions": {
         "width": 1231,
-        "height": 168
+        "height": 167
       },
       "referencedBy": [
         "settings/general",
@@ -2028,11 +2060,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-general-integrity-light.png",
-      "bytes": 25488,
-      "sha256": "3709b865fa69c211ee36488471178c576fbb1e753ac624fdfb0698e1d2e54f16",
+      "bytes": 25436,
+      "sha256": "1c396658f62f1409543c1225e3f430bfb7b686b6bc765744ea985d1600e18f7d",
       "dimensions": {
         "width": 1231,
-        "height": 168
+        "height": 167
       },
       "referencedBy": [
         "settings/general",
@@ -2051,8 +2083,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-general-storage-cache-dark.png",
-      "bytes": 11504,
-      "sha256": "f456d8dfc36ef93c5653fc2443bf018f4b1c085f4c0872549a09cb37f99bcd7d",
+      "bytes": 10429,
+      "sha256": "1c2e48c7ea91c6e2c04c9c42cc8cf1b59a0871ce82ae5c3fda02cea468ca00ee",
       "dimensions": {
         "width": 1231,
         "height": 108
@@ -2063,8 +2095,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-general-storage-cache-light.png",
-      "bytes": 11146,
-      "sha256": "a2cc7359e9b46e15a057b15b504cde8c822c427fdbc0728718d3021db4710ca9",
+      "bytes": 11380,
+      "sha256": "a99bad701d5776e267d0ecc5ebca6580fe71aaca7053e11261fe16264926f17f",
       "dimensions": {
         "width": 1231,
         "height": 108
@@ -2085,11 +2117,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-index-focused-dark.png",
-      "bytes": 41734,
-      "sha256": "1a4fc88d28af088c8b9f7dc5c89210443560deab46e541c1598d416e948ea948",
+      "bytes": 45412,
+      "sha256": "8ff65af256f6dd24cf5e06fadc8450ee3c76e02c6abe20942c3dbc5fa41c48cb",
       "dimensions": {
         "width": 1196,
-        "height": 936
+        "height": 1023
       },
       "referencedBy": [
         "getting-started",
@@ -2101,11 +2133,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-index-focused-light.png",
-      "bytes": 40887,
-      "sha256": "881e01409e82592a0ea4aafb9d5d3606a35f3c4f75c9a2f0b34801df7add084f",
+      "bytes": 44490,
+      "sha256": "b916e9f7b4ebec3f94d176c9da2fd359828a1023ed72f9b40f87ccbf871bdbff",
       "dimensions": {
         "width": 1196,
-        "height": 936
+        "height": 1023
       },
       "referencedBy": [
         "getting-started",
@@ -2127,8 +2159,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-logs-controls-dark.png",
-      "bytes": 125868,
-      "sha256": "c36759d202806e151329e60bc2829a85519db695bf601bb46e24da01d852e653",
+      "bytes": 92449,
+      "sha256": "7f3ff03fe950e552d8a2d64d60cb581f0befbc92d49212845e9ee60f81535954",
       "dimensions": {
         "width": 1231,
         "height": 434
@@ -2163,11 +2195,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-emby-dark.png",
-      "bytes": 12384,
-      "sha256": "63b3badd504c4f641d6bae7ca5baf9c51227d3c7ed200e3128e9d96b46d5311c",
+      "bytes": 9634,
+      "sha256": "f853ac073346b105934ed941643e88c0ebf5d3876977cbc09796106a4ec7ba35",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -2176,11 +2208,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-emby-light.png",
-      "bytes": 12084,
-      "sha256": "8f4bec78da05ba9c2ba13901001e7765c69fa0ed1a6c01d94097a567641c0c46",
+      "bytes": 9755,
+      "sha256": "50f744d6912f1a1d3d51cc147bf6aa63933c514d40d3f772ede0111b409818ff",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -2189,11 +2221,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-focused-dark.png",
-      "bytes": 37137,
-      "sha256": "87b7b6ef040fcd4f8475f9b3537bd70a1851eee278ea09fda8ac086a30fad1d0",
+      "bytes": 29787,
+      "sha256": "e3f317cd7b8cf08c547115161277b5016c559b9d39a005178bd81bd7641eb5c8",
       "dimensions": {
         "width": 1231,
-        "height": 355
+        "height": 342
       },
       "referencedBy": [
         "integrations"
@@ -2201,11 +2233,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-focused-light.png",
-      "bytes": 36015,
-      "sha256": "d12bfa0e2b306aeb350e3349f84a263150f78ee6a48bbf1ecd3035ea5f15271b",
+      "bytes": 28929,
+      "sha256": "8da81ea138634aee3515c45f6829fae89c2e5e70b0db71c59d32c23bf0a4d638",
       "dimensions": {
         "width": 1231,
-        "height": 355
+        "height": 342
       },
       "referencedBy": [
         "integrations"
@@ -2213,11 +2245,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-jellyfin-dark.png",
-      "bytes": 12835,
-      "sha256": "ba3a85523d6f9d1134cc0334319a16e5306641944a3f67ca67848eac3b102f4e",
+      "bytes": 9799,
+      "sha256": "85a07b81c796c1199f84852b2c3e3f100c53e872953a23e327d1e7f1b0dc57df",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -2226,11 +2258,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-jellyfin-light.png",
-      "bytes": 12401,
-      "sha256": "fb558e75fdd9cfba82f0a42c10f03b457c1edbad95ee4be011321bc46a700200",
+      "bytes": 9931,
+      "sha256": "3b9ddadc6cf5f27b8d1ebe2af0547b6a3759145cbd3a8bcef0a30d79e2c2e030",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -2249,11 +2281,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-plex-dark.png",
-      "bytes": 11998,
-      "sha256": "2aa715ff58ddb689b7df9a08776f1a25c024d4863e99ad10315d288f3246c5dc",
+      "bytes": 9337,
+      "sha256": "1d8789c5c86b09ee4b0fa755107e8117906f2afb90941d1f9371c2b7e9bb0c7e",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -2262,11 +2294,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-media-servers-plex-light.png",
-      "bytes": 11550,
-      "sha256": "80fa79c734e47b964bfc720ff7e68509bddf054cbf4f26ac6b08e89cb676833e",
+      "bytes": 9324,
+      "sha256": "3146a7f174603ab18f332c410032c15079636ca2cc897d829abb5fb4c22a794c",
       "dimensions": {
         "width": 1231,
-        "height": 112
+        "height": 108
       },
       "referencedBy": [
         "integrations",
@@ -2295,11 +2327,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-providers-dark.png",
-      "bytes": 70263,
-      "sha256": "4ea0e07604b5243bca2b580c3bfc87ad1cd83b83e945e9ed41f70e94844c1bb3",
+      "bytes": 58958,
+      "sha256": "bf054ea048a6c2c09a8374ef7f1e165cc6fd9139b3b640f0eabba34f209896b9",
       "dimensions": {
         "width": 1231,
-        "height": 525
+        "height": 563
       },
       "referencedBy": [
         "integrations",
@@ -2309,11 +2341,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-providers-light.png",
-      "bytes": 65033,
-      "sha256": "375ccf1df3dd3381266c87776d10d730a7dabfbfef94221ee4979af89a564ecb",
+      "bytes": 66200,
+      "sha256": "269ac7a63c35897107a866e909a25a8ea36108cf2bfcfcbb4da06446d79848cc",
       "dimensions": {
         "width": 1231,
-        "height": 525
+        "height": 563
       },
       "referencedBy": [
         "integrations",
@@ -2323,11 +2355,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-refresh-dark.png",
-      "bytes": 28198,
-      "sha256": "53f81b380d6af05971c02dc0bde5e77c5344ad3e4f3a4afcc2ea48ed3b0132fa",
+      "bytes": 20523,
+      "sha256": "b612330b39115ceab52327cbc9d5ecf99461c5f931e1e06cf2749ea6e57b2568",
       "dimensions": {
         "width": 1231,
-        "height": 182
+        "height": 167
       },
       "referencedBy": [
         "settings/metadata",
@@ -2336,11 +2368,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-refresh-light.png",
-      "bytes": 26661,
-      "sha256": "6de2ac164d8fca2c524b7be5f25e577450f4cdb0d4e98b2aba2a7786f12439bd",
+      "bytes": 24465,
+      "sha256": "9673c5daf0cdb7b494b30e7b6cbf491a94fd86fa55a93215c7629ced61d271c2",
       "dimensions": {
         "width": 1231,
-        "height": 182
+        "height": 167
       },
       "referencedBy": [
         "settings/metadata",
@@ -2349,11 +2381,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-refresh-tmdb-dark.png",
-      "bytes": 29969,
-      "sha256": "3033b4005319c1f7028f87827d04b7c58b413be67c20c256eba63ab1f6e2b71a",
+      "bytes": 22898,
+      "sha256": "dd9a1a37703ffee84221cede3c4bd0b9bc47eff66c85495464f05634ac48a06f",
       "dimensions": {
         "width": 1231,
-        "height": 220
+        "height": 211
       },
       "referencedBy": [
         "settings/metadata"
@@ -2361,11 +2393,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-refresh-tmdb-light.png",
-      "bytes": 28791,
-      "sha256": "cac5808f0f7e368bc17963ab72c975f3124b882edad352ae7f96e77ade5aa5a2",
+      "bytes": 26812,
+      "sha256": "5e68ecc74711926eb49fee111fbeac506e507334f648d92a3ad8a65f3ea4b6d0",
       "dimensions": {
         "width": 1231,
-        "height": 220
+        "height": 211
       },
       "referencedBy": [
         "settings/metadata"
@@ -2373,11 +2405,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-refresh-tvdb-dark.png",
-      "bytes": 31792,
-      "sha256": "a90369ce17fd4cc95f008f02b68261aa80597e2f82793b56f4fafbcea55bd0ed",
+      "bytes": 25359,
+      "sha256": "da787fcff54e84efbb1d12c836ac7533aad22d843521e0d1644114019337fbcd",
       "dimensions": {
         "width": 1231,
-        "height": 263
+        "height": 255
       },
       "referencedBy": [
         "settings/metadata"
@@ -2385,11 +2417,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-metadata-refresh-tvdb-light.png",
-      "bytes": 30227,
-      "sha256": "2b28cda80dcacab85ec83b3bdabd4e9047822d4140845d2187dd2f4193861af6",
+      "bytes": 28496,
+      "sha256": "e0d2a4a21bba9733704fa33da66bd1b903f0d4b349eaae160316e53c3256b1ac",
       "dimensions": {
         "width": 1231,
-        "height": 263
+        "height": 255
       },
       "referencedBy": [
         "settings/metadata"
@@ -2407,11 +2439,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-restore-focused-dark.png",
-      "bytes": 57031,
-      "sha256": "eebee0bd7bfd290bed9ed5ef6793452781f1df1fb750b7d3c090d1599909e5f2",
+      "bytes": 56246,
+      "sha256": "cbda3b27dee0a207236f2fb808d37dd9174fff103014da3ff554409a6bc5e613",
       "dimensions": {
         "width": 1231,
-        "height": 349
+        "height": 344
       },
       "referencedBy": [
         "settings/restore"
@@ -2419,11 +2451,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-restore-focused-light.png",
-      "bytes": 53550,
-      "sha256": "f6a79c1e1f7ad81600a6368f6e4f5b5cea0e64a8bfefccae69d005b1920dce09",
+      "bytes": 52290,
+      "sha256": "088915dfa4b83952ab8dc5203899c23f539f1721a36d9e3ebb488706dcbe10e3",
       "dimensions": {
         "width": 1231,
-        "height": 349
+        "height": 344
       },
       "referencedBy": [
         "settings/restore"
@@ -2441,8 +2473,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-restore-merge-replace-dark.png",
-      "bytes": 40966,
-      "sha256": "65b1765e8577cfc3608a0c631834af319d6fa46177f186e0b56de1ba95737e39",
+      "bytes": 32146,
+      "sha256": "03b8789e3d0613a97ed4774fb939ec4eaa19c9800f37555267697cc862612c74",
       "dimensions": {
         "width": 713,
         "height": 429
@@ -2454,8 +2486,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-restore-merge-replace-light.png",
-      "bytes": 38904,
-      "sha256": "cee86017df7b9edfd55981b3e63cf82c9b459b7b4c58c010f8d24962914248ba",
+      "bytes": 39256,
+      "sha256": "b3321f2151fb4ddc15bb5e732356220c68888a6cf561f00b386ee38aca574d98",
       "dimensions": {
         "width": 713,
         "height": 429
@@ -2467,8 +2499,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-restore-watch-history-dark.png",
-      "bytes": 91379,
-      "sha256": "1c46dfdb16950ba8303f162c90a0dfe55abf92535c82f601e06ba1558f54816f",
+      "bytes": 70900,
+      "sha256": "e863b86a0738d0b12279cf7ce3d8a0398ed7b6843cb7ce09a9e2ea6f13dc3582",
       "dimensions": {
         "width": 1231,
         "height": 629
@@ -2481,8 +2513,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-restore-watch-history-light.png",
-      "bytes": 85520,
-      "sha256": "694d2b6384303101e867fe6d1f06307021f1a1907418afdf8250c628bd9f46fb",
+      "bytes": 84748,
+      "sha256": "8b0203ff347c5f9b5a5a88a15ce6d4b2be958f8fabb26a053b5e6e7bcaa32b2f",
       "dimensions": {
         "width": 1231,
         "height": 629
@@ -2555,11 +2587,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-sync-overview-focused-dark.png",
-      "bytes": 111603,
-      "sha256": "d4f2290841ce80144ec93b9e8ffe30de1995e17cdd52290845cc7070c0573ec8",
+      "bytes": 111471,
+      "sha256": "cee932617b3fd27bb311a95ef4bf75ff45564cfc1380a4e373a9bf48da275dbd",
       "dimensions": {
         "width": 1161,
-        "height": 736
+        "height": 735
       },
       "referencedBy": [
         "concepts"
@@ -2567,11 +2599,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-sync-overview-focused-light.png",
-      "bytes": 111125,
-      "sha256": "83e0c58eec152a6af8750f92241b4ea6ce66dd147a037b56192054ca4dffb0dc",
+      "bytes": 110994,
+      "sha256": "f97405d2112a94ffb01a8cd863365e7a32175fba53ee3bf0736b24429d9f7245",
       "dimensions": {
         "width": 1161,
-        "height": 736
+        "height": 735
       },
       "referencedBy": [
         "concepts"
@@ -2579,8 +2611,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-sync-tools-dark.png",
-      "bytes": 46873,
-      "sha256": "d2fb4f1e29a4f9f3743daf339c8aeb98a5f87d6ee53e96c51b3c33078233ce53",
+      "bytes": 35026,
+      "sha256": "1a2900a24962e206822cbd0a5b9f4a2ce6c781f18e885202b719280bba53c713",
       "dimensions": {
         "width": 1231,
         "height": 287
@@ -2595,8 +2627,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-sync-tools-light.png",
-      "bytes": 43966,
-      "sha256": "60b9b0f1009d821360b154fb74a3a5e2948e8efe1cfed52a0b2031ca8fa4e4e5",
+      "bytes": 43215,
+      "sha256": "fb319359767a606142fdc203e921c5ff8a4a3effab850986a64ec54705df0fb0",
       "dimensions": {
         "width": 1231,
         "height": 287
@@ -2611,8 +2643,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-sync-tuning-dark.png",
-      "bytes": 98628,
-      "sha256": "f26260b38e707133a0c8605e3c21fcf1107db5e13802fa30d453e3da2538b915",
+      "bytes": 72265,
+      "sha256": "c7bc14954acc7633966f148a17377fc62b20535dc0c1429de2a29779fc296d66",
       "dimensions": {
         "width": 1231,
         "height": 556
@@ -2651,11 +2683,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-tools-database-repairs-dark.png",
-      "bytes": 73957,
-      "sha256": "618a55f313659d95384e6102477ffe12e47624e9a14d3950a3b44e57106dc254",
+      "bytes": 51013,
+      "sha256": "ebc3e98cac4526e31a4ae1242fd991e4825f1a2e78e02677ccd0c0df9318058d",
       "dimensions": {
         "width": 1231,
-        "height": 389
+        "height": 346
       },
       "referencedBy": [
         "settings/tools"
@@ -2699,11 +2731,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-tools-library-rebuilds-dark.png",
-      "bytes": 27822,
-      "sha256": "9f114203fe470aeac1960208680a15293856168338ad9baaae8f1a0c75cdc1e6",
+      "bytes": 20022,
+      "sha256": "fe77d3ab359fa698e58b1f7f4e5b37d0106c46eb239c33e369b3fe53fcbe0d9f",
       "dimensions": {
         "width": 1231,
-        "height": 182
+        "height": 167
       },
       "referencedBy": [
         "settings/tools"
@@ -2733,11 +2765,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-tools-wipe-data-dark.png",
-      "bytes": 66109,
-      "sha256": "807620bfed522b94451a7a0b72a9d2836e35570b04306519203c300581daf72e",
+      "bytes": 48309,
+      "sha256": "f4aea6b710a830c88e1f5ee0c1a011e93b437d85fc9b7b52f4aa4ba438d1fa40",
       "dimensions": {
         "width": 1231,
-        "height": 425
+        "height": 403
       },
       "referencedBy": [
         "settings/tools"
@@ -2777,8 +2809,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-webhooks-secret-dark.png",
-      "bytes": 13109,
-      "sha256": "6b89a851099ab45ee7578c19a3ad045f4011688a397162a037193110f02019c0",
+      "bytes": 10630,
+      "sha256": "1ec879ad47187f629d48f7dcec49708d10f7d6cd1b1d7ba7f5620d3c429bb9f7",
       "dimensions": {
         "width": 1231,
         "height": 108
@@ -2790,8 +2822,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-webhooks-secret-light.png",
-      "bytes": 12191,
-      "sha256": "2b39f1aa8eb93e5b0433a687b000507412da71804de4d038eb09eaf4a8aafb1c",
+      "bytes": 12003,
+      "sha256": "24f7170369415cbdb3719d9df12d76fe853c105c97d8e6e8dd09e09c3af787df",
       "dimensions": {
         "width": 1231,
         "height": 108
@@ -2803,11 +2835,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-webhooks-setup-dark.png",
-      "bytes": 50038,
-      "sha256": "9c54fc720dfca02ef079cba20efe75ff62ded9f7641ab4e721a348d9aa30dfd6",
+      "bytes": 38556,
+      "sha256": "a26e1ab1d72c97bd99065f9909efbba2ad4173a8cb8af9b5f80b9057e3a9a051",
       "dimensions": {
         "width": 1231,
-        "height": 350
+        "height": 344
       },
       "referencedBy": [
         "concepts",
@@ -2819,11 +2851,11 @@
     },
     {
       "path": "public/assets/app-captures/settings-webhooks-setup-light.png",
-      "bytes": 47791,
-      "sha256": "6dcdad7a257a5b223bb028d64ff8d2d2ee7c1c914b3dc47821e2aff4b4af7198",
+      "bytes": 46723,
+      "sha256": "b63762d578e3ff702f05d372cf930aa07bdead3c38280c5b758ffe18019d88bd",
       "dimensions": {
         "width": 1231,
-        "height": 350
+        "height": 344
       },
       "referencedBy": [
         "concepts",
@@ -2835,11 +2867,11 @@
     },
     {
       "path": "public/assets/app-captures/stats-dark.png",
-      "bytes": 170076,
-      "sha256": "9c0225e8a8a4a31c569fca823ceb48a9768de51bf8031efc10982ead51207317",
+      "bytes": 10796,
+      "sha256": "f5823dafa71e179de6e2425da6385571cddf3998715346c90645dcbf370612ea",
       "dimensions": {
-        "width": 1440,
-        "height": 683
+        "width": 466,
+        "height": 150
       },
       "referencedBy": [
         "stats"
@@ -2847,11 +2879,11 @@
     },
     {
       "path": "public/assets/app-captures/stats-light.png",
-      "bytes": 167256,
-      "sha256": "dd4d81ac59fb74e30ec577108328bf863597ef51cd4c57954f67fbf2190e9549",
+      "bytes": 10622,
+      "sha256": "a075b92d7465fac9df7a0a21b033ac048738bb7289596790f77f5ffa748126aa",
       "dimensions": {
-        "width": 1440,
-        "height": 683
+        "width": 466,
+        "height": 150
       },
       "referencedBy": [
         "stats"
@@ -2869,8 +2901,8 @@
     },
     {
       "path": "public/assets/app-captures/sync-activity-focused-dark.png",
-      "bytes": 93419,
-      "sha256": "34f754363be259a485c55b6fd7cf875e4a9ab6ccde1a4f454b51f512ea662537",
+      "bytes": 60567,
+      "sha256": "6e2b9bce340690e6385d96568ef4050aa83d0b60d4c28628d218bba6e1e0bf40",
       "dimensions": {
         "width": 1231,
         "height": 682
@@ -2888,8 +2920,8 @@
     },
     {
       "path": "public/assets/app-captures/sync-activity-focused-light.png",
-      "bytes": 89867,
-      "sha256": "17e7bb33ef38fefcadd134f61c72eeac3f8e78484bdeaf87bd6af6cce7b1781e",
+      "bytes": 56721,
+      "sha256": "71640071fdfebb4aa75cb9e0f07ee706bf450237ec58f7b1cf8f85fc8a821c11",
       "dimensions": {
         "width": 1231,
         "height": 682
@@ -2943,8 +2975,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-cast-focus-dark.png",
-      "bytes": 224550,
-      "sha256": "e9967774fd7fbf2c168e5c2b5a58ca5bde5f895b840611a7715248e07202b6d2",
+      "bytes": 225770,
+      "sha256": "d28e7c8f4b8e1d0e251d57766fb7dfb9643ffede47b3489554b25e96d2b166db",
       "dimensions": {
         "width": 1231,
         "height": 201
@@ -2955,8 +2987,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-cast-focus-light.png",
-      "bytes": 222247,
-      "sha256": "05c457085dfd4617dce1e251ea88ee9b5fc2b87fcb9b6f0a1fa08ead156d1527",
+      "bytes": 223782,
+      "sha256": "764ecdcd1a327688c56a8fd7b507ec0d6b2f8500bec94fffe4c12bee515913c8",
       "dimensions": {
         "width": 1231,
         "height": 201
@@ -2967,8 +2999,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-detail-page-dark.png",
-      "bytes": 2983645,
-      "sha256": "6b4d5e7618a9e7bc37f1b758939e5350ad6d3d1dc3779ffa555535280ffb16f5",
+      "bytes": 2994703,
+      "sha256": "d4a787e11d9339f0e54daaaa8f61a406049cf72b3ad1c2183af62864c5464e01",
       "dimensions": {
         "width": 1373,
         "height": 2183
@@ -2979,8 +3011,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-detail-page-light.png",
-      "bytes": 2946137,
-      "sha256": "20e9c11bedcd722d2abccb7579680217e7ddae12884b09a2fb9264112d04217c",
+      "bytes": 2962185,
+      "sha256": "2cb833d30a693580f5cd57e16710bd7ab0e8d8ffc2d247a84f62c74031cede45",
       "dimensions": {
         "width": 1373,
         "height": 2183
@@ -2991,8 +3023,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-images-focus-dark.png",
-      "bytes": 250854,
-      "sha256": "992a9197d1dfb4a7f902b06cb13e0e5b5933120906c38c6482f9574d236b5e92",
+      "bytes": 228690,
+      "sha256": "f5d97f822d21851e0454a6058c6c09ecc4a3681efa862064fa07ca83af9741b1",
       "dimensions": {
         "width": 1231,
         "height": 146
@@ -3003,8 +3035,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-images-focus-light.png",
-      "bytes": 251298,
-      "sha256": "e75918b66d062bee3e182941c6c903b0cf2c9712efb2eed1e60742a078eeb88d",
+      "bytes": 229297,
+      "sha256": "8bfc0934c82ee800e8bef6f1ff7574636175a1dacad631580f4613bd900f8613",
       "dimensions": {
         "width": 1231,
         "height": 146
@@ -3015,8 +3047,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-media-info-focus-dark.png",
-      "bytes": 39000,
-      "sha256": "1f7b9516bb3cf21b49046999f740b89b75c6a42318b601b728ceca289b36d23e",
+      "bytes": 38988,
+      "sha256": "083311ddfaa2a7b3881224750da9a568b7cd467631ec20b7c74fc5ca94773104",
       "dimensions": {
         "width": 1199,
         "height": 581
@@ -3027,8 +3059,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-media-info-focus-light.png",
-      "bytes": 39330,
-      "sha256": "d5c9f5a0e5647b7e097b92976f77d67673f6fe3b5a14e9b0e40fd42638273a31",
+      "bytes": 39331,
+      "sha256": "f551659d89025e8dbaf3a27f248acf72f512905dfe48cc950a4e84efb56425ae",
       "dimensions": {
         "width": 1199,
         "height": 581
@@ -3039,8 +3071,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-related-focus-dark.png",
-      "bytes": 350703,
-      "sha256": "165ad1bb2157b4b3207ca1bd324d5e48daa991ae35b16030cbf5d54c89078123",
+      "bytes": 358660,
+      "sha256": "e33472c5c49a3c62b598b33db42fd875bde7378554abf40b6ed80ee597fef7dc",
       "dimensions": {
         "width": 1231,
         "height": 202
@@ -3051,8 +3083,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-related-focus-light.png",
-      "bytes": 357050,
-      "sha256": "51385775d3561868e421564582ac000aec190a80f3f59ddb76ebc3c9cfdb3d1d",
+      "bytes": 364107,
+      "sha256": "e825ef7558574d9726d1e0928f31c9631ff79b2101ffb89b08a462edf2f3f443",
       "dimensions": {
         "width": 1231,
         "height": 202
@@ -3063,8 +3095,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-seasons-episodes-focus-dark.png",
-      "bytes": 896134,
-      "sha256": "38f0b4e4854f949bbb9befd115756f821bf388e7fcf55a4aa460a88cf370b937",
+      "bytes": 894986,
+      "sha256": "a6156d4ff5c1b6c0569216f799c9f596d64567b38f3fdc3ebbea6fced5af3c49",
       "dimensions": {
         "width": 1161,
         "height": 1063
@@ -3075,8 +3107,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-seasons-episodes-focus-light.png",
-      "bytes": 845963,
-      "sha256": "db97bbbb045de2b47bee3d7d49fa1236ce0f058c243ed39e8ac8b539646005d5",
+      "bytes": 845510,
+      "sha256": "2624141d042c223d104a6ff60db1e4d0ecea1a6fc5b8f1c8658e0289ecd70c59",
       "dimensions": {
         "width": 1161,
         "height": 1063
@@ -3087,8 +3119,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-spoilers-off-dark.png",
-      "bytes": 968654,
-      "sha256": "edc5fecb1c7d6c354b95754262aa075991613ad0df5cc415137b2d26b9fa8db3",
+      "bytes": 970784,
+      "sha256": "6fe8fc1f8e8403f565eb8409f2e3eb76c4d7623a6b538ba824f602a22ed16a93",
       "dimensions": {
         "width": 1196,
         "height": 1022
@@ -3101,8 +3133,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-spoilers-off-light.png",
-      "bytes": 948064,
-      "sha256": "72747884bfa19eedfd35fe9f2986ace03b68447dcdb83949cae4645e75c97010",
+      "bytes": 950850,
+      "sha256": "f077f9d52ef534e3e8b55c9322bcb1248ee3a1dc186adcafeab2aca15217ef9f",
       "dimensions": {
         "width": 1196,
         "height": 1022
@@ -3115,8 +3147,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-spoilers-on-dark.png",
-      "bytes": 879335,
-      "sha256": "fbe3a3848f1a6f904e29405b3a2aa8294fecad256b36fdb1c6566e89c914c0a7",
+      "bytes": 881598,
+      "sha256": "ea22a0ce0cdc69513e412314c9952706333080ce01eb7c2868a6d698c31984da",
       "dimensions": {
         "width": 1196,
         "height": 1022
@@ -3127,8 +3159,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-spoilers-on-light.png",
-      "bytes": 858674,
-      "sha256": "59feb980456b1771900d88c17791b7c3b9fbc3b2bba78eab10f418b3c36503ca",
+      "bytes": 860986,
+      "sha256": "5c9cedd4ff2696713070cdc9e34e511f19ba2dd8f608f0cc151ec4f0380763bb",
       "dimensions": {
         "width": 1196,
         "height": 1022
@@ -3139,8 +3171,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-trailers-focus-dark.png",
-      "bytes": 237675,
-      "sha256": "7514c7e44ec0e7cbb864d4d1a455d0104a0ca4faf0cfa5ccc72c3db3205a3ad5",
+      "bytes": 237376,
+      "sha256": "c120aa83caff963d25722d1789337e85d022c46aecba11a46c18caace3c8954f",
       "dimensions": {
         "width": 1231,
         "height": 260
@@ -3151,8 +3183,8 @@
     },
     {
       "path": "public/assets/app-captures/tv-trailers-focus-light.png",
-      "bytes": 238312,
-      "sha256": "0251e2fa2ccc18066ee37327a8b6c8be063be8c8ce30edbe926ef0514c5ab2ec",
+      "bytes": 238170,
+      "sha256": "c1d11a4ef0e89d6b0c2bba1198425425a9d697b3efe34dd59d2a5dd36fb26be3",
       "dimensions": {
         "width": 1231,
         "height": 260
@@ -3163,8 +3195,8 @@
     },
     {
       "path": "public/assets/app-captures/tvshows-dark.png",
-      "bytes": 1127748,
-      "sha256": "048b1c5d183a6a765238c34d95029d8dfe57de4f7c710f3ffd01a59b4da6fe3a",
+      "bytes": 1172109,
+      "sha256": "4420eaf80dcd67b1f017f34d7aff81bb6659f92270d3e9d878dd85e2fc32333a",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -3176,8 +3208,8 @@
     },
     {
       "path": "public/assets/app-captures/tvshows-light.png",
-      "bytes": 1081441,
-      "sha256": "cb4b937910bb874c8c906e14f037ea912318a72b608593b068d2f7329e4c839d",
+      "bytes": 1123849,
+      "sha256": "2debe6e887501bdd3ea385f377b3b7fbcd7a0e71a5892fb73e1d3db97a04f0ae",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -3189,11 +3221,11 @@
     },
     {
       "path": "public/assets/app-captures/upcoming-dark.png",
-      "bytes": 590306,
-      "sha256": "3f903d76a2a19599e34530158a2414204591799f76dae9680aa563b61a94dd86",
+      "bytes": 443456,
+      "sha256": "7dc5799df83a5a6eec1730e6cf098fd9438a4cdd78e34cf6a2fc523b47af2aff",
       "dimensions": {
         "width": 1161,
-        "height": 2833
+        "height": 2241
       },
       "referencedBy": [
         "upcoming"
@@ -3201,11 +3233,11 @@
     },
     {
       "path": "public/assets/app-captures/upcoming-light.png",
-      "bytes": 583737,
-      "sha256": "3113a48d3f42807bb29063c9923b21a6793f69f44080e1b89e3d45d4c555c567",
+      "bytes": 441240,
+      "sha256": "7a0382a6014bb2fc4010d44194413d09243780c6c299b4dd6423f659dd2247be",
       "dimensions": {
         "width": 1161,
-        "height": 2833
+        "height": 2241
       },
       "referencedBy": [
         "upcoming"
@@ -3213,8 +3245,8 @@
     },
     {
       "path": "public/assets/app-captures/watchlist-card-dark.png",
-      "bytes": 298373,
-      "sha256": "e6fd817f83cccdd88a231c25fca6b2131002067983ed7a2457b90d88f7903840",
+      "bytes": 298357,
+      "sha256": "ae8092632e3bb91277614381c71de3d391965ca83218a95f32411a40318aa9c1",
       "dimensions": {
         "width": 1231,
         "height": 182
@@ -3225,8 +3257,8 @@
     },
     {
       "path": "public/assets/app-captures/watchlist-card-light.png",
-      "bytes": 277020,
-      "sha256": "c0b9e0c7324f77367e8dcf486dc434a42bdd1008e147c2916a2459f97d5cb891",
+      "bytes": 277158,
+      "sha256": "b59e8ce06414945dbb099c7dae39526ed76a2496f723fd9b82cd402567e8b1d1",
       "dimensions": {
         "width": 1231,
         "height": 182
@@ -3237,8 +3269,8 @@
     },
     {
       "path": "public/assets/app-captures/watchlist-dark.png",
-      "bytes": 324208,
-      "sha256": "02fb0fa29556d77e3b841c9747cc6dc5d83c18d488c27555879fc967f0625b21",
+      "bytes": 326510,
+      "sha256": "0864fb969e89e5fc59b1dfc86fe7e644a70ca8a6ff82b31fb340a23aefd68bfe",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -3250,8 +3282,8 @@
     },
     {
       "path": "public/assets/app-captures/watchlist-light.png",
-      "bytes": 305378,
-      "sha256": "189e778540719aeb41dcee89dcc0ff15ff2a2a8f40f7eea27b99b2c80092ea09",
+      "bytes": 307043,
+      "sha256": "e45c8f48dfb497207107b086c7e615763daf614c9af01e12de7152fc5cc433e3",
       "dimensions": {
         "width": 1440,
         "height": 683
@@ -3270,8 +3302,8 @@
     },
     {
       "path": "public/assets/home-dashboard-dark.jpg",
-      "bytes": 497883,
-      "sha256": "f0d2ff6fa50ffa4ba6b73b7a9ce9a5d173255705b1414f31b1a9527c96ef0f2f",
+      "bytes": 506352,
+      "sha256": "2e50535903de988ab2e34912d45ca41be5485322d798b3203e905a014ffb6265",
       "dimensions": {
         "width": 2000,
         "height": 998
@@ -3280,8 +3312,8 @@
     },
     {
       "path": "public/assets/home-dashboard.jpg",
-      "bytes": 466200,
-      "sha256": "1131b2f2d71dff00a73acbfcd4a24bca3fe993e5f23bc697f9b4dac97ae6cab9",
+      "bytes": 504250,
+      "sha256": "5cd1ac26e5643e1e07929c61dc7bad5da43c047205d0a2187bd11579be31789d",
       "dimensions": {
         "width": 2000,
         "height": 998
@@ -3386,8 +3418,8 @@
     },
     {
       "path": "public/assets/og-card.png",
-      "bytes": 808861,
-      "sha256": "9e96c709734f9347077651e8ecd73e809b5c8ffb7fd43a7e8e5320b4977621e2",
+      "bytes": 229760,
+      "sha256": "dff4029afab45fbcc4fd866e858c70b14a792dfd6eef4949f8f8900f63c5d28e",
       "dimensions": {
         "width": 1200,
         "height": 630

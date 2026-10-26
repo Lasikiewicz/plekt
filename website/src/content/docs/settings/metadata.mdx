@@ -3,7 +3,7 @@ title: Metadata
 description: Configure metadata providers and refresh cached TMDB and TVDB information.
 category: Settings
 order: 5.5
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -29,6 +29,10 @@ trailers. Provider keys are stored server-side and are never displayed in the br
 configuration response.
 
 ## Metadata providers
+
+Enable AniDB to use its titles and descriptions for anime. Review a proposed match before
+confirming it; a title with one safe supported provider link can match automatically. AniDB
+does not change episode numbering, artwork, or watch history.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-metadata-providers-dark.png"

@@ -3,7 +3,7 @@ title: Connections
 description: Connect Trakt, Tautulli, and Seerr for watch-history imports, sync, and media requests.
 category: Settings
 order: 5.4
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -48,6 +48,19 @@ removals enter the same synchronization pipeline as media-server events.
 
 Plekt should be the only Trakt bridge. Disable Emby and Jellyfin Trakt plugins and scheduled
 Trakt tasks so a second writer cannot reapply old state.
+
+## Simkl
+
+Connect Simkl through Plekt's sign-in flow; no personal Client ID is needed. Review the
+first full-sync preview before importing watches. After connection, **Check now** requests
+an on-demand check, alongside event-driven and scheduled checks. Personal Rating Sync can
+also include Simkl ratings.
+
+## One Time Imports
+
+Use **Netflix** to upload Viewing Activity as a CSV or personal-information ZIP. Choose a
+profile when needed, review matches and skipped items, then import selected watches with
+their original dates. Plekt creates a backup before importing.
 
 ## Tautulli
 

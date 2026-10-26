@@ -4,6 +4,96 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.2.0 - 26 October 2026
+
+This update adds Simkl, Netflix imports and multi-user accounts, while improving sync, navigation and mobile layouts.
+
+[Visit the Plekt website](https://plekt.net)
+
+### New Features
+
+#### Sync & connection recovery
+
+- Connect Simkl without a personal Client ID to sync watch history and ratings alongside Trakt, with a reviewable first sync and on-demand checks.
+- Create multiple user accounts with administrator-managed access, keeping each person's data and sessions separate.
+- Use the Plekt Emby and Jellyfin plugins for media-server events, with setup guides for each plugin and the webhook alternative.
+- Import Netflix viewing history from a CSV or personal-information ZIP, choose a profile, review matches and import selected watches with their original dates.
+- Browse cast filmographies with Movies and TV Shows tabs and year and genre filters.
+- Watch History offers a Days view, grouping watches by date, alongside the existing Cards view.
+- Drop (with a [bequbed](https://github.com/bequbed) animation) and restore titles from Up Next or their detail pages; filter dropped titles and see their count in Stats.
+- Enable AniDB titles and descriptions for anime, review matches, and safely match titles with a single supported link.
+- Subscribe to upcoming movie and TV releases using a private calendar feed; regenerate the URL to revoke the old one.
+- Add TV season source selection, episode translation, unmatched episode handling, and translated Up Next warmup.
+
+### Bug Fixes
+
+#### Up Next & watch-state
+
+- Up Next and Recently Watched refresh across open dashboards and devices, and returning to the dashboard shows cached cards while fresh results load.
+- A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail
+
+#### Sync & provider recovery
+
+- Resume sync preserves newer stop positions, avoids repeated Plex resume updates and restores eligible Emby Continue Watching items.
+- Jellyfin webhook events recognize dashed user IDs, and the higher webhook rate limit accommodates bursts.
+
+### Tweaks
+
+#### Up Next & watch-state
+
+- On phones, featured Up Next and Now Playing cards have larger posters, and Up Next actions use a compact toolbar.
+- This update includes improve watch state, season mapping and presentation, tighten match flow and confirm Plex unwatches, restyle appearance, brand surfaces and the login page, fall back when cached artwork files are missing, and hide card art on media detail pages.
+- Preserve completed Plex watch state across stale resume data and protect unwatch races.
+
+#### Manual Watch review
+
+- Review confirmed TV episode numbering conflicts in Manual Watch, with a count and dismiss action that leaves watch state unchanged.
+- Re-check suspected Plex unwatches against live metadata and keep cached episode state aligned, preventing stale reports from reaching manual watch review.
+
+#### Sync & connection recovery
+
+- Add sidebar links to Discord and Reddit, with an option to hide project links.
+- Setup guides explain the Plekt Emby and Jellyfin plugins and their webhook alternatives, and warn against enabling both.
+- Media server cards in the setup wizard show their logos, and backup options are grouped into local and remote sections.
+- Setup cards and status indicators follow Settings styling in both themes, with clearer tracker and import progress.
+- Library pages show loading progress, retain the first page while refreshing and preserve distinct titles sharing artwork.
+- Desktop navigation and library controls remain visible without empty action space.
+- Opening Info from a scrolled media page keeps the header visible and closes the Options menu.
+- Opened Watchlist, Ratings and Watch History posters retain their folded size on phones.
+- Phone layouts improve cast profiles, TV library cards, Discover and Playlists rows, and the timeline live panel.
+- Playing sessions show a Now playing label, while paused sessions retain their Paused label.
+- Settings shows plain connection statuses and keeps Help cards compact until expanded.
+- First-run tracker imports can run in parallel and start an add-only outward sync with progress and held-item counts.
+- Tautulli and Netflix imports are grouped under One Time Imports in Settings.
+- Opening Settings no longer automatically requests Seerr capabilities.
+- Webhook rate limits allow larger media-server event bursts.
+- Installation steps remain readable on phones in both themes.
+- Trakt errors and restore conflicts show safe messages, and security-related dependencies have been updated.
+- Preserve Trakt-only plays during show replacement and fail closed on occupied targets.
+- Split sync, history import, polling, and scheduling work into focused modules with retry and lease safeguards.
+- Improve appearance controls, changelog navigation, Reddit release bundling, and README screenshots.
+- Keep TV season-source choice and watch-impact confirmation beside search controls, with less blank space across phone, tablet, and desktop.
+- Use provider-neutral empty-season messaging when episode lists are unavailable while preserving TV and movie match results.
+- Modern is the only look; the Classic style and its switch are removed.
+- Card Art and Background Art checkboxes added to the Appearance menu (Background Art only on the Dashboard and details pages).
+- Appearance menu rows match the media option rows with icons, and Text size sits at the bottom.
+- Buttons use a neutral default state in both themes; hover changes only text and border.
+- Spoiler toggle no longer tints the whole button when checked; only the checkbox shows the state.
+- Settings use two brand surfaces in both themes, aligned with the left menu.
+- Dashboard and settings surfaces aligned with the left menu.
+- Navbar on every page uses the left-menu tone, not only media pages.
+- About card uses the left-menu tone in both themes.
+- Left-menu search is an underline field in light mode, as in dark.
+- Light-mode changelog entries use the white panel tone.
+- Softer outline on the selected settings section.
+- Onboarding and sign-in footer theme toggle shows the Light and Dark words only.
+- Login panel uses the left-menu tone and its fields use the main-background tone.
+- Login heading reads "Please log in"; the long intro text is removed.
+- "Forgot your password?" sits right-aligned under the password field.
+- Sign-in fields no longer show the default focus outline.
+- Show and movie posters now use provider artwork when a saved local image is unavailable.
+- Card Art is no longer offered in the Appearance menu on media detail pages, which have no cards to show it on
+
 ## v2.1.1 - 18 October 2026
 
 This update improves watch state and season matching, restyles the appearance and login page, and hides Card Art on media detail pages.

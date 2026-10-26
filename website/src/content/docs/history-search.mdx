@@ -3,9 +3,10 @@ title: History
 description: Review the durable watch archive and its sync context.
 category: Use the app
 order: 5
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - public/modules/history.js
+  - public/modules/history-day-view.js
   - public/modules/explorer.js
   - public/modules/history-poster-overlay.js
   - public/modules/page-card-open.js
@@ -13,6 +14,8 @@ sourcePaths:
 screenshots:
   - /assets/app-captures/history-dark.png
   - /assets/app-captures/history-light.png
+  - /assets/app-captures/history-days-dark.png
+  - /assets/app-captures/history-days-light.png
 ---
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
@@ -20,11 +23,26 @@ import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
 ## History
 
+Choose **Cards** or **Days** to view watch history as individual cards or grouped by date.
+On phones the same choice is available from **Filter**. Use **Dropped only** to filter for
+titles you have dropped.
+
 <ScreenshotFigure
   darkSrc="/assets/app-captures/history-dark.png"
   lightSrc="/assets/app-captures/history-light.png"
   alt="Plekt Watch History page showing recent watched movie and episode records"
   caption="History is the durable event archive, with title actions and per-record sync context."
+/>
+
+### Days view
+
+Choose **Days** to group watch records by calendar date, showing daily activity counts and watches.
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/history-days-dark.png"
+  lightSrc="/assets/app-captures/history-days-light.png"
+  alt="Plekt Watch History Days view grouping watch records by calendar date"
+  caption="Days view groups watch history by date with daily activity totals."
 />
 
 History is the complete watch-event archive, newest first. Use it to answer which source

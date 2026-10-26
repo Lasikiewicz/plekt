@@ -57,6 +57,10 @@ export function isPublicCalendarOrigin(baseUrl = "") {
   return true;
 }
 
+export function resolveCalendarOrigin(configuredOrigin = "", browserOrigin = "") {
+  return configuredOrigin || browserOrigin;
+}
+
 export async function getCalendarFeedSettings(baseUrl = "") {
   const runtime = await loadRuntimeState();
   const token = String(runtime[TOKEN_KEY] || "");
@@ -67,7 +71,7 @@ export async function getCalendarFeedSettings(baseUrl = "") {
     types: normalizeCalendarFeedTypes(runtime[TYPES_KEY]).length
       ? normalizeCalendarFeedTypes(runtime[TYPES_KEY])
       : [...DEFAULT_CALENDAR_FEED_TYPES],
-    message: ready ? "" : "Set PLEKT_PUBLIC_URL to an internet-reachable origin before generating or viewing the feed URL.",
+    message: ready ? "" : "Open Plekt at an internet-reachable address or set PLEKT_PUBLIC_URL before generating or viewing the feed URL.",
   };
 }
 

@@ -3,7 +3,7 @@ title: Upgrading from Plembfin to Plekt
 description: Safely upgrade an existing Plembfin instance while preserving its data, settings, backups, connections, and dashboard address.
 category: Start here
 order: 2
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - README.md
   - docs/development.md
@@ -15,7 +15,7 @@ screenshots: []
 
 Plekt is the new name for Plembfin. Upgrade your existing instance with its existing data;
 you do not need to create a new account, reconnect your media servers, or import your history.
-The steps below cover the v2.1.1 update.
+The steps below cover the v2.2.0 update.
 
 ## Before you update
 
@@ -45,8 +45,8 @@ settings. Keeping those names also avoids accidentally creating a new Compose-ma
 | Docker Hub | `plembfin/plembfin` | `plembfin/plekt` |
 | GitHub Container Registry | `ghcr.io/lasikiewicz/plembfin` | `ghcr.io/lasikiewicz/plekt` |
 
-For the stable v2.1.1 update, use `plembfin/plekt:2.1.1` or
-`ghcr.io/lasikiewicz/plekt:2.1.1`. Keep your existing channel if you deliberately use an
+For the stable v2.2.0 update, use `plembfin/plekt:2.2.0` or
+`ghcr.io/lasikiewicz/plekt:2.2.0`. Keep your existing channel if you deliberately use an
 alpha or develop tag. Both old image names continue receiving releases for at least six
 months after the rebrand, so changing the image name can wait until you are ready.
 
@@ -55,7 +55,7 @@ For example, an existing service named `plembfin` can keep that name:
 ```yaml
 services:
   plembfin:
-    image: ghcr.io/lasikiewicz/plekt:2.1.1
+    image: ghcr.io/lasikiewicz/plekt:2.2.0
     # Keep the existing volumes, ports, environment, and other settings here.
 ```
 
@@ -100,7 +100,7 @@ move its data, follow the reported error and retry with the preserved data.
 
 ## Node.js or a custom service
 
-Stop the existing process or service and deploy the v2.1.1 release using your usual update
+Stop the existing process or service and deploy the v2.2.0 release using your usual update
 method. Keep the same data directory, `.env` file, credentials, and service environment.
 If you launch from a new application directory, explicitly point `DATA_DIR` at the existing
 data directory so the app does not start an empty instance. Install the release's
@@ -124,7 +124,7 @@ bookmarks, reverse-proxy upstreams, firewall rules, and each media-server
 ## Verify before resuming normal use
 
 1. Open your chosen dashboard address and sign in with the existing account. Check
-   [Settings → About](/docs/settings/about/) reports v2.1.1.
+   [Settings → About](/docs/settings/about/) reports v2.2.0.
 2. Check familiar watch history and resume progress, plus your
    [Watchlist](/docs/watchlist/), [Ratings](/docs/ratings/), and [Playlists](/docs/playlists/).
 3. Check the configured [media servers](/docs/settings/media-servers/) and other

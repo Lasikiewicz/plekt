@@ -3,7 +3,7 @@ title: Integrations
 description: Connect media servers, Trakt, Tautulli, Seerr, and metadata providers with the right expectations.
 category: Connect services
 order: 4
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - docs/plex.md
   - docs/emby.md
@@ -60,7 +60,7 @@ Add the other services once the first connection is healthy.
 | --- | --- | --- |
 | Plex | Library state, playback, watch history, artwork context, and playlists | Built-in WebSocket notification channel and scheduled checks |
 | Emby | Library state, playback, watch history, resume progress, and playlists | Webhooks plus polling |
-| Jellyfin | Library state, playback, watch history, resume progress, and playlists | Webhooks plugin plus polling |
+| Jellyfin | Library state, playback, watch history, resume progress, and playlists | Plekt plugin or Webhooks plugin, plus polling |
 
 The server running Plekt must reach each configured URL.
 
@@ -145,7 +145,11 @@ Connect with the server URL and a user login, or provide an API key and user ID.
 
 The setup guide does not store the password after obtaining a token.
 
-In Emby, open **Preferences → Notifications → Webhooks**, add the full Plekt webhook URL,
+The Plekt Emby plugin is available as a local beta. Use the in-app Emby setup guide for
+plugin installation, or use Emby's built-in webhooks as an alternative. Enable only one
+event sender to avoid duplicate events.
+
+For the webhook alternative, open **Preferences → Notifications → Webhooks**, add the full Plekt webhook URL,
 and enable:
 
 - playback: **Start**, **Pause**, **Unpause**, and **Stop**;
@@ -172,7 +176,10 @@ artwork requests separate from server-side authentication.
 
 The password is not stored after token exchange.
 
-Install the **Webhooks** plugin from the Jellyfin plugin catalog.
+The recommended Plekt Jellyfin plugin sends events directly to Plekt. Follow the in-app
+Jellyfin setup guide for its repository, manifest URL and webhook address. Alternatively,
+install the **Webhooks** plugin from the Jellyfin plugin catalog. Use one method, not both,
+to avoid duplicate events.
 
 Add a Generic Webhook named `plekt`, paste the URL, and enable:
 
@@ -237,6 +244,13 @@ skips only that destination and preserves the local archive.
 When **Personal Rating Sync** is enabled under [Settings → Sync](/docs/settings/sync/), Trakt also participates
 in the separate two-way 1–10 rating sync. That rating domain has its own queue and conflict
 rules; it is not the watched-state sync described above.
+
+## Simkl
+
+Connect Simkl in [Settings → Connections](/docs/settings/connections/#simkl) using Plekt's
+sign-in flow. Review the first full-sync preview before importing existing watches; later
+checks can run on demand and after media-server events. Optional rating sync also supports
+Simkl.
 
 ## Tautulli
 

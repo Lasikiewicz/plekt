@@ -12,6 +12,13 @@ const {
   setSelectedChangelogChannel,
 } = await import("../public/modules/changelog-channels.js");
 
+test("changelog text renders HTTPS markdown links while escaping unsafe content", async () => {
+  const { renderChangelogText } = await import("../public/modules/changelog-channels.js");
+  assert.equal(renderChangelogText('Drop (<img> [bequbed](https://github.com/bequbed))'),
+    'Drop (&lt;img&gt; <a href="https://github.com/bequbed" target="_blank" rel="noopener noreferrer">bequbed</a>)');
+  assert.equal(renderChangelogText('[bad](javascript:alert(1))'), '[bad](javascript:alert(1))');
+});
+
 test("changelog opens on the tab matching the install until a tab is picked", () => {
   assert.equal(defaultChangelogChannel("alpha"), "alpha");
   assert.equal(defaultChangelogChannel("develop"), "alpha");

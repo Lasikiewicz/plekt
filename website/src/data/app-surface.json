@@ -1,5 +1,11 @@
 [
   {
+    "id": "portainer",
+    "label": "Install with Portainer",
+    "docSlug": "portainer",
+    "sourcePaths": ["README.md", "docker-compose.quickstart.yml", "Dockerfile"]
+  },
+  {
     "id": "upgrading-from-plembfin",
     "label": "Upgrading from Plembfin to Plekt",
     "docSlug": "upgrading-from-plembfin",

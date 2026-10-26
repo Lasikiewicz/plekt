@@ -24,7 +24,7 @@
 
 ---
 
-> **v2.1.1.** Plekt writes watched state and playback progress to connected media
+> **v2.2.0.** Plekt writes watched state and playback progress to connected media
 > servers, so **back up first** (Settings → Backup → Local). Report
 > issues on the [issue tracker](https://github.com/Lasikiewicz/plekt/issues).
 
@@ -657,7 +657,7 @@ is in [`.env.example`](.env.example).
 | `WEBHOOK_SECRET` | _generated_ | Secret for webhook auth; rotatable independently of `API_KEY`. |
 | `SESSION_SECRET` | _generated_ | Signing secret for the session cookie. |
 | `PLEKT_CREDENTIAL_KEY` | _generated file_ | Optional external credential-vault key (64 hex chars or base64url). Keep with disaster-recovery material. |
-| `PLEKT_PUBLIC_URL` | _none_ | Fixed internet-reachable public origin for provider return links and calendar feed URLs (`http(s)://host`, no path). Local hostnames and private IP addresses are not shown as feed URLs. |
+| `PLEKT_PUBLIC_URL` | _none_ | Fixed internet-reachable public origin for provider return links and calendar feed URLs (`http(s)://host`, no path). Calendar feeds otherwise use the browser's current origin; local hostnames and private IP addresses are not shown. |
 | `PLEKT_PUBLISHED_PORT` | _none_ | Host port Plekt is published on (5056 in the compose files); used by the startup webhook port advisory, which is skipped when unset. |
 | `PLEKT_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS to enable the `Secure` cookie flag and HSTS. |

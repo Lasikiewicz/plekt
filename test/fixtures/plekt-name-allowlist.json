@@ -9,13 +9,19 @@
     "test/simklAuthIntegration.test.js": {
       "reason": "compatibility",
       "lines": [
-        ["return { method, body, cookies: session ? { plembfin_session: `${payload}.${signature}` } : {}, get: (name) => values[name.toLowerCase()] };", 1]
+        [
+          "return { method, body, cookies: session ? { plembfin_session: `${payload}.${signature}` } : {}, get: (name) => values[name.toLowerCase()] };",
+          1
+        ]
       ]
     },
     "test/upNextResetReissue.test.js": {
       "reason": "compatibility",
       "lines": [
-        ["localStorage.setItem(\"plembfin:upNextCache:v6\", JSON.stringify({", 1]
+        [
+          "localStorage.setItem(\"plembfin:upNextCache:v6\", JSON.stringify({",
+          1
+        ]
       ]
     },
     "test/analyticsConfig.test.js": {
@@ -114,7 +120,10 @@
     ".claude/skills/push-website-live/SKILL.md": {
       "reason": "compatibility",
       "lines": [
-        ["6. Verify the returned `pages.dev` deployment URL and `https://plembfin.com` both serve", 1],
+        [
+          "6. Verify the returned `pages.dev` deployment URL and `https://plembfin.com` both serve",
+          1
+        ],
         [
           "working tree directly to the existing `plembfin-website` Cloudflare Pages project.",
           1
@@ -2291,10 +2300,22 @@
     "docs/code-index.md": {
       "reason": "compatibility",
       "lines": [
-        ["| `plembfin-backups/restore` | `handlePlektRestore` | `routes/plektRestore.js` |", 1],
-        ["| `plembfin-backups/upload` | `handlePlektRestoreUpload` | `routes/plektRestore.js` |", 1],
-        ["| `plembfin-backups` | `handlePlektBackups` | `routes/backups.js` |", 1],
-        ["- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed, listActiveUpNextProviderItems, listUpNextProviderFeedStates and 5 more", 1]
+        [
+          "| `plembfin-backups/restore` | `handlePlektRestore` | `routes/plektRestore.js` |",
+          1
+        ],
+        [
+          "| `plembfin-backups/upload` | `handlePlektRestoreUpload` | `routes/plektRestore.js` |",
+          1
+        ],
+        [
+          "| `plembfin-backups` | `handlePlektBackups` | `routes/backups.js` |",
+          1
+        ],
+        [
+          "- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed, listActiveUpNextProviderItems, listUpNextProviderFeedStates and 5 more",
+          1
+        ]
       ]
     },
     "docs/file-map-server.md": {
@@ -12150,7 +12171,7 @@
           1
         ],
         [
-          "For the stable v2.1.1 update, use `plembfin/plekt:2.1.1` or",
+          "For the stable v2.2.0 update, use `plembfin/plekt:2.2.0` or",
           1
         ],
         [

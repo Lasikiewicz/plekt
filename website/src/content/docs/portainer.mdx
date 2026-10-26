@@ -1,0 +1,36 @@
+---
+title: Install with Portainer
+description: Deploy Plekt as a Docker Compose stack in Portainer and keep its data persistent.
+category: Start here
+order: 2
+sourceVersion: "2.2.0"
+sourcePaths:
+  - README.md
+  - docker-compose.quickstart.yml
+  - Dockerfile
+screenshots: []
+---
+
+Use a Portainer **stack** to deploy Plekt with Docker Compose. The stack publishes Plekt on
+port **5056** and stores its database and configuration in `/data`.
+
+## Create the stack
+
+1. In Portainer, select your Docker environment, then open **Stacks → Add stack**.
+2. Choose **Web editor** and enter a name such as `plekt`.
+3. Paste the contents of the repository's [`docker-compose.quickstart.yml`](https://github.com/Lasikiewicz/plekt/blob/main/docker-compose.quickstart.yml).
+4. Add `ADMIN_PASSWORD` under **Environment variables** and set it to a strong, private password. Portainer substitutes it for `${ADMIN_PASSWORD}` in the Compose file.
+5. Select **Deploy the stack**.
+
+The quickstart maps host port `5056` to Plekt's container port `5055` and persists `/data`
+in a `data` directory associated with the stack. Keep that storage when updating or
+recreating the stack; it contains your database and settings.
+
+## Open Plekt
+
+Visit `http://<docker-host>:5056`, replacing `<docker-host>` with the address of the machine
+running Docker. Sign in with username `admin` and the password you set in Portainer.
+
+Do not publish or share the stack's environment values.
+
+For the full Compose setup and other install options, see [Getting started](/docs/getting-started/).

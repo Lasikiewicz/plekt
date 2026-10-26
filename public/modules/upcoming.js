@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.1.1.1.0";
-import { state, elements } from "./state.js?v=2.1.1.1.0";
-import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.1.1.1.0";
-import { posterMarkup, hydratePosters } from "./images.js?v=2.1.1.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.0";
+import { state, elements } from "./state.js?v=2.2.0.0.0";
+import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.2.0.0.0";
+import { posterMarkup, hydratePosters } from "./images.js?v=2.2.0.0.0";
 
 let _cb = {};
 
@@ -93,14 +93,14 @@ async function openCalendarFeedDialog() {
   const status = elements.upcomingCalendarFeedStatus;
   if (status) status.textContent = "Loading your private calendar URL…";
   try {
-    const response = await fetch("/api/calendar-feed/settings", { headers: authHeaders() });
+    const response = await fetch("/api/calendar-feed/settings", { headers: { ...authHeaders(), "X-Plekt-Calendar-Origin": window.location.origin } });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error || "Could not load calendar feed settings");
     setCalendarFeedTypes(payload.types);
     savedCalendarFeedTypes = getSelectedCalendarFeedTypes();
     setCalendarFeedUrl(payload.url || "", payload.ready);
     if (status) status.textContent = !payload.ready
-      ? payload.message || "Set PLEKT_PUBLIC_URL to your public internet origin first."
+      ? payload.message || "Open Plekt at an internet-reachable address first."
       : payload.url
       ? "Anyone with this URL can read the feed. Regenerating it immediately revokes the previous URL."
       : "Generate a private URL to subscribe to this calendar.";
@@ -152,7 +152,7 @@ async function regenerateCalendarFeedUrl() {
     if (!types.length) throw new Error("Select TV shows, movies, or both.");
     const response = await fetch("/api/calendar-feed/settings", {
       method: "POST",
-      headers: { ...authHeaders(), "Content-Type": "application/json" },
+      headers: { ...authHeaders(), "Content-Type": "application/json", "X-Plekt-Calendar-Origin": window.location.origin },
       body: JSON.stringify({ types }),
     });
     const payload = await response.json();

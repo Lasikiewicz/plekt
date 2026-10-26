@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { calendarFeedTokenMatches, createCalendarFeedToken, getCalendarFeed, getCalendarFeedSettings, isPublicCalendarOrigin, normalizeCalendarFeedTypes, regenerateCalendarFeedToken, serializeCalendarFeed } from "../server/src/utils/calendarFeed.js";
+import { calendarFeedTokenMatches, createCalendarFeedToken, getCalendarFeed, getCalendarFeedSettings, isPublicCalendarOrigin, normalizeCalendarFeedTypes, regenerateCalendarFeedToken, resolveCalendarOrigin, serializeCalendarFeed } from "../server/src/utils/calendarFeed.js";
 
 test("calendar feed tokens are high entropy and compared exactly", () => {
   const token = createCalendarFeedToken();
@@ -23,6 +23,14 @@ test("calendar subscribe URLs are hidden for local origins and accepted for publ
     assert.equal((await getCalendarFeedSettings(localOrigin)).url, "", localOrigin);
   }
   assert.equal(isPublicCalendarOrigin("https://calendar.example.net"), true);
+});
+
+test("calendar origin uses the browser address unless an explicit origin is configured", async () => {
+  const origin = resolveCalendarOrigin("", "https://plekt.example.net");
+  assert.equal((await getCalendarFeedSettings(origin)).ready, true);
+  assert.equal((await getCalendarFeedSettings(resolveCalendarOrigin("", "http://localhost:5056"))).ready, false);
+  assert.equal(resolveCalendarOrigin("https://configured.example.net", origin), "https://configured.example.net");
+  assert.equal((await getCalendarFeedSettings(resolveCalendarOrigin("http://localhost:5056", origin))).ready, false);
 });
 
 test("regenerating the feed token immediately replaces the old subscription URL", async () => {

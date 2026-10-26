@@ -3,7 +3,7 @@ title: Upcoming
 description: Browse episode air dates with calendar navigation, search, and show context.
 category: Use the app
 order: 4
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - public/modules/upcoming.js
   - docs/upcoming.md
@@ -34,6 +34,16 @@ view.
 
 The calendar uses TheTVDB-backed season and episode structure. Cached months open quickly,
 while revalidation can refresh changed air dates in the background.
+
+## Subscribe in a calendar app
+
+Select **Subscribe** to create a private calendar URL for TV releases, movies, or both.
+The feed includes upcoming releases for titles in your library. It uses the public address
+you opened in your browser, unless `PLEKT_PUBLIC_URL` is configured. The address must be
+reachable by your calendar provider. Local and private addresses cannot be used.
+
+Anyone with the URL can read the feed. Regenerate it to revoke the previous URL, including
+when changing which types of release are included.
 
 ## What Upcoming does not change
 

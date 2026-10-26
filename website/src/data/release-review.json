@@ -1,26 +1,12 @@
 {
-  "publishedVersion": "2.1.0",
+  "publishedVersion": "2.1.1",
   "unchanged": {
-    "concepts": "Phase A read-through against the v2.1.1 candidate: local state, provider observations and sync responsibilities remain accurate; shared navigation styling changes do not change these concepts.",
-    "getting-started": "Phase A read-through: installation, account claim, Guided Setup and first health checks remain accurate; this release changes the appearance of shared controls.",
-    "guides": "Phase A read-through: canonical guide links and ownership remain accurate after the Modern-only navigation update.",
-    "history-search": "Phase A read-through: history controls, global-search groups and detail navigation remain accurate; replacement images cover the new shared presentation.",
-    "integrations": "Phase A read-through: Plex, Emby, Jellyfin, Trakt and Seerr integration responsibilities and links remain current.",
-    "libraries": "Phase A read-through: library navigation and the separate Movies and TV Shows guides remain current.",
-    "manual-watch-review": "Phase A read-through: provider event review and its decision controls remain accurate; shared navigation changes do not alter the workflow.",
-    "media-details": "Phase A read-through: the guide links to the current movie and TV detail owners; the changed appearance and detail controls are documented there.",
-    "movies": "Phase A read-through: Movies library filtering, card menu and detail links remain current; new captures show the shared presentation.",
-    "moving-to-port-5056": "Phase A read-through: Docker, Unraid and Windows port migration guidance remains accurate for the approved candidate.",
-    "playlists": "Phase A read-through: playlist creation, automatic rules, imports and provider sync remain accurate; the approved card-text correction changes layout only.",
-    "safe-daily-workflows": "Phase A read-through: watch-state corrections, review and recovery instructions remain current; removed style choices are not described here.",
-    "settings": "Phase A read-through: Settings groups and working rules remain accurate; the current map is covered by a replacement capture.",
-    "settings/restore": "Phase A read-through: restore modes, status and conflict guidance remain current.",
-    "settings/sync": "Phase A read-through: sync groups, history and tuning controls remain current; replacement captures cover current presentation and issue state.",
-    "stats": "Phase A read-through: statistics filters, metrics and provider attribution remain current; the shared visual changes require no wording change.",
-    "sync-tools": "Phase A read-through: watch-sync tools and issue handling remain accurate; replacement captures illustrate the current controls.",
-    "tv-shows": "Phase A read-through: TV library controls and detail navigation remain accurate; the detail guide owns season and episode layout changes.",
-    "upcoming": "Phase A read-through: month navigation, search and metadata-only calendar behavior remain current; the replacement capture shows a complete current month.",
-    "watch-progress-not-syncing": "Phase A read-through: provider, polling and progress troubleshooting remain accurate for the approved candidate.",
-    "watchlist": "Phase A read-through: local watchlist membership and optional provider projection remain current."
+    "settings/restore": "Reviewed restore modes and stale restore-lock recovery against the v2.2.0 candidate; the documented behavior remains current.",
+    "settings/sync": "Reviewed Up Next provider push, Manual Watch review, ratings and Watchlist sync against the v2.2.0 candidate; the documented controls remain current.",
+    "sync-tools": "Reviewed both Force Sync directions and the Settings Sync Tools surface against the v2.2.0 candidate; the instructions remain current.",
+    "safe-daily-workflows": "Reviewed resume guidance against the v2.2.0 candidate; it correctly points to Dashboard Now Playing and Up Next.",
+    "discover": "Reviewed feed, filter, recommendation and personal-action descriptions against the candidate and release notes; the relevant change is mobile row presentation, not these instructions.",
+    "playlists": "Reviewed playlist creation, automatic rules, imports and provider-sync guidance against the candidate and release notes; the relevant release change is mobile row presentation.",
+    "watchlist": "Reviewed membership, Plex-only projection and personal-action guidance against candidate documentation; the release changes folded card sizing on phones, not these instructions."
   }
 }

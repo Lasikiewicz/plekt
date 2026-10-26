@@ -3,7 +3,7 @@ title: "Plex or Jellyfin watch progress not syncing?"
 description: Trace one watch event from its source through Plekt and on to the destination.
 category: Fix a problem
 order: 7.1
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - website/src/content/docs/integrations.mdx
   - website/src/content/docs/sync-tools.mdx
@@ -19,7 +19,7 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-*Plekt steps checked against v1.3.1 on 2 October 2026.*
+*Plekt steps reviewed against the v2.2.0 release candidate.*
 
 When a film or episode is watched on one server but stays unwatched, or keeps the wrong resume position elsewhere, trace one event before changing anything. Repeatedly toggling watched state can make it harder to tell which service has the latest value.
 
@@ -27,7 +27,7 @@ When a film or episode is watched on one server but stays unwatched, or keeps th
 
 1. Choose one film or episode and one direction, such as Plex to Jellyfin. Note the source, destination, title, year or episode, and approximate event time.
 2. Open the source service and confirm that it recorded the watched state or playback position. If the source is wrong, fix playback reporting there first.
-3. Confirm how the source reaches Plekt. Plex uses its built-in WebSocket notifications plus scheduled checks. Jellyfin uses its Webhooks plugin plus polling. Follow the [Jellyfin webhook setup](/docs/integrations/#jellyfin) when Jellyfin is the source.
+3. Confirm how the source reaches Plekt. Plex uses its built-in WebSocket notifications plus scheduled checks. Jellyfin can use the Plekt plugin or webhooks alongside polling. Follow the [Jellyfin setup guide](/docs/integrations/#jellyfin) and choose one event method, not both.
 4. Confirm Plekt is connected to the intended server and account. The Plekt host must be able to reach the server URL; a connection that works in your browser does not prove that the host can reach it.
 5. Check that the destination contains the same title. Compare the year, season, episode number, and provider identity before correcting a match. Duplicate titles and differently matched episodes can look like failed syncs.
 

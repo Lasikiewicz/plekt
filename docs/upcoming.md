@@ -30,9 +30,10 @@ selected upcoming library episodes and/or cached movie release dates and answers
 data for an invalid token. The feed
 uses the persistent upcoming episode cache and cached movie metadata so a calendar refresh does
 not trigger metadata requests across the whole library. Watchlist and playlist entries are not
-included. Set `PLEKT_PUBLIC_URL` to an internet-reachable public origin before generating a link;
-local hostnames and private or reserved IP addresses are rejected and never shown. The URL is
-built from that configured origin, not the address used to open the dashboard. The access logger
+included. The URL uses the browser's current origin, or `PLEKT_PUBLIC_URL` when configured.
+Local hostnames and private or reserved IP addresses are rejected and never shown. An origin
+must be reachable by the calendar service; its public-looking name alone does not prove that.
+The access logger
 redacts the URL's `token` query parameter.
 
 ## Backend

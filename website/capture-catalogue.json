@@ -112,7 +112,7 @@
         "light"
       ],
       "route": "/",
-      "state": "Dashboard at scroll top; wait for the live session or idle feature cards to render in the Now Playing panel.",
+      "state": "Dashboard with a live Plex playback session and the updated Now Playing panel.",
       "framing": {
         "type": "element",
         "target": {
@@ -120,7 +120,6 @@
         },
         "padding": 0
       },
-      "live": "playback",
       "automation": "auto",
       "sources": [
         "public/modules/dashboard.js",
@@ -142,7 +141,8 @@
         {
           "waitFor": "#nowPlayingGrid .modern-idle-feature, #nowPlayingGrid [data-now-playing-card-id]"
         }
-      ]
+      ],
+      "live": "playback"
     },
     "now-playing-options": {
       "pages": [
@@ -153,7 +153,7 @@
         "light"
       ],
       "route": "/",
-      "state": "Dashboard with live sessions playing; the cog beside the panel heading is open. Change nothing; close the options afterwards.",
+      "state": "Dashboard with a live playback session; the cog beside the Now Playing panel heading is open. Change nothing; close the options afterwards.",
       "framing": {
         "type": "element",
         "target": {
@@ -166,7 +166,6 @@
         "noScroll": true,
         "padding": 0
       },
-      "live": "playback",
       "automation": "auto",
       "sources": [
         "public/modules/dashboard.js",
@@ -193,7 +192,8 @@
         {
           "wait": 500
         }
-      ]
+      ],
+      "live": "playback"
     },
     "dashboard-up-next": {
       "pages": [
@@ -205,16 +205,13 @@
         "light"
       ],
       "route": "/",
-      "state": "Up Next rail including the heading, a resume card with progress, and Watch now links. Allow part watched items here must be OFF so the resume card remains in this rail; the release-capture agent sets it OFF with scripts/now-playing-option.mjs before capture and back ON after.",
+      "state": "Featured Up Next cards, including the heading, resume progress and Watch now links.",
       "framing": {
         "type": "element",
         "target": {
-          "css": "#upNextDashboardSection"
+          "css": ".live-panel"
         },
-        "padding": 0,
-        "through": {
-          "css": "#upNextPanel"
-        }
+        "padding": 8
       },
       "automation": "auto",
       "sources": [
@@ -225,17 +222,17 @@
       ],
       "sizes": {
         "dark": {
-          "height": 216,
-          "width": 1231
+          "width": 1247,
+          "height": 232
         },
         "light": {
-          "height": 216,
-          "width": 1231
+          "width": 1247,
+          "height": 232
         }
       },
       "steps": [
         {
-          "waitFor": "#upNextPanel > [data-up-next-card-id]:not([data-featured-in-panel]) .part-watched-progress-fill"
+          "waitFor": ".live-panel .part-watched-progress-fill"
         },
         {
           "wait": 3000
@@ -592,6 +589,54 @@
         }
       }
     },
+    "history-days": {
+      "pages": [
+        "history-search"
+      ],
+      "variants": [
+        "dark",
+        "light"
+      ],
+      "route": "/history",
+      "state": "Watch History in Days view, with the first day group, item count and cards loaded.",
+      "framing": {
+        "type": "element",
+        "target": {
+          "css": ".history-day-box:first-of-type"
+        },
+        "padding": 0
+      },
+      "automation": "auto",
+      "sources": [
+        "public/modules/history-day-view.js",
+        "public/modules/explorer.js"
+      ],
+      "sizes": {
+        "dark": {
+          "width": 1231,
+          "height": 224
+        },
+        "light": {
+          "width": 1231,
+          "height": 224
+        }
+      },
+      "steps": [
+        {
+          "click": "[data-history-view=\"days\"]"
+        },
+        {
+          "waitFor": ".history-day-box"
+        },
+        {
+          "wait": 1000
+        }
+      ],
+      "viewport": {
+        "width": 1440,
+        "height": 683
+      }
+    },
     "upcoming": {
       "pages": [
         "upcoming"
@@ -618,11 +663,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 2833,
+          "height": 2241,
           "width": 1161
         },
         "light": {
-          "height": 2833,
+          "height": 2241,
           "width": 1161
         }
       },
@@ -671,7 +716,11 @@
       "route": "/stats",
       "state": "Stats at scroll top with its media type, period and range controls visible.",
       "framing": {
-        "type": "viewport"
+        "type": "element",
+        "target": {
+          "css": "#statsKpiStrip",
+          "padding": 0
+        }
       },
       "automation": "auto",
       "sources": [
@@ -679,12 +728,12 @@
       ],
       "sizes": {
         "dark": {
-          "height": 683,
-          "width": 1440
+          "width": 466,
+          "height": 150
         },
         "light": {
-          "height": 683,
-          "width": 1440
+          "width": 466,
+          "height": 150
         }
       }
     },
@@ -1138,8 +1187,8 @@
         "dark",
         "light"
       ],
-      "route": "/movie/a-quiet-place",
-      "state": "Movie detail; the watchlist, custom-list, rating and watch-state action row.",
+      "route": "/tvshow/lioness",
+      "state": "TV show detail for Lioness; watchlist, custom-list, Drop, Up Next and options action row.",
       "framing": {
         "type": "element",
         "target": {
@@ -1152,18 +1201,18 @@
       "sources": [
         "public/modules/media-detail.js",
         "public/modules/media-detail-events.js",
-        "public/modules/media-detail-movie.js",
+        "public/modules/media-detail-show.js",
         "public/modules/media-detail-shared.js",
-        "public/modules/watch-action.js"
+        "public/modules/dropped-titles.js"
       ],
       "sizes": {
         "dark": {
-          "height": 62,
-          "width": 320
+          "width": 609,
+          "height": 62
         },
         "light": {
-          "height": 62,
-          "width": 320
+          "width": 609,
+          "height": 62
         }
       }
     },
@@ -2235,11 +2284,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 936,
+          "height": 1023,
           "width": 1196
         },
         "light": {
-          "height": 936,
+          "height": 1023,
           "width": 1196
         }
       },
@@ -2355,11 +2404,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 168,
+          "height": 167,
           "width": 1231
         },
         "light": {
-          "height": 168,
+          "height": 167,
           "width": 1231
         }
       }
@@ -2429,11 +2478,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 355,
+          "height": 342,
           "width": 1231
         },
         "light": {
-          "height": 355,
+          "height": 342,
           "width": 1231
         }
       }
@@ -2465,11 +2514,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         },
         "light": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         }
       }
@@ -2505,11 +2554,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         },
         "light": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         }
       }
@@ -2545,11 +2594,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         },
         "light": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         }
       }
@@ -2582,11 +2631,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 350,
+          "height": 344,
           "width": 1231
         },
         "light": {
-          "height": 350,
+          "height": 344,
           "width": 1231
         }
       }
@@ -2662,12 +2711,12 @@
       ],
       "sizes": {
         "dark": {
-          "height": 236,
-          "width": 1231
+          "width": 1231,
+          "height": 167
         },
         "light": {
-          "height": 236,
-          "width": 1231
+          "width": 1231,
+          "height": 167
         }
       }
     },
@@ -2686,7 +2735,7 @@
         "type": "crop",
         "source": "settings-connections",
         "target": {
-          "subPanel": "tools-tautulli"
+          "subPanel": "tools-one-time-imports"
         },
         "legacyRect": null
       },
@@ -2700,12 +2749,12 @@
       ],
       "sizes": {
         "dark": {
-          "height": 112,
-          "width": 1231
+          "width": 1231,
+          "height": 167
         },
         "light": {
-          "height": 112,
-          "width": 1231
+          "width": 1231,
+          "height": 167
         }
       }
     },
@@ -2737,11 +2786,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         },
         "light": {
-          "height": 112,
+          "height": 108,
           "width": 1231
         }
       }
@@ -2779,12 +2828,12 @@
       ],
       "sizes": {
         "dark": {
-          "height": 525,
-          "width": 1231
+          "width": 1231,
+          "height": 563
         },
         "light": {
-          "height": 525,
-          "width": 1231
+          "width": 1231,
+          "height": 563
         }
       }
     },
@@ -2819,11 +2868,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 182,
+          "height": 167,
           "width": 1231
         },
         "light": {
-          "height": 182,
+          "height": 167,
           "width": 1231
         }
       }
@@ -2859,11 +2908,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 220,
+          "height": 211,
           "width": 1231
         },
         "light": {
-          "height": 220,
+          "height": 211,
           "width": 1231
         }
       },
@@ -2907,11 +2956,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 263,
+          "height": 255,
           "width": 1231
         },
         "light": {
-          "height": 263,
+          "height": 255,
           "width": 1231
         }
       },
@@ -2951,11 +3000,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 736,
+          "height": 735,
           "width": 1161
         },
         "light": {
-          "height": 736,
+          "height": 735,
           "width": 1161
         }
       },
@@ -3081,11 +3130,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 176,
+          "height": 167,
           "width": 733
         },
         "light": {
-          "height": 176,
+          "height": 167,
           "width": 733
         }
       }
@@ -3121,11 +3170,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 240,
+          "height": 227,
           "width": 733
         },
         "light": {
-          "height": 240,
+          "height": 227,
           "width": 733
         }
       }
@@ -3156,11 +3205,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 349,
+          "height": 344,
           "width": 1231
         },
         "light": {
-          "height": 349,
+          "height": 344,
           "width": 1231
         }
       }
@@ -3285,7 +3334,7 @@
       ],
       "sizes": {
         "dark": {
-          "height": 389,
+          "height": 346,
           "width": 1231
         },
         "light": {
@@ -3324,7 +3373,7 @@
       ],
       "sizes": {
         "dark": {
-          "height": 182,
+          "height": 167,
           "width": 1231
         },
         "light": {
@@ -3363,7 +3412,7 @@
       ],
       "sizes": {
         "dark": {
-          "height": 425,
+          "height": 403,
           "width": 1231
         },
         "light": {

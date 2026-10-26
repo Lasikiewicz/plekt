@@ -1,6 +1,6 @@
 {
   "name": "plekt",
-  "version": "2.1.1",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
   "main": "server/server.js",

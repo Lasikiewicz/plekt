@@ -12,8 +12,21 @@
 // version and never raises an update prompt - the server forces
 // alphaBuild.newerBuildAvailable false off the alpha channel for exactly that
 // reason.
-import { state, elements } from "./state.js?v=2.1.1.1.0";
-import { escapeAttribute, escapeHtml, formatBuildVersion, formatListDate, versionDisplayLabel } from "./utils.js?v=2.1.1.1.0";
+import { state, elements } from "./state.js?v=2.2.0.0.0";
+import { escapeAttribute, escapeHtml, formatBuildVersion, formatListDate, versionDisplayLabel } from "./utils.js?v=2.2.0.0.0";
+
+export function renderChangelogText(value) {
+  const text = String(value || "");
+  const links = /\[([^\]\n]+)\]\((https:\/\/[^\s)]+)\)/g;
+  let result = "";
+  let offset = 0;
+  for (const match of text.matchAll(links)) {
+    result += escapeHtml(text.slice(offset, match.index));
+    result += `<a href="${escapeAttribute(match[2])}" target="_blank" rel="noopener noreferrer">${escapeHtml(match[1])}</a>`;
+    offset = match.index + match[0].length;
+  }
+  return result + escapeHtml(text.slice(offset));
+}
 
 export { formatBuildVersion };
 
@@ -321,16 +334,16 @@ export async function renderChangelog(force = false) {
           <section class="changelog-detail-group">
             <h5>${heading}</h5>
             ${groups.length === 1 && !groups[0].title
-              ? `<ul>${groups[0].details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}</ul>`
+              ? `<ul>${groups[0].details.map((detail) => `<li>${renderChangelogText(detail)}</li>`).join("")}</ul>`
               : `<div class="changelog-detail-subgroups">${groups.map((group) => `
                 <div class="changelog-detail-subgroup">
                   ${group.title ? `<h6>${escapeHtml(group.title)}</h6>` : ""}
-                  <ul>${group.details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}</ul>
+                  <ul>${group.details.map((detail) => `<li>${renderChangelogText(detail)}</li>`).join("")}</ul>
                 </div>`).join("")}</div>`}
           </section>`).join("")}</div>`;
       }
       const details = Array.isArray(entry.details) ? entry.details.filter(Boolean) : [];
-      return details.length ? `<ul>${details.map((detail) => `<li>${escapeHtml(detail)}</li>`).join("")}</ul>` : "";
+      return details.length ? `<ul>${details.map((detail) => `<li>${renderChangelogText(detail)}</li>`).join("")}</ul>` : "";
     };
 
     const renderEntry = (entry) => {

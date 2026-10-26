@@ -3,7 +3,7 @@ title: The sync model
 description: How Plekt records canonical state, routes changes, and explains delivery.
 category: Understand the app
 order: 2
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - docs/architecture.md
   - docs/webhooks.md
@@ -66,7 +66,7 @@ when the media is added later.
 
 The normal path for a watched or resume update is:
 
-1. Plex, Emby, Jellyfin, Trakt, or a Plekt action produces an event.
+1. Plex, Emby, Jellyfin, Trakt, Simkl, or a Plekt action produces an event.
 2. Plekt validates the payload and normalizes its identifiers.
 3. The event is written to local history and playstate.
 4. Matching connected destinations are selected.
@@ -85,7 +85,7 @@ valid replays on a later day remain watch events. When a Jellyfin event is proce
 keeps its native item ID available for the corresponding provider update.
 
 Personal ratings and Watchlist changes do not enter this watched-state event path. Rating sync
-uses a separate queue for Plex, Emby, Jellyfin, and Trakt. Watchlist sync uses Plex's
+uses a separate queue for Plex, Emby, Jellyfin, Trakt, and Simkl. Watchlist sync uses Plex's
 account-level Watchlist as its only provider and keeps the local movie/show list canonical.
 
 ## Watched state and resume progress
@@ -151,7 +151,7 @@ first attempt, Plekt treats the destination as delivered instead of adding anoth
 
 Plex can be observed through its built-in WebSocket notification channel and scheduled checks.
 
-Emby and Jellyfin use webhooks with scheduled polling as a backstop.
+Emby and Jellyfin use the Plekt plugin or a webhook sender, with scheduled polling as a backstop.
 
 The scheduler also handles active sessions, catch-up scans, metadata maintenance, and
 backups.

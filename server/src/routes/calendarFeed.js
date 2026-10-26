@@ -1,6 +1,6 @@
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { requireAdmin } from "../utils/auth.js";
-import { getCalendarFeed, getCalendarFeedSettings, normalizeCalendarFeedTypes, regenerateCalendarFeedToken, serializeCalendarFeed } from "../utils/calendarFeed.js";
+import { getCalendarFeed, getCalendarFeedSettings, normalizeCalendarFeedTypes, regenerateCalendarFeedToken, resolveCalendarOrigin, serializeCalendarFeed } from "../utils/calendarFeed.js";
 import { loadMediaConfig } from "../utils/configStore.js";
 import { readJson } from "../utils/requestBody.js";
 
@@ -21,7 +21,8 @@ export async function handleCalendarFeedSettings(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (!(await requireAdmin(req, res))) return;
   const config = await loadMediaConfig({ resolveConnections: false });
-  const settings = await getCalendarFeedSettings(config.publicBaseUrl);
+  const origin = resolveCalendarOrigin(config.publicBaseUrl, req.get("X-Plekt-Calendar-Origin") || "");
+  const settings = await getCalendarFeedSettings(origin);
   if (req.method === "GET") {
     return sendJson(res, settings);
   }
@@ -34,7 +35,7 @@ export async function handleCalendarFeedSettings(req, res) {
     const types = body.types === undefined ? settings.types : normalizeCalendarFeedTypes(body.types);
     if (!types.length) return sendJson(res, { error: "Select movies, TV shows or both." }, 400);
     const token = await regenerateCalendarFeedToken(types);
-    const regenerated = await getCalendarFeedSettings(config.publicBaseUrl);
+    const regenerated = await getCalendarFeedSettings(origin);
     return sendJson(res, { ...regenerated, regenerated: Boolean(token) });
   }
   return methodNotAllowed(res);

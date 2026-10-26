@@ -3,7 +3,7 @@ title: Getting started
 description: Install Plekt, claim the instance, and complete the in-app Guided Setup flow.
 category: Start here
 order: 1
-sourceVersion: "2.1.1"
+sourceVersion: "2.2.0"
 sourcePaths:
   - README.md
   - docs/onboarding.md
@@ -213,7 +213,9 @@ Work through the stages in this order when possible:
 3. **Metadata** — add a TMDB key first; add TheTVDB, Fanart.tv, OMDb, or YouTube when you
    need their additional data.
 4. **Media servers** — optionally connect and test Plex, Emby, Jellyfin, or more than one server.
-5. **Webhooks** — configure Emby or Jellyfin event delivery. Plex's built-in WebSocket channel does
+5. **Webhooks** — configure Emby or Jellyfin event delivery. The in-app guide recommends the
+   Plekt Jellyfin plugin and also explains the webhook alternative; use only one sender.
+   Plex's built-in WebSocket channel does
    not need a manual webhook.
 6. **Backup** — schedule local backups and optionally configure a Backblaze B2 mirror.
 7. **Import & sync** — watch the import and delivery status rather than starting another

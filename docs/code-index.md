@@ -201,7 +201,7 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `calendar-picker.js`: calendarStateFromIso, formatCalendarDisplay, mountCalendarPicker, renderCalendarPickerHtml
 - `card-art.js`: ART_RETRY_DELAYS_MS, artKey, cardArtAttribute, mediaArtKey, observeCardArtwork, requestArtKey
 - `cast-disclosure.js`: hydrateDeferredCastDisclosure, renderCastActor
-- `changelog-channels.js`: baseVersionOf, bindChangelogChannelTabs, defaultChangelogChannel, developVersionForBuild, formatBuildVersion, initChangelog, loadChangelogData, partitionAlphaEntriesByBase and 4 more
+- `changelog-channels.js`: baseVersionOf, bindChangelogChannelTabs, defaultChangelogChannel, developVersionForBuild, formatBuildVersion, initChangelog, loadChangelogData, partitionAlphaEntriesByBase and 5 more
 - `dashboard-modern.js`: bindDashboardRuns, createDashboardHistoryLiveRefresh, dashboardTvRowUnits, isDashboardRowCompact, renderDashboardTvRowUnit, sessionMatchesCardArt, setDashboardRowCompact, setDashboardRunExpanded
 - `dashboard.js`: dedupePlaybackProgress, getRowFitLimit, initDashboard, loadPartWatched, mergeDashboardHistoryEntries, observeDashboardPosters, partWatchedProgress, progressRecordIdentity and 12 more
 - `discover.js`: dontRecommendDiscoverItem, initDiscover, loadDiscover, renderDiscover, resetDiscover
@@ -342,7 +342,7 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `brandEnv.js`: brandEnv, legacyEnvNamesInUse, logLegacyEnvNames, providerAppName
 - `cacheTelemetry.js`: cacheRebuildDebugEnabled, cacheRebuildTelemetry, recordCacheRebuild, resetCacheRebuildTelemetry, timeCacheRebuild, timeCacheRebuildAsync
 - `cacheWarmup.js`: DEFAULT_WARMUP_STEPS, REQUEST_DEFER_MAX_MS, REQUEST_QUIET_MS, WARMUP_MAX_WAIT_MS, WARMUP_QUIET_MS, createCacheWarmup, noteRequestActivity, startCacheWarmup and 1 more
-- `calendarFeed.js`: DEFAULT_CALENDAR_FEED_TYPES, calendarFeedTokenMatches, createCalendarFeedToken, getCalendarFeed, getCalendarFeedSettings, isPublicCalendarOrigin, normalizeCalendarFeedTypes, regenerateCalendarFeedToken and 1 more
+- `calendarFeed.js`: DEFAULT_CALENDAR_FEED_TYPES, calendarFeedTokenMatches, createCalendarFeedToken, getCalendarFeed, getCalendarFeedSettings, isPublicCalendarOrigin, normalizeCalendarFeedTypes, regenerateCalendarFeedToken and 2 more
 - `compoundEpisode.js`: buildCompoundEpisodeIndex, canonicalCompoundEpisodeMedia, canonicalText, canonicalizeCompoundEpisodeRows, compoundEpisodeForMedia, compoundEpisodeForRow, compoundEpisodeItemsForMedia, findCompoundEpisodesFromSeason and 1 more
 - `concurrency.js`: runWithConcurrency
 - `configStore.js`: BACKGROUND_SYNC_PROGRESS_MAX_OWNER_MS, BACKGROUND_SYNC_PROGRESS_STALE_MS, DEFAULT_NOW_PLAYING, DEFAULT_RATING_SYNC, DEFAULT_TAUTULLI, DEFAULT_UP_NEXT_SYNC, DEFAULT_WATCHLIST_SYNC, NOW_PLAYING_ITEM_COUNT_MAX and 56 more

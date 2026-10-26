@@ -6335,58 +6335,5 @@
       "bullets": []
     }
   ],
-  "alpha": {
-    "baseVersion": "2.1.1",
-    "build": 0,
-    "version": "2.1.1.0.0",
-    "updatedAt": "2026-10-18T20:37:39.660Z",
-    "entries": [
-      {
-        "build": 2,
-        "version": "2.1.0.2.0",
-        "date": "18 October 2026",
-        "title": "Alpha build 2",
-        "summary": "Fix - Show a playing title once on the dashboard",
-        "bullets": [
-          "Fix: A title that is playing live no longer also appears as its own part watched card in Now Playing or the Up Next rail"
-        ]
-      },
-      {
-        "build": 1,
-        "version": "2.1.0.1.0",
-        "date": "18 October 2026",
-        "title": "Alpha build 1",
-        "summary": "This update improves watch state and season matching, restyles the appearance and login page, and hides Card Art on media detail pages.",
-        "bullets": [
-          "Feature: Add TV season source selection, episode translation, unmatched episode handling, and translated Up Next warmup.",
-          "Tweak: Preserve completed Plex watch state across stale resume data and protect unwatch races.",
-          "Tweak: Preserve Trakt-only plays during show replacement and fail closed on occupied targets.",
-          "Tweak: Split sync, history import, polling, and scheduling work into focused modules with retry and lease safeguards.",
-          "Tweak: Improve appearance controls, changelog navigation, Reddit release bundling, and README screenshots.",
-          "Tweak: Re-check suspected Plex unwatches against live metadata and keep cached episode state aligned, preventing stale reports from reaching manual watch review.",
-          "Tweak: Keep TV season-source choice and watch-impact confirmation beside search controls, with less blank space across phone, tablet, and desktop.",
-          "Tweak: Use provider-neutral empty-season messaging when episode lists are unavailable while preserving TV and movie match results.",
-          "Tweak: Modern is the only look; the Classic style and its switch are removed.",
-          "Tweak: Card Art checkbox added to the Appearance menu (hidden on media detail pages); Background Art checkbox only on the Dashboard and details pages.",
-          "Tweak: Appearance menu rows match the media option rows with icons, and Text size sits at the bottom.",
-          "Tweak: Buttons use a neutral default state in both themes; hover changes only text and border.",
-          "Tweak: Spoiler toggle no longer tints the whole button when checked; only the checkbox shows the state.",
-          "Tweak: Settings use two brand surfaces in both themes, aligned with the left menu.",
-          "Tweak: Dashboard and settings surfaces aligned with the left menu.",
-          "Tweak: Navbar on every page uses the left-menu tone, not only media pages.",
-          "Tweak: About card uses the left-menu tone in both themes.",
-          "Tweak: Left-menu search is an underline field in light mode, as in dark.",
-          "Tweak: Light-mode changelog entries use the white panel tone.",
-          "Tweak: Softer outline on the selected settings section.",
-          "Tweak: Onboarding and sign-in footer theme toggle shows the Light and Dark words only.",
-          "Tweak: Login panel uses the left-menu tone and its fields use the main-background tone.",
-          "Tweak: Login heading reads \"Please log in\"; the long intro text is removed.",
-          "Tweak: \"Forgot your password?\" sits right-aligned under the password field.",
-          "Tweak: Sign-in fields no longer show the default focus outline.",
-          "Tweak: Show and movie posters now use provider artwork when a saved local image is unavailable.",
-          "Tweak: Card Art is no longer offered in the Appearance menu on media detail pages, which have no cards to show it on."
-        ]
-      }
-    ]
-  }
+  "alpha": null
 }
