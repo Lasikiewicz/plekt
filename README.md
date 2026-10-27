@@ -154,7 +154,7 @@ saved on the Plekt server, so it applies wherever you open Plekt.
     <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/sync-activity-light.png">
     <img alt="Sync Activity view" src="docs/screenshots/sync-activity-dark.png" width="100%" />
   </picture>
-  <em>Live sync status and activity stream detailing sync origins, destinations, and delivery results</em>
+  <em>Live sync status, with any issues that need review explained alongside recommended next steps</em>
 </p>
 
 <p align="center">
@@ -215,9 +215,10 @@ saved on the Plekt server, so it applies wherever you open Plekt.
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/stats-dark.png">
     <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/stats-light.png">
-    <img alt="Stats view" src="docs/screenshots/stats-dark.png" width="100%" />
+    <img alt="Stats summary tiles" src="docs/screenshots/stats-dark.png" width="466" />
   </picture>
-  <em>All-time play counts, top shows, platform breakdowns, and monthly watch activity</em>
+  <br>
+  <em>All-time play counts, top platform, busiest month, and dropped titles at a glance</em>
 </p>
 
 <p align="center">
