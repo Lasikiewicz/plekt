@@ -58,7 +58,7 @@ export function parseAnidbAnime(xml, expectedAid) {
     aid, title, titles,
     // Plain text only: strip AniDB URL/label markup and HTML-like tags. Rendering
     // code must still escape this text as it does every other provider field.
-    overview: valueOf(anime.description).replace(/https?:\/\/[^\s\[\]]+\s+\[([^\]]+)\]/g, "$1").replace(/<[^>]*>/g, "").trim(),
+    overview: valueOf(anime.description).replace(/https?:\/\/[^\s\[\]]+\s+\[([^\]]+)\]/g, "$1").replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim(),
     type: valueOf(anime.type),
     episodes: listOf(anime.episodes?.episode).map((episode) => ({
       id: String(episode["@id"] || ""),
