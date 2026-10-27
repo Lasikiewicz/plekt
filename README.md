@@ -141,9 +141,9 @@ saved on the Plekt server, so it applies wherever you open Plekt.
 
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dashboard-dark.png">
-    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.png">
-    <img alt="Now Playing dashboard" src="docs/screenshots/dashboard-dark.png" width="100%" />
+    <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/dashboard-dark.jpg">
+    <source media="(prefers-color-scheme: light)" srcset="docs/screenshots/dashboard-light.jpg">
+    <img alt="Now Playing dashboard" src="docs/screenshots/dashboard-dark.jpg" width="100%" />
   </picture>
   <em>Dashboard showing live playback status and recent watch history</em>
 </p>
