@@ -32,6 +32,9 @@ website/.impeccable.md
 .Jules/
 reasonix.toml
 
+# Local Promo Desk tooling for the advertising plan; not part of the app.
+scripts/promo-desk.js
+
 # Local dependency/tool caches and temporary website verification output
 .tools/
 .tmp-website-build/

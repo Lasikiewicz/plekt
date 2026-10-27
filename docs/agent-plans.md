@@ -28,8 +28,10 @@ TODO. There is no root `TODO.md` (retired 15 September 2026).
   section or change log: what the user must do lives in each plan's "Waiting on you", and history
   lives in the plans.
 - **Release assignment for new work**: when creating a new plan or feature, ask which release
-  bucket it belongs in unless the user already specified one. Ask them to choose Post Release
-  (released version), Release (expected version), or Future Release. Record the answer in the
+  bucket it belongs in unless the user already specified one. Offer exactly three choices
+  (user-agreed 27 October 2026): Hotfix (a fix to the released version, listed under Post
+  Release), Next release (the expected version, listed under Release), or Future release.
+  Record the answer in the
   plan and list it in that TODO section. Defer work by assigning it to a future release, not by
   creating a Deferred category. Derive the current release from the latest
   published changelog entry and the next expected version from the release tooling/package

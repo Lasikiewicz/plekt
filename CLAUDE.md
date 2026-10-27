@@ -105,8 +105,8 @@ any provider requiring login.
 ## Plans, documentation and backlog
 
 Read [docs/agent-plans.md](docs/agent-plans.md) before creating/updating plans or todo.md.
-When creating a new plan or feature, ask which release it belongs in (Post Release, Release,
-or Future Release) unless the user already specified it. Deferred work belongs in Future Release.
+When creating a new plan or feature, ask which release it belongs in (Hotfix, Next release,
+or Future release) unless the user already specified it. Deferred work belongs in Future Release.
 Record the chosen release/version
 in the plan and TODO section. After EVERY step update its Results and summary (Steps, then a brief
 current "Where we are"; background/history linked to separate history.md in the plan folder, never
