@@ -1,7 +1,28 @@
 {
-  "version": "2.2.0.0.0",
-  "build": 0,
+  "version": "2.2.0.0.1",
+  "build": 1,
   "resetCommit": "4c4bde8f5ff86203acd94964cf7832888b7f80a9",
-  "updatedAt": "2026-10-26T22:53:00.455Z",
-  "entries": []
+  "updatedAt": "2026-10-27T21:17:19.328Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-10-27T21:17:19.328Z",
+      "commit": "a1b07482667084727bc3d88d4d566d95dc7143bf",
+      "message": "This update includes strip leftover tag characters from AniDB descriptions, refresh README screenshots from the v2.2.0 website captures, use the homepage dashboard captures for the README dashboard image, and stop the initial Emby watched sync timing out on large libraries.",
+      "author": "Lasikiewicz",
+      "details": [
+        "AniDB anime descriptions can no longer keep partial HTML tag fragments after markup is stripped",
+        "README screenshots now show the current v2.2.0 interface",
+        "The README dashboard screenshot no longer shows loading placeholder tiles in light mode",
+        "The initial watched-status import from Emby and Jellyfin now reads the played history in pages of 500 instead of one request for everything, so a large watch history no longer fails with \"Upstream request timed out after 10000ms\"",
+        "Watched-history reads no longer ask Emby and Jellyfin for artwork, so third-party image plugins on the media server cannot slow them down"
+      ],
+      "messageFragments": [
+        "Security - Strip leftover tag characters from AniDB descriptions",
+        "Docs - Refresh README screenshots from the v2.2.0 website captures",
+        "Docs - Use the homepage dashboard captures for the README dashboard image",
+        "Fix - Stop the initial Emby watched sync timing out on large libraries"
+      ]
+    }
+  ]
 }

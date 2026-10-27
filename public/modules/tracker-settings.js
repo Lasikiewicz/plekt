@@ -1,6 +1,6 @@
-import { state } from "./state.js?v=2.2.0.0.0";
-import { plexHistoricalSyncEnabled } from "./plex-history-policy.js?v=2.2.0.0.0";
-import { initTrackerFullSync, renderTrackerFullSync } from "./tracker-full-sync.js?v=2.2.0.0.0";
+import { state } from "./state.js?v=2.2.0.0.1";
+import { plexHistoricalSyncEnabled } from "./plex-history-policy.js?v=2.2.0.0.1";
+import { initTrackerFullSync, renderTrackerFullSync } from "./tracker-full-sync.js?v=2.2.0.0.1";
 
 let getHeaders = () => ({ "Content-Type": "application/json" });
 let bound = false;
