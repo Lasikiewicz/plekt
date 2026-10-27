@@ -92,14 +92,55 @@ async function main(directory) {
 
   if (!findings.length) {
     console.log("CodeQL severity gate passed: no unsuppressed High or Critical findings.");
+  } else {
+    console.error(`CodeQL severity gate failed: ${findings.length} High/Critical finding(s) remain.`);
+    for (const finding of findings) {
+      console.error(`- [${finding.ruleId}] security-severity=${finding.severity} at ${finding.location}: ${finding.message}`);
+    }
+    process.exitCode = 1;
     return;
   }
 
-  console.error(`CodeQL severity gate failed: ${findings.length} High/Critical finding(s) remain.`);
-  for (const finding of findings) {
-    console.error(`- [${finding.ruleId}] security-severity=${finding.severity} at ${finding.location}: ${finding.message}`);
+  // GitHub's processed alert inventory is an authoritative backstop. SARIF
+  // severity metadata can vary across action versions; the former SARIF-only
+  // gate silently passed while GitHub opened High alerts.
+  const repository = process.env.GITHUB_REPOSITORY;
+  const branch = process.env.GITHUB_REF_NAME;
+  const token = process.env.GITHUB_TOKEN;
+  if (!repository || !branch || !token) {
+    throw new Error('GitHub alert verification requires GITHUB_REPOSITORY, GITHUB_REF_NAME and GITHUB_TOKEN.');
   }
-  process.exitCode = 1;
+  const ref = `refs/heads/${branch}`;
+  let url = `https://api.github.com/repos/${repository}/code-scanning/alerts?state=open&ref=${encodeURIComponent(ref)}&per_page=100`;
+  const alerts = [];
+  while (url) {
+    const response = await fetch(url, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+    if (!response.ok) throw new Error(`GitHub code-scanning alert check failed: HTTP ${response.status}.`);
+    alerts.push(...await response.json());
+    const next = response.headers.get('link')?.match(/<([^>]+)>;\s*rel="next"/);
+    url = next?.[1] || '';
+  }
+
+  const blockingAlerts = alerts.filter(alert => {
+    const alertRef = alert.most_recent_instance?.ref;
+    return alert.state === 'open' && alertRef === ref &&
+      ['high', 'critical'].includes(alert.rule?.security_severity_level);
+  });
+  if (blockingAlerts.length) {
+    console.error(`GitHub code-scanning gate failed: ${blockingAlerts.length} open High/Critical alert(s) on ${ref}.`);
+    for (const alert of blockingAlerts) {
+      console.error(`- #${alert.number} [${alert.rule?.id || 'unknown rule'}] ${alert.most_recent_instance?.location?.path || 'unknown file'}:${alert.most_recent_instance?.location?.start_line || '?'}: ${alert.most_recent_instance?.message?.text || 'CodeQL finding'}`);
+    }
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`GitHub code-scanning alert gate passed: no open High/Critical alerts on ${ref}.`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

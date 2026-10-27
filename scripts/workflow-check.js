@@ -243,11 +243,12 @@ async function main() {
     cleanup(); availableLock();
     if (git('branch', '--show-current') !== 'develop') throw Error('Start this workflow on develop; preserve existing changes before switching.');
     console.log(`Baseline HEAD: ${git('rev-parse', 'HEAD')}\nDevelop tip: ${git('rev-parse', 'develop')}\n${git('status', '--short')}`);
-    if (workflow === 'push') {
-      // Print every alert. Only exact, documented fingerprints are notes; everything else
-      // remains blocking when high/critical or in a changed file.
+    {
+      // Print every relevant alert on every promotion path. Force promotions use
+      // direct ref pushes, so their precheck must catch findings before publication.
       let blocked = false;
-      for (const kind of ['code-scanning', 'dependabot']) {
+      const alertKinds = workflow === 'push' ? ['code-scanning', 'dependabot'] : ['code-scanning'];
+      for (const kind of alertKinds) {
         const alerts = JSON.parse(command('gh', ['api', `repos/Lasikiewicz/plekt/${kind}/alerts?state=open&per_page=100`]));
         const changed = [...git('diff', '--name-only', 'HEAD').split('\n'), ...git('diff', '--name-only', 'origin/develop...HEAD').split('\n')];
         for (const a of alerts) {

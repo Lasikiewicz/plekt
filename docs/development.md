@@ -21,7 +21,12 @@ They query GitHub cleanup/security state and local Git/lock facts; they do not f
 acquire locks, promote, push or treat successful checks as approval. API/auth failures
 fail loudly; existing user-decision exceptions remain in the skills.
 
-The push precheck prints GitHub's open security alerts. CodeQL #64
+The push and release prechecks print GitHub's open CodeQL alerts; the push precheck also checks
+Dependabot. Exact documented fingerprints can be notes, while any other high/critical alert
+blocks the precheck. This applies to Force to alpha and Force to main as well as ordinary pushes,
+because promotions update branch refs directly without a pull request. The CodeQL workflow also
+checks GitHub's processed alert inventory after SARIF upload, in addition to its local SARIF
+severity check; an API or processing failure fails closed. CodeQL #64
 (`website/scripts/recapture.mjs`) is the old `main` instance; its image-source allow-list
 is in `develop`. Dependabot #15 (`braces`) is auto-dismissed. Dependabot #17 (`sprintf-js`)
 still refers to the legacy Devvit lockfile on the default branch; the Devvit source and
@@ -664,7 +669,7 @@ not valid semver. See `docs/decisions.md` entry 18.
 
 | Workflow | What it does |
 | --- | --- |
-| `security.yml` | `npm audit --audit-level=high` + CodeQL, on push to `main`/`alpha`, PRs targeting `main`, and daily. CodeQL loads `.github/codeql/codeql-config.yml`, which excludes the `js/request-forgery` query repo-wide - every outbound request funnels through the centralized, validated fetch guard in `server/src/utils/outbound.js`, and admin-configured LAN media server URLs make that query permanently false-positive for this app |
+| `security.yml` | `npm audit --audit-level=high` + CodeQL, on push to `main`/`alpha`, PRs targeting `main`, and daily. The CodeQL severity gate checks both SARIF and GitHub's processed open alerts for the scanned ref. CodeQL loads `.github/codeql/codeql-config.yml`, which excludes the `js/request-forgery` query repo-wide - every outbound request funnels through the centralized, validated fetch guard in `server/src/utils/outbound.js`, and admin-configured LAN media server URLs make that query permanently false-positive for this app |
 | `secret-scan.yml` | TruffleHog verified-secret scan on push to `main`/`alpha`/`develop` and PRs targeting `main`/`develop` |
 | `docker-build-check.yml` | Checks README consistency, then builds the image on every PR targeting `main`, without pushing anything, and runs `better-sqlite3` and `sharp` inside it, so a broken Dockerfile or dependency install is caught before a PR merges. The runtime probe matters because production dependencies install with `--ignore-scripts`: a native module with no usable binary for the platform still builds cleanly and would fail on first database open |
 | `docker-publish-alpha.yml` | On every push to `alpha`: checks README consistency, builds the image, runs the same native-module probe as `docker-build-check.yml`, then pushes it to `ghcr.io/lasikiewicz/plekt:alpha` and `ghcr.io/lasikiewicz/plekt:alpha-<build>` (reading the build number already committed by "Force to alpha"), creates or updates the matching numbered GitHub prerelease with generated notes, and posts the changelog entry to Discord (see "Discord release notifications"). Never writes anything back to `alpha`; never touches `changelog.json`, the package version, or the `:latest` tag |

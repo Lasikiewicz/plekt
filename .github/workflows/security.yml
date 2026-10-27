@@ -65,4 +65,5 @@ jobs:
       - name: Block high-severity CodeQL findings
         env:
           CODEQL_RESULTS: ${{ runner.temp }}/codeql-processed
+          GITHUB_TOKEN: ${{ github.token }}
         run: node .github/scripts/check-codeql-severity.mjs "$CODEQL_RESULTS"
