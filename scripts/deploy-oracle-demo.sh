@@ -52,6 +52,10 @@ run_runtime() {
   "${SUDO[@]}" "$RUNTIME" "$@"
 }
 
+echo "Freeing disk space and clearing temporary storage before pulling $IMAGE"
+"${SUDO[@]}" rm -rf /var/tmp/container_images_storage* 2>/dev/null || true
+run_runtime image prune --all --force >/dev/null 2>&1 || true
+
 echo "Pulling $IMAGE with $RUNTIME"
 runtime_arch_args=()
 if ! run_runtime pull "$IMAGE"; then
@@ -128,6 +132,7 @@ if [[ "$existing_container" == true ]]; then
     run_runtime cp "$CONTAINER_NAME:/data/." "$DATA_DIR/"
   fi
   run_runtime rm "$CONTAINER_NAME" >/dev/null 2>&1 || true
+  run_runtime image prune --all --force >/dev/null 2>&1 || true
 fi
 
 "${SUDO[@]}" mkdir -p "$DATA_DIR"
