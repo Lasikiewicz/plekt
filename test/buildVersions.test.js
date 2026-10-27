@@ -159,7 +159,7 @@ test("the release-history gate refuses a new release under the wrong version", (
 // run-on headline, and two agents corrupting the repository at once.
 
 const { changelogEntryQualityViolations, CHANGELOG_ALPHA_MAX_BULLETS } = await import("../scripts/changelog-message.js");
-const { productCommitSubjects } = await import("../scripts/check-pending-commits.js");
+const { productCommitSubjects, pendingLogArgs } = await import("../scripts/check-pending-commits.js");
 const { lockDecision } = await import("../scripts/release-lock.js");
 
 test("a publishable entry passes the quality gate", () => {
@@ -235,6 +235,16 @@ test("pending product commits are counted without tooling commits", () => {
     "chore: five-segment build versions",
     "chore: rebuild develop changelog",
   ]).length, 1);
+});
+
+test("pending commits already published on main are left out of the shape check", () => {
+  // After Force to main, develop sits on the release commit and the next push carries
+  // published main history, which cannot be squashed into the new work.
+  assert.deepEqual(
+    pendingLogArgs("origin/develop..HEAD", { excludeRef: "origin/main" }),
+    ["log", "origin/develop..HEAD", "--not", "origin/main", "--format=%s"],
+  );
+  assert.deepEqual(pendingLogArgs("origin/develop..HEAD"), ["log", "origin/develop..HEAD", "--format=%s"]);
 });
 
 test("the release lock refuses a concurrent session but not an abandoned one", () => {

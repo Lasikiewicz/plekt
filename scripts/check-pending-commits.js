@@ -13,6 +13,11 @@
 // Tooling commits are excluded. `chore:` work contributes no bullets and is kept
 // deliberately separate from product commits, so any number of those is fine.
 //
+// Commits already on origin/main are excluded too. After "Force to main", local
+// develop is moved onto the release commit (decisions.md entry 18), so the next
+// push carries published main history. Those commits cannot be squashed without
+// detaching develop from main, so they are not part of the shape being checked.
+//
 // This is a shape check on the push, not a judgement about the content. It says
 // "these should be one commit", and the fix is the reset-and-recommit in step 7.
 
@@ -32,9 +37,25 @@ export function productCommitSubjects(subjects = []) {
     && isReleaseTypeCommitMessage(subject));
 }
 
-function pendingSubjects(range) {
+// Exported pure so the exclusion can be tested without a repository.
+export function pendingLogArgs(range, { excludeRef = "" } = {}) {
+  return ["log", range, ...(excludeRef ? ["--not", excludeRef] : []), "--format=%s"];
+}
+
+function refExists(ref) {
   try {
-    return execFileSync("git", ["log", range, "--format=%s"], { cwd: root, encoding: "utf8" })
+    execFileSync("git", ["rev-parse", "--verify", "--quiet", `${ref}^{commit}`], { cwd: root, stdio: "ignore" });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function pendingSubjects(range) {
+  // Without a fetched origin/main nothing is excluded, so the check stays strict.
+  const excludeRef = refExists("origin/main") ? "origin/main" : "";
+  try {
+    return execFileSync("git", pendingLogArgs(range, { excludeRef }), { cwd: root, encoding: "utf8" })
       .split(/\r?\n/)
       .map((line) => line.trim())
       .filter(Boolean);
