@@ -113,7 +113,10 @@ Every minute `fetchLiveSessions` polls `/Sessions` for Now Playing. The catch-up
 
 - **Recently watched** - `fetchEmbyWatchedItems` (user's items filtered to
   `IsPlayed`, ordered by play date) → `syncRecentlyWatchedFromEmby` records watches
-  whose webhooks were missed.
+  whose webhooks were missed. Full-history reads (initial import, Force Sync, restore
+  clears) fetch this feed in pages of 500 with `EnableImages=false`, so a large history
+  never depends on one response finishing inside the outbound timeout and Emby skips
+  image-enhancer plugins for these items.
 - **Resumable items** - `fetchEmbyResumableItems` (`/Users/<id>/Items/Resume`) →
   `syncRecentlyResumableFromEmby` replicates resume positions to the other platforms.
   The query asks for `Fields=UserDataLastPlayedDate`: Emby 4.9 otherwise omits the last-played

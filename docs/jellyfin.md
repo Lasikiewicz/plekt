@@ -86,7 +86,9 @@ Every minute `fetchLiveSessions` polls `/Sessions` for Now Playing. The catch-up
 (every 15 minutes by default) pulls:
 
 - **Recently watched** - `fetchJellyfinWatchedItems` → `syncRecentlyWatchedFromJellyfin`
-  records watches whose webhooks were missed.
+  records watches whose webhooks were missed. Full-history reads fetch this feed in pages
+  of 500 with `EnableImages=false`, so a large history never depends on one response
+  finishing inside the outbound timeout.
 - **Resumable items** - `fetchJellyfinResumableItems` (`/Users/<id>/Items/Resume`) →
   `syncRecentlyResumableFromJellyfin` replicates resume positions. Episode rows include
   series provider IDs so cross-server lookup can resolve the series before selecting

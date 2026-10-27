@@ -737,20 +737,36 @@ function buildJellyfinWatchedItemsUrl(config, { limit = 0, parentId = "" } = {})
   url.searchParams.set("IncludeItemTypes", "Movie,Episode");
   url.searchParams.set("Fields", "ProviderIds");
   url.searchParams.set("EnableUserData", "true");
-  url.searchParams.set("SortBy", "DatePlayed");
+  // SortName breaks DatePlayed ties so items marked played without a date keep
+  // a stable order across pages.
+  url.searchParams.set("SortBy", "DatePlayed,SortName");
   url.searchParams.set("SortOrder", "Descending");
+  url.searchParams.set("EnableTotalRecordCount", "true");
+  // No caller reads artwork from this feed, so skip image tag work on the server.
+  url.searchParams.set("EnableImages", "false");
   if (parentId) url.searchParams.set("ParentId", String(parentId));
   if (Number(limit) > 0) url.searchParams.set("Limit", String(Math.max(1, Math.round(Number(limit)))));
   return url;
 }
 
+// Paged so a large watch history never depends on one response finishing
+// inside the outbound timeout; a single unpaged request timed out on big libraries.
 export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds } = {}) {
   requireJellyfinConfig(config);
   const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
   const items = [];
   for (const parentId of parents) {
-    const data = await fetchJson(buildJellyfinWatchedItemsUrl(config, { limit, parentId }), config);
-    items.push(...(data?.Items || []));
+    items.push(...await fetchPagedFeed(
+      config,
+      (start, pageSize) => {
+        const url = buildJellyfinWatchedItemsUrl(config, { parentId });
+        url.searchParams.set("StartIndex", String(start));
+        url.searchParams.set("Limit", String(pageSize));
+        return url;
+      },
+      limit,
+      { pageSize: 500 },
+    ));
   }
   return items;
 }

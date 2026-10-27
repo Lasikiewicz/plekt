@@ -697,21 +697,38 @@ function buildEmbyWatchedItemsUrl(config, { limit = 0, parentId = "" } = {}) {
   url.searchParams.set("Filters", "IsPlayed");
   url.searchParams.set("IncludeItemTypes", "Movie,Episode");
   url.searchParams.set("Fields", "ProviderIds,SeriesProviderIds,UserData,PremiereDate,ProductionYear");
-  url.searchParams.set("SortBy", "DatePlayed");
+  // SortName breaks DatePlayed ties so items marked played without a date keep
+  // a stable order across pages.
+  url.searchParams.set("SortBy", "DatePlayed,SortName");
   url.searchParams.set("SortOrder", "Descending");
+  url.searchParams.set("EnableTotalRecordCount", "true");
+  // No caller reads artwork from this feed. Skipping image tags also skips
+  // per-item image enhancer plugins, which slowed this query on a reported server.
+  url.searchParams.set("EnableImages", "false");
   if (parentId) url.searchParams.set("ParentId", String(parentId));
   if (Number(limit) > 0) url.searchParams.set("Limit", String(Math.max(1, Math.round(Number(limit)))));
   url.searchParams.set("api_key", config.apiKey);
   return url;
 }
 
+// Paged so a large watch history never depends on one response finishing
+// inside the outbound timeout; a single unpaged request timed out on big libraries.
 export async function fetchEmbyWatchedItems(config, { limit = 0, libraryIds } = {}) {
   requireEmbyConfig(config);
   const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
   const items = [];
   for (const parentId of parents) {
-    const data = await fetchJson(buildEmbyWatchedItemsUrl(config, { limit, parentId }), config);
-    items.push(...(data?.Items || []));
+    items.push(...await fetchPagedFeed(
+      config,
+      (start, pageSize) => {
+        const url = buildEmbyWatchedItemsUrl(config, { parentId });
+        url.searchParams.set("StartIndex", String(start));
+        url.searchParams.set("Limit", String(pageSize));
+        return url;
+      },
+      limit,
+      { pageSize: 500 },
+    ));
   }
   return items;
 }
