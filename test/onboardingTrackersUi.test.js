@@ -19,7 +19,7 @@ test("onboarding tracker grid renders only registry status providers and escapes
   const html = ui.render();
   assert.match(html, /Connect any watch trackers you use, or skip this step/);
   // Connected cards do not echo the account name in this step; raw markup must never appear.
-  assert.doesNotMatch(html, /Simkl|<script>|bad<\/script>/);
+  assert.doesNotMatch(html, /Simkl|<script>|bad<\/script>/i);
   assert.match(fixture().ui.render(), /No watch trackers are currently available/);
 });
 

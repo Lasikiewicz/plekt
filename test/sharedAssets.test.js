@@ -330,7 +330,7 @@ test("provider metadata cache hit from user A is reused for user B without a sec
   let omdbFetches = 0;
   globalThis.fetch = async (url) => {
     const urlStr = String(url);
-    if (urlStr.includes("omdbapi.com")) {
+    if (new URL(urlStr).hostname === "www.omdbapi.com") {
       omdbFetches += 1;
       return new Response(JSON.stringify({
         Response: "True",

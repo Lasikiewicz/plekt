@@ -118,7 +118,9 @@ export function extractRoutes(source, fromFile = ROUTE_FILE) {
 }
 
 function escapeCell(value) {
-  return value.replace(/\|/g, "\\|");
+  // Cells are code spans, where backslashes render literally; GFM tables only
+  // need the pipe escaped, so doubling backslashes would corrupt the output.
+  return value.split("|").join("\\|");
 }
 
 function formatExports(names) {

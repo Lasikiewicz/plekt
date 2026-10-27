@@ -36,7 +36,7 @@ test("initial sync screen escapes user text in destination and item markup", () 
   assert.match(markup, /&lt;plex&gt;/);
   assert.match(markup, /A &amp; B/);
   assert.match(markup, /&lt;i&gt;hold reason&lt;\/i&gt;/);
-  assert.doesNotMatch(markup, /<script>|<img |<svg |<b>|<i>/);
+  assert.doesNotMatch(markup, /<script>|<img |<svg |<b>|<i>/i);
   assert.match(markup, /more items may be pending/);
 });
 
