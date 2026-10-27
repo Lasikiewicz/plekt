@@ -8,20 +8,47 @@ if (!/^\d+\.\d+\.\d+$/.test(expectedVersion)) {
 }
 
 const origin = new URL(baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`);
+const fallbackHost = process.env.OCI_DEMO_HOST
+  ? new URL(`http://${process.env.OCI_DEMO_HOST}${process.env.OCI_DEMO_PORT && process.env.OCI_DEMO_PORT !== "80" ? `:${process.env.OCI_DEMO_PORT}` : ""}/`)
+  : null;
 
-async function read(pathname) {
-  const url = new URL(pathname, origin);
+async function fetchOne(targetOrigin, pathname) {
+  const url = new URL(pathname, targetOrigin);
   url.searchParams.set("release", expectedVersion);
   url.searchParams.set("check", String(Date.now()));
   const response = await fetch(url, {
-    headers: { "cache-control": "no-cache" },
+    headers: {
+      "cache-control": "no-cache",
+      "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+    },
     signal: AbortSignal.timeout(15_000),
   });
-  const body = await response.text();
   if (!response.ok) {
     throw new Error(`${url.pathname} returned HTTP ${response.status}`);
   }
-  return body;
+  return response.text();
+}
+
+async function read(pathname) {
+  let lastError;
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try {
+      return await fetchOne(origin, pathname);
+    } catch (err) {
+      lastError = err;
+      if (fallbackHost && fallbackHost.origin !== origin.origin) {
+        try {
+          return await fetchOne(fallbackHost, pathname);
+        } catch (fallbackErr) {
+          lastError = fallbackErr;
+        }
+      }
+      if (attempt < 6) {
+        await new Promise((resolve) => setTimeout(resolve, 3_000));
+      }
+    }
+  }
+  throw lastError;
 }
 
 const changelog = JSON.parse(await read("/changelog.json"));
