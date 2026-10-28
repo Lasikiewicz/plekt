@@ -36,6 +36,15 @@ while the source is absent. The check does not dismiss alerts. Any other alert, 
 fingerprint, or missing fix keeps the normal blocking rule for high/critical or changed-file
 findings. See [decision 50](decisions.md#50-retire-the-reddit-release-app-from-the-repository).
 
+CodeQL #66-70 from main commit `453fc063c5ab504be2e51bb0630b4cd9bb0029bb` have
+reviewed fixes in develop. Their exact rule, file, severity and commit fingerprints are
+notes only while the corresponding source fixes remain present; later findings block normally.
+
+Open items in `plan/bugs.md` block pushes by default. Only after explicit user approval,
+set `PLEKT_BUG_BACKLOG_OVERRIDE` to the full SHA of the exact HEAD being pushed for
+the gate and push command. The hook logs the exception and keeps all other checks active.
+The exception stops applying when HEAD changes; it does not close or modify bug reports.
+
 `npm run release:candidate -- <record.json>` checks pinned refs, detached HEAD, port 5056
 ownership and release metadata. `node scripts/workflow-check.js staged` checks sensitive
 paths, README consistency and asset stamps against an index-matching worktree.

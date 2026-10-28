@@ -1,4 +1,0 @@
-chore: allow mid-step compaction in agent conduct
-
-site-impact: none
-Website review: not required: agent process guidance only

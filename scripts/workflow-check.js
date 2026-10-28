@@ -16,11 +16,18 @@ export function assertScope(baseline, pending) {
   if (baseline.pending.length) throw Error('Baseline contains older unpushed commits. Ask for all-scope or a narrower scope; do not consolidate.');
   if (!pending.includes(baseline.head) && pending.length) throw Error('Current history no longer contains the chat baseline. Reconcile scope before committing.');
 }
+export function bugBacklogOverrideApplies(override, head) {
+  return /^[a-f0-9]{40}$/.test(override || '') && override === head;
+}
 export function assertBugBacklogClear() {
   const file = path.join(root, 'plan/bugs.md');
   if (!fs.existsSync(file)) throw Error('Cannot verify plan/bugs.md; refusing remote push.');
   const content = fs.readFileSync(file, 'utf8');
   if (/^\s*-\s*\[\s\]/m.test(content)) {
+    if (bugBacklogOverrideApplies(process.env.PLEKT_BUG_BACKLOG_OVERRIDE, git('rev-parse', 'HEAD'))) {
+      console.log('User-authorized bug backlog exception for this exact HEAD; open reports remain unresolved.');
+      return;
+    }
     throw Error('plan/bugs.md contains unchecked bug/follow-up work. Resolve and verify/close every item before any remote push; deferral does not clear the blocker.');
   }
 }
@@ -30,6 +37,24 @@ export function assertSafePaths(paths) {
   }
 }
 const KNOWN_SECURITY_ALERTS = {
+  ...Object.fromEntries([
+    [70, 'js/incomplete-url-substring-sanitization', 'test/sharedAssets.test.js', ['new URL(urlStr).hostname === "www.omdbapi.com"']],
+    [69, 'js/incomplete-sanitization', 'scripts/generate-code-index.js', ['value.split("|").join("\\\\|")']],
+    [68, 'js/incomplete-multi-character-sanitization', 'server/src/utils/anidbProtocol.js', ['.replace(/[<>]/g, "")']],
+    [67, 'js/bad-tag-filter', 'test/onboardingTrackersUi.test.js', ['assert.doesNotMatch(html, /Simkl|<script>|bad<\\/script>/i)']],
+    [66, 'js/bad-tag-filter', 'test/initialSyncUi.test.js', ['assert.doesNotMatch(markup, /<script>|<img |<svg |<b>|<i>/i)']],
+  ].map(([number, rule, file, fragments]) => [`code-scanning:${number}`, {
+    matches: a => a.rule?.id === rule && a.rule?.security_severity_level === 'high' &&
+      a.most_recent_instance?.location?.path === file && a.most_recent_instance?.ref === 'refs/heads/main' &&
+      a.most_recent_instance?.commit_sha === '453fc063c5ab504be2e51bb0630b4cd9bb0029bb',
+    note: 'known: the reviewed fix is in develop; this finding is from the older main scan',
+    remedy: () => {
+      try {
+        const source = fs.readFileSync(path.join(root, file), 'utf8');
+        return fragments.every(fragment => source.includes(fragment));
+      } catch { return false; }
+    },
+  }])),
   'code-scanning:64': {
     matches: a => a.rule?.id === 'js/xss-through-dom' &&
       a.rule?.security_severity_level === 'high' &&
@@ -238,7 +263,9 @@ async function getJson(url) {
 async function main() {
   const [phase, workflow, ...args] = process.argv.slice(2);
   const option = name => args.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
-  if (phase === 'precheck') {
+  if (phase === 'bug-backlog') {
+    assertBugBacklogClear();
+  } else if (phase === 'precheck') {
     if (!['push', 'alpha', 'main'].includes(workflow)) throw Error('Choose push, alpha or main.');
     cleanup(); availableLock();
     if (git('branch', '--show-current') !== 'develop') throw Error('Start this workflow on develop; preserve existing changes before switching.');

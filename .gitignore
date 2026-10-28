@@ -35,6 +35,19 @@ reasonix.toml
 # Local Promo Desk tooling for the advertising plan; not part of the app.
 scripts/promo-desk.js
 
+# Local working files: scratch output, check evidence, research, business and
+# marketing documents, and dated audits. None of them is needed to build or run.
+/tmp/
+/tmp-netflix-check/
+/evidence/
+/research_notes/
+/reports/
+/.impeccable.md
+docs/app-audit-*.md
+docs/functional-audit-*.md
+docs/marketing-plan-*.md
+docs/submission-log.md
+
 # Local dependency/tool caches and temporary website verification output
 .tools/
 .tmp-website-build/

@@ -10,7 +10,7 @@ Rules that hold regardless of which skill is running:
   request pages in connected Chrome, compare status/votes/comments with the ignored local
   snapshot, and draft (never post) replies a maintainer needs. If a provider asks for login,
   stop at that provider and tell the user which session needs attention.
-- Before any remote push, inspect `plan/bugs.md`. Any unchecked bug or follow-up blocks develop, alpha, and main pushes until resolved and verified/closed; deferral does not clear the gate. The pre-push hook enforces this.
+- Before any remote push, inspect `plan/bugs.md`. Any unchecked bug or follow-up blocks develop, alpha, and main pushes until resolved and verified/closed; deferral does not clear the gate. If the user explicitly authorizes a particular push despite the backlog, set `PLEKT_BUG_BACKLOG_OVERRIDE` to that push's full HEAD SHA for the gate and push command only. The pre-push hook checks the exact SHA and reports the exception; the reports stay open. Never set this exception without explicit user authorization.
 - Never bypass a hook with `--no-verify`, and never bypass the changelog rebuild.
 - The `.githooks/post-commit`, `post-merge`, and `post-rewrite` hooks regenerate the ignored
   `plan/updates.md` ledger from committed history since `origin/main`. Refresh it with

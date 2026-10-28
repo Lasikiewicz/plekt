@@ -1,6 +1,32 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, versionAtLeast, vitePatched } from '../scripts/workflow-check.js';
+import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, versionAtLeast, vitePatched, bugBacklogOverrideApplies } from '../scripts/workflow-check.js';
+
+test('bug backlog exception applies only to an explicitly supplied full HEAD', () => {
+  const head = 'a'.repeat(40);
+  assert.equal(bugBacklogOverrideApplies(head, head), true);
+  for (const override of [undefined, '', '1', 'true', 'a'.repeat(7), 'b'.repeat(40)]) {
+    assert.equal(bugBacklogOverrideApplies(override, head), false);
+  }
+});
+
+test('reviewed security fixes recognize only their older main scan', () => {
+  for (const [number, rule, file] of [
+    [70, 'js/incomplete-url-substring-sanitization', 'test/sharedAssets.test.js'],
+    [69, 'js/incomplete-sanitization', 'scripts/generate-code-index.js'],
+    [68, 'js/incomplete-multi-character-sanitization', 'server/src/utils/anidbProtocol.js'],
+    [67, 'js/bad-tag-filter', 'test/onboardingTrackersUi.test.js'],
+    [66, 'js/bad-tag-filter', 'test/initialSyncUi.test.js'],
+  ]) {
+    const alert = { number, rule: { id: rule, security_severity_level: 'high' }, most_recent_instance: {
+      location: { path: file }, ref: 'refs/heads/main', commit_sha: '453fc063c5ab504be2e51bb0630b4cd9bb0029bb',
+    } };
+    assert.match(knownSecurityAlertNote('code-scanning', alert), /reviewed fix is in develop/);
+    for (const change of [{ ref: 'refs/heads/develop' }, { commit_sha: 'new-main-commit' }, { location: { path: 'another.js' } }]) {
+      assert.equal(knownSecurityAlertNote('code-scanning', { ...alert, most_recent_instance: { ...alert.most_recent_instance, ...change } }), null);
+    }
+  }
+});
 
 test('cleanup refuses running and queued jobs, accepts no run or completed', () => {
   for (const status of ['queued', 'in_progress', 'waiting']) assert.throws(() => assertCleanup([{ status }]));

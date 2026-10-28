@@ -27,6 +27,7 @@ procedures; keep shared guidance in its owning docs instead of copying it into s
 | Task | Skill | Example request |
 | --- | --- | --- |
 | Check public feature request status | [check-requests](../.claude/skills/check-requests/SKILL.md) | `Check requests` |
+| Check published Plekt community posts for new replies | [check-replies](../.agents/skills/check-replies/SKILL.md) | `Check for replies` |
 | Draft a community post or reply | [draft-community-posts](../.claude/skills/draft-community-posts/SKILL.md) | `Draft a Reddit post for r/selfhosted about Plekt's new release.` |
 
 ## Local development
