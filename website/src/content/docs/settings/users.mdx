@@ -1,0 +1,85 @@
+---
+title: Users
+description: Add household users, manage their separate instances, and control sign-in and administrator access.
+category: Settings
+order: 5.15
+sourceVersion: "2.2.1"
+sourcePaths:
+  - public/index.html
+  - public/modules/settings-users.js
+  - public/modules/settings-shell.js
+  - docs/auth.md
+  - docs/frontend.md
+---
+
+Users lets an administrator add more people to one Plekt server. Each user gets their own
+Plekt instance with separate watch history, connections, settings, backups, and webhook path.
+Shared artwork and metadata are reused across users.
+
+Only administrators see **Users**. A standard user's Settings shows their own account,
+appearance, media-server and personal connection settings, webhook setup, and sync history.
+
+## Each user needs their own accounts
+
+Multi-user works only when every Plekt user has their own media-server accounts. Plekt tells
+users apart by the account that plays, so people who share one Plex, Emby, or Jellyfin login
+cannot be tracked separately: their watches land in one history.
+
+- Give each person their own Plex account and their own Emby or Jellyfin user before adding
+  them to Plekt.
+- Each Plekt user connects only their own accounts. Plekt refuses a Plex account that is
+  already connected to another Plekt user.
+- Connect personal trackers such as Trakt or Simkl only to the matching Plekt user.
+
+## Multi-user stats
+
+The top card summarizes the server:
+
+- **Accounts**, **Running**, **Stopped**, and **Sign-in disabled** counts;
+- **Open account**, the instance open in your current session; and
+- **Process memory** and **Process uptime**.
+
+All accounts share one Node process, so memory is the process total, not per-user usage.
+
+## Add a user
+
+1. Expand **Add user → New user**.
+2. Enter a **User name**: letters, numbers, dashes, or underscores, 2 to 32 characters,
+   starting with a letter or number.
+3. Enter a **Starting password** of at least 8 characters and select **Add user**.
+4. Give the password to the user. They can change it in
+   [Settings → General](/docs/settings/general/).
+
+Plekt creates the user's folder under `data/users` and their instance is ready immediately.
+The user signs in with their own user name and password and sees only their own instance.
+
+## What each user sets up
+
+- **Media servers:** each user connects their own accounts in
+  [Settings → Media servers](/docs/settings/media-servers/). See
+  [Plex](/docs/integrations/#plex) for how playback on a server another user owns appears in
+  Now Playing.
+- **Webhooks:** each user has their own webhook path, `/u/<name>/api/webhook`, shown in their
+  user row. Point that user's senders at it; see [Settings → Webhooks](/docs/settings/webhooks/).
+- **Sync:** each user's scheduled sync and queued jobs run independently, so one user's
+  backlog does not hold up another's.
+
+## Manage a user
+
+Expand a user in the account list to see their data folder, webhook path, and these options:
+
+- **Open** switches your session into that user's instance while it is running. The account
+  picker stays available so you can switch back.
+- **Restart**, **Stop**, and **Start** control the user's instance. A stopped instance stops
+  receiving webhooks until it is started again.
+- **Rename** moves `data/users/<name>` and changes the user's webhook URL to
+  `/u/<new-name>/api/webhook`. Update their media-server senders afterwards.
+- **Reset password** sets a new password of at least 8 characters and signs out their sessions.
+- **Access** offers **Sign out sessions** and **Disable sign-in** (or **Enable sign-in**).
+- **Administrator access** grants or removes full access to shared settings and user
+  management. Changing it signs out that user's existing sessions.
+- **Remove user** asks for confirmation. Tick **Also delete** to remove their folder with all of
+  their watch history, connections, and backups; shared artwork and metadata are kept.
+
+The administrator account opens any user's instance and manages users. It cannot be stopped,
+disabled, renamed, or removed, and its data stays in the root `data/` folder.

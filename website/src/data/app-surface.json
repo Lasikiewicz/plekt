@@ -217,5 +217,6 @@
     "sourcePaths": ["website/src/content/docs/settings/backup.mdx", "website/src/content/docs/settings/restore.mdx", "website/src/content/docs/operations.mdx", "docs/watch-history-backups.md", "docs/backups.md"]
   },
   {"id": "settings-restore", "label": "Restore", "docSlug": "settings/restore", "sourcePaths": ["server/src/utils/configStore.js", "server/src/scheduled.js", "docs/watch-history-backups.md"]},
-  {"id": "settings-sync", "label": "Sync", "docSlug": "settings/sync", "sourcePaths": ["server/src/scheduler.js", "server/src/scheduled.js", "docs/scheduled-sync.md"]}
+  {"id": "settings-sync", "label": "Sync", "docSlug": "settings/sync", "sourcePaths": ["server/src/scheduler.js", "server/src/scheduled.js", "docs/scheduled-sync.md"]},
+  {"id": "settings-users", "label": "Users", "docSlug": "settings/users", "sourcePaths": ["public/modules/settings-users.js", "server/src/routes/users.js", "docs/auth.md"]}
 ]

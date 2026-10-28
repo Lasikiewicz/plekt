@@ -3,7 +3,7 @@ title: Dashboard
 description: Read live playback, the mixed Up Next queue, and durable watch history from one screen.
 category: Dashboard and libraries
 order: 3
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/dashboard.js
@@ -132,9 +132,13 @@ To use it:
 3. Check the source badge, position, and duration.
 4. Select the title to open its media details when you need more actions.
 
-Plekt refreshes active sessions independently of the normal scheduled sync: the poll is
-more frequent while something is playing, and opening the Dashboard or returning to a
-background tab requests a fresh snapshot immediately.
+Plekt refreshes active sessions independently of the normal scheduled sync: playback checks
+run every 10 seconds while something is playing and every 5 minutes while idle, and opening
+the Dashboard or returning to a background tab requests a fresh snapshot immediately. A plugin,
+webhook, or Plex notification reports a new session sooner than the idle check.
+
+Each user sees their own playback. An added user watching on a Plex server that another Plekt
+user owns still appears in their own Now Playing; see [Plex](/docs/integrations/#plex).
 
 A provider failure is kept separate from a genuinely empty session result, so a temporary
 connection problem does not falsely report that playback stopped. Disappearing from Now

@@ -4,8 +4,10 @@
   "changes": {
     "added": [],
     "changed": [
-      "public/assets/home-dashboard-dark.jpg",
-      "public/assets/home-dashboard.jpg"
+      "public/assets/app-captures/settings-logs-controls-dark.png",
+      "public/assets/app-captures/settings-logs-controls-light.png",
+      "public/assets/app-captures/settings-webhooks-setup-dark.png",
+      "public/assets/app-captures/settings-webhooks-setup-light.png"
     ],
     "removed": [],
     "unreferenced": [
@@ -2159,8 +2161,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-logs-controls-dark.png",
-      "bytes": 92449,
-      "sha256": "7f3ff03fe950e552d8a2d64d60cb581f0befbc92d49212845e9ee60f81535954",
+      "bytes": 88591,
+      "sha256": "d8316a70a599d7ef40898f35920462f77de0b1475cccfc04371a928bbd473323",
       "dimensions": {
         "width": 1231,
         "height": 434
@@ -2172,8 +2174,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-logs-controls-light.png",
-      "bytes": 124512,
-      "sha256": "437475d2aa0a778020c26d2d82dde77c65f685e01c618beacca942908f8e2295",
+      "bytes": 83936,
+      "sha256": "1245cd3839fe017eba853ce1b6f55cd0d8a9e8e20028ef0acb73bd5ac668900b",
       "dimensions": {
         "width": 1231,
         "height": 434
@@ -2835,8 +2837,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-webhooks-setup-dark.png",
-      "bytes": 38556,
-      "sha256": "a26e1ab1d72c97bd99065f9909efbba2ad4173a8cb8af9b5f80b9057e3a9a051",
+      "bytes": 49518,
+      "sha256": "ae39472f29e15db8fd6f2371af21372c1671cb78cda67aef277748ab8cab8faf",
       "dimensions": {
         "width": 1231,
         "height": 344
@@ -2851,8 +2853,8 @@
     },
     {
       "path": "public/assets/app-captures/settings-webhooks-setup-light.png",
-      "bytes": 46723,
-      "sha256": "b63762d578e3ff702f05d372cf930aa07bdead3c38280c5b758ffe18019d88bd",
+      "bytes": 47428,
+      "sha256": "3753208edf9baae9715c64ae9df0bb33da4214ee7b50a6b36c481d3effa18446",
       "dimensions": {
         "width": 1231,
         "height": 344

@@ -6510,5 +6510,33 @@
       "bullets": []
     }
   ],
-  "alpha": null
+  "alpha": {
+    "baseVersion": "2.2.0",
+    "build": 1,
+    "version": "2.2.0.1.0",
+    "updatedAt": "2026-10-28T00:32:42.214Z",
+    "entries": [
+      {
+        "build": 1,
+        "version": "2.2.0.1.0",
+        "date": "28 October 2026",
+        "title": "Alpha build 1",
+        "summary": "This update gives each added user their own scheduled sync and shared Plex Now Playing, adds Server Logs controls, and stops large Emby and Jellyfin watched imports timing out.",
+        "bullets": [
+          "Feature: Added users now get their own scheduled sync and queued-job processing.",
+          "Feature: Shared Plex playback now shows in the matching user's Now Playing, while each user's credentials and history stay separate.",
+          "Feature: Server Logs can pause live updates, follow the newest entries and filter by text, and keep your reading position during refreshes.",
+          "Fix: The initial watched-status import from Emby and Jellyfin now reads played history in pages of 500, so a large watch history no longer fails with \"Upstream request timed out after 10000ms\".",
+          "Fix: Anonymous Plex owner-ID sessions are now ignored, and the same Plex account can no longer be connected twice.",
+          "Fix: Completed playback is recorded through the existing tracker intent, so an interrupted run can no longer create competing tracker writes.",
+          "Fix: Same-title shows with conflicting provider identities are now kept separate in Stats.",
+          "Fix: AniDB anime descriptions no longer keep partial HTML tag fragments after markup is stripped.",
+          "Tweak: Watched-history reads no longer request artwork from Emby and Jellyfin, so third-party image plugins cannot slow them down.",
+          "Tweak: Historical Simkl baseline evidence no longer shows as a persistent warning, and tracker reviews show a compact title, watch date and history buttons.",
+          "Tweak: Idle playback checks now run every 5 minutes (every 10 seconds once playback is detected), and setup help explains how plugins or webhooks give prompt updates.",
+          "Tweak: README screenshots now show the current v2.2.0 interface, including a dashboard image without loading placeholders."
+        ]
+      }
+    ]
+  }
 }

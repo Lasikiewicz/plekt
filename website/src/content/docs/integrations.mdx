@@ -3,7 +3,7 @@ title: Integrations
 description: Connect media servers, Trakt, Tautulli, Seerr, and metadata providers with the right expectations.
 category: Connect services
 order: 4
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - docs/plex.md
   - docs/emby.md
@@ -114,7 +114,14 @@ activity log.
 Plex needs a server URL and token, or the account connection flow.
 
 Plekt attaches to Plex's notification WebSocket once the URL and token are configured, so
-no external listener is required for watched/unwatched changes.
+no external listener is required for watched/unwatched changes. Playback checks back it up
+every 5 minutes while idle and every 10 seconds once playback is detected.
+
+Each Plekt user should connect their own Plex account. Account sign-in refuses a Plex account
+that is already connected to another Plekt user, so watch histories stay separate. When an
+added user plays on a Plex server another Plekt user owns, Now Playing uses the owner's
+session list for that server, matched by Plex user; the added user's history and writes still
+use their own connection. Sessions that carry only Plex's anonymous owner ID are left out.
 
 In Plex, turn off **Refresh library metadata periodically**.
 
