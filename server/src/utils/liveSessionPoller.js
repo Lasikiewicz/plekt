@@ -1,22 +1,20 @@
-import { activeSyncOperation, loadMediaConfig, loadRuntimeState, SYNC_OPERATION_SCHEDULED } from "./configStore.js";
-import { createLoopStore } from "./loopStore.js";
 import { isVerboseLogging } from "./logVerbose.js";
-import { refreshLiveSessions } from "./liveSessionCompletion.js";
+import { refreshTenantLiveSessions } from "./liveSessionTenants.js";
 
 // Now Playing detection used to be gated entirely by the once-a-minute scheduled-sync
 // tick (see docs/now-playing.md): a session starting or ending could take up to 60s to
 // show up or clear. This runs refreshLiveSessions() on its own faster, activity-adaptive
-// cadence instead - quick while something is actually playing, and no more frequent than
-// the old baseline while idle, so it does not add load to Plex/Emby/Jellyfin the rest of
-// the time. onPlaySessionActivity in plexNotificationListener.js pokes this poller the
+// cadence instead - quick while something is actually playing, with a five-minute
+// idle fallback. Plugins/webhooks provide prompt playback events without continuous
+// idle requests. onPlaySessionActivity in plexNotificationListener.js pokes this poller the
 // instant Plex's own "playing" WebSocket notification arrives, and handleNowPlaying pokes
 // it when a viewer shows up after a gap - both cases collapse into an immediate re-run of
 // the same tick this file already runs on a timer.
 const DEFAULT_ACTIVE_INTERVAL_MS = 10_000;
-const DEFAULT_IDLE_INTERVAL_MS = 45_000;
+const DEFAULT_IDLE_INTERVAL_MS = 300_000;
 const DEFAULT_ERROR_INTERVAL_MS = 30_000;
 
-export function createLiveSessionPoller({ logger = console.log } = {}) {
+export function createLiveSessionPoller({ logger = console.log, refresh = refreshTenantLiveSessions } = {}) {
   let stopped = true;
   let timer = null;
   let running = false;
@@ -29,28 +27,10 @@ export function createLiveSessionPoller({ logger = console.log } = {}) {
     let nextDelay = DEFAULT_IDLE_INTERVAL_MS;
 
     try {
-      const runtime = await loadRuntimeState().catch(() => ({}));
-      const operation = activeSyncOperation(runtime);
-      if (operation && operation.kind !== SYNC_OPERATION_SCHEDULED) {
-        // A rebuild/restore/force-sync owns the watch tables right now - don't race it.
-        hasActiveSession = false;
-      } else {
-        const config = await loadMediaConfig().catch(() => null);
-        if (config) {
-          const loopStore = createLoopStore();
-          const trace = isVerboseLogging() ? logger : () => {};
-          const result = await refreshLiveSessions(config, loopStore, { logger, trace });
-          // Keep polling at the fast interval while a session is still playing, and also
-          // while a missed-appearance is awaiting its confirmation poll (see
-          // MISSING_LIVE_SESSION_CONFIRMATION_POLLS in scheduled.js) - otherwise the very
-          // last active session dropping out would fall back to the slow idle interval
-          // right when a prompt second poll is what's needed to confirm it actually ended.
-          hasActiveSession = result.currentRows.length > 0 || result.pendingConfirmations > 0;
-        } else {
-          hasActiveSession = false;
-        }
-      }
-      nextDelay = hasActiveSession ? DEFAULT_ACTIVE_INTERVAL_MS : DEFAULT_IDLE_INTERVAL_MS;
+      const trace = isVerboseLogging() ? logger : () => {};
+      const result = await refresh({ logger, trace });
+      hasActiveSession = result.hasActiveSession;
+      nextDelay = hasActiveSession ? DEFAULT_ACTIVE_INTERVAL_MS : result.failed ? DEFAULT_ERROR_INTERVAL_MS : DEFAULT_IDLE_INTERVAL_MS;
     } catch (error) {
       logger(`Live session poller failed: ${error?.message || error}`);
       hasActiveSession = false;

@@ -804,7 +804,7 @@ function statsMovieKey(row = {}) {
 }
 
 function statsShowKey(row = {}) {
-  return canonicalTitleKey(row.show_title || showTitleFrom(row.title)) || row.show_title || showTitleFrom(row.title) || "unknown-show";
+  return row._statsShowKey || canonicalTitleKey(row.show_title || showTitleFrom(row.title)) || "unknown-show";
 }
 
 function compactStatsMedia(row = {}, { key, type, title } = {}) {
@@ -3795,11 +3795,7 @@ export async function getWatchStats() {
   if (statsCache.version === version && statsCache.stats) return statsCache.stats;
   const statsRebuildStartedAt = performance.now();
 
-  // Same-event echoes (e.g. a media server firing its "played" webhook several
-  // times for one viewing) must not inflate play counts here - every other
-  // consumer of watch_history already collapses these via
-  // filterSameEventDuplicateRows, so Stats needs to match or it overcounts
-  // titles the dedup tool correctly sees as having nothing left to remove.
+  // Suppress same-event echoes consistently with the history views.
   // getCachedHistory is intentionally uncapped: the TV Shows library already
   // needs the complete identity context, and reusing it here preserves the
   // exact JS grouping/echo semantics instead of reimplementing them in SQL.
@@ -3807,6 +3803,7 @@ export async function getWatchStats() {
     (await getCachedHistory()).filter(isPlektTrackedWatchRow),
   ));
   const statsMovieKeys = buildStatsMovieKeys(rows);
+  const statsShowKeys = showGroupKeys(rows.filter((row) => row.media_type === "episode"));
   const movieKeys = new Set();
   let episodes = 0;
   const bySource = new Map();
@@ -3819,7 +3816,7 @@ export async function getWatchStats() {
   for (const sourceRow of rows) {
     const row = sourceRow.media_type === "movie"
       ? { ...sourceRow, _statsMovieKey: statsMovieKeys.get(sourceRow) }
-      : sourceRow;
+      : { ...sourceRow, _statsShowKey: statsShowKeys.get(sourceRow) };
     const source = normalizePlatformSource(row.source);
     bySource.set(source, (bySource.get(source) || 0) + 1);
     const month = String(row.watched_at || "").slice(0, 7) || "unknown";
@@ -3832,8 +3829,8 @@ export async function getWatchStats() {
       movieKeys.add(row.imdb_id || row.tmdb_id || row.tvdb_id || row.title);
     } else if (row.media_type === "episode") {
       episodes += 1;
-      const show = showTitleFrom(row.title);
-      byShow.set(show, (byShow.get(show) || 0) + 1);
+      const show = statsShowKey(row);
+      byShow.set(show, { title: row.show_title || showTitleFrom(row.title), count: (byShow.get(show)?.count || 0) + 1 });
     }
     const monthPeriod = statsMonthPeriods.get(month) || createStatsPeriod(month, month);
     addRowToStatsPeriod(monthPeriod, row);
@@ -3842,7 +3839,7 @@ export async function getWatchStats() {
 
   const sourceBreakdown = [...bySource.entries()].map(([source, count]) => ({ source, count })).sort((a, b) => b.count - a.count);
   const monthlyActivity = [...byMonth.entries()].map(([month, count]) => ({ month, count })).sort((a, b) => a.month.localeCompare(b.month));
-  const topShows = [...byShow.entries()].map(([title, count]) => ({ title, count })).sort((a, b) => b.count - a.count || a.title.localeCompare(b.title)).slice(0, 5);
+  const topShows = [...byShow.values()].sort((a, b) => b.count - a.count || a.title.localeCompare(b.title)).slice(0, 5);
   const yearlyReports = [...byYear.values()].map(finalizeStatsPeriod).sort((a, b) => b.period.localeCompare(a.period));
   const monthlyReports = [...statsMonthPeriods.values()].map(finalizeStatsPeriod).sort((a, b) => b.period.localeCompare(a.period));
 

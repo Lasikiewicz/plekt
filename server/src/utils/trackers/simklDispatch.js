@@ -26,7 +26,7 @@ export async function dispatchSimklWatchState(media, state, lane, isCancelled = 
       if (!media.watched_at && !media.watchedAt) throw simklReviewRequired("Simkl needs an observed watch date");
       simklHistoryPayload({ ...media, watched_at: intent.watched_at });
     } catch (error) {
-      if (!["settled", "cancelled"].includes(intent.status)) finishTrackerWriteIntent(intent.id, "review", error.message);
+      if (!["settled", "cancelled"].includes(intent.status)) finishTrackerWriteIntent(intent.id, "review", `Not sent: ${error.message}`);
       throw error;
     }
     const result = await writeSimklWatched(connection, { ...media, trackerWriteIntentId: intent.id }, {

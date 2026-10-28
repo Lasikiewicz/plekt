@@ -26,6 +26,26 @@ with that private device key before clients receive runtime configuration. Plekt
 sends the private key to Plex. Legacy PIN flows that were already open before an upgrade
 can still complete, but every new connection uses strong PIN/JWT authorization.
 
+Each Plekt user must connect a distinct Plex account; connecting an account already used
+by another Plekt user is blocked. Existing duplicate connections are not disconnected.
+Plekt saves the selected server's ownership flag from plex.tv and looks it up for older
+connections when needed. Only a positively recorded non-owner sign-in may import
+unlabelled library played flags as its own when `/accounts` cannot resolve the username.
+Unknown ownership and owner connections retain the strict user filter; a 403 alone
+never establishes ownership. Server-token refreshes are isolated per Plekt user.
+
+Non-owner Now Playing uses the active owner's session poll on the same Plex server,
+matched strictly by Plex user ID. It requires a connected owner account in Plekt;
+the non-owner's own history and write credentials remain in use. See
+[Now Playing](now-playing.md) for failure handling and duplicate-account behavior.
+
+For multi-user playback, ensure the player authenticates as the intended Plex account.
+Plex's **Network → List of IP addresses and networks that are allowed without auth**
+can cause anonymous local access to be treated as the owner. An empty User element with
+only Player userID 1 is excluded from Plekt routing. After changing authentication settings,
+restart playback through the signed-in account and verify its user ID.
+See [Plex's network documentation](https://support.plex.tv/articles/200430283-network/).
+
 Manual setup remains optional; its values are stored in the `settings` SQLite row via
 `configStore.js`, and env vars `PLEX_SERVER_URL` / `PLEX_TOKEN` / `PLEX_USERNAME` act as
 defaults:

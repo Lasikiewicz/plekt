@@ -6,6 +6,7 @@ import { isAuthoritativeRestoreActive, setRuntimeState } from "./configStore.js"
 import { loadWatchBackupRuntime } from "./watchHistoryBackups.js";
 import { buildWatchProvenance } from "./watchProvenance.js";
 import { recordWatchAuditEvent } from "./watchAudit.js";
+import { createPerUserState } from "./perUserState.js";
 import { listUpNextProviderFeedStates } from "./upNextRepository.js";
 import { refreshUpNextProviderFeeds } from "./upNextProviderSync.js";
 import { playstateBlocksStoredResumeProgress, resumeProgressBlockedByPlaystate } from "./resumeAuthority.js";
@@ -27,10 +28,10 @@ export const UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS = Math.max(
 // live-session poll already asks every provider each tick; when one of those
 // calls fails, re-read that provider's Up Next feeds so the failure is recorded.
 // Throttled per provider so a flaky sessions endpoint cannot hammer the feeds.
-const upNextOutageProbeAt = new Map();
-const upNextOutageProbesInFlight = new Set();
+const outageState = createPerUserState(() => ({ at: new Map(), inFlight: new Set() }));
 
 export function upNextProvidersToProbeForOutage(failedSources, config, { now = Date.now(), feeds = listUpNextProviderFeedStates() } = {}) {
+  const { at: upNextOutageProbeAt, inFlight: upNextOutageProbesInFlight } = outageState();
   return [...(failedSources || [])].map((source) => String(source || "").trim().toLowerCase()).filter((provider) => {
     if (!["plex", "emby", "jellyfin"].includes(provider)) return false;
     const section = config?.[provider] || {};
@@ -45,6 +46,7 @@ export function upNextProvidersToProbeForOutage(failedSources, config, { now = D
 }
 
 function probeUpNextFeedsAfterSessionFailure(failedSources, config, logger) {
+  const { at: upNextOutageProbeAt, inFlight: upNextOutageProbesInFlight } = outageState();
   if (!failedSources?.size) return;
   const providers = upNextProvidersToProbeForOutage(failedSources, config);
   if (!providers.length) return;
@@ -116,7 +118,7 @@ function sessionWatchProvenance(media, row, watchedAt) {
 async function dispatchSessionWatch(media, config, loopStore, sessionId, watchId) {
   let syncSummary;
   try {
-    syncSummary = await syncMediaPlaystate(media, config, loopStore);
+    syncSummary = await syncMediaPlaystate({ ...media, watchRecordId: watchId }, config, loopStore);
   } catch (error) {
     console.error("Live tracking sync dispatch failed", { sessionId, error });
     syncSummary = {
@@ -184,7 +186,8 @@ async function processCompletedSession(row, config, loopStore) {
     // An earlier attempt wrote this session's history row but failed before recording its dispatch:
     // dispatch that one row. The created_at check keeps older rows with no telemetry (imports) out.
     const lastSeenMs = Number(row.updated_at || 0);
-    if (!existingByAnyKey.sync_dispatch_telemetry && lastSeenMs > 0 && Number(existingByAnyKey.created_at || 0) >= lastSeenMs) {
+    const dispatchPending = !existingByAnyKey.sync_dispatch_telemetry || /Dispatch status: pending/i.test(existingByAnyKey.sync_dispatch_telemetry);
+    if (dispatchPending && lastSeenMs > 0 && Number(existingByAnyKey.created_at || 0) >= lastSeenMs) {
       media.watched_at = existingByAnyKey.watched_at || undefined;
       media.watchProvenance = sessionWatchProvenance(media, row, new Date(lastSeenMs).toISOString());
       await dispatchSessionWatch(media, config, loopStore, row.session_id, existingByAnyKey.id);
@@ -359,7 +362,7 @@ async function processStoppedSessionProgress(row, config, loopStore) {
 // This absorbs a one-off Plex session-key change (e.g. a transcode/quality switch assigns
 // a new session id to the same still-playing item) without needing to fix the id matching
 // itself. Keyed by session_id; cleared as soon as a session is seen again or acted on.
-const missingLiveSessionStreaks = new Map();
+const completionState = createPerUserState(() => new Map());
 const MISSING_LIVE_SESSION_CONFIRMATION_POLLS = 2;
 
 // Fetches current Plex/Emby/Jellyfin sessions, reconciles them against
@@ -368,9 +371,10 @@ const MISSING_LIVE_SESSION_CONFIRMATION_POLLS = 2;
 // scheduled-sync tick and the independent, faster live-session poller
 // (liveSessionPoller.js) so both drive the exact same completion/propagation
 // logic instead of maintaining two copies of it.
-export async function refreshLiveSessions(config, loopStore, { logger = () => {}, trace = () => {} } = {}) {
+export async function refreshLiveSessions(config, loopStore, { logger = () => {}, trace = () => {}, plexSessions } = {}) {
+  const missingLiveSessionStreaks = completionState();
   if (isAuthoritativeRestoreActive()) return { currentRows: [], completions: [], progressUpdates: [], staleIds: [], cachedCount: 0, pendingConfirmations: 0, skipped: true };
-  const { sessions: currentSessions, failedSources } = await fetchLiveSessions(config);
+  const { sessions: currentSessions, failedSources } = await fetchLiveSessions(config, { plexSessions });
   probeUpNextFeedsAfterSessionFailure(failedSources, config, logger);
   const currentRows = currentSessions.map(buildCacheRow);
   const currentIds = new Set(currentRows.map((row) => row.session_id));

@@ -72,7 +72,7 @@ export async function writeSimklWatched(connection, media, { trigger, sendNow = 
     const item = { ...media, watched_at: live.watched_at };
     try { client.simklHistoryPayload(item); } // Fail closed before claiming or networking.
     catch (error) {
-      finishTrackerWriteIntent(intent.id, "review", "Simkl media identity or observed date needs review");
+      finishTrackerWriteIntent(intent.id, "review", `Not sent: ${error.message || "Simkl media identity or observed date needs review"}`);
       throw error;
     }
     // Simkl already reported this item watched: settle without reading its

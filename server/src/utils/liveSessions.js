@@ -289,7 +289,8 @@ export function parsePlexSessions(xmlText = "", config = {}) {
         // stream: `<User />` with every attribute absent) while still reporting
         // the account on <Player userID>. Carrying it lets the session still be
         // attributed instead of failing the username check by default.
-        userId: player.userID || user.id || "",
+        userId: user.id || player.userID || "",
+        userIdSource: user.id ? "user" : "player",
       },
       ids: plexGuidIds(attributes, body),
       raw: { attributes, player, user },
@@ -475,6 +476,7 @@ async function fetchJson(url, headers) {
 // would risk recording someone else's play as the configured user's - see
 // docs/decisions.md on preferring a missed watch over a phantom one.
 function plexSessionMatchesUser(session, username, accountId) {
+  if (session.client?.userIdSource === "player" && String(session.client.userId) === "1" && !session.client.userName) return false;
   const sessionUser = String(session.client?.userName || "").trim().toLowerCase();
   if (sessionUser && sessionUser === String(username).trim().toLowerCase()) return true;
 
@@ -483,7 +485,7 @@ function plexSessionMatchesUser(session, username, accountId) {
   return Number.isFinite(sessionAccountId) && sessionAccountId === Number(accountId);
 }
 
-async function fetchPlexSessions(config) {
+export async function fetchPlexSessions(config, { allUsers = false } = {}) {
   if (!config.plex.baseUrl || !config.plex.token) return { sessions: [], ok: true };
   const url = new URL(`${config.plex.baseUrl}/status/sessions`);
 
@@ -492,6 +494,7 @@ async function fetchPlexSessions(config) {
     if (!response.ok) throw new Error(`Request failed with ${response.status}`);
     const text = await response.text();
     const parsed = parsePlexSessions(text, config.plex);
+    if (allUsers) return { sessions: parsed, ok: true };
     if (!config.plex.username) return { sessions: parsed, ok: true };
 
     // Memoized for 10 minutes inside resolvePlexAccountId, so the poller's own
@@ -575,9 +578,9 @@ async function fetchJellyfinSessions(config) {
 // Returns { sessions, failedSources }: failedSources names which of "plex"/"emby"/
 // "jellyfin" could not be reached this call, so callers can avoid treating that
 // platform's (forced-empty) result as proof nothing is playing on it.
-export async function fetchLiveSessions(config) {
+export async function fetchLiveSessions(config, { plexSessions } = {}) {
   const sourceNames = ["plex", "emby", "jellyfin"];
-  const results = await Promise.allSettled([fetchPlexSessions(config), fetchEmbySessions(config), fetchJellyfinSessions(config)]);
+  const results = await Promise.allSettled([plexSessions ?? fetchPlexSessions(config), fetchEmbySessions(config), fetchJellyfinSessions(config)]);
   const sessions = [];
   const failedSources = new Set();
   results.forEach((result, index) => {

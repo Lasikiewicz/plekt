@@ -8,28 +8,29 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.2.0.0.1" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.2.0.0.2" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.2.0.0.1"></script>
+    <script src="/theme-boot.js?v=2.2.0.0.2"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.0.0.1" />
-    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.0.0.1" />
-    <link rel="stylesheet" href="/styles.css?v=2.2.0.0.1" />
+    <link rel="modulepreload" href="/app.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.0.0.2" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.0.0.2" />
+    <link rel="stylesheet" href="/styles.css?v=2.2.0.0.2" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
@@ -362,6 +363,7 @@
                 <input type="number" min="1" max="3" step="1" inputmode="numeric" data-now-playing-option="itemCount" />
               </label>
               <p class="now-playing-option-error hidden" role="alert"></p>
+              <p class="muted-copy">Set up your server's plugin or playback webhooks so Plekt hears about playback promptly. While idle, Plekt checks for missed activity every 5 minutes to reduce background requests. Once polling detects playback, checks run every 10 seconds. This panel refreshes every 10 seconds.</p>
             </div>
             <div id="nowPlayingGrid" class="now-playing-grid" aria-live="polite"></div>
           </section>
@@ -1245,7 +1247,7 @@
                             <li>
                               <b>Plex</b>
                               <span>No webhook setup is required. Plekt connects to Plex's WebSocket notification channel automatically to capture watched and unwatched changes in real time.</span>
-                              <span>It also checks playback progress every minute, so Plex activity continues to feed the normal watched-state and sync workflows.</span>
+                              <span>Plex playback notifications provide prompt updates. Playback checks back them up every 5 minutes while idle, then every 10 seconds once playback is detected.</span>
                             </li>
                             <li>
                               <b>Emby Webhook Setup Guide</b>
@@ -1318,7 +1320,7 @@
                               <b>Webhook Secret</b>
                               <span>The listener receives play, pause, stop, scrobble, and watched events from Plex, Emby, and Jellyfin, updating live session tracking as media plays.</span>
                               <span>Use the generated secret in the webhook URL or in an <code>X-Plekt-Webhook-Secret</code> or <code>Authorization: Bearer</code> header. Rotating it invalidates old webhook URLs without changing admin login.</span>
-                              <span>The background scheduler still checks playback every minute, applies the watched threshold, records completed watches, and dispatches cross-platform sync.</span>
+                              <span>Set up the plugin or playback webhooks for prompt updates. Playback checks back them up every 5 minutes while idle, then every 10 seconds once playback is detected.</span>
                             </li>
                           </ul>
                         </div>
@@ -3060,7 +3062,7 @@
                         <div class="sync-heading-title">
                           <p style="margin: 0;">Server Logs</p>
                         </div>
-                        <span class="activity-log-state" style="font-size: 0.78rem; color: var(--muted);"><span class="pulse-dot"></span> Live Output</span>
+                        <span id="logsLiveStatus" class="activity-log-state" style="font-size: 0.78rem; color: var(--muted);">Live output · refreshes every 3 seconds</span>
                       </div>
 
                       <div id="logsCategoryFilter" class="logs-category-filter">
@@ -3071,6 +3073,12 @@
                         <button type="button" class="logs-cat-btn" data-category="system">System Logs</button>
                       </div>
 
+                      <div class="settings-actions logs-viewer-controls">
+                        <button id="logsPauseButton" class="button-ghost" type="button" aria-pressed="false">Pause updates</button>
+                        <button id="logsFollowButton" class="button-ghost" type="button" aria-pressed="true">Follow latest</button>
+                        <label>Filter text <input id="logsTextFilter" type="search" placeholder="Search this category" /></label>
+                      </div>
+                      <p class="muted-copy">Pause freezes this snapshot. Resume to change category. Scrolling up turns off Follow latest. Text filtering ignores case; Download Logs exports all logs.</p>
                       <pre id="logsTerminal" class="logs-terminal" aria-live="polite"></pre>
 
                       <div class="settings-actions" style="margin-top: var(--space-3);">
@@ -3423,7 +3431,7 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.2.0.0.1"></script>
-    <script type="module" src="/app.js?v=2.2.0.0.1"></script>
+    <script type="module" src="/modules/analytics.js?v=2.2.0.0.2"></script>
+    <script type="module" src="/app.js?v=2.2.0.0.2"></script>
   </body>
 </html>

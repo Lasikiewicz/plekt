@@ -72,7 +72,7 @@ export function getPlexPrivateKey({ vaultOptions = {} } = {}) {
 
 function publicConnection(row) {
   if (!row) return null;
-  return { id: row.id, provider: row.provider, baseUrl: row.base_url, serverId: row.server_id, serverName: row.server_name || "", authDeviceId: row.auth_device_id, remoteUserId: row.remote_user_id, remoteUsername: row.remote_username || "", authKind: row.auth_kind, accessTokenExpiresAt: row.access_token_expires_at, lastRefreshedAt: row.last_refreshed_at, refreshFailureCount: row.refresh_failure_count, status: row.status, lastValidatedAt: row.last_validated_at, createdAt: row.created_at, updatedAt: row.updated_at };
+  return { id: row.id, provider: row.provider, baseUrl: row.base_url, serverId: row.server_id, serverName: row.server_name || "", authDeviceId: row.auth_device_id, remoteUserId: row.remote_user_id, remoteUsername: row.remote_username || "", authKind: row.auth_kind, serverOwned: row.server_owned == null ? null : Boolean(row.server_owned), accessTokenExpiresAt: row.access_token_expires_at, lastRefreshedAt: row.last_refreshed_at, refreshFailureCount: row.refresh_failure_count, status: row.status, lastValidatedAt: row.last_validated_at, createdAt: row.created_at, updatedAt: row.updated_at };
 }
 
 export function getMediaConnection(provider, { includeCredential = false, vaultOptions = {} } = {}) {
@@ -104,12 +104,12 @@ export function saveMediaConnection(input, { vaultOptions = {} } = {}) {
   db.transaction(() => {
     db.prepare("UPDATE media_connections SET status='disabled', updated_at=? WHERE provider=? AND id<>? AND status IN ('connected','reauth_required','legacy')").run(now, provider, id);
     db.prepare(`INSERT INTO media_connections
-      (id,provider,base_url,server_id,server_name,auth_device_id,remote_user_id,remote_username,auth_kind,credential_ciphertext,credential_iv,credential_tag,token_version,server_credential_ciphertext,server_credential_iv,server_credential_tag,server_token_version,access_token_expires_at,last_refreshed_at,refresh_failure_count,status,last_validated_at,created_at,updated_at)
-      VALUES (@id,@provider,@baseUrl,@serverId,@serverName,@deviceId,@userId,@username,@authKind,@ciphertext,@iv,@tag,@version,@serverCiphertext,@serverIv,@serverTag,@serverVersion,@expiresAt,@refreshedAt,0,@status,@validatedAt,@now,@now)
-      ON CONFLICT(id) DO UPDATE SET base_url=excluded.base_url,server_id=excluded.server_id,server_name=excluded.server_name,auth_device_id=excluded.auth_device_id,remote_user_id=excluded.remote_user_id,remote_username=excluded.remote_username,auth_kind=excluded.auth_kind,credential_ciphertext=excluded.credential_ciphertext,credential_iv=excluded.credential_iv,credential_tag=excluded.credential_tag,token_version=excluded.token_version,server_credential_ciphertext=excluded.server_credential_ciphertext,server_credential_iv=excluded.server_credential_iv,server_credential_tag=excluded.server_credential_tag,server_token_version=excluded.server_token_version,access_token_expires_at=excluded.access_token_expires_at,last_refreshed_at=excluded.last_refreshed_at,refresh_failure_count=0,status=excluded.status,last_validated_at=excluded.last_validated_at,updated_at=excluded.updated_at`).run({
+      (id,provider,base_url,server_id,server_name,auth_device_id,remote_user_id,remote_username,auth_kind,credential_ciphertext,credential_iv,credential_tag,token_version,server_credential_ciphertext,server_credential_iv,server_credential_tag,server_token_version,access_token_expires_at,last_refreshed_at,refresh_failure_count,status,last_validated_at,server_owned,created_at,updated_at)
+      VALUES (@id,@provider,@baseUrl,@serverId,@serverName,@deviceId,@userId,@username,@authKind,@ciphertext,@iv,@tag,@version,@serverCiphertext,@serverIv,@serverTag,@serverVersion,@expiresAt,@refreshedAt,0,@status,@validatedAt,@serverOwned,@now,@now)
+      ON CONFLICT(id) DO UPDATE SET base_url=excluded.base_url,server_id=excluded.server_id,server_name=excluded.server_name,auth_device_id=excluded.auth_device_id,remote_user_id=excluded.remote_user_id,remote_username=excluded.remote_username,auth_kind=excluded.auth_kind,credential_ciphertext=excluded.credential_ciphertext,credential_iv=excluded.credential_iv,credential_tag=excluded.credential_tag,token_version=excluded.token_version,server_credential_ciphertext=excluded.server_credential_ciphertext,server_credential_iv=excluded.server_credential_iv,server_credential_tag=excluded.server_credential_tag,server_token_version=excluded.server_token_version,access_token_expires_at=excluded.access_token_expires_at,last_refreshed_at=excluded.last_refreshed_at,refresh_failure_count=0,status=excluded.status,last_validated_at=excluded.last_validated_at,server_owned=excluded.server_owned,updated_at=excluded.updated_at`).run({
       id, provider, baseUrl, serverId: String(input.serverId), serverName: String(input.serverName || ""), deviceId: device.id, userId: String(input.remoteUserId), username: String(input.remoteUsername || ""), authKind: input.authKind, ciphertext: encrypted.ciphertext, iv: encrypted.iv, tag: encrypted.tag, version: encrypted.version,
       serverCiphertext: encryptedServer?.ciphertext || null, serverIv: encryptedServer?.iv || null, serverTag: encryptedServer?.tag || null, serverVersion: encryptedServer?.version || 1,
-      expiresAt: input.accessTokenExpiresAt ?? null, refreshedAt: input.lastRefreshedAt ?? null, status: input.status || "connected", validatedAt: input.lastValidatedAt ?? now, now,
+      expiresAt: input.accessTokenExpiresAt ?? null, refreshedAt: input.lastRefreshedAt ?? null, status: input.status || "connected", validatedAt: input.lastValidatedAt ?? now, serverOwned: input.serverOwned == null ? null : (input.serverOwned ? 1 : 0), now,
     });
   }).immediate();
   return getMediaConnection(provider);
@@ -125,7 +125,7 @@ export function resolveConnectedProviderConfig(provider, legacyConfig = {}, opti
   if (!connection) return legacyConfig;
   const device = getActiveAuthDevice(provider);
   return provider === "plex"
-    ? { ...legacyConfig, baseUrl: connection.baseUrl, token: connection.serverCredential || connection.credential, username: connection.remoteUsername, connectionId: connection.id, remoteUserId: connection.remoteUserId, authKind: connection.authKind, clientIdentifier: device?.deviceIdentifier || "" }
+    ? { ...legacyConfig, baseUrl: connection.baseUrl, token: connection.serverCredential || connection.credential, username: connection.remoteUsername, connectionId: connection.id, remoteUserId: connection.remoteUserId, authKind: connection.authKind, serverOwned: connection.serverOwned, clientIdentifier: device?.deviceIdentifier || "" }
     : { ...legacyConfig, baseUrl: connection.baseUrl, apiKey: connection.credential, userId: connection.remoteUserId, connectionId: connection.id, authKind: connection.authKind };
 }
 

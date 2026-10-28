@@ -49,6 +49,8 @@ the measured 90,000-row rebuild cost.
   month chart (`renderMonthChart`).
 - Leaderboard posters hydrate through the standard poster pipeline
   ([posters-artwork.md](posters-artwork.md)).
+- Show rankings use the library's provider identity groups, keeping same-title
+  shows with conflicting identities and their artwork separate across periods.
 
 On desktop, the Most Played title and selected scope stay on one line, the top-ten
 panel fills the available page height, and Watch Activity expands into the remaining

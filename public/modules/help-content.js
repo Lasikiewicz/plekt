@@ -1,6 +1,6 @@
-import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.2.0.0.1";
-import { state } from "./state.js?v=2.2.0.0.1";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.0.0.1";
+import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.2.0.0.2";
+import { state } from "./state.js?v=2.2.0.0.2";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.0.0.2";
 
 function webhookAckEntry(acks, provider) {
   return acks?.[provider] || null;
@@ -107,7 +107,7 @@ async function renderWebhookSetupGuides(container) {
           <span>No webhook setup required</span>
         </summary>
         <div class="tool-item-row">
-          <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">Plekt watches Plex automatically. It picks up watched and unwatched changes in real time, and also checks playback progress every minute.</p>
+          <p style="font-size: 0.9rem; color: var(--muted); margin: 0;">Plekt watches Plex automatically. Playback notifications provide prompt updates, backed by playback checks every 5 minutes while idle and every 10 seconds once playback is detected.</p>
           <p style="font-size: 0.9rem; color: var(--muted); margin: var(--space-2) 0 0;">Changes are saved to Plekt and passed on to your other servers.</p>
           <div class="guide-callout warning-callout" style="gap: var(--space-1); border-color: rgba(234, 179, 8, 0.45); background: rgba(234, 179, 8, 0.08); margin-top: var(--space-3);">
             <b style="color: var(--yellow); font-size: 0.85rem; display: block;">
@@ -520,7 +520,7 @@ export function webhookWarning() {
           <li>Plex does not support sending unwatched (unscrobble) events via native webhooks or Tautulli.</li>
           <li>For resume sync, Plex webhook traffic must include playback lifecycle events such as <code>media.play</code>, <code>media.resume</code>, <code>media.pause</code>, <code>media.stop</code>, and <code>media.scrobble</code>. Plekt reads <code>viewOffset</code> and <code>duration</code> when Plex provides them.</li>
           <li><b>Real-time Sync (Built-in):</b> Plekt's server includes a built-in Plex notification listener. It connects to your Plex Media Server via the WebSocket notification channel (configured automatically from your Plex URL and token in Settings → Media Servers), records watched and unwatched library changes, and expands bulk show or season changes into their episodes for propagation - no external script or daemon is required.</li>
-          <li><b>Per-Minute Scheduler:</b> Plekt's background worker runs every minute to process playback sessions, evaluate watched thresholds, and dispatch sync actions.</li>
+          <li><b>Background Worker:</b> Scheduled sync and queued actions run every minute. Playback notifications provide prompt updates; playback checks back them up every 5 minutes while idle and every 10 seconds once playback is detected.</li>
           <li>For general playback events, set up webhooks according to the <a href="https://support.plex.tv/articles/115002267687-webhooks/?utm_campaign=Plex%20Apps&utm_medium=Plex%20Web&utm_source=Plex%20Apps" target="_blank" rel="noopener noreferrer" style="color: #4b96e6; text-decoration: underline;">Plex Webhook Documentation</a>.</li>
         </ul>
       </div>

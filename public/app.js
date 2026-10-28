@@ -1,17 +1,18 @@
-import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=2.2.0.0.1";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs, formatLogLineToHtml } from "./modules/logs.js?v=2.2.0.0.1";
-import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=2.2.0.0.1";
-import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=2.2.0.0.1";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=2.2.0.0.1";
-import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=2.2.0.0.1";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=2.2.0.0.1";
-import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=2.2.0.0.1";
-import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=2.2.0.0.1";
-import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=2.2.0.0.1";
-import { initSupervisorSwitch, refreshSwitchUsers } from "./modules/supervisor-switch.js?v=2.2.0.0.1";
-import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=2.2.0.0.1";
-import { cachedExplorerPage, rememberExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows } from "./modules/explorer-page-cache.js?v=2.2.0.0.1";
-import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=2.2.0.0.1";
+import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=2.2.0.0.2";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./modules/logs.js?v=2.2.0.0.2";
+import { createLogsViewer } from "./modules/logs-viewer.js?v=2.2.0.0.2";
+import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=2.2.0.0.2";
+import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=2.2.0.0.2";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=2.2.0.0.2";
+import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=2.2.0.0.2";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=2.2.0.0.2";
+import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=2.2.0.0.2";
+import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=2.2.0.0.2";
+import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=2.2.0.0.2";
+import { initSupervisorSwitch, refreshSwitchUsers } from "./modules/supervisor-switch.js?v=2.2.0.0.2";
+import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=2.2.0.0.2";
+import { cachedExplorerPage, rememberExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows } from "./modules/explorer-page-cache.js?v=2.2.0.0.2";
+import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=2.2.0.0.2";
 
 // Route, dialog, media-detail, and maintenance modules load on demand through
 // modules/route-modules.js: a route downloads only the modules it renders.
@@ -47,6 +48,7 @@ const viaModule = (key, read) => (...args) => (isRouteModuleLoaded(key)
 const renderSettingsInlineHelp = ifLoaded("help-content", "renderSettingsInlineHelp");
 const loadSettingsUsersForRoute = ifLoaded("settings-events", "loadSettingsUsers");
 const renderChangelog = viaModule("changelog-channels", () => renderChangelogFromModule);
+const { renderLogs, syncLogsRefresh } = createLogsViewer({ state, elements, authHeaders, logsText });
 
 // How each route module is bound and initialized. route-modules.js runs this
 // once, after the module's own dependencies have loaded and before anything
@@ -368,7 +370,7 @@ const THEME_KEY = "plembfin:theme";
 
 function updateThemeIcon() {
   const isLightMode = document.documentElement.classList.contains("light-mode");
-  const src = isLightMode ? "/plekt_header_logo_light.png?v=2.2.0.0.1" : "/plekt_header_logo_dark.png?v=2.2.0.0.1";
+  const src = isLightMode ? "/plekt_header_logo_light.png?v=2.2.0.0.2" : "/plekt_header_logo_dark.png?v=2.2.0.0.2";
   // Several logos can exist at once - the sidebar, setup wizard, and locked
   // login panel all need to track the selected theme.
   for (const logo of document.querySelectorAll(".brand-logo, [data-theme-logo]")) {
@@ -3014,79 +3016,6 @@ function renderDbStatus(isOnline) {
 }
 
 
-
-async function renderLogs(forceScrollToBottom = false) {
-  if (!elements.logsTerminal) return;
-
-  const isInitialLoad = !state.hasLoadedLogsOnce;
-  state.hasLoadedLogsOnce = true;
-
-  const localLogs = logsText();
-  const category = state.activeLogCategory || "all";
-
-  // The frontend debug log is a flat browser-activity trail with no server-side
-  // category of its own, so it only genuinely belongs under "All" and "System" -
-  // showing it under Plex WebSockets/Outbound Sync/Scheduled Polls made every tab
-  // look identical, since tab switches force-scroll to the bottom of this section.
-  const includeFrontendSection = category === "all" || category === "system";
-
-  try {
-    const backendLogs = await fetchDiagnosticLogs(authHeaders(), category);
-    if (backendLogs.length > 0 || includeFrontendSection) {
-      const visibleBackendLogs = backendLogs.slice(-250);
-      const visibleFrontendLogs = includeFrontendSection && localLogs ? localLogs.split("\n").slice(-50) : [];
-      const allLogs = [
-        `=== BACKEND DIAGNOSTIC LOGS (${category.toUpperCase()}) ===`,
-        ...backendLogs,
-        ...(includeFrontendSection ? ["", "=== FRONTEND DEBUG LOGS ===", localLogs || "[no frontend logs]"] : [])
-      ].join("\n");
-      state.renderedLogsText = allLogs;
-
-      const htmlLines = [
-        `<div class="log-section-header">=== BACKEND DIAGNOSTIC LOGS (${escapeHtml(category.toUpperCase())}) - showing latest ${visibleBackendLogs.length} of ${backendLogs.length} ===</div>`,
-        ...(visibleBackendLogs.length ? visibleBackendLogs.map(formatLogLineToHtml) : ['<div class="log-row"><span class="log-msg" style="opacity: 0.6;">[no backend logs for this category]</span></div>']),
-        ...(includeFrontendSection ? [
-          `<div class="log-section-header" style="margin-top: 1rem;">=== FRONTEND DEBUG LOGS ===</div>`,
-          ...(visibleFrontendLogs.length ? visibleFrontendLogs.map(formatLogLineToHtml) : ['<div class="log-row"><span class="log-msg" style="opacity: 0.6;">[no frontend logs]</span></div>'])
-        ] : [])
-      ].join("");
-
-      elements.logsTerminal.innerHTML = htmlLines;
-    } else {
-      state.renderedLogsText = localLogs || `[no diagnostic logs captured yet for category: ${category}]`;
-      elements.logsTerminal.innerHTML = `<div class="log-row"><span class="log-msg" style="opacity: 0.6;">${escapeHtml(state.renderedLogsText)}</span></div>`;
-    }
-  } catch (error) {
-    state.renderedLogsText = localLogs || "[no diagnostic logs captured yet]";
-    elements.logsTerminal.innerHTML = `<div class="log-row"><span class="log-msg" style="opacity: 0.6;">${escapeHtml(state.renderedLogsText)}</span></div>`;
-  }
-
-  const el = elements.logsTerminal;
-  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-  if (forceScrollToBottom || isInitialLoad || atBottom) {
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
-    });
-  }
-}
-
-function syncLogsRefresh() {
-  const shouldRefresh = state.activeView === "settings" && state.activeSettingsRoute?.panel === "logs" && state.token;
-  if (shouldRefresh && !state.logsRefreshInterval) {
-    if (!state.hasLoadedLogsOnce) renderLogs(true).catch(() => { });
-    state.logsRefreshInterval = window.setInterval(() => {
-      if (state.activeView === "settings" && state.activeSettingsRoute?.panel === "logs") {
-        renderLogs().catch(() => { });
-      }
-    }, 3000);
-  } else if (!shouldRefresh) {
-    if (state.logsRefreshInterval) {
-      window.clearInterval(state.logsRefreshInterval);
-      state.logsRefreshInterval = undefined;
-    }
-    state.hasLoadedLogsOnce = false;
-  }
-}
 
 function refreshHelpIfVisible() {}
 

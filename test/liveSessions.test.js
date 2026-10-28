@@ -145,6 +145,14 @@ test("Plex sessions carry the player account id when <User> is empty", () => {
   const [session] = parsePlexSessions(plexSessionXml("playing"), {});
   assert.equal(session.client.userName, "");
   assert.equal(session.client.userId, "1");
+  assert.equal(session.client.userIdSource, "player");
+});
+
+test("an explicit Plex User identity takes priority over a conflicting player fallback", () => {
+  const xml = plexSessionXml("playing").replace("<User />", '<User id="880537937" title="lasiki" />');
+  const [session] = parsePlexSessions(xml, {});
+  assert.equal(session.client.userId, "880537937");
+  assert.equal(session.client.userIdSource, "user");
 });
 
 // A Plex live session carries no series ids of its own. Without the show's

@@ -7,6 +7,7 @@ import { disableStoredLegacyCredential, loadMediaConfig, mediaAccountAuthEnabled
 import { assertSafeOutboundUrl, fetchWithTimeout } from "../utils/outbound.js";
 import { authoriseAuthFlow, completeAuthFlow, createAuthFlow, disableMediaConnection, getActiveAuthDevice, getAuthFlow, getMediaConnection, getOrCreateAuthDevice, getOrCreatePlexAuthDevice, getPlexLegacyAuthDevice, getPlexPrivateKey, getReusableAuthorisedAuthFlow, saveMediaConnection } from "../utils/mediaConnectionRepo.js";
 import { createPlexPin, plexAuthUrl, plexClientHeaders, plexTokenExpiresAt, pollPlexPin } from "../utils/plexAuth.js";
+import { otherPlektUserOnPlexAccount } from "../utils/plexAccountClaims.js";
 import { authenticateEmbyLike, initiateJellyfinQuickConnect, jellyfinQuickConnectEnabled, logoutEmbyLike, pollJellyfinQuickConnect } from "../utils/embyLikeAuth.js";
 
 function requestFingerprint(req) {
@@ -124,13 +125,18 @@ export async function handlePlexAuth(req, res, path) {
   const serverCredential = String(selected.accessToken || selected.access_token || flow.secret);
   const verified = await verifyPlexServer(selected, serverCredential);
   const legacyConfig = await loadMediaConfig({ resolveConnections: false });
+  // Check after network work, with no await between the claim check and save.
+  if (otherPlektUserOnPlexAccount(account.id)) {
+    writeAuditLog("media-auth.plex.shared-account-blocked", { ip: req.ip || req.socket?.remoteAddress, detail: { flowId: flow.id } });
+    return sendJson(res, { error: "This Plex account is already connected to another Plekt user. Each Plekt user needs their own Plex account, otherwise their watch history would mix." }, 409);
+  }
   let connection;
   db.transaction(() => {
     if (legacyConfig.plex?.token) {
       saveMediaConnection({ provider: "plex", baseUrl: legacyConfig.plex.baseUrl || verified.baseUrl, serverId: verified.serverId, serverName: verified.serverName, authDeviceId: flow.authDeviceId, remoteUserId: `unverified:${legacyConfig.plex.username || "legacy"}`, remoteUsername: legacyConfig.plex.username || "Legacy account", authKind: "legacy", credential: legacyConfig.plex.token, status: "disabled", lastValidatedAt: null });
     }
     const managedJwt = flow.secret.split(".").length === 3;
-    connection = saveMediaConnection({ provider: "plex", ...verified, authDeviceId: flow.authDeviceId, remoteUserId: account.id, remoteUsername: account.username, authKind: managedJwt ? "plex_jwt" : "plex_legacy", credential: flow.secret, serverCredential, accessTokenExpiresAt: managedJwt ? plexTokenExpiresAt(flow.secret) : null, lastValidatedAt: Date.now() });
+    connection = saveMediaConnection({ provider: "plex", ...verified, authDeviceId: flow.authDeviceId, remoteUserId: account.id, remoteUsername: account.username, authKind: managedJwt ? "plex_jwt" : "plex_legacy", credential: flow.secret, serverCredential, accessTokenExpiresAt: managedJwt ? plexTokenExpiresAt(flow.secret) : null, serverOwned: typeof selected.owned === "boolean" ? selected.owned : null, lastValidatedAt: Date.now() });
     disableStoredLegacyCredential("plex", connection.id, { authMode: "account", activate: true });
     completeAuthFlow(flow.id, fingerprint);
     writeAuditLog("media-auth.plex.connected", { ip: req.ip || req.socket?.remoteAddress, detail: { connectionId: connection.id, serverId: connection.serverId } });

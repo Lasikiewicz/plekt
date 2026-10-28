@@ -5,9 +5,46 @@ import { makeTempDataDir } from "./helpers.js";
 makeTempDataDir("plembfin-live-poller-completion-");
 
 const repo = await import("../server/src/utils/dataRepo.js");
-const { refreshLiveSessions } = await import("../server/src/utils/liveSessionCompletion.js");
+const { refreshLiveSessions, __setCompletionAfterInsertHook } = await import("../server/src/utils/liveSessionCompletion.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 const { dropTitle, listDroppedTitles } = await import("../server/src/utils/droppedTitles.js");
+const { db } = await import("../server/src/db.js");
+const { saveTrackerConnection } = await import("../server/src/utils/trackerConnectionRepo.js");
+
+test("interrupted completion settles its captured tracker intent without creating an orphan or resending", async () => {
+  saveTrackerConnection({ provider: "trakt", clientId: "fixture", clientSecret: "fixture", remoteUserId: "fixture-user", accessToken: "fixture-token", refreshToken: "fixture-refresh", accessTokenExpiresAt: Date.now() + 86400_000 });
+  const originalFetch = globalThis.fetch;
+  let writes = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url).startsWith("https://api.trakt.tv/sync/history") && options.method === "POST") {
+      writes += 1;
+      return new Response(JSON.stringify({ added: { movies: 1 }, not_found: { movies: [] } }), { status: 201 });
+    }
+    throw new Error(`Unexpected request: ${new URL(url).pathname}`);
+  };
+  try {
+    __setCompletionAfterInsertHook(() => { throw new Error("fixture interruption after watch insert"); });
+    await seedSession({ sessionId: "poller-tracker-intent", tmdb: "900008", progress: 96 });
+    const loop = createLoopStore();
+    await refreshLiveSessions(EMPTY_CONFIG, loop);
+    await refreshLiveSessions(EMPTY_CONFIG, loop);
+    assert.equal(writes, 0);
+    assert.equal(db.prepare("SELECT status FROM tracker_write_intents WHERE media_key LIKE '%900008%'").get().status, "pending");
+    __setCompletionAfterInsertHook(null);
+    await refreshLiveSessions(EMPTY_CONFIG, loop);
+    await refreshLiveSessions(EMPTY_CONFIG, loop);
+    const rows = await watchRows("900008");
+    assert.equal(rows.length, 1);
+    const intents = db.prepare("SELECT watch_record_id,status FROM tracker_write_intents WHERE media_key LIKE '%900008%'").all();
+    assert.deepEqual(intents, [{ watch_record_id: rows[0].id, status: "settled" }]);
+    await refreshLiveSessions(EMPTY_CONFIG, loop);
+    assert.equal(writes, 1);
+  } finally {
+    __setCompletionAfterInsertHook(null);
+    globalThis.fetch = originalFetch;
+    db.prepare("DELETE FROM tracker_connections WHERE provider='trakt'").run();
+  }
+});
 
 // End-to-end coverage of the poller's vanished-session promotion
 // (core-sync-health step 2): a cached session that is no longer reported for

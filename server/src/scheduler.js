@@ -53,17 +53,20 @@ import {
 import { resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem } from "./utils/watchDates.js";
 import { enqueueManualWatchReview } from "./utils/manualWatchReview.js";
 import { brandEnv } from "./utils/brandEnv.js";
+import { createPerUserState } from "./utils/perUserState.js";
 
 const NEXT_AIRING_REFRESH_INTERVAL_MS = 30 * 60 * 1000;
 const EPISODE_IDENTITY_REPAIR_INTERVAL_MS = 15 * 60 * 1000;
 const TRAKT_PROVIDER_RECONCILIATION_INTERVAL_MS = 6 * 60 * 60 * 1000;
 const UPCOMING_CALENDAR_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const NEXT_AIRING_REFRESH_LIMIT = 40;
-let lastNextAiringRefreshAt = 0;
-let lastEpisodeIdentityRepairAt = 0;
-let lastTraktProviderReconciliationAt = 0;
-let nextAiringInitialBuildPending = true;
-let lastUpcomingCalendarRefreshAt = 0;
+const tickCadence = createPerUserState(() => ({
+  lastNextAiringRefreshAt: 0,
+  lastEpisodeIdentityRepairAt: 0,
+  lastTraktProviderReconciliationAt: 0,
+  nextAiringInitialBuildPending: true,
+  lastUpcomingCalendarRefreshAt: 0,
+}));
 const LARGE_DISPATCH_PENDING_THRESHOLD = 8;
 const PLEX_BULK_EPISODE_CONCURRENCY = 2;
 const PLEX_NOTIFICATION_STATE_DEDUPE_MS = 60 * 1000;
@@ -430,6 +433,7 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   if (isAuthoritativeRestoreActive()) await recoverStaleSyncOperation();
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
   pruneSyncPlans();
+  const cadence = tickCadence();
   await runWithTimeBudget("Loop key prune", () => {
     const removed = pruneExpiredLoopKeys();
     if (removed > 0) console.log(`Loop key prune: removed ${removed} expired row${removed === 1 ? "" : "s"}.`);
@@ -442,9 +446,9 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   // numbering conflicts. Re-check it infrequently in the background; when
   // Trakt eventually adopts the canonical TVDB series and season numbers,
   // clear only that override before Scheduled sync runs in this same tick.
-  if (Date.now() - lastTraktProviderReconciliationAt >= TRAKT_PROVIDER_RECONCILIATION_INTERVAL_MS) {
+  if (Date.now() - cadence.lastTraktProviderReconciliationAt >= TRAKT_PROVIDER_RECONCILIATION_INTERVAL_MS) {
     if (!isLeader()) return { skipped: true, reason: "lease-lost" };
-    lastTraktProviderReconciliationAt = Date.now();
+    cadence.lastTraktProviderReconciliationAt = Date.now();
     await runWithTimeBudget("Trakt provider mapping reconciliation", () => reconcileTraktProviderMappings(), 45_000);
   }
   // A large outstanding backlog (checkUnwatched + recently-watched/resumable
@@ -504,9 +508,9 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   // Repair identity aliases before the dashboard projection and metadata
   // warm-up run. The pass is idempotent and bounded by its cadence; it repairs
   // old episode-level ids and collapses progress aliases left by older feeds.
-  if (Date.now() - lastEpisodeIdentityRepairAt >= EPISODE_IDENTITY_REPAIR_INTERVAL_MS) {
+  if (Date.now() - cadence.lastEpisodeIdentityRepairAt >= EPISODE_IDENTITY_REPAIR_INTERVAL_MS) {
     if (!isLeader()) return { skipped: true, reason: "lease-lost" };
-    lastEpisodeIdentityRepairAt = Date.now();
+    cadence.lastEpisodeIdentityRepairAt = Date.now();
     await runWithTimeBudget("Episode identity repair", () => repairEpisodeSeriesIdentity(), 30_000);
     // Cached TMDB answers only; uncached ids go to a background lookup job.
     if (!isAuthoritativeRestoreActive()) {
@@ -519,16 +523,16 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   // hold the scheduler tick open on TMDB/TVDB requests.
   await runWithTimeBudget("TMDB metadata warm-up", () => prewarmTmdbLibrary(), 30_000);
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
-  if (Date.now() - lastNextAiringRefreshAt > NEXT_AIRING_REFRESH_INTERVAL_MS) {
+  if (Date.now() - cadence.lastNextAiringRefreshAt > NEXT_AIRING_REFRESH_INTERVAL_MS) {
     if (!isLeader()) return { skipped: true, reason: "lease-lost" };
-    lastNextAiringRefreshAt = Date.now();
-    const forceAll = nextAiringInitialBuildPending;
-    nextAiringInitialBuildPending = false;
+    cadence.lastNextAiringRefreshAt = Date.now();
+    const forceAll = cadence.nextAiringInitialBuildPending;
+    cadence.nextAiringInitialBuildPending = false;
     await runWithTimeBudget("Next airing cache refresh", () => refreshNextAiringCache({ forceAll }), 45_000);
   }
-  if (Date.now() - lastUpcomingCalendarRefreshAt > UPCOMING_CALENDAR_REFRESH_INTERVAL_MS) {
+  if (Date.now() - cadence.lastUpcomingCalendarRefreshAt > UPCOMING_CALENDAR_REFRESH_INTERVAL_MS) {
     if (!isLeader()) return { skipped: true, reason: "lease-lost" };
-    lastUpcomingCalendarRefreshAt = Date.now();
+    cadence.lastUpcomingCalendarRefreshAt = Date.now();
     await runWithTimeBudget("Upcoming calendar cache refresh", () => refreshUpcomingCalendarCache(), 50_000);
   }
   return { skipped: false };

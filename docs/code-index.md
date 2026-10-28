@@ -216,7 +216,8 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `images.js`: batchedFallbackPosterUrl, bestTmdbLogo, bindPosterImageErrorHandler, cachedPosterLookup, clearPersistentPosterLookupCache, compactPosterUrl, configuredImageUrl, hydrateMediaDetailImages and 18 more
 - `initial-sync.js`: initialSyncDialogMarkup, loadInitialSyncSummary, openInitialSyncDialog, renderInitialSync, startInitialSyncUi, stopInitialSyncUi
 - `live-updates.js`: startLiveUpdates, stopLiveUpdates
-- `logs.js`: DEBUG_LOGS_KEY, MAX_DEBUG_LOGS, appendDebugLog, clearDebugLogs, clearDiagnosticLogs, escapeHtml, fetchDiagnosticLogs, formatBrowserLocalTime and 3 more
+- `logs-viewer.js`: createLogsViewer, filterLogLines
+- `logs.js`: DEBUG_LOGS_KEY, MAX_DEBUG_LOGS, appendDebugLog, clearDebugLogs, clearDiagnosticLogs, escapeHtml, fetchDiagnosticLogs, formatBrowserLocalTime and 4 more
 - `manual-watch-review.js`: buildManualWatchReviewEpisodeCatalog, filterManualWatchReviews, groupManualWatchReviews, groupReviewsByEpisode, groupReviewsBySeason, initManualWatchReview, isEpisodeReview, loadManualWatchReview and 13 more
 - `media-card.js`: mediaCardHref, normalizeMediaCardRecord, renderMediaCard
 - `media-detail-context.js`: authHeaders, bumpMediaRenderToken, clearMediaDetailState, closeDebugModal, closeMediaDetail, closeMediaInfoModal, currentMediaRenderToken, initMediaDetail and 21 more
@@ -262,6 +263,7 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `status-indicators.js`: loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary, renderSyncActivityStatus, setSyncActivityProgress, setSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling
 - `supervisor-switch.js`: initSupervisorSwitch, refreshSwitchUsers, setupSwitchMarkup
 - `sync-activity.js`: activityPlatform, attentionIssueMarkup, buildSyncActivityLog, canonicalShowKey, clearClientAttention, clearClientAttentionForRoute, clientAttentionItemMarkup, compareSyncActivityGroups and 45 more
+- `sync-attention-cards.js`: renderSyncAttentionItem
 - `sync-preview.js`: initSyncPreview
 - `sync.js`: activeSessionsKey, categorizeIssues, getActiveTargets, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, hasConfirmedMediaAvailability, historyAction and 43 more
 - `tautulli-import.js`: initTautulliImport, refreshTautulliImport
@@ -376,7 +378,8 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `libraryForceSync.js`: forceSyncLibraryState, normalizeLibraryForceSyncRequest, plannerMediaToSyncMedia
 - `liveSessionCompletion.js`: UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS, __setCompletionAfterInsertHook, __setCompletionBeforeRecheckHook, __setStoppedProgressBeforeWriteHook, refreshLiveSessions, upNextProvidersToProbeForOutage
 - `liveSessionPoller.js`: createLiveSessionPoller
-- `liveSessions.js`: LIVE_SESSION_COMPLETION_MAX_AGE_MS, LIVE_SESSION_PLAYBACK_STATES, NOW_PLAYING_TERMINAL_GRACE_MS, buildCacheRow, canInferLiveSessionCompletion, fetchLiveSessions, hydrateCachedSession, isSessionActive and 7 more
+- `liveSessionTenants.js`: refreshTenantLiveSessions, routePlexSessions
+- `liveSessions.js`: LIVE_SESSION_COMPLETION_MAX_AGE_MS, LIVE_SESSION_PLAYBACK_STATES, NOW_PLAYING_TERMINAL_GRACE_MS, buildCacheRow, canInferLiveSessionCompletion, fetchLiveSessions, fetchPlexSessions, hydrateCachedSession and 8 more
 - `logVerbose.js`: isVerboseLogging, setVerboseLogging, traceLog
 - `loopStore.js`: createLoopStore, pruneExpiredLoopKeys
 - `manualWatchReview.js`: RESOLVED_BY_LOCAL_STATE, countPendingManualWatchReviewItems, countPendingManualWatchReviews, dismissPendingManualWatchReviewsForMedia, enqueueManualWatchReview, enqueueSourceMismatchReview, getManualWatchReview, listPendingManualWatchReviews and 5 more
@@ -397,6 +400,7 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `outboundGovernor.js`: acquireOutboundSlot, configureOutboundGovernor, noteOutboundResponse, noteOutboundRetry, outboundGovernorProfile, outboundGovernorTelemetry, resetOutboundGovernor
 - `outboundStateLease.js`: runWithOutboundStateLease
 - `parsers.js`: buildPlexMediaFromMetadata, decodeHtmlEntities, normalizeProviderIds, parseCustomWebhook, parseEmbyWebhook, parseJellyfinWebhook, parsePlexGuids, parsePlexMediaIds and 1 more
+- `perUserState.js`: createPerUserState
 - `personCreditWatchRows.js`: getPersonCreditWatchRows
 - `personalMediaKey.js`: normalizePersonalMediaType, personalMediaKey
 - `personalRatingIdentity.js`: normalizePersonalRatingMedia, normalizePersonalRatingType, personalRatingMediaAliases, personalRatingMediaKey, ratingMediaForStorage, showTitleKey
@@ -420,13 +424,14 @@ Exported names per source file, sorted. Rows with more than 8 exports list the f
 - `playstateAliasReview.js`: dismissPlaystateAliasesForShow, dismissedPlaystateAliasKeys, foldPlaystateAliasesIntoShow, listDismissedPlaystateAliases, listUnprovenPlaystateAliases, restoreDismissedPlaystateAliases
 - `plektBackups.js`: createPlektBackup, deletePlektBackup, listPlektBackups, loadPlektBackupConfig, loadPlektBackupRuntime, plektBackupFilePath, plektBackupStatus, runScheduledPlektBackup and 2 more
 - `plektRestore.js`: getPlektRestoreJob, readEncryptedEnvelope, runPlektRestore, saveUploadedBackup, startPlektRestore, uploadedBackupPath
+- `plexAccountClaims.js`: otherPlektUserOnPlexAccount
 - `plexAdaptivePoller.js`: createPlexAdaptivePoller
 - `plexAuth.js`: PLEX_CLIENTS_ORIGIN, PLEX_TOKEN_REFRESH_SCOPE, createPlexPin, decodeJwtClaims, plexAuthUrl, plexClientHeaders, plexTokenExpiresAt, pollPlexPin and 2 more
 - `plexClient.js`: __resetPlexIdentityCache, __setPlexIdentityCacheNow, clearPlexPersonalRating, countPlexWatchedItems, fetchPlexContainerEpisodes, fetchPlexContinueWatching, fetchPlexContinueWatchingItems, fetchPlexLibraryItems and 19 more
 - `plexFetch.js`: fetchPlexWithRefresh, plexRequestHeaders
 - `plexNotificationListener.js`: createPlexNotificationListener, isPlexPlayingNotification, parsePlexNotificationRatingKeys, probePlexNotificationSocket
 - `plexPlaylists.js`: addPlexPlaylistItems, clearPlexServerIdentifierCache, createPlexPlaylist, deletePlexPlaylist, fetchPlexPlaylist, fetchPlexPlaylistItems, fetchPlexPlaylists, getPlexServerIdentifier and 5 more
-- `plexTokenManager.js`: getValidPlexServerToken, getValidPlexToken
+- `plexTokenManager.js`: ensurePlexServerOwnership, getValidPlexServerToken, getValidPlexToken
 - `plexWatchlistClient.js`: add, addPlexWatchlistItem, capabilities, fetchPlexWatchlistRss, fetchPlexWatchlistSnapshot, listManagedItems, listPlexWatchlistItems, plexWatchlistCapabilities and 4 more
 - `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, plexUnplayedHasWatchEvidence, shouldRepairRecentPlexUnwatch
 - `posterCache.js`: cacheArtworkFromUrl, cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache, markPosterMissing, restoreMissingCachedArtwork and 3 more

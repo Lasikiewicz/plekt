@@ -705,6 +705,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Core deferred cast disclosure markup and focus handling | `modules/cast-disclosure.js` |
 | Sync status, sync history, now-playing polling | `modules/sync.js`, `modules/sync-preview.js` |
 | Sync Activity page (`/sync-activity`), including its route-scoped action/event handlers | `modules/sync-activity.js` |
+| Sync Attention card rendering, including compact tracker-write cards, watched-date guidance and tracker history buttons | `modules/sync-attention-cards.js` (loaded with `sync-activity.js`) |
 | Dashboard rendering | `modules/dashboard.js` |
 | Dashboard behaviour (TV runs collapsed only in posters-only mode, Now Playing feature layout, the page backdrop), compact Recently watched rows and coalesced live history preview refresh | `modules/dashboard-modern.js` |
 | Backdrop artwork behind cards on every page (Card Art) | `modules/card-art.js` |
@@ -759,6 +760,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Setup encrypted backup configuration and shared remote-destination form | `modules/onboarding-backups.js` |
 | Registry-driven setup tracker cards, per-provider authorization flows, import choices and parallel import requests | `modules/onboarding-trackers.js` |
 | Debug/diagnostic logs & telemetry export | `modules/logs.js` (categorization, local time formatting, export) |
+| Server Logs renderer, snapshot pause, follow, filtering and refresh lifecycle | `modules/logs-viewer.js` |
 | Connection label formatting | `modules/settings.js` |
 | Shared settings modal, picker, and card-grid primitives | `modules/settings-ui.js` |
 | Media-server and metadata-provider settings cards/modals | `modules/settings-services.js` |

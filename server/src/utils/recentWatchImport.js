@@ -4,6 +4,7 @@ import { isRecentOutboundJellyfinNextUpNudge, syncMediaPlaystate } from "./syncO
 import { parsePlexMediaIds } from "./parsers.js";
 import { resolvePlexAccountId } from "./plexClient.js";
 import { fetchPlexWithRefresh } from "./plexFetch.js";
+import { ensurePlexServerOwnership } from "./plexTokenManager.js";
 import { isAuthoritativeRestoreActive } from "./configStore.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { loadWatchBackupRuntime } from "./watchHistoryBackups.js";
@@ -139,7 +140,7 @@ async function resolvePlexTargetAccountId(plexConfig, username, logger = console
   }
 }
 
-export function plexHistoryItemMatchesConfiguredUser(item = {}, { username = "", accountId = null, accountScoped = false } = {}) {
+export function plexHistoryItemMatchesConfiguredUser(item = {}, { username = "", accountId = null, accountScoped = false, tokenScoped = false } = {}) {
   if (!username) return true;
 
   const itemAccountId = plexAccountIdFromItem(item);
@@ -155,7 +156,12 @@ export function plexHistoryItemMatchesConfiguredUser(item = {}, { username = "",
   // Plex omits User/Account from library-section results, even when the
   // request is explicitly scoped with accountID. Preserve that request
   // provenance so a valid, server-filtered result is not discarded.
-  return accountScoped && accountId != null;
+  if (accountScoped && accountId != null) return true;
+  // A Plex account that plex.tv records as not owning the server only ever
+  // sees its own played flags in library listings (Plex ignores accountID for
+  // it), so an unlabelled row from that sign-in is the user's own. Never
+  // inferred from a 403: an owner sign-in keeps the strict filter above.
+  return tokenScoped;
 }
 
 export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = console.log, trackerWatchedDateIndex = null) {
@@ -175,7 +181,9 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
   const skippedMalformed = [];
 
   const targetAccountId = await resolvePlexTargetAccountId(config.plex, username, logger);
-  if (username && targetAccountId == null) {
+  const tokenScoped = Boolean(username && targetAccountId == null && config.plex.connectionId
+    && (config.plex.serverOwned === false || (config.plex.serverOwned == null && await ensurePlexServerOwnership() === false)));
+  if (username && targetAccountId == null && !tokenScoped) {
     logger(`Plex: configured user "${config.plex.username}" was not resolved to an account id; rows without a matching username will be skipped.`);
   }
 
@@ -259,7 +267,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
 
     for (const candidate of allItems) {
       const { item, accountScoped, kind } = candidate;
-      if (!plexHistoryItemMatchesConfiguredUser(item, { username, accountId: targetAccountId, accountScoped })) continue;
+      if (!plexHistoryItemMatchesConfiguredUser(item, { username, accountId: targetAccountId, accountScoped, tokenScoped: tokenScoped && kind === "section" })) continue;
       if (item.type !== "movie" && item.type !== "episode") continue;
       if (kind === "section" && Number(item.viewCount || 0) <= 0) continue;
 

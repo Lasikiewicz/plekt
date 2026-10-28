@@ -1,4 +1,4 @@
-import { state } from "./state.js?v=2.2.0.0.1";
+import { state } from "./state.js?v=2.2.0.0.2";
 
 const MEMORY_TTL_MS = 30 * 60 * 1000;
 const PERSISTED_KEY = "plekt:explorerPageCache:v3";

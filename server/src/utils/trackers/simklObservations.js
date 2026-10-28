@@ -34,21 +34,21 @@ export function persistSimklObservations(connection, snapshot, { expectedCursor 
         || ![snapshot.watched, snapshot.ratings, snapshot.unrated ?? [], snapshot.review].every(Array.isArray)
         || expectedCursor && Date.parse(snapshot.cursor) < Date.parse(expectedCursor)) throw simklReviewRequired("Simkl activity envelope is incomplete or out of order");
     const previous = db.prepare("SELECT * FROM tracker_observations WHERE provider='simkl' AND connection_id=?").all(connection.id);
-    const put = (kind, item, key, status, reason = "") => {
+    const put = (kind, item, key, status, reason = "", attentionRequired = false) => {
       if (!key) throw simklReviewRequired("Simkl observation has no usable identity");
       const observationKey = `${kind}:${key}`;
       const id = crypto.createHash("sha256").update(JSON.stringify([connection.id, observationKey])).digest("hex");
       const now = Date.now();
       // Keep an acknowledgement/dismissal across repeated delta observations.
-      db.prepare(`INSERT INTO tracker_observations (id,provider,connection_id,account_id,observation_key,kind,observation_json,status,reason,created_at,updated_at)
-        VALUES (?,'simkl',?,?,?,?,?,?,?,?,?) ON CONFLICT(provider,connection_id,observation_key) DO UPDATE SET
-        observation_json=excluded.observation_json,updated_at=excluded.updated_at`)
-        .run(id, connection.id, connection.remoteUserId, observationKey, kind, JSON.stringify(item), status, reason, now, now);
+      db.prepare(`INSERT INTO tracker_observations (id,provider,connection_id,account_id,observation_key,kind,observation_json,status,reason,attention_required,created_at,updated_at)
+        VALUES (?,'simkl',?,?,?,?,?,?,?,?,?,?) ON CONFLICT(provider,connection_id,observation_key) DO UPDATE SET
+        observation_json=excluded.observation_json,attention_required=excluded.attention_required,updated_at=excluded.updated_at`)
+        .run(id, connection.id, connection.remoteUserId, observationKey, kind, JSON.stringify(item), status, reason, Number(attentionRequired), now, now);
     };
     for (const item of snapshot.review) {
       const key = simklMediaKey(item.media);
       if (!key) throw simklReviewRequired("Simkl review observation has no usable identity");
-      put("review", item, `${key}:${item.reason}:${item.season ?? ""}:${item.episode ?? ""}`, "review", item.reason);
+      put("review", item, `${key}:${item.reason}:${item.season ?? ""}:${item.episode ?? ""}`, "review", item.reason, Boolean(expectedCursor));
     }
     // One row per rated title holds its latest Simkl rating for rating sync.
     // Neither absence nor a rating-created movie watch is proof of a play.
@@ -83,7 +83,7 @@ export function persistSimklObservations(connection, snapshot, { expectedCursor 
       // Ordinary state observations are not a repeat-play feed. A new remote
       // date for a known watched item must never manufacture another local play.
       const baselineOnly = !expectedCursor;
-      put("watched", item, key, reason ? "review" : known || baselineOnly ? "observed" : "pending", reason);
+      put("watched", item, key, reason ? "review" : known || baselineOnly ? "observed" : "pending", reason, Boolean(expectedCursor && reason));
     }
     db.prepare(`INSERT INTO tracker_observation_cursors (provider,connection_id,account_id,cursor,activities_json,updated_at)
       VALUES ('simkl',?,?,?,?,?) ON CONFLICT(provider) DO UPDATE SET connection_id=excluded.connection_id,
@@ -141,7 +141,8 @@ export function simklObservationAttentionItems() {
     unknown_watch_date: "Simkl did not provide a known watch date.",
   };
   return db.prepare(`SELECT o.* FROM tracker_observations o JOIN tracker_connections c ON c.provider=o.provider
-    AND c.id=o.connection_id AND c.remote_user_id=o.account_id WHERE o.provider='simkl' AND o.status='review' ORDER BY o.created_at`).all().map((row) => {
+    AND c.id=o.connection_id AND c.remote_user_id=o.account_id WHERE o.provider='simkl' AND o.status='review'
+    AND o.attention_required=1 ORDER BY o.created_at`).all().map((row) => {
     const item = JSON.parse(row.observation_json);
     return { id: `simkl-observation-${row.id}`, kind: "tracker_observation_review", provider: "simkl", severity: "warning",
       title: `Simkl: ${item.media?.title || "Media observation"}`, source: "tracker_observation", status: "review",

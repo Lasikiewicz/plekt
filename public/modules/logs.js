@@ -1,6 +1,13 @@
 export const DEBUG_LOGS_KEY = "plembfin_debug_logs";
 export const MAX_DEBUG_LOGS = 500;
 
+export function replaceLogContent(el, html, forceScroll = false) {
+  const scrollTop = el.scrollTop;
+  const follow = forceScroll || el.scrollHeight - scrollTop - el.clientHeight < 120;
+  el.innerHTML = html;
+  el.scrollTop = follow ? el.scrollHeight : scrollTop;
+}
+
 export function readStoredDebugLogs(storage = localStorage) {
   try {
     const parsed = JSON.parse(storage.getItem(DEBUG_LOGS_KEY) || "[]");

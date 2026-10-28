@@ -4,9 +4,10 @@ Simkl checks run on demand and after media-server events, never on unattended
 polling. Event-driven checks are throttled to at most once per 30 minutes; Check
 now is immediate. Ordinary outbound watches wait up to 30 minutes so several can
 share one batch; explicit multi-item marks still send immediately. The integration retains baseline/delta
-observations and activity cursors durably. Unsafe dates, mappings and rating
-observations appear as review holds in Sync Attention when present. **Keep local
-history** hides an observation without applying it or sending a tracker write.
+observations and activity cursors durably. Unsafe observations from the initial
+baseline remain available to the explicit full-sync preview, but do not create a
+permanent Sync Attention queue; newly observed unsafe delta items do. **Keep local
+history** hides a delta observation without applying it or sending a tracker write.
 Settings → Connections → External trackers includes a Simkl connection card.
 Opening Settings reads saved tracker previews and sync status locally. Watchlist
 status does not resolve Plex credentials, and Settings bootstrap skips automatic
@@ -21,7 +22,9 @@ Disconnect deletes Plekt's encrypted credentials and keeps local history; access
 can also be revoked in Simkl's connected-app settings. The Simkl card has the same
 **First connection** choice as Trakt (start from current state, or review history for
 import after connecting). The first check always establishes a baseline; it never
-imports old watched state automatically. **Check now** checks for new changes;
+imports old watched state automatically. Unsafe baseline rows stay available to an
+explicit full-sync preview without raising individual Sync Attention warnings.
+**Check now** checks for new changes;
 historical import requires the full-sync preview and explicit selected-item approval.
 Simkl full sync supports previewed import and selected batched sends, subject to
 normal activation, identity and quota guards. Ordinary eligible watched dispatches use
@@ -723,6 +726,16 @@ item that is absent from one library remains an availability difference rather
 than an issue.
 
 ## Server Logs
+
+Automatic refresh preserves the scroll position while reading older entries.
+**Pause updates** freezes the current snapshot, including responses already in flight;
+**Resume updates** loads fresh logs. Category selection and Clear Logs are disabled while
+paused. **Follow latest** scrolls to new entries; scrolling up turns it off, and the button
+turns it back on. Refresh preserves a visible entry when the bounded log window rolls forward.
+The case-insensitive **Filter text** searches fetched entries within the selected category,
+including the paused snapshot. Copy Logs copies matching entries; Download Logs still exports
+all categories. The view shows at most 250 backend and 50 browser entries and refreshes every
+three seconds while open and unpaused. Opening or switching category starts at the latest entries.
 
 The **Server Logs** panel (`/settings/logs`) displays real-time and historical diagnostic logs captured by the server alongside browser output. Logs are automatically categorized and can be filtered using interactive tabs:
 

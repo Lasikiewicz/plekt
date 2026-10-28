@@ -12,6 +12,7 @@ import { startUpNextProviderFeed, completeUpNextProviderFeed, failUpNextProvider
 import { refreshUpNextProviderFeeds } from "./utils/upNextProviderSync.js";
 import { reconcileAvailableWatchedItems } from "./utils/libraryAvailabilitySync.js";
 import { brandEnv } from "./utils/brandEnv.js";
+import { createPerUserState } from "./utils/perUserState.js";
 import { runDueUnwatchedPolls } from "./utils/unwatchedStatusPoll.js";
 import { UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS } from "./utils/liveSessionCompletion.js";
 import { buildProgressTelemetry, recordSyncHistory } from "./utils/syncHistoryTelemetry.js";
@@ -37,7 +38,7 @@ const SCHEDULED_RESUME_SYNC_LIMIT = 50;
 // These serve as backstops for events missed by webhooks/live session tracking, so they
 // do not need to run on every 1-minute tick.
 const CATCHUP_SYNC_INTERVAL_MS = Number(process.env.CATCHUP_SYNC_INTERVAL_MS || process.env.CATCHUP_SYNC_INTERVAL || 15 * 60 * 1000);
-let lastCatchupSyncAt = 0;
+const catchupCadence = createPerUserState(() => ({ lastCatchupSyncAt: 0 }));
 
 function failedUpNextProvidersDue(now = Date.now()) {
   const providers = new Set();
@@ -493,7 +494,8 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
   let availabilityRepairs = 0;
   let manualSynced = 0;
 
-  const shouldRunCatchup = forceCatchup || !lastCatchupSyncAt || (Date.now() - lastCatchupSyncAt >= CATCHUP_SYNC_INTERVAL_MS);
+  const cadence = catchupCadence();
+  const shouldRunCatchup = forceCatchup || !cadence.lastCatchupSyncAt || (Date.now() - cadence.lastCatchupSyncAt >= CATCHUP_SYNC_INTERVAL_MS);
   let upNextFailedFeedsRetried = 0;
   if (!shouldRunCatchup) {
     // The normal 15-minute catch-up already polls every active provider. On
@@ -504,7 +506,7 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
     });
   }
   if (shouldRunCatchup) {
-    lastCatchupSyncAt = Date.now();
+    cadence.lastCatchupSyncAt = Date.now();
     if (forceCatchup) logger("Scheduled Sync: running requested recent-item repair...");
     else trace(`Scheduled Sync: running catch-up library checks (interval: ${CATCHUP_SYNC_INTERVAL_MS / 60000}m)...`);
 

@@ -891,6 +891,7 @@ CREATE TABLE IF NOT EXISTS tracker_observations (
   id TEXT PRIMARY KEY, provider TEXT NOT NULL, connection_id TEXT NOT NULL,
   account_id TEXT NOT NULL, observation_key TEXT NOT NULL, kind TEXT NOT NULL,
   observation_json TEXT NOT NULL, status TEXT NOT NULL, reason TEXT,
+  attention_required INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
   UNIQUE(provider, connection_id, observation_key)
 );

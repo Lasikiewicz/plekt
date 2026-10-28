@@ -5,6 +5,7 @@ import { resolveProcessRole, roleHasWorker } from "./processRole.js";
 import { syncAllPlaylists, syncPlaylist } from "./playlistPullEngine.js";
 import { convertAllPlaylistShows } from "./playlistShowConversion.js";
 import { removeWatchedPlaylistItems } from "./playlistWatched.js";
+import { createPerUserState } from "./perUserState.js";
 
 // Plembfin edits sync after a short quiet period, so a burst of adds and
 // removals becomes one pass. The scheduled pass picks up app-side changes and
@@ -16,7 +17,7 @@ const hasTargetsStmt = db.prepare("SELECT 1 FROM personal_list_targets WHERE lis
 const anyTargetStmt = db.prepare("SELECT 1 FROM personal_list_targets LIMIT 1");
 
 const pending = new Map();
-let lastScheduledRunAt = 0;
+const scheduledCadence = createPerUserState(() => ({ lastScheduledRunAt: 0 }));
 
 export function playlistHasTargets(listId) {
   return Boolean(hasTargetsStmt.get(String(listId || "").trim()));
@@ -58,8 +59,9 @@ async function checkDueRules() {
 
 export async function runPlaylistSyncScheduler({ now = Date.now(), force = false, syncAll = syncAllPlaylists, convertAll = convertAllPlaylistShows, checkRules = checkDueRules, removeWatched = removeWatchedPlaylistItems } = {}) {
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
-  if (!force && now - lastScheduledRunAt < PLAYLIST_SYNC_INTERVAL_MS) return { skipped: true, reason: "not_due" };
-  lastScheduledRunAt = now;
+  const cadence = scheduledCadence();
+  if (!force && now - cadence.lastScheduledRunAt < PLAYLIST_SYNC_INTERVAL_MS) return { skipped: true, reason: "not_due" };
+  cadence.lastScheduledRunAt = now;
   const converted = await convertAll();
   // "Remove items once watched" runs every pass, before the rule checks, so
   // the push takes watched items out of the apps (decision 55).

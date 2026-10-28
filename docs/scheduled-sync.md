@@ -9,6 +9,11 @@ lease ensures only one `all` or `worker` process runs scheduler work and the Ple
 notification listener. The lease is renewed every 10 seconds and expires after 60.
 The existing per-process overlap guard remains in place.
 
+The lease belongs to the admin database and is checked there even while the elected
+worker runs an added user's tick or claims that user's queued job. Jobs and sync data
+remain in that user's database. Catch-up, playlist, maintenance and tick cadence state
+are kept per user, so the admin's run cannot consume an added user's scheduled turn.
+
 Before applying the restore admission gate, the worker recovers an operation whose
 heartbeat is more than three minutes old. Recovery rechecks the owner and heartbeat
 inside the SQLite transaction, so a replacement operation or renewed heartbeat stays
@@ -259,7 +264,7 @@ Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback 
 
 ## What it does each run
 
-1. **Live session tracking** (this feeds Now Playing) - **runs every minute**:
+1. **Live session tracking** (this feeds Now Playing) - **runs independently of the minute scheduler**, every 10 seconds while active, 5 minutes while idle, or 30 seconds after a failed poll. Plugins/playback webhooks provide prompt events; idle polling recovers missed activity without continuous requests:
    - `fetchLiveSessions(config)` polls the configured servers for what's playing now.
    - `buildCacheRow()` shapes each session; `upsertLiveTrackingCache()` writes them
      to the `live_tracking_cache` SQLite table.
@@ -525,6 +530,9 @@ authorize automatic removals, including rating clears. Episode coverage gaps rem
 review observations; unknown/sentinel dates never become current-time anchors.
 The provider's watched-episode count excludes season-zero specials. Recorded specials
 remain mapping-review observations and do not inflate the regular-episode coverage count.
+Review observations from the initial baseline remain in the ledger for explicit
+full-sync planning, but do not each raise Sync Attention. Unsafe observations from
+later activity deltas do raise attention because they represent newly observed changes.
 
 Ordinary watched writes require a current-account durable intent, preserve existing
 remote dates, send one explicit item, and confirm watched state by readback. Interrupted

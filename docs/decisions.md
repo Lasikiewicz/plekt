@@ -323,6 +323,13 @@ dropping the username filter entirely, for the same reason.
 `client.userId` the Plex parser now carries, and a `console.warn` naming every session the filter
 rejects so this cannot fail silently in either direction again.
 
+**Amended 27 October 2026:** The simultaneous lasiki/owner test showed an empty `<User />`
+with `<Player userID="1">` on lasiki's intended stream, while the owner's stream explicitly
+named the owner. Player ID 1 alone therefore does not establish owner identity. Unnamed
+player-only ID 1 is excluded from account routing; an explicit User ID takes priority over
+Player.userID. Do not guess the account from the player name, device, or another account's
+absence. A missed anonymous stream is preferable to writing it into the owner's history.
+
 ---
 
 ### 13. Paused playback is a live session, not a stopped one
@@ -1602,3 +1609,25 @@ the same way. These matches never seed neighbour gap fill.
 **Enforced by:** `learnedNetflixSeason` and `looseEpisodeMatch` in
 `server/src/utils/netflixEpisodes.js` and the renumbered-season and single-title-miss tests in
 `test/netflixImport.test.js`.
+
+### 63. Keep Simkl baseline review evidence out of persistent Sync Attention
+**Date:** 2026-10-28 | **Status:** Active
+
+**Context:** A first Simkl snapshot can retain dozens of ambiguous historical observations for
+an explicit full-sync preview. Showing every retained row as a persistent attention warning
+made a successful baseline look like dozens of new unresolved sync failures. The rows still
+matter to full-sync planning because they prevent unsafe imports or duplicate sends.
+
+**Decision:** Retain baseline review rows and their safety guards, but do not project them into
+Sync Attention. New unsafe observations from later activity deltas remain actionable there.
+Existing review rows are treated as baseline evidence on migration; full-sync preview continues
+to include them. A Simkl write rejected by local preflight is labelled as not sent, while
+uncertain transport outcomes keep the duplicate-protection warning.
+
+**Rejected:** Deleting or dismissing baseline rows, because that would remove evidence used to
+hold unsafe full-sync items; keeping one warning per baseline row, because users must not triage
+a large historical batch before ordinary sync status can be clear.
+
+**Enforced by:** `attention_required` in `tracker_observations`,
+`simklObservationAttentionItems` in `server/src/utils/trackers/simklObservations.js`, and
+`test/simklPersistence.test.js`.

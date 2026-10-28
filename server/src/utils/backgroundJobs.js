@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { db, parseJson, toJson } from "../db.js";
 import { isAuthoritativeRestoreActive } from "./configStore.js";
-import { schedulerLeaseStatus } from "./schedulerLease.js";
+import { schedulerLeaseStatus, validateSchedulerLease } from "./schedulerLease.js";
 
 const selectJob = db.prepare("SELECT * FROM background_jobs WHERE id = ?");
 const selectLatestType = db.prepare("SELECT * FROM background_jobs WHERE type = ? ORDER BY requested_at DESC LIMIT 1");
@@ -112,8 +112,7 @@ export function appendBackgroundJobLog(id, message, now = Date.now()) {
 
 export function claimNextBackgroundJob({ holderId, generation, staleAfterMs = BACKGROUND_JOB_STALE_MS, now = Date.now() }) {
   return db.transaction(() => {
-  const lease = db.prepare("SELECT holder_id, generation, expires_at FROM scheduler_lease WHERE id='scheduler'").get();
-  if (lease?.holder_id !== holderId || Number(lease.generation) !== Number(generation) || Number(lease.expires_at) <= now) return null;
+  if (!validateSchedulerLease({ holderId, generation, now })) return null;
 
     if (isAuthoritativeRestoreActive()) {
       cancelSyncJobsForRestoreInTransaction(now);

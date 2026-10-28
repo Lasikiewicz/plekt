@@ -47,13 +47,15 @@ test("legacy schema migration is idempotent under concurrent process startup", a
     const columns = new Set(upgraded.pragma("table_info(watch_history)").map((column) => column.name));
     for (const name of ["logo_url", "backdrop_url", "sync_retry_count", "sync_next_retry_at", "watch_provenance", "sync_match_ignored_at", "episode_title", "episode_title_status", "episode_title_checked_at", "episode_title_resolution_error"]) assert.ok(columns.has(name));
     assert.equal(upgraded.prepare("SELECT id FROM watch_history WHERE id='legacy-row'").get()?.id, "legacy-row");
-    assert.deepEqual(upgraded.prepare("SELECT id FROM schema_migrations ORDER BY id").all().map((row) => row.id), Array.from({ length: 61 },(_, index) => index + 1));
+    assert.deepEqual(upgraded.prepare("SELECT id FROM schema_migrations ORDER BY id").all().map((row) => row.id), Array.from({ length: 63 },(_, index) => index + 1));
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='media_connections'").get());
     const connectionColumns = new Set(upgraded.pragma("table_info(media_connections)").map((column) => column.name));
     assert.ok(connectionColumns.has("server_credential_ciphertext"));
+    assert.ok(connectionColumns.has("server_owned"));
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tracker_connections'").get());
     const trackerColumns = new Set(upgraded.pragma("table_info(tracker_connections)").map((column) => column.name));
     assert.ok(trackerColumns.has("history_synced_at"));
+    assert.ok(upgraded.pragma("table_info(tracker_observations)").some((column) => column.name === "attention_required"));
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='tracker_play_history'").get());
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='personal_rating_sources'").get());
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='personal_rating_sync_queue'").get());

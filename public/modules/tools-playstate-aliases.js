@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.1";
-import { state } from "./state.js?v=2.2.0.0.1";
-import { escapeAttribute, escapeHtml, episodeCode, formatDate } from "./utils.js?v=2.2.0.0.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.2";
+import { state } from "./state.js?v=2.2.0.0.2";
+import { escapeAttribute, escapeHtml, episodeCode, formatDate } from "./utils.js?v=2.2.0.0.2";
 
 // ── Watch-state aliases ─────────────────────────────────────────────────────
 // Episode playstate rows keyed on the episode's own ids that no TMDB or TVDB

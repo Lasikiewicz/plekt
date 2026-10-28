@@ -5,11 +5,14 @@ import { getPlexPrivateKey } from "./mediaConnectionRepo.js";
 import { plexClientHeaders, refreshPlexJwt } from "./plexAuth.js";
 import { fetchWithTimeout } from "./outbound.js";
 import { brandEnv } from "./brandEnv.js";
+import { createPerUserState } from "./perUserState.js";
 
 const REFRESH_AHEAD_MS = 24 * 60 * 60 * 1000;
 const LEASE_MS = 30 * 1000;
 const WAIT_LIMIT_MS = 5 * 1000;
-let serverTokenRefreshPromise = null;
+// Per user: a shared in-flight refresh would hand one user's Plex token to
+// another user who asked at the same moment.
+const serverTokenRefresh = createPerUserState(() => ({ promise: null }));
 
 function activePlexRow() {
   return db.prepare("SELECT * FROM media_connections WHERE provider='plex' AND status IN ('connected','reauth_required') ORDER BY updated_at DESC LIMIT 1").get();
@@ -120,8 +123,9 @@ export async function getValidPlexServerToken({ force = false, fetchImpl = fetch
     const stored = decryptCredential({ ciphertext: current.server_credential_ciphertext, iv: current.server_credential_iv, tag: current.server_credential_tag, version: current.server_token_version }, vaultOptions);
     if (!looksLikeJwt(stored)) return stored;
   }
-  if (serverTokenRefreshPromise) return serverTokenRefreshPromise;
-  serverTokenRefreshPromise = (async () => {
+  const refresh = serverTokenRefresh();
+  if (refresh.promise) return refresh.promise;
+  refresh.promise = (async () => {
     let accountToken = await getValidPlexToken({ vaultOptions });
     const device = plexDevice(current);
     const request = () => fetchImpl("https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1", { headers: plexClientHeaders(device, { token: accountToken }) });
@@ -148,8 +152,30 @@ export async function getValidPlexServerToken({ force = false, fetchImpl = fetch
     return token;
   })();
   try {
-    return await serverTokenRefreshPromise;
+    return await refresh.promise;
   } finally {
-    serverTokenRefreshPromise = null;
+    refresh.promise = null;
+  }
+}
+
+// Whether the connected Plex account owns its server: true, false, or null
+// when unknown. Connections saved before ownership was recorded learn it once
+// from plex.tv's resource list, the same source sign-in reads it from.
+export async function ensurePlexServerOwnership({ fetchImpl = fetchWithTimeout, vaultOptions = {} } = {}) {
+  const current = activePlexRow();
+  if (!current) return null;
+  if (current.server_owned != null) return Boolean(current.server_owned);
+  try {
+    const accountToken = await getValidPlexToken({ vaultOptions });
+    const response = await fetchImpl("https://plex.tv/api/v2/resources?includeHttps=1&includeRelay=1", { headers: plexClientHeaders(plexDevice(current), { token: accountToken }) });
+    if (!response.ok) return null;
+    const body = await response.json();
+    const resources = Array.isArray(body) ? body : body?.MediaContainer?.Device || [];
+    const server = resources.find((item) => String(item.clientIdentifier || item.machineIdentifier || "") === String(current.server_id));
+    if (!server || typeof server.owned !== "boolean") return null;
+    db.prepare("UPDATE media_connections SET server_owned=? WHERE id=?").run(server.owned ? 1 : 0, current.id);
+    return server.owned;
+  } catch {
+    return null;
   }
 }

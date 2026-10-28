@@ -36,13 +36,37 @@ excluded from Now Playing as well.
 
 ### Live-session poller cadence
 
+The elected worker refreshes the admin and every active added user in that user's
+database context. For account-connected Plex servers, a positively recorded owner
+connection reads `/status/sessions` once per server per poll. Sessions are assigned
+by Plex user ID to connections on that same server; missing IDs and unmatched users
+are ignored. Non-owner connections do not call the owner-only session endpoint.
+If the owner connection is absent or its request fails, the recipient's Plex source
+is treated as unavailable, preserving cached playback rather than inferring a stop.
+Only session data is handed over: history, progress and completion writes use the
+recipient's settings and credentials. Disabled or stopped Plekt accounts are excluded. Existing
+duplicate account connections receive a session only once (admin first).
+Missing-session confirmation and outage retry state are separate per user.
+
+An empty Plex User element with only Player userID 1 is ambiguous: unauthenticated
+playback can be reported that way even when a person intended to use a shared account.
+It is excluded from account routing, rather than assigned to the owner. Plex must supply
+the authenticated user's identity; explicit User IDs take priority over Player IDs.
+
+Completed-session tracker dispatch reuses the intent captured with the local watch
+record. If interrupted after insertion, it resumes that pending dispatch rather than
+creating a second competing intent or skipping the saved watch.
+
 `live_tracking_cache` used to be refreshed only once a minute, inside the same
 scheduler tick as backups, TMDB prewarm, and catch-up sync - a session starting
 or ending could take up to 60s to show up or clear. `liveSessionPoller.js` now
 runs on its own timer instead, independent of that tick, and is
 activity-adaptive: it polls every 10s while a session is currently playing, and
-backs off to 45s while idle (close to the old baseline, so idle-state load on
-Plex/Emby/Jellyfin does not meaningfully increase). The once-a-minute scheduler
+backs off to five minutes while idle to reduce background requests. Set up the
+server plugin or playback webhooks for prompt activity updates; idle polling is
+a fallback for missed events for all connections, including those without webhooks.
+Startup and explicit refresh signals can request an earlier check. Once polling
+detects a session, it returns to ten-second checks. The once-a-minute scheduler
 tick no longer calls the same fetch itself - that would just poll the same
 session endpoints a second time for no benefit - it only reads the cache the
 poller already keeps current.
@@ -62,8 +86,12 @@ current interval:
   own idle interval. The response itself is never delayed by this: it always
   serves whatever is already cached, and the poke's fresher data lands in time
   for the next 10s frontend poll.
-- Emby and Jellyfin have no equivalent push channel wired up today, so their
-  Now Playing freshness is bounded by the poller's own interval alone.
+- Emby and Jellyfin have no equivalent WebSocket poke wired up today. Their
+  plugins and playback webhooks can still write active-session data immediately;
+  polling remains enabled as a fallback for missed events and session reconciliation.
+  Without playback webhooks, start detection can wait for the five-minute idle poll
+  plus the dashboard's next refresh. These session checks are separate from the
+  default 15-minute watched-history catch-up sync.
 
 ### Not mistaking a poll blip for a real stop
 
@@ -102,7 +130,7 @@ think it had.
 
 ```text
 Plex/Emby/Jellyfin
-   |  (adaptive poll: 10s active / 45s idle)   (webhook "active" events)
+   |  (adaptive poll: 10s active / 5m idle)    (webhook "active" events)
    v                                                  |
 liveSessionPoller.js -> live_tracking_cache   active_sessions <- handleWebhook (phase=active)
         ^                       |                     |

@@ -83,7 +83,7 @@ test("invalid, stale-cursor and out-of-order envelopes atomically keep previous 
   assert.equal(observations.pendingSimklObservations(connection).length, 0);
 });
 
-test("unknown dates, native identities, ambiguous watches and ratings stay visible and cannot write", () => {
+test("baseline review evidence stays out of attention while new unsafe deltas remain visible", () => {
   const connection = connect("import");
   const snapshot = envelope([{ ...watched(), watchedAt: null, timestampProvenance: "unknown" },
     { ...watched(2), media: { ...media(2), ids: { simkl: "9" } } }, watched(3)]);
@@ -91,11 +91,17 @@ test("unknown dates, native identities, ambiguous watches and ratings stay visib
   snapshot.ratings = [{ media: { title: "Rated movie", media_type: "movie" }, providerItemId: "10", rating: 8, ratedAt: null }];
   observations.persistSimklObservations(connection, snapshot);
   assert.equal(observations.pendingSimklObservations(connection).length, 0);
+  assert.equal(observations.simklObservationAttentionItems().length, 0, "baseline review evidence does not create a permanent attention queue");
+  assert.equal(db.prepare("SELECT count(*) AS n FROM tracker_observations WHERE status='review'").get().n, 4, "unsafe baseline evidence remains retained");
+  const delta = envelope([], later, false);
+  delta.review = [{ media: media(4), reason: "episode_mapping_required" }];
+  observations.persistSimklObservations(connection, delta, { expectedCursor: cursor });
   const attention = observations.simklObservationAttentionItems();
-  assert.equal(attention.length, 4);
+  assert.equal(attention.length, 1, "a new unsafe delta remains actionable");
+  assert.equal(attention[0].title, "Simkl: Movie 4");
   assert.ok(attention.every((item) => item.canSkip && item.source === "tracker_observation"));
   assert.equal(observations.dismissSimklObservation(attention[0].id.replace("simkl-observation-", "")), true);
-  assert.equal(observations.simklObservationAttentionItems().length, 3);
+  assert.equal(observations.simklObservationAttentionItems().length, 0);
   assert.equal(db.prepare("SELECT count(*) AS n FROM tracker_write_intents").get().n, 0);
 });
 
@@ -159,6 +165,11 @@ test("unwatches are a terminal policy skip and undated plays hold, both without 
     assert.equal(skipped.decision, TARGET_DECISIONS.SKIPPED_BY_POLICY);
     assert.equal(skipped.dismissed, true);
     await assert.rejects(dispatchSimklWatchState({ ...media(2), watchRecordId: "undated" }, "watched", "sync"), { code: "TRACKER_REVIEW_REQUIRED" });
+    const intents = await import("../server/src/utils/trackerWriteIntents.js");
+    const attention = intents.trackerWriteAttentionItems();
+    assert.equal(attention.length, 1);
+    assert.match(attention[0].reason, /^Not sent: Simkl needs an observed watch date/);
+    assert.match(attention[0].explanation, /before contacting Simkl.*It was not sent/);
     const statuses = db.prepare("SELECT status FROM tracker_write_intents ORDER BY id").all().map((row) => row.status).sort();
     assert.deepEqual(statuses, ["cancelled", "review"]);
   } finally { globalThis.fetch = original; }

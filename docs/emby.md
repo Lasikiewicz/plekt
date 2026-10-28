@@ -108,7 +108,13 @@ purely through the webhook - no extra listener is needed.
 
 ## Inbound: scheduler polling
 
-Every minute `fetchLiveSessions` polls `/Sessions` for Now Playing. The catch-up sync
+The independent live-session poller calls `/Sessions` every 10 seconds while active,
+5 minutes while idle, or 30 seconds after a failed poll. Set up the plugin or playback
+webhooks for prompt detection; idle polling is a fallback for missed activity, whether
+or not a plugin/webhook is configured. The dashboard refreshes its
+cached view every 10 seconds. Plugins and playback webhooks can report activity sooner;
+polling remains enabled to recover missed events and reconcile session state. See
+[Now Playing](now-playing.md). The separate catch-up sync
 (every 15 minutes by default) pulls:
 
 - **Recently watched** - `fetchEmbyWatchedItems` (user's items filtered to

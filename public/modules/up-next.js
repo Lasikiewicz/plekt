@@ -1,16 +1,16 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.1";
-import { state, elements } from "./state.js?v=2.2.0.0.1";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.2.0.0.1";
-import { hydratePosters } from "./images.js?v=2.2.0.0.1";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.2.0.0.1";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.2.0.0.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.2";
+import { state, elements } from "./state.js?v=2.2.0.0.2";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.2.0.0.2";
+import { hydratePosters } from "./images.js?v=2.2.0.0.2";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.2.0.0.2";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.2.0.0.2";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
-} from "./up-next-shared.js?v=2.2.0.0.1";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.2.0.0.1";
-import { renderMediaCard } from "./media-card.js?v=2.2.0.0.1";
-import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.2.0.0.1";
+} from "./up-next-shared.js?v=2.2.0.0.2";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.2.0.0.2";
+import { renderMediaCard } from "./media-card.js?v=2.2.0.0.2";
+import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.2.0.0.2";
 
 const UP_NEXT_TIMEOUT_MS = 20000;
 const UP_NEXT_DROP_SLIDE_MS = 600;

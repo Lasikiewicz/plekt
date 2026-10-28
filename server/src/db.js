@@ -1780,6 +1780,34 @@ const migrations = [
       database.exec("UPDATE dropped_title_tracker_state SET write_status='unbound' WHERE connection_id='' OR account_id=''");
     },
   },
+  {
+    id: 62,
+    up(database) {
+      // Whether the signed-in Plex account owns the connected server, from
+      // plex.tv's own resource list. NULL means not yet known.
+      const columns = new Set(database.pragma("table_info(media_connections)").map((column) => column.name));
+      if (columns.size && !columns.has("server_owned")) database.exec("ALTER TABLE media_connections ADD COLUMN server_owned INTEGER");
+    },
+  },
+  {
+    id: 63,
+    up(database) {
+      // Existing Simkl review rows are retained evidence for an explicit
+      // full-sync preview. They should not keep the Sync Attention badge lit.
+      const columns = new Set(database.pragma("table_info(tracker_observations)").map((column) => column.name));
+      if (columns.size && !columns.has("attention_required")) {
+        database.exec("ALTER TABLE tracker_observations ADD COLUMN attention_required INTEGER NOT NULL DEFAULT 0");
+      }
+      database.exec(`UPDATE tracker_write_intents SET last_error='Not sent: ' || last_error
+        WHERE provider='simkl' AND status='review' AND last_error IN (
+          'Simkl needs a verified media identity',
+          'Simkl native/anime identity needs canonical mapping and readback validation',
+          'Simkl needs an observed watch date',
+          'Simkl episode numbering needs review',
+          'Simkl media identity or observed date needs review'
+        )`);
+    },
+  },
 ];
 
 function parseJsonValue(value, fallback) {

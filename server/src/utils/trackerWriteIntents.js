@@ -179,17 +179,25 @@ export function correlateTrackerObservation(provider, connection, entry) {
 export function trackerWriteAttentionItems() {
   maintainTrackerWriteIntents();
   return db.prepare(`SELECT * FROM tracker_write_intents WHERE status='review' AND (${KNOWN} OR (provider='simkl' AND EXISTS
-    (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id))) ORDER BY created_at`).all(known()).map((intent) => ({
-    id: `tracker-intent-${intent.id}`, kind: "tracker_write_review", provider: intent.provider, severity: "warning",
-    title: `${getTrackerAdapter(intent.provider).label}: ${JSON.parse(intent.media_json).title || intent.media_key}`,
-    reason: intent.last_error || "Tracker write requires review", intentId: intent.id,
-    source: "tracker_write", status: "review", createdAt: intent.created_at, canSkip: true, skipLabel: "Cancel this write",
-    skipTitle: "Cancel this tracker write?", explanationHeading: "Why this write is held",
-    skipNote: "Cancelling means Plekt will not send this write. Local watch history is not changed.",
-    summary: intent.last_error || "Tracker write requires review",
-    explanation: "Plekt cannot tell whether this write reached the tracker, so it will not send it again automatically. Another send could create a duplicate play.",
-    recommendations: [`Check this title's history on ${getTrackerAdapter(intent.provider).label}.`, "If the play is there, or you do not want it sent, cancel this write. Local watch history is not changed."],
-  })).concat(unknownTrackerAttentionItems());
+    (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id))) ORDER BY created_at`).all(known()).map((intent) => {
+    const knownUnsent = intent.provider === "simkl" && String(intent.last_error || "").startsWith("Not sent:");
+    const explanation = knownUnsent
+      ? "Plekt checked this write before contacting Simkl and stopped because the media identity or watch date could not be verified. It was not sent."
+      : "Plekt cannot tell whether this write reached the tracker, so it will not send it again automatically. Another send could create a duplicate play.";
+    const recommendations = knownUnsent
+      ? ["Correct this title's identity or watch date in Plekt, then create a new sync write if it is still needed.", "Cancel this held write to remove the warning. Local watch history is not changed."]
+      : [`Check this title's history on ${getTrackerAdapter(intent.provider).label}.`, "If the play is there, or you do not want it sent, cancel this write. Local watch history is not changed."];
+    return {
+      id: `tracker-intent-${intent.id}`, kind: "tracker_write_review", provider: intent.provider, severity: "warning",
+      title: `${getTrackerAdapter(intent.provider).label}: ${JSON.parse(intent.media_json).title || intent.media_key}`,
+      watchedAt: intent.watched_at,
+      reason: intent.last_error || "Tracker write requires review", intentId: intent.id,
+      source: "tracker_write", status: "review", createdAt: intent.created_at, canSkip: true, skipLabel: "Cancel this write",
+      skipTitle: "Cancel this tracker write?", explanationHeading: "Why this write is held",
+      skipNote: "Cancelling means Plekt will not send this write. Local watch history is not changed.",
+      summary: intent.last_error || "Tracker write requires review", explanation, recommendations,
+    };
+  }).concat(unknownTrackerAttentionItems());
 }
 
 // When this process first saw each unrecognised tracker, for the card's date.

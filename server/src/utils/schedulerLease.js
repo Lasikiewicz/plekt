@@ -1,4 +1,8 @@
-import { db } from "../db.js";
+import { adminDb as db } from "../db.js";
+
+// One process runs every user's scheduler tick, so the lease is a single
+// install-wide record in the admin database. The routed `db` would read an
+// added user's own, never-claimed copy and report that the leader lost it.
 
 const selectLease = db.prepare("SELECT * FROM scheduler_lease WHERE id = 'scheduler'");
 const claimLease = db.prepare(`

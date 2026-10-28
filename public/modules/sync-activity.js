@@ -1,7 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.1";
-import { state, elements } from "./state.js?v=2.2.0.0.1";
-import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.2.0.0.1";
-import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.2.0.0.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.2";
+import { state, elements } from "./state.js?v=2.2.0.0.2";
+import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.2.0.0.2";
+import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.2.0.0.2";
+import { renderSyncAttentionItem } from "./sync-attention-cards.js?v=2.2.0.0.2";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -273,10 +274,10 @@ function isActive() {
 // dispatch as Plex here. Sync activity names trackers as well as servers, so it
 // resolves platforms itself.
 const PLATFORMS = {
-  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.2.0.0.1" },
-  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.2.0.0.1" },
-  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.2.0.0.1" },
-  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.2.0.0.1" },
+  plex: { name: "Plex", icon: "/icons/plex.svg?v=2.2.0.0.2" },
+  emby: { name: "Emby", icon: "/icons/emby.svg?v=2.2.0.0.2" },
+  jellyfin: { name: "Jellyfin", icon: "/icons/jellyfin.svg?v=2.2.0.0.2" },
+  trakt: { name: "Trakt", icon: "/icons/trakt.svg?v=2.2.0.0.2" },
   plembfin: { name: "Plekt", icon: "" },
 };
 
@@ -2063,43 +2064,12 @@ function attentionIssueList(item = {}) {
 }
 
 export function syncAttentionItemMarkup(item = {}) {
-  const recommendations = Array.isArray(item.recommendations) ? item.recommendations.filter(Boolean) : [];
-  const skipping = state.syncAttentionSkipping === String(item.id || "");
-  const actionBusy = Boolean(state.syncAttentionSkipping || state.syncAttentionIssueSkipping || state.syncAttentionIssueRetrying);
-  const skipLabel = skipping ? "Skipping..." : String(item.skipLabel || "Skip this issue");
-  const tone = attentionToneForItem(item);
-  const isBlocking = tone === "error";
-  return `
-    <article class="sync-attention-item" data-sync-attention-item="${escapeAttribute(item.id)}">
-      <div class="sync-attention-item-header">
-        <div class="sync-attention-item-title">
-          <span class="sync-attention-kicker">${isBlocking ? "Blocking issue" : "Warning"}</span>
-          <h3>${escapeHtml(item.title || "Sync issue")}</h3>
-        </div>
-        <span class="status-pill status-${isBlocking ? "error" : "warning"}">${isBlocking ? "Needs attention" : "Review warning"}</span>
-      </div>
-      <p class="sync-attention-summary">${escapeHtml(item.summary || "This operation did not complete.")}</p>
-      <div class="sync-attention-detail-grid">
-        <div>
-          <h4>${escapeHtml(item.explanationHeading || "Why this blocks completion")}</h4>
-          <p>${escapeHtml(item.explanation || "The sync cannot be considered complete until this issue is resolved or skipped.")}</p>
-        </div>
-        <div>
-          <h4>Recommended next steps</h4>
-          ${recommendations.length
-            ? `<ol>${recommendations.map((recommendation) => `<li>${escapeHtml(recommendation)}</li>`).join("")}</ol>`
-            : `<p>Review Settings → Logs, correct the affected connection, and retry the operation.</p>`}
-        </div>
-      </div>
-      ${attentionIssueList(item)}
-      <div class="sync-attention-item-footer">
-        <span class="sync-attention-detected">Detected ${escapeHtml(attentionCreatedAt(item))}</span>
-        <div class="sync-attention-actions">
-          <p>${escapeHtml(item.skipNote || "Skipping accepts this incomplete projection and lets normal sync resume; it does not create the missing remote records.")}</p>
-          <button class="button-ghost sync-attention-skip" type="button" data-sync-attention-skip="${escapeAttribute(item.id)}" ${actionBusy ? "disabled" : ""} ${skipping ? 'aria-busy="true"' : ""}>${escapeHtml(skipLabel)}</button>
-        </div>
-      </div>
-    </article>`;
+  return renderSyncAttentionItem(item, {
+    state,
+    attentionToneForItem,
+    attentionIssueList,
+    attentionCreatedAt,
+  });
 }
 
 export function clientAttentionItemMarkup(item = {}) {
@@ -2262,14 +2232,17 @@ export function renderSyncAttention() {
   }
   const clientItems = items.filter((item) => item.source === "client");
   const clientOnly = clientItems.length > 0 && clientItems.length === items.length;
-  const heading = affectedCount
+  const trackerWriteOnly = items.length > 0 && items.every((item) => item.source === "tracker_write");
+  const heading = trackerWriteOnly
+    ? `${count} tracker write${count === 1 ? "" : "s"} need review`
+    : affectedCount
     ? `${count} issue${count === 1 ? "" : "s"} · ${affectedCount} affected play${affectedCount === 1 ? "" : "s"}`
     : clientOnly
       ? `${clientItems.length} failed request${clientItems.length === 1 ? "" : "s"} need${clientItems.length === 1 ? "s" : ""} action`
       : `${count} issue${count === 1 ? "" : "s"} need${count === 1 ? "s" : ""} review`;
   const badge = blockingCount ? `${blockingCount} attention` : `${count} to review`;
   const hasMatchIssues = items.some((item) => item.source === "match_report");
-  const description = serverItems.length
+  const description = trackerWriteOnly ? "Check the tracker history before canceling a write." : serverItems.length
     ? (serverItems.every((item) => item.source === "unknown_tracker") ? "Your restored data includes a tracker this version can't sync." : serverItems.every((item) => item.source === "tracker_write" || item.source === "unknown_tracker") ? "Plekt is holding tracker writes it could not confirm. Review each one below." : "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below.")
     : hasMatchIssues
       ? "Choose the correct title to resolve these matches."
@@ -2279,11 +2252,11 @@ export function renderSyncAttention() {
   container.innerHTML = `
     <div class="sync-attention-heading">
       <div>
-        <span class="sync-attention-kicker">Sync - Attention Needed</span>
+        ${trackerWriteOnly ? "" : '<span class="sync-attention-kicker">Sync - Attention Needed</span>'}
         <h2 id="syncAttentionHeading">${escapeHtml(heading)}</h2>
         <p>${escapeHtml(description)}</p>
       </div>
-      <span class="status-pill status-${blockingCount ? "error" : "warning"}">${escapeHtml(badge)}</span>
+      ${trackerWriteOnly ? "" : `<span class="status-pill status-${blockingCount ? "error" : "warning"}">${escapeHtml(badge)}</span>`}
     </div>
     <div class="sync-attention-list">${items.map((item) => item.source === "client"
       ? clientAttentionItemMarkup(item)

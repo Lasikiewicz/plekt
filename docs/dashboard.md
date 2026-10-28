@@ -50,9 +50,11 @@ connected media server cannot refresh its provider feed, the dashboard identifie
 server, keeps the last usable queue visible, and offers a Retry connection action. The
 background scheduler retries only the affected provider every two minutes by default;
 the normal multi-provider catch-up remains on its longer cadence. An outage is noticed
-without waiting for either: when the Now Playing session poll (about every 45 seconds)
+without waiting for either: when the Now Playing session poll (every five minutes while idle,
+or ten seconds while active)
 cannot reach a server whose feeds last succeeded, that server's feeds are re-read at once
-(at most every two minutes per server), so the status line appears within about a minute.
+(at most every two minutes per server). Idle outage detection can therefore take five minutes;
+opening/returning to the dashboard can trigger an earlier session check.
 
 The Now Playing panel holds three items by default. Live sessions come
 first; the remaining slots (all of them when nothing is playing) feature the Up Next rail's
