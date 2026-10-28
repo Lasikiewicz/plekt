@@ -1,38 +1,7 @@
 {
-  "version": "2.2.0.0.3",
-  "build": 3,
-  "resetCommit": "4c4bde8f5ff86203acd94964cf7832888b7f80a9",
-  "updatedAt": "2026-10-28T00:29:39.353Z",
-  "entries": [
-    {
-      "build": 3,
-      "date": "2026-10-28T00:29:39.353Z",
-      "commit": "5fb98ee1013a17386586271d0cf356dfac07e637",
-      "message": "This update includes strip leftover tag characters from AniDB descriptions, refresh README screenshots from the v2.2.0 website captures, use the homepage dashboard captures for the README dashboard image, stop the initial Emby watched sync timing out on large libraries, and improve per-user sync and tracker review workflows.",
-      "author": "Lasikiewicz",
-      "details": [
-        "AniDB anime descriptions can no longer keep partial HTML tag fragments after markup is stripped",
-        "README screenshots now show the current v2.2.0 interface",
-        "The README dashboard screenshot no longer shows loading placeholder tiles in light mode",
-        "The initial watched-status import from Emby and Jellyfin now reads the played history in pages of 500 instead of one request for everything, so a large watch history no longer fails with \"Upstream request timed out after 10000ms\"",
-        "Watched-history reads no longer ask Emby and Jellyfin for artwork, so third-party image plugins on the media server cannot slow them down",
-        "Run scheduled sync and queued jobs independently for added users.",
-        "Show shared Plex playback in the matching user's Now Playing while keeping each user's credentials and history separate.",
-        "Exclude anonymous Plex owner-ID sessions and block new duplicate Plex account connections.",
-        "Record completed playback through the existing tracker intent so interrupted runs do not create competing writes.",
-        "Keep historical Simkl baseline evidence out of persistent warnings and show compact tracker reviews with title, watch date and history buttons.",
-        "Add pause, follow and text filtering to Server Logs while preserving the reading position during refreshes.",
-        "Reduce idle playback polling to five minutes and explain the ten-second active checks and prompt plugin or webhook updates in setup help.",
-        "Keep same-title shows with conflicting provider identities separate in statistics.",
-        "Refresh website dashboard image references, release data and the Yamtrack comparison link."
-      ],
-      "messageFragments": [
-        "Security - Strip leftover tag characters from AniDB descriptions",
-        "Docs - Refresh README screenshots from the v2.2.0 website captures",
-        "Docs - Use the homepage dashboard captures for the README dashboard image",
-        "Fix - Stop the initial Emby watched sync timing out on large libraries",
-        "Fix - Improve per-user sync and tracker review workflows"
-      ]
-    }
-  ]
+  "version": "2.2.0.1.0",
+  "build": 0,
+  "resetCommit": "55e69fcc462542ec388e78f06e9675c938bcd966",
+  "updatedAt": "2026-10-28T00:32:42.214Z",
+  "entries": []
 }

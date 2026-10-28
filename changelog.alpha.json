@@ -1,8 +1,95 @@
 {
   "baseVersion": "2.2.0",
-  "build": 0,
-  "version": "2.2.0.0.0",
-  "updatedAt": "2026-10-26T22:53:00.455Z",
+  "build": 1,
+  "version": "2.2.0.1.0",
+  "updatedAt": "2026-10-28T00:32:42.214Z",
   "releaseMessage": "",
-  "entries": []
+  "entries": [
+    {
+      "build": 1,
+      "version": "2.2.0.1.0",
+      "shortVersion": "2.2.0.1.0",
+      "date": "2026-10-28T00:32:42.214Z",
+      "commit": "55e69fcc462542ec388e78f06e9675c938bcd966",
+      "message": "This update gives each added user their own scheduled sync and shared Plex Now Playing, adds Server Logs controls, and stops large Emby and Jellyfin watched imports timing out.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Feature: Added users now get their own scheduled sync and queued-job processing.",
+        "Feature: Shared Plex playback now shows in the matching user's Now Playing, while each user's credentials and history stay separate.",
+        "Feature: Server Logs can pause live updates, follow the newest entries and filter by text, and keep your reading position during refreshes.",
+        "Fix: The initial watched-status import from Emby and Jellyfin now reads played history in pages of 500, so a large watch history no longer fails with \"Upstream request timed out after 10000ms\".",
+        "Fix: Anonymous Plex owner-ID sessions are now ignored, and the same Plex account can no longer be connected twice.",
+        "Fix: Completed playback is recorded through the existing tracker intent, so an interrupted run can no longer create competing tracker writes.",
+        "Fix: Same-title shows with conflicting provider identities are now kept separate in Stats.",
+        "Fix: AniDB anime descriptions no longer keep partial HTML tag fragments after markup is stripped.",
+        "Tweak: Watched-history reads no longer request artwork from Emby and Jellyfin, so third-party image plugins cannot slow them down.",
+        "Tweak: Historical Simkl baseline evidence no longer shows as a persistent warning, and tracker reviews show a compact title, watch date and history buttons.",
+        "Tweak: Idle playback checks now run every 5 minutes (every 10 seconds once playback is detected), and setup help explains how plugins or webhooks give prompt updates.",
+        "Tweak: README screenshots now show the current v2.2.0 interface, including a dashboard image without loading placeholders."
+      ],
+      "sections": {
+        "newFeatures": [
+          "Added users now get their own scheduled sync and queued-job processing.",
+          "Shared Plex playback now shows in the matching user's Now Playing, while each user's credentials and history stay separate.",
+          "Server Logs can pause live updates, follow the newest entries and filter by text, and keep your reading position during refreshes."
+        ],
+        "majorBugFixes": [
+          "The initial watched-status import from Emby and Jellyfin now reads played history in pages of 500, so a large watch history no longer fails with \"Upstream request timed out after 10000ms\".",
+          "Anonymous Plex owner-ID sessions are now ignored, and the same Plex account can no longer be connected twice.",
+          "Completed playback is recorded through the existing tracker intent, so an interrupted run can no longer create competing tracker writes.",
+          "Same-title shows with conflicting provider identities are now kept separate in Stats.",
+          "AniDB anime descriptions no longer keep partial HTML tag fragments after markup is stripped."
+        ],
+        "tweaks": [
+          "Watched-history reads no longer request artwork from Emby and Jellyfin, so third-party image plugins cannot slow them down.",
+          "Historical Simkl baseline evidence no longer shows as a persistent warning, and tracker reviews show a compact title, watch date and history buttons.",
+          "Idle playback checks now run every 5 minutes (every 10 seconds once playback is detected), and setup help explains how plugins or webhooks give prompt updates.",
+          "README screenshots now show the current v2.2.0 interface, including a dashboard image without loading placeholders."
+        ]
+      },
+      "sectionGroups": {
+        "newFeatures": [
+          {
+            "title": "Multi-user & diagnostics",
+            "details": [
+              "Added users now get their own scheduled sync and queued-job processing.",
+              "Shared Plex playback now shows in the matching user's Now Playing, while each user's credentials and history stay separate.",
+              "Server Logs can pause live updates, follow the newest entries and filter by text, and keep your reading position during refreshes."
+            ]
+          }
+        ],
+        "majorBugFixes": [
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "The initial watched-status import from Emby and Jellyfin now reads played history in pages of 500, so a large watch history no longer fails with \"Upstream request timed out after 10000ms\".",
+              "Anonymous Plex owner-ID sessions are now ignored, and the same Plex account can no longer be connected twice.",
+              "Completed playback is recorded through the existing tracker intent, so an interrupted run can no longer create competing tracker writes.",
+              "Same-title shows with conflicting provider identities are now kept separate in Stats.",
+              "AniDB anime descriptions no longer keep partial HTML tag fragments after markup is stripped."
+            ]
+          }
+        ],
+        "tweaks": [
+          {
+            "title": "Playback, trackers & docs",
+            "details": [
+              "Watched-history reads no longer request artwork from Emby and Jellyfin, so third-party image plugins cannot slow them down.",
+              "Historical Simkl baseline evidence no longer shows as a persistent warning, and tracker reviews show a compact title, watch date and history buttons.",
+              "Idle playback checks now run every 5 minutes (every 10 seconds once playback is detected), and setup help explains how plugins or webhooks give prompt updates.",
+              "README screenshots now show the current v2.2.0 interface, including a dashboard image without loading placeholders."
+            ]
+          }
+        ]
+      },
+      "messageFragments": [
+        "Security - Strip leftover tag characters from AniDB descriptions",
+        "Docs - Refresh README screenshots from the v2.2.0 website captures",
+        "Docs - Use the homepage dashboard captures for the README dashboard image",
+        "Fix - Stop the initial Emby watched sync timing out on large libraries",
+        "Fix - Improve per-user sync and tracker review workflows"
+      ]
+    }
+  ],
+  "shortVersion": "2.2.0.1.0"
 }

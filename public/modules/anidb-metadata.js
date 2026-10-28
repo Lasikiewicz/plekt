@@ -1,6 +1,6 @@
-import { state } from "./state.js?v=2.2.0.0.3";
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.0.3";
-import { escapeHtml } from "./utils.js?v=2.2.0.0.3";
+import { state } from "./state.js?v=2.2.0.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.0.1.0";
+import { escapeHtml } from "./utils.js?v=2.2.0.1.0";
 
 // One bounded read for the same batch already requested by tmdb.js. Failures
 // preserve the original metadata and never affect identity or numbering.
