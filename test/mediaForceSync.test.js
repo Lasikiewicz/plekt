@@ -6,7 +6,7 @@ import {
   remoteItemIsWatched,
   remoteItemToMedia,
 } from "../server/src/utils/mediaForceSync.js";
-import { normalizeLibraryForceSyncRequest, plannerMediaToSyncMedia } from "../server/src/utils/libraryForceSync.js";
+import { normalizeLibraryForceSyncRequest, plannerMediaToSyncMedia, withLibrarySeriesIds } from "../server/src/utils/libraryForceSync.js";
 import { createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested, requestMediaForceSyncCancellation } from "../server/src/utils/mediaForceSyncActivity.js";
 import { embyEpisodeMatchesCoordinates } from "../server/src/utils/embyClient.js";
 import { jellyfinEpisodeMatchesCoordinates } from "../server/src/utils/jellyfinClient.js";
@@ -279,4 +279,27 @@ test("onboarding library import never replaces a missing played time with the im
   }, Date.parse("2026-08-25T12:39:02.807Z"));
 
   assert.equal(media, null);
+});
+
+test("Settings Force Sync stores series ids, not each episode's own ids", async () => {
+  const calls = [];
+  const resolve = async (media) => {
+    calls.push(media.seriesItemId);
+    return { ...media, ids: { imdb: "tt18699118", tmdb: "202308", tvdb: "420207" } };
+  };
+  const items = await withLibrarySeriesIds([
+    { type: "episode", source: "emby", title: "Alert - S01E01", seriesItemId: "77", imdb: "tt22043908", tmdb: "3729699", tvdb: "9168790" },
+    { type: "episode", source: "emby", title: "Alert - S01E02", seriesItemId: null, tmdb: "4044535" },
+    { type: "movie", source: "emby", title: "Heat", tmdb: "949" },
+  ], { emby: {} }, resolve);
+  assert.deepEqual(calls, ["77"]);
+  assert.deepEqual([items[0].imdb, items[0].tmdb, items[0].tvdb], ["tt18699118", "202308", "420207"]);
+  assert.equal(items[1].tmdb, "4044535");
+  assert.equal(items[2].tmdb, "949");
+});
+
+test("a failed series lookup leaves the Force Sync item unchanged", async () => {
+  const item = { type: "episode", source: "emby", title: "Alert - S01E01", seriesItemId: "77", tmdb: "3729699" };
+  const [result] = await withLibrarySeriesIds([item], {}, async () => { throw new Error("timeout"); });
+  assert.equal(result.tmdb, "3729699");
 });

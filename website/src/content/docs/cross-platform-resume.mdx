@@ -1,0 +1,63 @@
+---
+title: Cross-platform resume
+description: Pause on one media server and pick up where you stopped on another.
+category: Features
+order: 3.4
+sourceVersion: "2.2.1"
+sourcePaths:
+  - server/src/utils/syncOrchestrator.js
+  - server/src/utils/upNextProviderSync.js
+  - docs/webhooks.md
+  - docs/scheduled-sync.md
+  - docs/dashboard.md
+---
+
+Plekt keeps one resume position per title. When you stop part-way through on one server, Plekt
+records the position and writes it to your other connected servers, so the title is already partly
+watched wherever you open it next.
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | Positions are read from Plex and written back to it. See [Plex](/docs/plex/). |
+| Emby | Yes, after setup | Needs the Plekt plugin or the built-in webhook with **Send All Properties** on, so the position fields are present. See [Emby](/docs/emby/). |
+| Jellyfin | Yes, after setup | Needs the Plekt plugin or a webhook. See [Jellyfin](/docs/jellyfin/). |
+| Trakt, Simkl | Not applicable | Plekt's guides describe resume positions moving between media servers only. |
+
+**Why it differs.** Each server stores a resume position its own way and can only receive one for an
+item it has matched to the same title. A server missing the title, or matching it differently, is
+skipped. Emby leaves position fields out of its webhook unless **Send All Properties** is on, so
+without it Plekt has nothing to carry.
+
+## How a position travels
+
+1. You stop or pause a title. Plekt receives the event from the server, or finds the position on
+   its next scheduled check.
+2. If the position is worth keeping, Plekt stores it against the canonical title. A stop shorter
+   than **Minimum Resume Position** is ignored, and a stop past the **Watched Threshold** (90% by
+   default) counts as a completed watch instead.
+3. Plekt writes the position to the other servers that have a matching item.
+4. The title shows as a resume card in [Up Next](/docs/up-next/).
+
+When the position and duration are both available, Plekt works out the percentage from them rather
+than trusting a conflicting percentage in the event, so the card, History, and each server agree.
+
+Both settings live in [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning).
+
+## What it never overwrites
+
+- A genuine part-watch already on a server is left alone.
+- A newer completed watch is not undone by an older resume position.
+- A deliberate unwatched action clears the position, and a delayed provider flag cannot bring it back.
+- A server that already holds the same position is not rewritten, so a push does not loop.
+
+## When it does not carry over
+
+A server can only receive a position once its item is matched to the canonical record. If a title is
+missing from a library, or two servers hold it under different matches, that server is skipped. Use
+[Fix Match](/docs/media-details/#fix-match) and follow
+[Resume progress did not carry over](/docs/troubleshooting/#resume-progress-did-not-carry-over).
+
+To replay every known position to one server, for example after a rebuild, use
+[Force Sync](/docs/sync-tools/#force-sync).

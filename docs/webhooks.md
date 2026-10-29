@@ -16,6 +16,34 @@ checks at startup and shows a dismissable notice on the dashboard.
 - The notice returns until the webhook is fixed or dismissed; a dismissal is remembered per warning text.
   Status is served by `GET /api/webhook-port/status` (admin only).
 
+## Webhook delivery test
+
+A **Test** button beside "Plugin configured" or "Webhook configured" for Emby (Plekt plugin, built-in webhook) and
+Jellyfin (Plekt plugin, Jellyfin Webhooks plugin) in Settings > Webhooks and the setup step opens a
+pop-up that checks a manual played mark reaches Plekt, whichever sender is used. Plex has no button
+(no webhook). The pop-up shows the steps, a live countdown,
+the events Plekt receives as they arrive (polled every second) and the result, with no page refresh;
+closing it cancels the test. Logic is in
+`server/src/utils/webhookTest.js`, routes in `server/src/routes/webhookTest.js`
+(`POST webhook-test/start|cancel|unmark`, `GET webhook-test/status|poster`; admin only, disabled in the
+demo), panel in `public/modules/webhook-test.js`.
+
+- A test lasts 5 minutes. The first played-flag event from the tested server (Emby `item.markplayed`, Jellyfin `UserDataSaved` with Played true or `ItemMarkedPlayed`) that passes the token and the
+  connected-user checks is captured in `handleWebhook` and answered with 200. Capture runs after the Plekt-echo guards (native Up Next rail refresh, Jellyfin Next Up ordering nudge, outbound mark and progress echoes), so Plekt's own writes never count as the person's mark. It writes no watch
+  history, queues no Manual Watch review and is never dispatched to another app or tracker.
+- `GET webhook-test/poster` streams the captured item's poster from the media server (path checked, key kept server-side) for the pass screen. The hold is checked once early and again right at the capture point, so a duplicate mark-played that was already in flight when the first was captured is swallowed too.
+- The captured item is held: the Emby or Jellyfin scheduled scan skips it, and a duplicate mark-played or the
+  unmark echo for that item is swallowed. The hold ends 10 minutes after capture, immediately on
+  "Leave it marked" (the next scan then treats it as a normal manual mark), or 60 seconds after
+  "Unmark it" (which calls the Emby or Jellyfin API for that one item id).
+- Only the first mark is captured, so a genuine mark made during the window becomes the test item;
+  "Leave it marked" hands it to the next scan as a normal manual mark. Playback events and every
+  other item pass through untouched.
+- State is in memory per signed-in user (single API process); a server restart ends a test.
+- On timeout the status route reads the server's most recent played items to tell "nothing was marked"
+  from "the server never told Plekt". The panel combines that with what arrived (event names, rejected
+  tokens) into one likely cause. Tests cover the state rules in `test/webhookTest.test.js`.
+
 ## Authentication & per-user routing
 
 The admin's webhook endpoint is at `/api/webhook`, so existing single-user Plex, Emby, and
@@ -172,7 +200,10 @@ Results are written back as `sync_dispatch_telemetry` on the watch record and in
 the `sync_history` SQLite table.
 
 **Content type is not trusted.** `normalizeWebhook` routes multipart and form-encoded
-bodies to the Plex parser, and everything else is judged by whether the body parses as
+bodies to the Plex parser, except a body with no Plex `payload` field whose `data` field
+holds JSON: that is Emby's Notifications webhook set to multipart/form-data, and it goes to
+the JSON parsers (before 28 October 2026 every such Emby event was dropped as "Plex Raw
+Event: missing payload"). Everything else is judged by whether the body parses as
 JSON - not by the declared content type. Jellyfin's webhook plugin posts valid JSON
 labelled `text/plain`, so a header-based check would drop every event it sends,
 including the mark-played and mark-unplayed events unwatch propagation depends on. A

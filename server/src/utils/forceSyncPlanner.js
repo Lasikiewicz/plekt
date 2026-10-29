@@ -10,7 +10,7 @@
 // mark-played/mark-unplayed call. It imports no client write functions and no
 // dataRepo write helpers. Tests assert this stays true.
 
-import { mediaKeyFor } from "./dataRepo.js";
+import { canonicalTitleKey, mediaKeyFor, showTitleFrom } from "./dataRepo.js";
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { normalizeProviderIds, parsePlexMediaIds } from "./parsers.js";
 import {
@@ -207,6 +207,9 @@ export function mapEmbyLikeWatchedItem(item = {}, source = "emby") {
     tmdb: ids.tmdb || null,
     tvdb: ids.tvdb || null,
     episodeTitle: item.Type === "Episode" ? item.Name : null,
+    // The ids above are usually the episode's own; this lets an importer
+    // resolve the series ids before storing (decision 15).
+    seriesItemId: item.Type === "Episode" ? item.SeriesId || null : null,
     source,
     timestamp: watchedAt || releaseDate ? new Date(watchedAt || releaseDate) : null,
     timestampInferredFromRelease: Boolean(!watchedAt && releaseDate),
@@ -440,6 +443,76 @@ function matchBasisFor(media = {}) {
 
 // Builds the full action list from collected server items + history rows.
 // Pure: no I/O, no writes. `historyRows` are raw rows from getCachedHistory().
+// The server item a write lands on: the target plus the title and, for an
+// episode, its season and episode. Provider ids are left out on purpose, since
+// the clash below comes from one item held under two different id sets.
+function writeCoordinate(action = {}) {
+  const media = action.media || {};
+  if (!action.target) return "";
+  if (media.type === "episode") {
+    const title = canonicalTitleKey(showTitleFrom(media.title));
+    if (!title || media.season == null || media.episode == null) return "";
+    return `${action.target}|episode|${title}|${media.season}|${media.episode}`;
+  }
+  const title = canonicalTitleKey(media.title);
+  return title ? `${action.target}|${media.type || "movie"}|${title}` : "";
+}
+
+// Two Plekt identities for one server item (an episode stored under its own ids
+// and under its series ids) can ask one target to mark it played and unplayed in
+// the same plan. The executor runs actions concurrently, so whichever request
+// landed last would decide (Emby item 1787031 was unplayed then played 1 ms
+// apart). Neither write is evidence enough, so both are dropped and the item is
+// listed as skipped for the identity split to be fixed.
+// Movies are matched by provider id, so two same-titled movies with a differing
+// IMDb/TMDB/TVDB id are different films (Moana 2016 and 2026), not one split
+// item. Only ids that cannot tell them apart (one side lacks the kind) clash.
+// Episodes keep the title/season/episode match: a split episode's two
+// identities carry unrelated ids by definition.
+function movieIdsCompatible(a = {}, b = {}) {
+  return ["imdb", "tmdb", "tvdb"].every((kind) => !a[kind] || !b[kind] || String(a[kind]) === String(b[kind]));
+}
+
+export function dropOpposingWrites(actions = [], skipped = []) {
+  const writesByCoordinate = new Map();
+  for (const action of actions) {
+    if (action.kind !== "mark_played" && action.kind !== "mark_unplayed") continue;
+    const coordinate = writeCoordinate(action);
+    if (!coordinate) continue;
+    if (!writesByCoordinate.has(coordinate)) writesByCoordinate.set(coordinate, []);
+    writesByCoordinate.get(coordinate).push(action);
+  }
+  const clashingActions = new Set();
+  for (const writes of writesByCoordinate.values()) {
+    const played = writes.filter((action) => action.kind === "mark_played");
+    const unplayed = writes.filter((action) => action.kind === "mark_unplayed");
+    for (const p of played) {
+      for (const u of unplayed) {
+        if (p.media?.type === "episode" || movieIdsCompatible(p.media?.ids, u.media?.ids)) {
+          clashingActions.add(p);
+          clashingActions.add(u);
+        }
+      }
+    }
+  }
+  if (!clashingActions.size) return actions;
+  const reported = new Set();
+  return actions.filter((action) => {
+    if (!clashingActions.has(action)) return true;
+    const coordinate = writeCoordinate(action);
+    if (!reported.has(coordinate)) {
+      reported.add(coordinate);
+      skipped.push({
+        mediaKey: action.mediaKey,
+        title: action.media?.title,
+        target: action.target,
+        reason: `Plekt holds this item as both watched and unwatched under different identities, so ${action.target} was not asked to mark it played or unplayed. Fix the duplicate match, then run Force Sync again.`,
+      });
+    }
+    return false;
+  });
+}
+
 export function buildForceSyncPlan({
   itemsByServer = {},
   historyRows = [],
@@ -613,8 +686,9 @@ export function buildForceSyncPlan({
     }
   }
 
+  const conflictFreeActions = dropOpposingWrites(actions, skipped);
   const summary = summarizePlan({
-    actions,
+    actions: conflictFreeActions,
     skipped,
     scope,
     scannedServers,
@@ -632,7 +706,7 @@ export function buildForceSyncPlan({
     fingerprints,
     scopeErrors,
     configRevision: syncRolesRevision(config),
-    actions,
+    actions: conflictFreeActions,
     skipped,
     summary,
   };

@@ -1,9 +1,9 @@
 ---
 title: Watchlist
 description: Save movies and TV shows for later without changing watched state.
-category: Media and discovery
+category: Features
 order: 3.31
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/personal-media.js
@@ -29,6 +29,20 @@ you want to revisit. Episode ratings are supported separately on [Ratings](/docs
 but episodes are not Watchlist entries. Watchlist is not a media-server queue and it never
 marks a title watched by itself.
 
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | The only app that syncs. It uses your account's Universal Watchlist. |
+| Emby | No | Emby has no account-level watchlist. |
+| Jellyfin | No | Jellyfin has no account-level watchlist. |
+| Trakt, Simkl | No | Neither is a watchlist source for Plekt. |
+
+**Why it differs.** Emby and Jellyfin only offer playlists and favorites, which belong to a single
+library. Adding a title that is not in that library is silently ignored, so there is nothing safe
+to sync to. Your Plekt watchlist still works for every app: it is a local list for movies and TV
+shows, not episodes.
 
 ## Open Watchlist
 

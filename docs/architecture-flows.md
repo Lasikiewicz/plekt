@@ -119,8 +119,8 @@ env values (`mergeEnvDefaults` in `configStore.js`).
 
 ## Synchronization safety modules
 
-- `server/src/utils/forceSyncPlanner.js` collects read-only server state and builds typed, scoped Force Sync actions.
-- `server/src/utils/libraryForceSync.js` powers the Settings library-wide Set Plekt as Source of Truth (push) and Import Watched Status (pull) operations.
+- `server/src/utils/forceSyncPlanner.js` collects read-only server state and builds typed, scoped Force Sync actions. When one plan would mark the same server item played and unplayed (one item held under two Plekt identities), `dropOpposingWrites()` sends neither and lists the item as skipped, since concurrent execution would let whichever request landed last decide. Episodes match on show title, season and episode; same-titled movies clash only when their provider ids cannot tell them apart, so two films with differing IMDb/TMDB/TVDB ids (Moana 2016 and 2026) both sync.
+- `server/src/utils/libraryForceSync.js` powers the Settings library-wide Set Plekt as Source of Truth (push) and Import Watched Status (pull) operations. `withLibrarySeriesIds()` resolves Emby and Jellyfin episodes to their series ids before grouping and storing, as every other ingestion path does ([decision 15](decisions.md)).
 - `server/src/utils/forceSyncExecutor.js` validates plan freshness, creates verified destructive-run snapshots, and executes confirmed actions.
 - `server/src/utils/syncPlans.js` stores plan summaries/actions, confirmation state, snapshots, and retention.
 - `server/src/utils/outboundGovernor.js` coordinates per-host pacing, lanes, cooldowns, and safe telemetry.

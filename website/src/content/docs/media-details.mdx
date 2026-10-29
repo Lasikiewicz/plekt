@@ -1,9 +1,9 @@
 ---
 title: Media details and actions
 description: Understand the detail page, watch dates, Fix Match, artwork, the Options menu, and provider content.
-category: Media and discovery
+category: Features
 order: 5
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/modules/media-detail.js
   - public/modules/media-detail-context.js
@@ -58,6 +58,23 @@ Select a movie, show, episode, provider result, or person to open its detail con
 The detail page brings identity, artwork, watch state, related content, and destination
 actions together so a correction can be made against the correct record.
 
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | Mark watched, Mark unwatched, Edit watch date, and Force Sync (push or pull) all work. A backdated mark keeps the Plex server's clock, because Plex has no historical-date setter. |
+| Emby | Yes | The same actions work, and the original watch date is kept. |
+| Jellyfin | Yes | The same actions work, and the original watch date is kept. |
+| Trakt | Partly | Watched state is pushed to Trakt, but Force Sync never pulls it back. |
+| Simkl | Partly | Marking watched is pushed. Unwatching is disabled. Whether Force Sync can pull from it is not documented. |
+
+Delete and Merge change only Plekt's record, whichever app a title came from. They never remove
+files or items from your media servers. Merge is for TV shows only.
+
+**Why it differs.** Plex has no way to set a historical play date, so a backdated mark there keeps
+the server's current time. Trakt and Simkl are trackers, so Plekt pushes to them but pulls a
+title's watched state from media servers only.
 
 ## Page actions
 

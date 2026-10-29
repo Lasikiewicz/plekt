@@ -8,6 +8,7 @@ import { ensurePlexServerOwnership } from "./plexTokenManager.js";
 import { isAuthoritativeRestoreActive } from "./configStore.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { loadWatchBackupRuntime } from "./watchHistoryBackups.js";
+import { isWebhookTestHeldItem } from "./webhookTest.js";
 import { releaseDateForSourceItem, resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem, watchedAtForEmbyLikeItem } from "./watchDates.js";
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { buildWatchProvenance } from "./watchProvenance.js";
@@ -470,6 +471,8 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
     const raw = await fetchEmbyWatchedItems(config.emby, { limit: SCHEDULED_RECENT_WATCH_LIMIT });
     for (const item of raw) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
+      // The item a webhook delivery test captured stays out of the scan until the person unmarks it or leaves it marked.
+      if (isWebhookTestHeldItem("emby", item.Id)) continue;
       // For episodes, prefer series-level provider IDs (SeriesProviderIds) so that Plex and
       // other targets can match by series GUID rather than failing on episode-level IDs.
       const rawIds = item.Type === "Episode"
@@ -626,6 +629,8 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
     const raw = await fetchJellyfinWatchedItems(config.jellyfin, { limit: SCHEDULED_RECENT_WATCH_LIMIT });
     for (const item of raw) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
+      // The item a webhook delivery test captured stays out of the scan until the person unmarks it or leaves it marked.
+      if (isWebhookTestHeldItem("jellyfin", item.Id)) continue;
       // For episodes, prefer series-level provider IDs (SeriesProviderIds) so that Plex and
       // other targets can match by series GUID rather than failing on episode-level IDs.
       const rawIds = item.Type === "Episode"

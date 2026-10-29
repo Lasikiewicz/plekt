@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import "./domStubs.js";
 import { state } from "../public/modules/state.js";
 
-const { shouldHideWatchedShows, isAlphabeticalExplorerSort, renderShowRecord } = await import("../public/modules/explorer.js");
+const explorerModule = await import("../public/modules/explorer.js");
+const { shouldHideWatchedShows, isAlphabeticalExplorerSort, renderShowRecord } = explorerModule;
 
 test("show searches include fully watched shows even when the filter is enabled", () => {
   assert.equal(shouldHideWatchedShows("", true), true);
@@ -62,5 +63,31 @@ test("Next Airing cards show total regular seasons instead of only watched seaso
     state.explorerSortShows = previous.sort;
     if (previousMetadata) state.tmdbDetailsCache.set(cacheKey, previousMetadata);
     else state.tmdbDetailsCache.delete(cacheKey);
+  }
+});
+
+test("History search re-renders never overwrite text the user is still typing", () => {
+  const { syncHistorySearchInput } = explorerModule;
+  const previous = { search: state.historyViewSearch, active: document.activeElement };
+  try {
+    const input = { value: "Will Tr" };
+    state.historyViewSearch = "Will";
+    document.activeElement = input;
+    syncHistorySearchInput(input);
+    assert.equal(input.value, "Will Tr");
+
+    // A trailing space trims to the applied search, so it stays even when unfocused.
+    document.activeElement = null;
+    input.value = "Will ";
+    syncHistorySearchInput(input);
+    assert.equal(input.value, "Will ");
+
+    // Unfocused and genuinely different (route restore): the applied search wins.
+    input.value = "Old";
+    syncHistorySearchInput(input);
+    assert.equal(input.value, "Will");
+  } finally {
+    state.historyViewSearch = previous.search;
+    document.activeElement = previous.active;
   }
 });

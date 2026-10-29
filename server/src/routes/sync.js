@@ -56,6 +56,7 @@ import {
 } from "../utils/manualWatchReview.js";
 import { applyUnwatchedTransition } from "../utils/watchStateTransitions.js";
 import { auditSourceEventPayload, recordWatchAuditEvent, recordWatchAuditEvents } from "../utils/watchAudit.js";
+import { captureWebhookTestMark, discountEchoForWebhookTest, isHeldWebhookTestEvent, noteRejectedWebhookForTest, observeWebhookForTest } from "../utils/webhookTest.js";
 import { fetchPosterFromTmdb } from "../utils/tmdbClient.js";
 import { cacheBackdropFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache, markPosterMissing, usableCachedPoster } from "../utils/posterCache.js";
 import { getTmdbDetails, getTmdbImages, getTmdbPerson, getTmdbSeason, searchTmdb, getCachedTvdbId, queueTmdbMetadataWarmup } from "../utils/tmdbGateway.js";
@@ -246,7 +247,21 @@ function parseJsonWebhookBody(json) {
 export async function normalizeWebhook(req) {
   const contentType = req.get("content-type") || "";
   if (contentType.includes("multipart/form-data") || contentType.includes("application/x-www-form-urlencoded")) {
-    return parsePlexWebhook(await readFormData(req));
+    const formData = await readFormData(req);
+    // Emby's Notifications webhook can post multipart too, with its JSON event in
+    // a `data` field rather than Plex's `payload`. Read as Plex, every Emby event
+    // was dropped as "Plex Raw Event: missing payload" (3,972 in one reporter's night).
+    const embyData = formData.get("payload") ? null : formData.get("data");
+    if (embyData) {
+      let json = null;
+      try {
+        json = JSON.parse(embyData);
+      } catch {
+        // Not JSON: fall through to the Plex parser's missing-payload record.
+      }
+      if (json && typeof json === "object") return parseJsonWebhookBody(json);
+    }
+    return parsePlexWebhook(formData);
   }
   // A body that claims to be JSON and isn't is a real client error, so let
   // readJson's 400 through rather than quietly treating it as unrecognised.
@@ -3136,6 +3151,7 @@ export async function handleWebhook(req, res) {
   const authToken = String(req.get("authorization") || "").replace(/^Bearer\s+/i, "").trim();
   const queryToken = String(req.query?.token || "").trim();
   if (![headerToken, legacyHeaderToken, authToken, queryToken].some((token) => verifyWebhookToken(token))) {
+    noteRejectedWebhookForTest();
     return sendJson(res, { error: "Unauthorized" }, 401);
   }
   if (isAuthoritativeRestoreActive()) {
@@ -3158,6 +3174,7 @@ export async function handleWebhook(req, res) {
       isValid: media.isValid,
       ids: media.ids,
     });
+    observeWebhookForTest(media);
   } catch (error) {
     console.error("Webhook body parsing failed", error);
     return sendJson(res, { error: "Invalid webhook body", details: error.message }, 400);
@@ -3296,7 +3313,16 @@ export async function handleWebhook(req, res) {
     }
   }
 
+  // After a webhook delivery test (Settings > Webhooks) captured an item, a duplicate
+  // mark-played or the echo of its unmark is dropped here; capture itself happens
+  // below, once the Plekt-echo guards have run.
+  if (isHeldWebhookTestEvent(media)) {
+    console.log("Webhook: held by the webhook delivery test", { source: media.source, title: media.title, event: media.event });
+    return sendJson(res, { ok: true, inserted: false, skipped: true, reason: "Webhook delivery test" });
+  }
+
   if (isSyntheticUpNextWebhook(media)) {
+    discountEchoForWebhookTest(media);
     console.log("Webhook: ignored synthetic Up Next rail seed playback", {
       source: media.source,
       title: media.title,
@@ -3333,6 +3359,7 @@ export async function handleWebhook(req, res) {
     && media.playedFlagOnly === true
     && await isRecentOutboundJellyfinNextUpNudge(media, loopStore).catch(() => false)
   ) {
+    discountEchoForWebhookTest(media);
     console.log("Webhook: ignored Jellyfin Next Up ordering nudge", {
       title: media.title,
       event: media.event,
@@ -3359,6 +3386,7 @@ export async function handleWebhook(req, res) {
     && (media.phase === "unplayed" || media.playedFlagOnly === true)
     && await isRecentOutboundRailRefresh(media, media.source, loopStore).catch(() => false)
   ) {
+    discountEchoForWebhookTest(media);
     console.log("Webhook: ignored native Up Next rail refresh callback", {
       source: media.source,
       title: media.title,
@@ -3390,6 +3418,7 @@ export async function handleWebhook(req, res) {
     // payload would be reinterpreted as a fresh watched -> unwatched action.
     const ownProgressEcho = await isRecentOutboundProgressEcho(media, media.source, loopStore).catch(() => false);
     if (ownProgressEcho) {
+      discountEchoForWebhookTest(media);
       console.log("Webhook: skipped callback caused by outbound resume update", {
         source: media.source,
         title: media.title,
@@ -3424,6 +3453,7 @@ export async function handleWebhook(req, res) {
       if (currentPlaystate?.state !== "watched") ownUnplayedEcho = false;
     }
     if (ownUnplayedEcho) {
+      discountEchoForWebhookTest(media);
       console.log("Webhook: skipped outbound unplayed echo", {
         source: media.source,
         title: media.title,
@@ -3855,6 +3885,7 @@ export async function handleWebhook(req, res) {
         // acknowledgement, even when the local item is still watched. Do not
         // enter the canonical-repair branch: that branch writes to every
         // provider and can turn one callback into an endless fan-out loop.
+        discountEchoForWebhookTest(media);
         await deletePlaybackProgress(media).catch(() => null);
         await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
         return sendJson(res, {
@@ -3871,6 +3902,13 @@ export async function handleWebhook(req, res) {
     // LastPlayedDate to the moment of a manual "Mark watched" click, so that
     // value must not become the historical watch date. Apply the configured
     // watch-import policy here, just as the scheduled scanner does.
+    // A duplicate mark-played can be in flight while the first one is captured; it passed the
+    // early hold check before that capture, so check the hold again here.
+    if (isHeldWebhookTestEvent(media) || captureWebhookTestMark(media)) {
+      console.log("Webhook: captured by the webhook delivery test", { source: media.source, title: media.title, event: media.event });
+      return sendJson(res, { ok: true, inserted: false, skipped: true, reason: "Webhook delivery test" });
+    }
+
     if (media.playedFlagOnly) {
       const { mode, dateChoice } = await resolveWebhookFlagWatchDate(media);
       media.watched_at = dateChoice.previewWatchedAt;

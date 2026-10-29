@@ -1,0 +1,62 @@
+---
+title: Drop and Un-drop
+description: Take a title out of Up Next everywhere without losing its watch history.
+category: Features
+order: 3.3
+sourceVersion: "2.2.1"
+sourcePaths:
+  - public/modules/dropped-titles.js
+  - public/modules/dropped-title-views.js
+  - public/modules/up-next.js
+  - server/src/routes/droppedTitles.js
+  - server/src/utils/droppedTitles.js
+  - docs/dashboard.md
+---
+
+Drop is for a show or movie you have stopped watching. A dropped title leaves
+[Up Next](/docs/up-next/) and is left out of what Plekt pushes to your media apps, while its watch
+dates, play counts, and resume progress stay exactly as they were.
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | The title is hidden from Continue Watching. |
+| Emby | Yes | The title is hidden from Continue Watching (Resume). |
+| Jellyfin | Partly | Plekt stops listing the title, but an entry already on Next Up can stay visible. |
+| Trakt | Shows only | Drop syncs both ways for shows. Movies stay local. |
+| Simkl | Yes, with limits | Drop moves the title to Simkl's Dropped list and Un-drop restores its earlier list. A movie in Watching counts as watched, so Un-drop always returns movies to Plan to Watch. A title that was Completed before the drop is held rather than moved back. Simkl changes wait for the next watch or media-server event. |
+
+**Why it differs.** Plex and Emby each have a separate hide for their rail. Jellyfin has no hide
+that keeps resume progress, so Plekt cannot remove what is already on Next Up. Plekt syncs a drop to
+Trakt for shows only, and Simkl's list rules limit what Un-drop can safely put back.
+
+## Drop a title
+
+- On an Up Next card, open **More options** and choose **Drop**.
+- On a movie or show page, use **Drop** in the page actions.
+
+Plekt saves the drop first. It then asks Plex and Emby to hide the matching rail entry. If an app
+refuses, the drop still stands and Plekt reports the failure instead of reversing it.
+
+## Bring a title back
+
+Choose **Un-drop** from the same menus, or from the **Dropped only** view below. Un-drop makes the
+title eligible for Up Next again but does not force an app's rail entry back into view; the next
+normal playback or app refresh does that.
+
+A completed live play dated after the drop also restores the title on its own. Played flags,
+imports, history backfills, and tracker pulls do not.
+
+## Find dropped titles
+
+- **History**, **Movies**, and **TV Shows** each have a **Dropped only** control. It lists dropped
+  titles, including ones with no watch history, and follows the page's search and media type.
+- [Stats](/docs/stats/) shows a separate **Dropped** count, labelled all time regardless of the
+  period you pick.
+
+## Drop or remove?
+
+**Remove from Up Next** is a "not now" choice that can undo itself when newer playback arrives, and
+it is tracked in the Dismissed Up Next list. **Drop** is for a title you are done with. See
+[Remove and restore](/docs/up-next/#remove-and-restore).

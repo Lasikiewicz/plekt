@@ -1,0 +1,35 @@
+---
+title: Install on Windows
+description: Install Plekt as a Windows service using the Plekt installer.
+category: Start here
+order: 2
+sourceVersion: "2.2.1"
+sourcePaths:
+  - packaging/windows/README.md
+  - README.md
+screenshots: []
+---
+
+## Install with the Windows installer
+
+On 64-bit Windows, download the latest [Plekt installer from GitHub Releases](https://github.com/Lasikiewicz/plekt/releases/latest)
+and run it as an administrator. It includes the Plekt server, Node.js runtime, and
+Windows native dependencies, then registers the server as a background service.
+
+The installer keeps the runtime database, artwork cache, logs, and backups in
+`%ProgramData%\Plekt`, separate from any source checkout. An existing Plembfin service and
+data folder are moved to the Plekt names when you upgrade. Uninstalling preserves that
+data unless you explicitly confirm its removal.
+
+The installer options are preselected for a ready first launch:
+
+- **Open Plekt now** opens the local dashboard so you can claim a fresh instance.
+- **Start the notification-area companion** adds the tray menu for service status, dashboard
+  access, and stopping the server. Clear it if you do not want Plekt in the tray.
+- **Create a desktop shortcut** adds a convenience shortcut to the dashboard.
+- **Allow private-network access** opens the dashboard port (5056 by default, changeable during
+  setup) for other devices on the same private network. Leave it cleared when you only use `127.0.0.1` on the Windows machine.
+
+The browser launch and tray choice are independent, so you can select both. Alpha testers
+can use the matching prerelease installer from the [GitHub Releases page](https://github.com/Lasikiewicz/plekt/releases).
+<p class="install-next-step"><a class="button-primary" href="/docs/onboarding/">Next step: onboarding</a></p>

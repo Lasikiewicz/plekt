@@ -24,7 +24,7 @@
 
 ---
 
-> **v2.2.0.** Plekt writes watched state and playback progress to connected media
+> **v2.2.1.** Plekt writes watched state and playback progress to connected media
 > servers, so **back up first** (Settings → Backup → Local). Report
 > issues on the [issue tracker](https://github.com/Lasikiewicz/plekt/issues).
 
@@ -90,6 +90,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Rich analytics & stats** - In-depth all-time and period reports, top shows, and platform playback distribution; same-title shows with conflicting provider identities retain separate rankings and artwork. On desktop, the top-ten leaderboard and monthly activity chart use the available page height
 - **Server Logs controls** - Pause live updates, follow the newest entries, or filter text within a category. Scrolling up stops following; Download Logs exports the complete fetched diagnostic trail.
 - **Playback detection cadence** - Set up plugins/playback webhooks for prompt updates. Plekt checks for missed activity every 5 minutes while idle to reduce background requests, then every 10 seconds once playback is detected. The dashboard refreshes separately every 10 seconds.
+- **Webhook delivery test** - A Test button beside the Emby and Jellyfin webhook options in Settings > Webhooks opens a pop-up that checks marking an item played in Emby or Jellyfin reaches Plekt, for the Plekt plugin or the built-in or Jellyfin Webhooks plugin. The test records and syncs nothing, then offers to unmark the item and explains the likely cause if nothing arrives.
 - **Personal media organization** - Save movies, shows, and episodes to a watch list or playlists (optionally synced two ways to Plex, Emby, and Jellyfin, or filled automatically from genre, original language, year, and watched rules, with TV playlists holding the next episode of each show, and watched items removed if you choose), and rate them from their media pages; episode ratings use one canonical show/season/episode identity everywhere
 - **Cache-first media detail pages** - Reuse the latest local history snapshot on reload so known artwork, summaries, watched rows, and watch dates stay visible while provider metadata refreshes; cast profiles switch between Movies and TV Shows with boxed Year and Genre filters, and center the portrait and profile details on phones; pages without actions hide the empty action row while keeping the page title visible; on phones, the Options menu stays beside the detail title; metadata, availability, service links, and ratings share a table on every screen size
 - **Paged media libraries** - Movies and TV Shows load more cards as you scroll without rebuilding the cards already on screen, preserve separate titles when poster artwork is shared, and show a loading indicator while fetching; Posters only expands a selected card in place at the current poster size, with details beside the poster on phones; Next Airing shows the TV library as a dated list; saved TV pages revalidate after 30 minutes when reopened
@@ -534,18 +535,17 @@ notification channel automatically to capture watched and unwatched changes in r
 time, and polls playback progress as a backstop - every 10 seconds while something's
 playing, backing off to every 5 minutes while idle.
 
-**Emby** - The **Plekt** plugin is currently a local beta; its public repository and release
-are awaiting approval. Once released, install it manually:
-download `Emby.Plugin.Plekt.dll` from the
-[releases page](https://github.com/Lasikiewicz/emby-plugin-plekt/releases), copy it into
-Emby's `plugins` folder (`/config/plugins` on the linuxserver.io Docker image), and restart
-Emby (Emby Server 4.9.1 or newer) → open Settings → Plugins → Plekt → paste the complete
-webhook address from Plekt's Settings → Media Servers → Webhooks. In Docker, use Plekt's LAN
-address or hostname, not `localhost`, and turn off any built-in Emby webhook that posts to
-Plekt. The plugin needs no Premiere and no built-in webhook. Alternatively, use the built-in
-webhook: Preferences → Notifications → Webhooks → add one, paste the URL, enable
-**Playback**: `Start`/`Pause`/`Unpause`/`Stop` and **Users**: `Mark Played`/`Mark
-Unplayed`. Leave everything else unticked, and enable **Send All Properties**.
+**Emby** - Install the **Plekt** plugin from the public
+[beta releases](https://github.com/Lasikiewicz/emby-plugin-plekt/releases): download
+`Emby.Plugin.Plekt.dll`, copy it into Emby's `plugins` folder (`/config/plugins` inside the
+linuxserver.io Docker container), then restart Emby Server. Open **Settings → Plugins → Plekt**,
+paste the complete webhook address from **Plekt → Settings → Media Servers → Webhooks**, and save.
+Use a reachable LAN address or hostname in Docker, not `localhost`, and disable any built-in
+Emby webhook posting to the same Plekt server. The plugin needs no Premiere and is tested on
+Emby Server 4.10.1.0; other versions are unverified. It is not in Emby's plugin catalog.
+Alternatively, use Preferences → Notifications → Webhooks: enable **Playback**:
+`Start`/`Pause`/`Unpause`/`Stop` and **Users**: `Mark Played`/`Mark Unplayed`, leave other events
+unticked, and enable **Send All Properties**. Use only one sender.
 
 **Jellyfin** - Recommended: install the **Plekt** plugin from the Plekt repository (add
 `https://raw.githubusercontent.com/Lasikiewicz/jellyfin-plugin-plekt/main/manifest.json` under

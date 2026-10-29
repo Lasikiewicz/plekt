@@ -6,6 +6,24 @@
     "sourcePaths": ["README.md", "docker-compose.quickstart.yml", "Dockerfile"]
   },
   {
+    "id": "install-docker-compose",
+    "label": "Install with Docker Compose",
+    "docSlug": "install-docker-compose",
+    "sourcePaths": ["README.md", "docker-compose.yml", "docker-compose.quickstart.yml", "Dockerfile"]
+  },
+  {
+    "id": "install-node-js",
+    "label": "Install with Node.js",
+    "docSlug": "install-node-js",
+    "sourcePaths": ["docs/development.md", "package.json", "server/server.js"]
+  },
+  {
+    "id": "install-windows",
+    "label": "Install on Windows",
+    "docSlug": "install-windows",
+    "sourcePaths": ["README.md", "packaging/windows/README.md", "packaging/windows/Plekt.iss"]
+  },
+  {
     "id": "upgrading-from-plembfin",
     "label": "Upgrading from Plembfin to Plekt",
     "docSlug": "upgrading-from-plembfin",
@@ -163,10 +181,64 @@
     "sourcePaths": ["public/modules/onboarding.js", "docs/onboarding.md", "README.md"]
   },
   {
+    "id": "onboarding-guide",
+    "label": "Onboarding guide",
+    "docSlug": "onboarding",
+    "sourcePaths": ["public/modules/onboarding.js", "docs/onboarding.md", "docs/dashboard.md"]
+  },
+  {
     "id": "integrations",
     "label": "Integrations",
     "docSlug": "integrations",
     "sourcePaths": ["docs/plex.md", "docs/emby.md", "docs/jellyfin.md", "docs/metadata.md"]
+  },
+  {
+    "id": "plex-connection",
+    "label": "Plex connection",
+    "docSlug": "plex",
+    "sourcePaths": ["docs/plex.md", "docs/webhooks.md"]
+  },
+  {
+    "id": "emby-connection",
+    "label": "Emby connection",
+    "docSlug": "emby",
+    "sourcePaths": ["docs/emby.md", "docs/webhooks.md"]
+  },
+  {
+    "id": "jellyfin-connection",
+    "label": "Jellyfin connection",
+    "docSlug": "jellyfin",
+    "sourcePaths": ["docs/jellyfin.md", "docs/webhooks.md"]
+  },
+  {
+    "id": "trakt-connection",
+    "label": "Trakt connection",
+    "docSlug": "trakt",
+    "sourcePaths": ["docs/plex.md", "docs/settings.md", "docs/scheduled-sync.md", "docs/troubleshooting.md"]
+  },
+  {
+    "id": "simkl-connection",
+    "label": "Simkl connection",
+    "docSlug": "simkl",
+    "sourcePaths": ["public/modules/help-content.js", "server/src/utils/trackers/simkl.js", "server/src/utils/trackers/simklAuth.js"]
+  },
+  {
+    "id": "tautulli-import",
+    "label": "Tautulli import",
+    "docSlug": "tautulli",
+    "sourcePaths": ["public/modules/tautulli-import.js", "server/src/routes/tautulli.js"]
+  },
+  {
+    "id": "seerr-connection",
+    "label": "Seerr connection",
+    "docSlug": "seerr",
+    "sourcePaths": ["public/modules/help-content.js", "docs/media-detail.md"]
+  },
+  {
+    "id": "metadata-providers",
+    "label": "Metadata providers",
+    "docSlug": "metadata-providers",
+    "sourcePaths": ["docs/metadata.md"]
   },
   {
     "id": "sync-plex-with-trakt",
@@ -217,5 +289,11 @@
     "sourcePaths": ["website/src/content/docs/settings/backup.mdx", "website/src/content/docs/settings/restore.mdx", "website/src/content/docs/operations.mdx", "docs/watch-history-backups.md", "docs/backups.md"]
   },
   {"id": "settings-restore", "label": "Restore", "docSlug": "settings/restore", "sourcePaths": ["server/src/utils/configStore.js", "server/src/scheduled.js", "docs/watch-history-backups.md"]},
-  {"id": "settings-sync", "label": "Sync", "docSlug": "settings/sync", "sourcePaths": ["server/src/scheduler.js", "server/src/scheduled.js", "docs/scheduled-sync.md"]}
+  {"id": "settings-sync", "label": "Sync", "docSlug": "settings/sync", "sourcePaths": ["server/src/scheduler.js", "server/src/scheduled.js", "docs/scheduled-sync.md"]},
+  {"id": "settings-users", "label": "Users", "docSlug": "settings/users", "sourcePaths": ["public/modules/settings-users.js", "server/src/routes/users.js", "docs/auth.md"]},
+  {"id": "now-playing", "label": "Now Playing", "docSlug": "now-playing", "sourcePaths": ["public/modules/dashboard.js","server/src/utils/activeSessions.js","server/src/utils/liveSessions.js","docs/now-playing.md"]},
+  {"id": "up-next", "label": "Up Next", "docSlug": "up-next", "sourcePaths": ["public/modules/up-next.js","server/src/utils/upNextService.js","server/src/utils/upNextProviderSync.js","docs/dashboard.md"]},
+  {"id": "drop-titles", "label": "Drop and Un-drop", "docSlug": "drop-titles", "sourcePaths": ["public/modules/dropped-titles.js","server/src/routes/droppedTitles.js","server/src/utils/droppedTitles.js","docs/dashboard.md"]},
+  {"id": "cross-platform-resume", "label": "Cross-platform resume", "docSlug": "cross-platform-resume", "sourcePaths": ["server/src/utils/syncOrchestrator.js","docs/webhooks.md","docs/scheduled-sync.md"]},
+  {"id": "rewatch-tracking", "label": "Rewatch tracking", "docSlug": "rewatch-tracking", "sourcePaths": ["server/src/utils/upNextRewatch.js","server/src/utils/syncOrchestrator.js","docs/dashboard.md"]}
 ]

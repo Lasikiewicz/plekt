@@ -29,3 +29,11 @@ test("busiest month is empty when the period has no plays", () => {
   assert.equal(busiestMonth(monthlyActivityForPeriod(activity, "year", "1999")), null);
   assert.equal(busiestMonth([]), null);
 });
+
+test("Stats show entries link by show id, falling back to the title route", async () => {
+  const { statsMediaHref } = await import("../public/modules/stats.js");
+  assert.equal(statsMediaHref({ type: "episode", title: "Kin", show_tmdb_id: "236621" }), "/tvshow/tmdb/236621-kin");
+  assert.equal(statsMediaHref({ type: "episode", title: "Kin", show_tmdb_id: "112693", show_tvdb_id: "403485" }), "/tvshow/tvdb/403485-kin");
+  // Episode-level flat ids are never series identity.
+  assert.equal(statsMediaHref({ type: "episode", title: "Kin", tmdb_id: "999" }), "/tvshow/Kin");
+});

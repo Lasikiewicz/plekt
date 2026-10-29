@@ -1,0 +1,61 @@
+---
+title: Trakt
+description: Connect Trakt for two-way watch-history and optional personal-rating sync.
+category: Connect services
+order: 4.4
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/plex.md
+  - docs/settings.md
+  - docs/scheduled-sync.md
+  - docs/troubleshooting.md
+screenshots:
+  - /assets/app-captures/settings-connections-trakt-dark.png
+  - /assets/app-captures/settings-connections-trakt-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Trakt
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-connections-trakt-dark.png"
+  lightSrc="/assets/app-captures/settings-connections-trakt-light.png"
+  alt="Plekt Trakt connection settings showing the bridge and import controls"
+  caption="The Trakt card shows the device connection, import options, and single-bridge configuration."
+/>
+
+The live Trakt connection is two-way.
+
+For a focused walkthrough, see [Sync Plex with Trakt](/docs/sync-plex-with-trakt/).
+
+A change in Trakt, Plex, Emby, Jellyfin, or Plekt can flow through the local canonical
+record.
+
+It can then flow out to the other connected services.
+
+Choose **Connect Trakt** in [Settings → Connections → Trakt](/docs/settings/connections/#trakt).
+
+Open the displayed activation link, enter the device code, and approve access.
+
+A normal user does not need a Trakt VIP subscription or personal API application for the
+built-in device app.
+
+When Plekt is the Trakt bridge, disable Emby and Jellyfin Trakt plugins and their
+scheduled Trakt tasks.
+
+Multiple writers can reapply older state after Plekt has already corrected it.
+
+Temporary Trakt write failures are retried. Before a retry resends a watched play, Plekt
+checks Trakt history around the recorded play time; if Trakt already has that play, it treats
+the destination as delivered instead of creating a duplicate.
+
+See [Trakt changes that keep coming back](/docs/troubleshooting/#trakt-changes-keep-coming-back).
+
+If a Trakt episode is reported as `not_found`, use [show-match repair and retry](/docs/sync-tools/#trakt-show-match-repair)
+from Sync Activity. If the show is genuinely unavailable in Trakt, dismissing the Trakt error
+skips only that destination and preserves the local archive.
+
+When **Personal Rating Sync** is enabled under [Settings → Sync](/docs/settings/sync/), Trakt also participates
+in the separate two-way 1–10 rating sync. That rating domain has its own queue and conflict
+rules; it is not the watched-state sync described above.

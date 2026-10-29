@@ -14,7 +14,7 @@ const ROUTE_FILE = "server/src/index.js";
 const ROUTE_DIR = path.posix.dirname(ROUTE_FILE);
 // Keeps docs/code-index.md under the 60 KB whole-file Read limit. A file with
 // more exports lists the first names alphabetically, then "and N more".
-export const MAX_EXPORTS_PER_ROW = 8;
+export const MAX_EXPORTS_PER_ROW = 7;
 
 const compare = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 

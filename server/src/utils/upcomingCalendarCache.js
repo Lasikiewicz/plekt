@@ -127,14 +127,34 @@ function uniqueTrackedShows(shows) {
   });
 }
 
-function sortAndDedupeEpisodes(episodes) {
-  const seen = new Set();
-  return episodes.filter((episode) => {
-    const key = [episode.airDate, episode.tmdbId, episode.showId, episode.season, episode.episode].join("|");
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  }).sort((a, b) => a.airDate.localeCompare(b.airDate)
+// One series can be tracked as two shows (one grouped by tmdb id, one by tvdb id
+// with no tmdb id recorded) that both resolve to the same tmdb id. They carry
+// different showIds, so keying on showId alone listed every episode twice. An
+// episode is therefore identified by its TVDB series id (unique per series, and
+// two tracked shows can carry different tmdb ids for one series), then its tmdb
+// id; only episodes with neither fall back to their show id.
+function episodeIdentityKey(episode) {
+  const owner = episode.tvdbId ? `tvdb:${episode.tvdbId}`
+    : episode.tmdbId ? `tmdb:${episode.tmdbId}`
+      : `show:${episode.showId}`;
+  return [episode.airDate, owner, episode.season, episode.episode].join("|");
+}
+
+// When two entries are the same episode, keep the one from the tmdb-keyed show
+// and the one that carries artwork.
+function episodeEntryRank(episode) {
+  return (String(episode.showId || "").startsWith("tmdb:") ? 2 : 0)
+    + (episode.posterUrl || episode.posterRecordId ? 1 : 0);
+}
+
+export function sortAndDedupeEpisodes(episodes) {
+  const chosen = new Map();
+  for (const episode of episodes) {
+    const key = episodeIdentityKey(episode);
+    const current = chosen.get(key);
+    if (!current || episodeEntryRank(episode) > episodeEntryRank(current)) chosen.set(key, episode);
+  }
+  return [...chosen.values()].sort((a, b) => a.airDate.localeCompare(b.airDate)
     || a.showTitle.localeCompare(b.showTitle)
     || a.season - b.season
     || a.episode - b.episode);
@@ -263,7 +283,8 @@ export async function getUpcomingCalendarMonth(month, { refresh = false, revalid
   const trackedShows = uniqueTrackedShows(await getCachedShows({ includeScheduledLibraryHistory: true }));
   const covered = new Set(entry.showKeys || []);
   const missingShows = trackedShows.filter((show) => !covered.has(showKey(show)));
-  if (!missingShows.length) return entry.payload;
+  // Cached months built before the identity dedupe may still hold both copies.
+  if (!missingShows.length) return { ...entry.payload, episodes: sortAndDedupeEpisodes(entry.payload.episodes || []) };
   const addition = await collectMonth(month, { shows: missingShows, prefilterFuture: false });
   const payload = {
     ...entry.payload,

@@ -1,9 +1,9 @@
 ---
 title: Ratings
 description: Give movies, TV shows, and episodes private scores from 1 to 10.
-category: Media and discovery
+category: Features
 order: 3.32
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/personal-media.js
@@ -35,6 +35,20 @@ canonical watched state.
   alt="Plekt Ratings overview showing personal movie, show, and episode ratings"
   caption="Ratings groups your personal scores by media type while keeping provider ratings separate."
 />
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | Two-way. Off by default. |
+| Emby | Yes | Two-way. Off by default. |
+| Jellyfin | Yes | Two-way. Off by default. Clearing a rating sends a rating of 0, because Jellyfin ignores an empty value. |
+| Trakt | Yes | Two-way. Off by default. |
+| Simkl | Partly | Movies and shows only, no anime or episodes. A write needs a movie already completed with a known watch date, or a show already in a Simkl list. Unsafe writes are held. A missing Simkl rating never clears yours; only an explicit empty rating does. |
+
+**Why it differs.** Each service stores ratings on its own terms. Simkl only accepts a rating on a
+title it already tracks as watched or listed, so Plekt holds writes that would fail or create a
+false watch.
 
 ## Open Ratings
 

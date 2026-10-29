@@ -1,0 +1,85 @@
+---
+title: Now Playing
+description: See live sessions from Plex, Emby, and Jellyfin, with source, position, and progress.
+category: Features
+order: 3.1
+sourceVersion: "2.2.1"
+sourcePaths:
+  - public/modules/dashboard.js
+  - public/modules/up-next.js
+  - server/src/utils/activeSessions.js
+  - server/src/utils/liveSessions.js
+  - docs/dashboard.md
+  - docs/now-playing.md
+screenshots:
+  - /assets/app-captures/now-playing-dark.png
+  - /assets/app-captures/now-playing-light.png
+  - /assets/app-captures/now-playing-options-dark.png
+  - /assets/app-captures/now-playing-options-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+Now Playing is session information, not completed watch history. It sits at the top of the
+[Dashboard](/docs/dashboard/) and shows what is playing right now on your connected servers.
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | Sessions arrive through Plex's notification connection and a session check. A user added to a Plex server that another Plekt user owns appears through the owner's connected account. |
+| Emby | Yes, after setup | Needs the Plekt plugin or a webhook. See [Emby](/docs/emby/). |
+| Jellyfin | Yes, after setup | Needs the Plekt plugin or a webhook. See [Jellyfin](/docs/jellyfin/). |
+| Trakt, Simkl | Not applicable | They record history, not live playback. |
+
+**Why it differs.** Each media server reports playback in its own way. Plex's own webhooks only
+fire when playback changes state and send no "still playing" signal, so Plekt also checks Plex's
+sessions on a schedule. Emby and Jellyfin do not tell an outside app about playback until a plugin
+or webhook is set up. Trackers never host the player, so they have no sessions to show.
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/now-playing-dark.png"
+  lightSrc="/assets/app-captures/now-playing-light.png"
+  alt="Plekt Now Playing panel showing live sessions with their source and playback position"
+  caption="Each live session identifies its source and current position; with nothing playing, the panel is headed Up Next and features part watched and Up Next items."
+/>
+
+## What a session shows
+
+A session card shows the title, the episode title with its season and episode, the source
+service, the current position and duration, and a progress bar. Select the title to open its
+[media details](/docs/media-details/).
+
+## How fresh it is
+
+- Playback checks run every 10 seconds while something is playing and every 5 minutes while idle.
+- Opening the Dashboard or returning to a background tab requests a fresh snapshot at once.
+- A plugin, webhook, or Plex notification reports a new session sooner than the idle check.
+- **Active Session TTL** in [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning)
+  controls when an inactive session is treated as stale.
+
+Each user sees their own playback. A provider failure is kept separate from a genuinely empty
+result, so a temporary connection problem does not claim that playback stopped. Disappearing from
+Now Playing does not, by itself, create a completed watch.
+
+## Panel options
+
+The cog beside the panel heading opens its options. Every change saves at once and applies to the
+whole server.
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/now-playing-options-dark.png"
+  lightSrc="/assets/app-captures/now-playing-options-light.png"
+  alt="Plekt Now Playing panel with its options open, showing two allow checkboxes and an item count"
+  caption="The cog beside the panel heading sets which items can fill Now Playing and how many it holds."
+/>
+
+- **Allow part watched items here** and **Allow Up Next items here** are both on by default. Part
+  watched items fill the free slots first, then the other [Up Next](/docs/up-next/) items.
+- The item count (1 to 3) sets how many cards the panel holds, live sessions included.
+
+While an episode or movie plays, its own Up Next card is hidden and never featured in the panel,
+so the title shows once, as its live session.
+
+If a session never appears, follow
+[Now Playing is empty or stale](/docs/troubleshooting/#now-playing-is-empty-or-stale).

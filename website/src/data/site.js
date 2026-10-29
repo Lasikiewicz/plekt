@@ -189,19 +189,42 @@ export const docsNav = [
     description: "Get a new instance ready and choose the right next guide.",
     items: [
       {
-        slug: "guides",
-        label: "Guides",
-        description: "Choose a focused path for setup, daily use, connections, maintenance, or recovery.",
-      },
-      {
         slug: "getting-started",
         label: "Getting started",
-        description: "Install Plekt and complete the first-run setup.",
+        description: "Review prerequisites and choose how to install Plekt.",
         children: [
-          { id: "before-you-install", label: "Before you install" },
-          { id: "install-with-docker-compose", label: "Install with Docker Compose" },
-          { id: "install-with-node-js", label: "Install with Node.js" },
+          { id: "quick-summary", label: "Quick summary" },
+          { id: "prerequisites", label: "Prerequisites" },
+          { id: "choose-your-install-type", label: "Choose your install type" },
+        ],
+      },
+      {
+        slug: "install-windows",
+        label: "Install on Windows",
+        description: "Install Plekt as a Windows service.",
+      },
+      {
+        slug: "install-docker-compose",
+        label: "Install with Docker Compose",
+        description: "Deploy Plekt with Docker Compose and persistent application data.",
+      },
+      {
+        slug: "portainer",
+        label: "Install with Portainer",
+        description: "Deploy Plekt as a Docker Compose stack in Portainer.",
+      },
+      {
+        slug: "install-node-js",
+        label: "Install with Node.js",
+        description: "Install and run Plekt directly with Node.js.",
+      },
+      {
+        slug: "onboarding",
+        label: "Onboarding",
+        description: "Claim your instance, complete Guided Setup, and confirm your first sync.",
+        children: [
           { id: "claim-the-instance", label: "Claim the instance" },
+          { id: "if-you-forget-the-administrator-password", label: "If you forget the administrator password" },
           { id: "complete-the-guided-setup", label: "Complete the guided setup" },
           { id: "confirm-the-first-sync", label: "Confirm the first sync" },
           { id: "what-to-do-next", label: "What to do next" },
@@ -230,8 +253,8 @@ export const docsNav = [
     ],
   },
   {
-    label: "Dashboard and libraries",
-    description: "Learn the screens used for daily browsing, playback, and history review.",
+    label: "Features",
+    description: "Everything Plekt does, one page per feature, with the apps each one works on.",
     items: [
       {
         slug: "dashboard",
@@ -247,6 +270,68 @@ export const docsNav = [
         ],
       },
       {
+        slug: "now-playing",
+        label: "Now Playing",
+        description: "Live sessions from Plex, Emby, and Jellyfin, with source, position, and progress.",
+        children: [
+          { id: "what-a-session-shows", label: "What a session shows" },
+          { id: "how-fresh-it-is", label: "How fresh it is" },
+          { id: "panel-options", label: "Panel options" },
+        ],
+      },
+      {
+        slug: "up-next",
+        label: "Up Next",
+        description: "One queue of resume cards and next episodes, pushed to each app's native rail.",
+        children: [
+          { id: "how-the-queue-is-built", label: "How the queue is built" },
+          { id: "card-actions", label: "Card actions" },
+          { id: "what-each-app-receives", label: "What each app receives" },
+          { id: "remove-and-restore", label: "Remove and restore" },
+        ],
+      },
+      {
+        slug: "drop-titles",
+        label: "Drop and Un-drop",
+        description: "Take a title out of Up Next everywhere without losing its watch history.",
+        children: [
+          { id: "drop-a-title", label: "Drop a title" },
+          { id: "bring-a-title-back", label: "Bring a title back" },
+          { id: "find-dropped-titles", label: "Find dropped titles" },
+          { id: "drop-or-remove", label: "Drop or remove?" },
+        ],
+      },
+      {
+        slug: "cross-platform-resume",
+        label: "Cross-platform resume",
+        description: "Pause on one media server and pick up where you stopped on another.",
+        children: [
+          { id: "how-a-position-travels", label: "How a position travels" },
+          { id: "what-it-never-overwrites", label: "What it never overwrites" },
+          { id: "when-it-does-not-carry-over", label: "When it does not carry over" },
+        ],
+      },
+      {
+        slug: "rewatch-tracking",
+        label: "Rewatch tracking",
+        description: "Keep genuine repeat viewings in History without duplicate noise.",
+        children: [
+          { id: "real-rewatch-or-duplicate", label: "Real rewatch or duplicate?" },
+          { id: "rewatches-in-up-next", label: "Rewatches in Up Next" },
+        ],
+      },
+      {
+        slug: "manual-watch-review",
+        label: "Manual Watch review",
+        description: "Resolve uncertain watch events and recheck review status.",
+        children: [
+          { id: "how-review-queue-works", label: "How the review queue works" },
+          { id: "choose-a-watch-date", label: "Choose a watch date" },
+          { id: "correct-provider-state", label: "Correct provider state" },
+          { id: "recheck-status", label: "Recheck status" },
+        ],
+      },
+      {
         slug: "libraries",
         label: "Shared library controls",
         description: "Controls shared by the Movies and TV Shows libraries.",
@@ -255,12 +340,6 @@ export const docsNav = [
           { id: "the-shared-card-controls", label: "The shared card controls" },
         ],
       },
-    ],
-  },
-  {
-    label: "Media and discovery",
-    description: "Browse current feeds, keep private media lists, inspect titles, correct identity, choose artwork, and control optional detail sections.",
-    items: [
       {
         slug: "discover",
         label: "Discover",
@@ -374,34 +453,31 @@ export const docsNav = [
       {
         slug: "integrations",
         label: "Integrations",
-        description: "Connect media servers, Trakt, Tautulli, Seerr, and metadata providers.",
+        description: "Browse service-specific setup and connection guides.",
         children: [
           { id: "media-servers", label: "Media servers" },
           { id: "the-connection-checklist", label: "The connection checklist" },
-          { id: "plex", label: "Plex" },
-          { id: "emby", label: "Emby" },
-          { id: "jellyfin", label: "Jellyfin" },
-          { id: "trakt", label: "Trakt" },
-          { id: "tautulli", label: "Tautulli" },
-          { id: "seerr", label: "Seerr" },
-          { id: "metadata-and-artwork-providers", label: "Metadata and artwork providers" },
+          { id: "private-list-and-rating-sync", label: "Private-list and rating sync" },
           { id: "verify-a-connection-without-guessing", label: "Verify a connection without guessing" },
         ],
       },
-      {
-        slug: "sync-plex-with-trakt",
-        label: "Sync Plex with Trakt",
-        description: "Set up two-way Plex and Trakt watch-history sync and troubleshoot missed changes.",
-      },
+      { slug: "plex", label: "Plex", description: "Connect Plex for library state, playback events, and watch history." },
+      { slug: "emby", label: "Emby", description: "Connect Emby for playback events, watch history, and resume progress." },
+      { slug: "jellyfin", label: "Jellyfin", description: "Connect Jellyfin for playback events, watch history, and resume progress." },
+      { slug: "trakt", label: "Trakt", description: "Connect Trakt for two-way watch-history and optional rating sync." },
+      { slug: "simkl", label: "Simkl", description: "Connect Simkl for watch-history import and optional rating sync." },
+      { slug: "tautulli", label: "Tautulli", description: "Import completed Plex watch history from Tautulli." },
+      { slug: "seerr", label: "Seerr", description: "Connect Overseerr or Jellyseerr for request and availability context." },
+      { slug: "metadata-providers", label: "Metadata providers", description: "Configure metadata and artwork services." },
     ],
   },
   {
-    label: "Configure the instance",
-    description: "Use every settings group, control, maintenance tool, backup, and recovery action.",
+    label: "Settings",
+    description: "Configure Plekt, manage connections, and maintain the instance.",
     items: [
       {
         slug: "settings",
-        label: "Settings",
+        label: "Overview",
         description: "Every settings group, control, maintenance tool, backup, and recovery action.",
         children: [
           { id: "settings-map", label: "Settings map" },
@@ -484,6 +560,19 @@ export const docsNav = [
           { id: "about", label: "About" },
         ],
       },
+      { slug: "settings/general", label: "General", description: "Account, system integrity, and storage settings." },
+      { slug: "settings/media-servers", label: "Media servers", description: "Connect Plex, Emby, and Jellyfin." },
+      { slug: "settings/webhooks", label: "Webhooks", description: "Configure event delivery from media servers." },
+      { slug: "settings/connections", label: "Connections", description: "Connect Trakt, Tautulli, Seerr, and Simkl." },
+      { slug: "settings/metadata", label: "Metadata", description: "Configure metadata and artwork providers." },
+      { slug: "settings/sync", label: "Sync", description: "Configure sync behavior and personal ratings." },
+      { slug: "settings/backup", label: "Backup", description: "Configure local and remote backups." },
+      { slug: "settings/restore", label: "Restore", description: "Restore backups and recover application data." },
+      { slug: "settings/tools", label: "Tools", description: "Repair, rebuild, import, and reopen onboarding." },
+      { slug: "settings/logs", label: "Logs", description: "Review application and sync logs." },
+      { slug: "settings/about", label: "About", description: "Review version, license, and system information." },
+      { slug: "settings/changelog", label: "Changelog", description: "Review installed version changes." },
+      { slug: "settings/users", label: "Users", description: "Manage household users and their instances." },
     ],
   },
   {
@@ -512,17 +601,6 @@ export const docsNav = [
         ],
       },
       {
-        slug: "manual-watch-review",
-        label: "Manual Watch review",
-        description: "Resolve uncertain watch events, correct provider state, and recheck stale reviews.",
-        children: [
-          { id: "how-review-queue-works", label: "How the review queue works" },
-          { id: "choose-a-watch-date", label: "Choose a watch date" },
-          { id: "correct-provider-state", label: "Correct provider state" },
-          { id: "recheck-status", label: "Recheck status" },
-        ],
-      },
-      {
         slug: "operations",
         label: "Backups and operations",
         description: "Backups, imports, security, and maintenance.",
@@ -536,17 +614,32 @@ export const docsNav = [
           { id: "pwa-and-local-operation", label: "PWA and local operation" },
         ],
       },
+    ],
+  },
+  {
+    label: "Guides",
+    description: "Focused pages for individual tasks, symptoms, and recovery steps.",
+    items: [
+      {
+        slug: "guides",
+        label: "All guides",
+        description: "Browse task-focused guides for using, connecting, and maintaining Plekt.",
+        children: [
+          { id: "start-and-orient", label: "Start and orient" },
+          { id: "use-the-media-pages", label: "Use the media pages" },
+          { id: "keep-personal-lists", label: "Keep personal lists" },
+          { id: "connect-and-maintain", label: "Connect and maintain" },
+          { id: "keep-the-paths-clear", label: "Keep the paths clear" },
+        ],
+      },
+      { slug: "sync-plex-with-trakt", label: "Sync Plex with Trakt", description: "Set up two-way Plex and Trakt watch-history sync." },
+      { slug: "moving-to-port-5056", label: "Move to port 5056", description: "Change the instance port and update dependent services." },
       {
         slug: "watch-history-before-library-rebuild",
         label: "Protect watch history before a rebuild",
         description: "Back up watched state and resume progress before replacing a server or library.",
       },
-    ],
-  },
-  {
-    label: "Fix a problem",
-    description: "Start with the symptom and follow exact, feature-specific recovery steps.",
-    items: [
+      { slug: "safe-daily-workflows", label: "Safe daily workflows", description: "Use common Plekt workflows while protecting canonical watch history." },
       {
         slug: "watch-progress-not-syncing",
         label: "Watch progress not syncing",
@@ -662,6 +755,11 @@ export const docsPageNav = [
   { slug: "concepts", label: "The sync model" },
   { slug: "navigation", label: "Navigation and global controls" },
   { slug: "dashboard", label: "Dashboard" },
+  { slug: "now-playing", label: "Now Playing" },
+  { slug: "up-next", label: "Up Next" },
+  { slug: "drop-titles", label: "Drop and Un-drop" },
+  { slug: "cross-platform-resume", label: "Cross-platform resume" },
+  { slug: "rewatch-tracking", label: "Rewatch tracking" },
   { slug: "movies", label: "Movies" },
   { slug: "movies/media-page", label: "Movies media page" },
   { slug: "tv-shows", label: "TV Shows" },

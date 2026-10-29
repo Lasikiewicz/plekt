@@ -160,7 +160,11 @@ async function refreshNextAiringCache({ limit = NEXT_AIRING_REFRESH_LIMIT, force
       // airing calendar - forcing a refetch here would bypass the entire cache
       // layer for up to 40 shows every 30 minutes. This refresh's own TTLs
       // (nextAiringCacheEntryStale) govern how often shows are rechecked.
-      const details = await getTmdbDetails({ mediaType: "tv", tmdbId: show.tmdb_id, title: show.title });
+      // Pass the TVDB id already recorded for the show: when TMDB cannot map the
+      // stored tmdb id to a TVDB series, the lookup otherwise falls back to a
+      // title search, which fails for short generic titles such as "FBI" with
+      // "Could not resolve TVDB ID".
+      const details = await getTmdbDetails({ mediaType: "tv", tmdbId: show.tmdb_id, title: show.title, ids: { tvdbId: show.tvdb_id } });
       updates.push({
         key: show.key,
         title: show.title,

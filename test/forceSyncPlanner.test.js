@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildForceSyncPlan,
+  dropOpposingWrites,
   collectServerWatchedItems,
   mapEmbyLikeWatchedItem,
   mapPlexWatchedItem,
@@ -204,4 +205,49 @@ test("onboarding scan uses release date when Emby has no played timestamp", () =
   });
   assert.equal(media.timestamp.toISOString(), "2016-11-11T00:00:00.000Z");
   assert.equal(media.timestampInferredFromRelease, true);
+});
+
+test("opposing played and unplayed writes for one server item are both dropped and flagged", () => {
+  const episode = (ids) => ({ title: "Alert: Missing Persons Unit - S01E02", type: "episode", season: 1, episode: 2, ids });
+  const skipped = [];
+  const actions = [
+    { seq: 1, kind: "mark_unplayed", target: "emby", mediaKey: "episode-ids", media: episode({ tmdb: "4044535" }) },
+    { seq: 2, kind: "mark_played", target: "emby", mediaKey: "series-ids", media: episode({ tmdb: "202308" }) },
+    { seq: 3, kind: "mark_played", target: "jellyfin", mediaKey: "series-ids", media: episode({ tmdb: "202308" }) },
+    { seq: 4, kind: "mark_played", target: "emby", mediaKey: "other", media: { ...episode({}), episode: 3 } },
+  ];
+  const kept = dropOpposingWrites(actions, skipped);
+  assert.deepEqual(kept.map((action) => action.seq), [3, 4]);
+  assert.equal(skipped.length, 1);
+  assert.equal(skipped[0].target, "emby");
+  assert.match(skipped[0].reason, /both watched and unwatched/);
+  // Same-direction writes are left alone.
+  assert.equal(dropOpposingWrites([actions[1], actions[3]], []).length, 2);
+});
+
+// Found on local data: Moana (2016, watched) and Moana (2026, unwatched) are two
+// films, so both writes must go through. Ids that cannot tell two movies apart
+// still clash.
+test("same-titled movies with differing ids are not treated as one split item", () => {
+  const movie = (ids) => ({ title: "Moana", type: "movie", season: null, episode: null, ids });
+  const films = [
+    { seq: 1, kind: "mark_played", target: "plex", mediaKey: "m2016", media: movie({ imdb: "tt3521164", tmdb: "277834" }) },
+    { seq: 2, kind: "mark_unplayed", target: "plex", mediaKey: "m2026", media: movie({ imdb: "tt27419466", tmdb: "1108427" }) },
+  ];
+  const skipped = [];
+  assert.deepEqual(dropOpposingWrites(films, skipped).map((action) => action.seq), [1, 2]);
+  assert.equal(skipped.length, 0);
+
+  const split = [
+    { seq: 1, kind: "mark_played", target: "plex", mediaKey: "imdb-only", media: movie({ imdb: "tt3521164" }) },
+    { seq: 2, kind: "mark_unplayed", target: "plex", mediaKey: "tmdb-only", media: movie({ tmdb: "277834" }) },
+  ];
+  assert.equal(dropOpposingWrites(split, skipped).length, 0);
+  assert.equal(skipped.length, 1);
+});
+
+test("Emby episode mapping keeps the series item id for series-id resolution", () => {
+  const media = mapEmbyLikeWatchedItem({ Type: "Episode", SeriesName: "Alert", SeriesId: "77", ParentIndexNumber: 1, IndexNumber: 2, ProviderIds: { Tmdb: "4044535" } });
+  assert.equal(media.seriesItemId, "77");
+  assert.equal(mapEmbyLikeWatchedItem({ Type: "Movie", Name: "Heat", SeriesId: "77" }).seriesItemId, null);
 });

@@ -61,6 +61,14 @@ Each month records the tracked shows included in its result. Opening a cached ca
 after another show enters the library fetches only that missing show and merges its
 episodes immediately.
 
+An episode is identified by its air date, TVDB series id, season and episode number, not
+by the tracked show that produced it. One series can be tracked as two shows (one grouped
+by tmdb id, one by tvdb id with no tmdb id recorded, or two with different tmdb ids) that
+resolve to the same TVDB series; they would otherwise list every episode twice. Without a
+TVDB id the tmdb id is used, then the show id. The entry from the tmdb-keyed show wins,
+then the one with artwork; when still tied, the first one is kept. The dedupe
+also runs when a cached month is read, so months cached before it do not keep both copies.
+
 Opening the Upcoming page revalidates the current month with
 `GET /api/upcoming?month=YYYY-MM&revalidate=1`. That request answers from the persistent
 cache straight away and rebuilds the month behind the response, so the calendar paints

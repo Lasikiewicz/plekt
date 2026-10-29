@@ -3,7 +3,7 @@ title: Integrations
 description: Connect media servers, Trakt, Tautulli, Seerr, and metadata providers with the right expectations.
 category: Connect services
 order: 4
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - docs/plex.md
   - docs/emby.md
@@ -47,6 +47,16 @@ Plekt can then import current watched state and begin recording playback events.
 Add the other services once the first connection is healthy.
 
 
+## Service guides
+
+- [Plex](/docs/plex/)
+- [Emby](/docs/emby/)
+- [Jellyfin](/docs/jellyfin/)
+- [Trakt](/docs/trakt/) and the [Plex and Trakt sync walkthrough](/docs/sync-plex-with-trakt/)
+- [Simkl](/docs/simkl/)
+- [Tautulli](/docs/tautulli/)
+- [Seerr](/docs/seerr/)
+- [Metadata providers](/docs/metadata-providers/)
 ## Media servers
 
 <ScreenshotFigure
@@ -102,172 +112,6 @@ Keep the first test narrow.
 It is easier to identify a bad URL or unmatched item before a large import fills the
 activity log.
 
-## Plex
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-media-servers-plex-dark.png"
-  lightSrc="/assets/app-captures/settings-media-servers-plex-light.png"
-  alt="Plekt Plex settings section showing connection and credential controls"
-  caption="The Plex card shows its configured connection state; expand it to use account setup, manual credentials, and connection controls."
-/>
-
-Plex needs a server URL and token, or the account connection flow.
-
-Plekt attaches to Plex's notification WebSocket once the URL and token are configured, so
-no external listener is required for watched/unwatched changes.
-
-In Plex, turn off **Refresh library metadata periodically**.
-
-During a rematch, Plex can reset watched state, and Plekt would otherwise treat that reset
-as a real unwatch.
-
-Configure the connection in [Settings → Media servers](/docs/settings/media-servers/).
-
-The Plex card also contains the optional **Sync watchlist with Plex** toggle. It uses Plex's
-account-level Universal Watchlist; Plex is the only provider used for Watchlist sync.
-
-Open [Settings → Webhooks → Setup Guides](/docs/settings/webhooks/#setup-guides) for the
-provider-specific notification, webhook, and scheduled-task guidance.
-
-If Plex events are absent, check the token, server URL, WebSocket status, and then
-[the missing-event steps](/docs/troubleshooting/#a-watched-event-was-not-recorded).
-
-## Emby
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-media-servers-emby-dark.png"
-  lightSrc="/assets/app-captures/settings-media-servers-emby-light.png"
-  alt="Plekt Emby settings section showing connection and credential controls"
-  caption="The Emby settings card keeps the server connection and credential controls together."
-/>
-
-Connect with the server URL and a user login, or provide an API key and user ID.
-
-The setup guide does not store the password after obtaining a token.
-
-The Plekt Emby plugin is available as a local beta. Use the in-app Emby setup guide for
-plugin installation, or use Emby's built-in webhooks as an alternative. Enable only one
-event sender to avoid duplicate events.
-
-For the webhook alternative, open **Preferences → Notifications → Webhooks**, add the full Plekt webhook URL,
-and enable:
-
-- playback: **Start**, **Pause**, **Unpause**, and **Stop**;
-- users: **Mark Played** and **Mark Unplayed**; and
-- **Send All Properties**, so resume fields are present.
-
-Leave unrelated event categories off until the core event path works.
-
-They add noise without improving watched-state sync.
-
-## Jellyfin
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-media-servers-jellyfin-dark.png"
-  lightSrc="/assets/app-captures/settings-media-servers-jellyfin-light.png"
-  alt="Plekt Jellyfin settings section showing connection and credential controls"
-  caption="The Jellyfin settings card keeps the server connection and credential controls together."
-/>
-
-Connect with Quick Connect, a username/password flow, or an API key and user ID. Jellyfin 12
-uses its modern `MediaBrowser` authorization header for account and manual-token access; the
-manual API-key and Quick Connect credential paths remain supported. Plekt keeps browser
-artwork requests separate from server-side authentication.
-
-The password is not stored after token exchange.
-
-The recommended Plekt Jellyfin plugin sends events directly to Plekt. Follow the in-app
-Jellyfin setup guide for its repository, manifest URL and webhook address. Alternatively,
-install the **Webhooks** plugin from the Jellyfin plugin catalog. Use one method, not both,
-to avoid duplicate events.
-
-Add a Generic Webhook named `plekt`, paste the URL, and enable:
-
-- **Playback Start**, **Playback Progress**, **Playback Stop**, and **User Data Saved**;
-- optionally **Item Added** for newly added media catch-up;
-- item types **Movies** and **Episodes**; and
-- **Send All Properties (ignores template)**.
-
-The body must be JSON.
-
-Jellyfin may label the payload `text/plain`.
-
-Plekt still reads it as JSON and records malformed bodies in Sync Activity.
-
-Jellyfin still participates in watched-state and optional personal-rating sync, but it is not
-a Watchlist provider. Explicit watched and unwatched events remain authoritative, with scheduled
-polling used as a conservative backstop when webhook delivery is unavailable.
-
-Plekt keeps the native item ID from a Jellyfin playback event available when it sends a
-watched-state update back to that server.
-
-## Trakt
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-connections-trakt-dark.png"
-  lightSrc="/assets/app-captures/settings-connections-trakt-light.png"
-  alt="Plekt Trakt connection settings showing the bridge and import controls"
-  caption="The Trakt card shows the device connection, import options, and single-bridge configuration."
-/>
-
-The live Trakt connection is two-way.
-
-For a focused walkthrough, see [Sync Plex with Trakt](/docs/sync-plex-with-trakt/).
-
-A change in Trakt, Plex, Emby, Jellyfin, or Plekt can flow through the local canonical
-record.
-
-It can then flow out to the other connected services.
-
-Choose **Connect Trakt** in [Settings → Connections → Trakt](/docs/settings/connections/#trakt).
-
-Open the displayed activation link, enter the device code, and approve access.
-
-A normal user does not need a Trakt VIP subscription or personal API application for the
-built-in device app.
-
-When Plekt is the Trakt bridge, disable Emby and Jellyfin Trakt plugins and their
-scheduled Trakt tasks.
-
-Multiple writers can reapply older state after Plekt has already corrected it.
-
-Temporary Trakt write failures are retried. Before a retry resends a watched play, Plekt
-checks Trakt history around the recorded play time; if Trakt already has that play, it treats
-the destination as delivered instead of creating a duplicate.
-
-See [Trakt changes that keep coming back](/docs/troubleshooting/#trakt-changes-keep-coming-back).
-
-If a Trakt episode is reported as `not_found`, use [show-match repair and retry](/docs/sync-tools/#trakt-show-match-repair)
-from Sync Activity. If the show is genuinely unavailable in Trakt, dismissing the Trakt error
-skips only that destination and preserves the local archive.
-
-When **Personal Rating Sync** is enabled under [Settings → Sync](/docs/settings/sync/), Trakt also participates
-in the separate two-way 1–10 rating sync. That rating domain has its own queue and conflict
-rules; it is not the watched-state sync described above.
-
-## Simkl
-
-Connect Simkl in [Settings → Connections](/docs/settings/connections/#simkl) using Plekt's
-sign-in flow. Review the first full-sync preview before importing existing watches; later
-checks can run on demand and after media-server events. Optional rating sync also supports
-Simkl.
-
-## Tautulli
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-connections-tautulli-dark.png"
-  lightSrc="/assets/app-captures/settings-connections-tautulli-light.png"
-  alt="Plekt Tautulli connection settings showing the safe history import controls"
-  caption="The Tautulli card previews completed Plex history and keeps backup and identity review before commit."
-/>
-
-Tautulli is an optional import source for completed Plex history. Configure its server URL,
-API key, and user, then preview the import before committing it.
-
-Plekt creates a watch-history backup before the import, matches rows by provider identity
-where possible, and keeps ambiguous rows in the preview for review. It does not silently
-overwrite existing watch history.
-
 ## Private-list and rating sync
 
 Personal Rating Sync is optional and uses the authenticated Plex, Emby, Jellyfin, and Trakt
@@ -282,45 +126,6 @@ their old watchlist projections are not supported.
 See [Watchlist](/docs/watchlist/#sync-with-plex), [Ratings](/docs/ratings/#personal-rating-sync),
 and [Settings → Sync → Personal Rating Sync](/docs/settings/sync/#personal-rating-sync) for
 recovery and queue details.
-
-## Seerr
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-connections-seerr-dark.png"
-  lightSrc="/assets/app-captures/settings-connections-seerr-light.png"
-  alt="Plekt Seerr connection settings showing request integration controls"
-  caption="The Seerr card configures request and availability context for media details."
-/>
-
-Connect Overseerr or Jellyseerr from [Settings → Connections](/docs/settings/connections/).
-
-When available, detail pages show request actions for movies and shows.
-
-Availability and request status come from Seerr; watched state remains Plekt's
-responsibility.
-
-## Metadata and artwork providers
-
-<ScreenshotFigure
-  darkSrc="/assets/app-captures/settings-metadata-providers-dark.png"
-  lightSrc="/assets/app-captures/settings-metadata-providers-light.png"
-  alt="Plekt Metadata Providers settings showing provider cards and connection status"
-  caption="Metadata Providers contains the keys and connection status used for enrichment and artwork."
-/>
-
-- **TMDB** supplies posters, backdrops, cast, summaries, search, trailers, reviews, and
-  recommendations. Add a TMDB API key first for the richest details.
-- **TheTVDB** supplies show identity, season/episode numbering, air dates, and fallback art.
-- **Fanart.tv** supplies community-curated poster, backdrop, and logo fallbacks.
-- **OMDb** is optional and can provide IMDb rating badges.
-- **YouTube** is optional and can supply trailer metadata.
-
-Plekt caches metadata and artwork locally. A cached poster whose file has gone missing is
-downloaded again the next time it is needed, so the artwork is restored without a manual reset.
-
-A provider outage can affect new enrichment without erasing the local watch archive.
-
-Use [Settings → Metadata](/docs/settings/#metadata) to refresh after correcting a key.
 
 ## Verify a connection without guessing
 

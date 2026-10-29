@@ -1,0 +1,56 @@
+---
+title: Jellyfin
+description: Connect Jellyfin for playback events, watch history, resume progress, and playlists.
+category: Connect services
+order: 4.3
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/jellyfin.md
+  - docs/webhooks.md
+screenshots:
+  - /assets/app-captures/settings-media-servers-jellyfin-dark.png
+  - /assets/app-captures/settings-media-servers-jellyfin-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Jellyfin
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-media-servers-jellyfin-dark.png"
+  lightSrc="/assets/app-captures/settings-media-servers-jellyfin-light.png"
+  alt="Plekt Jellyfin settings section showing connection and credential controls"
+  caption="The Jellyfin settings card keeps the server connection and credential controls together."
+/>
+
+Connect with Quick Connect, a username/password flow, or an API key and user ID. Jellyfin 12
+uses its modern `MediaBrowser` authorization header for account and manual-token access; the
+manual API-key and Quick Connect credential paths remain supported. Plekt keeps browser
+artwork requests separate from server-side authentication.
+
+The password is not stored after token exchange.
+
+The recommended Plekt Jellyfin plugin sends events directly to Plekt. Follow the in-app
+Jellyfin setup guide for its repository, manifest URL and webhook address. Alternatively,
+install the **Webhooks** plugin from the Jellyfin plugin catalog. Use one method, not both,
+to avoid duplicate events.
+
+Add a Generic Webhook named `plekt`, paste the URL, and enable:
+
+- **Playback Start**, **Playback Progress**, **Playback Stop**, and **User Data Saved**;
+- optionally **Item Added** for newly added media catch-up;
+- item types **Movies** and **Episodes**; and
+- **Send All Properties (ignores template)**.
+
+The body must be JSON.
+
+Jellyfin may label the payload `text/plain`.
+
+Plekt still reads it as JSON and records malformed bodies in Sync Activity.
+
+Jellyfin still participates in watched-state and optional personal-rating sync, but it is not
+a Watchlist provider. Explicit watched and unwatched events remain authoritative, with scheduled
+polling used as a conservative backstop when webhook delivery is unavailable.
+
+Plekt keeps the native item ID from a Jellyfin playback event available when it sends a
+watched-state update back to that server.

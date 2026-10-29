@@ -1,0 +1,68 @@
+---
+title: Rewatch tracking
+description: Keep genuine repeat viewings in History without duplicate noise.
+category: Features
+order: 3.5
+sourceVersion: "2.2.1"
+sourcePaths:
+  - server/src/utils/upNextRewatch.js
+  - server/src/utils/syncOrchestrator.js
+  - docs/dashboard.md
+  - docs/webhooks.md
+screenshots:
+  - /assets/app-captures/history-dark.png
+  - /assets/app-captures/history-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+Plekt keeps a separate watch event for every real viewing, so a rewatch is never lost. Sending the
+same event twice is collapsed, so a retry never adds a second play.
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | A rating event is ignored. Plex cannot take a historical play date, so a rewatch sent to it is stamped with the Plex server's clock. |
+| Emby | Yes | A bare "marked played" flag has no playback behind it, so on an item already watched it is dropped and never counted as a rewatch. |
+| Jellyfin | Yes | Same as Emby. |
+| Trakt | Yes | A receiving destination. A retried play is checked against Trakt's history first. |
+| Simkl | Not yet | Rewatches and unwatches stay disabled for Simkl. |
+
+**Why it differs.** A real rewatch needs evidence of a new play, such as playback reaching the
+watched threshold. A played flag set by hand is not evidence, so Plekt will not turn it into a
+second viewing. Each destination also accepts plays differently: Plex has no historical-date setter
+and Simkl's rewatch handling is switched off. Plex, Emby, and Jellyfin each hold one episode per
+show on their Up Next rails, so a rewatch card replaces the next episode there, while Plekt's own
+Up Next shows both. See [Rewatches in Up Next](#rewatches-in-up-next).
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/history-dark.png"
+  lightSrc="/assets/app-captures/history-light.png"
+  alt="Plekt History page showing separate watch records for repeated viewing"
+  caption="History keeps genuine rewatches visible while collapsing duplicate delivery echoes."
+/>
+
+## Real rewatch or duplicate?
+
+- A new play at a later time is a rewatch. It stays visible in [History](/docs/history-search/) and
+  [Stats](/docs/stats/).
+- The same event arriving again from another route, such as a webhook and the next scheduled check,
+  is a duplicate and is collapsed.
+- A temporary Trakt failure is retried. Before a watched play is retried, Plekt checks Trakt's
+  history near that play's time. If Trakt already accepted the first attempt, the retry is treated
+  as delivered instead of adding another play.
+
+## Rewatches in Up Next
+
+When your latest play is behind the furthest episode you have watched, and the episode after it is
+released and unwatched, that episode gets its own card in [Up Next](/docs/up-next/) beside the
+show's ordinary next episode.
+
+Plex, Emby, and Jellyfin each hold one episode per show on their rails, so those rails follow the
+rewatch. The new episode stays in Plekt's Up Next only. When you remove a show that has two cards,
+Plekt asks whether to hide just that card's season or the whole show.
+
+To change what counts as a watch, adjust the **Watched Threshold** in
+[Sync tuning](/docs/settings/sync/#sync-tuning). If a play is missing, follow
+[A watched event was not recorded](/docs/troubleshooting/#a-watched-event-was-not-recorded).

@@ -3,7 +3,7 @@ title: Media servers
 description: Connect Plex, Emby, and Jellyfin and verify that each server can exchange watch state.
 category: Settings
 order: 5.2
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -67,7 +67,7 @@ Emby setup uses the server URL and account exchange to obtain a user-scoped toke
 is available when account setup cannot be used.
 
 After saving, test the server from Plekt's host and configure the webhook events in
-[Integrations](/docs/integrations/#emby).
+[Emby](/docs/emby/).
 
 ## Jellyfin
 
@@ -84,7 +84,7 @@ manual API-key credentials remain supported as a fallback, and Quick Connect sti
 account credentials for an access token.
 
 Configure the recommended Plekt Jellyfin plugin or the alternative Webhooks plugin as
-described in [Integrations](/docs/integrations/#jellyfin); enable only one event sender.
+described in [Jellyfin](/docs/jellyfin/); enable only one event sender.
 
 Emby and Jellyfin are used for watched-state, playback, and optional personal-rating sync;
 they are not Watchlist providers. Explicit watched and unwatched decisions are kept authoritative

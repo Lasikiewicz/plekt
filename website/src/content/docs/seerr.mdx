@@ -1,0 +1,31 @@
+---
+title: Seerr
+description: Connect Overseerr or Jellyseerr to show request actions and availability on title pages.
+category: Connect services
+order: 4.7
+sourceVersion: "2.2.1"
+sourcePaths:
+  - public/modules/help-content.js
+  - docs/media-detail.md
+screenshots:
+  - /assets/app-captures/settings-connections-seerr-dark.png
+  - /assets/app-captures/settings-connections-seerr-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Seerr
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-connections-seerr-dark.png"
+  lightSrc="/assets/app-captures/settings-connections-seerr-light.png"
+  alt="Plekt Seerr connection settings showing request integration controls"
+  caption="The Seerr card configures request and availability context for media details."
+/>
+
+Connect Overseerr or Jellyseerr from [Settings → Connections](/docs/settings/connections/).
+
+When available, detail pages show request actions for movies and shows.
+
+Availability and request status come from Seerr; watched state remains Plekt's
+responsibility.

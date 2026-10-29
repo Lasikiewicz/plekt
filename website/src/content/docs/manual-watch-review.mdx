@@ -1,9 +1,9 @@
 ---
 title: Manual Watch review
 description: Resolve uncertain watch events, correct provider state, and recheck stale reviews.
-category: Sync and maintain
+category: Features
 order: 6.5
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/manual-watch-review.js
@@ -20,6 +20,22 @@ sourcePaths:
 Manual Watch review is the decision queue for watch events that do not have a reliable
 completion time. It keeps Plekt from assigning an invented date and gives you a focused
 place to confirm, correct, or dismiss the event.
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | Held when a library notification reports an item watched with no usable time. |
+| Emby | Yes | A "marked played" flag arrives with no play date, so it is held for review. |
+| Jellyfin | Yes | Same as Emby. |
+| Trakt, Simkl | Not applicable | Review covers watched flags reported by media servers. |
+
+Review only applies while **Require review** is on in [Settings → Sync](/docs/settings/sync/).
+
+**Why it differs.** A flag set by hand in a media server says an item is watched but not when, and
+the server's own date may be missing or wrong. Plekt will not invent a date, so it holds the event
+until you choose one. Held events are not written to History or sent on until you confirm them.
+Trackers receive a date from Plekt, so they never raise this question.
 
 ## How the review queue works
 

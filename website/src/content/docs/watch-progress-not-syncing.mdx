@@ -1,9 +1,9 @@
 ---
 title: "Plex or Jellyfin watch progress not syncing?"
 description: Trace one watch event from its source through Plekt and on to the destination.
-category: Fix a problem
+category: Guides
 order: 7.1
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - website/src/content/docs/integrations.mdx
   - website/src/content/docs/sync-tools.mdx
@@ -27,7 +27,7 @@ When a film or episode is watched on one server but stays unwatched, or keeps th
 
 1. Choose one film or episode and one direction, such as Plex to Jellyfin. Note the source, destination, title, year or episode, and approximate event time.
 2. Open the source service and confirm that it recorded the watched state or playback position. If the source is wrong, fix playback reporting there first.
-3. Confirm how the source reaches Plekt. Plex uses its built-in WebSocket notifications plus scheduled checks. Jellyfin can use the Plekt plugin or webhooks alongside polling. Follow the [Jellyfin setup guide](/docs/integrations/#jellyfin) and choose one event method, not both.
+3. Confirm how the source reaches Plekt. Plex uses its built-in WebSocket notifications plus scheduled checks. Jellyfin can use the Plekt plugin or webhooks alongside polling. Follow the [Jellyfin setup guide](/docs/jellyfin/) and choose one event method, not both. Without an event, playback checks run every 5 minutes while idle and every 10 seconds once playback is detected, so a new session can take a few minutes to appear.
 4. Confirm Plekt is connected to the intended server and account. The Plekt host must be able to reach the server URL; a connection that works in your browser does not prove that the host can reach it.
 5. Check that the destination contains the same title. Compare the year, season, episode number, and provider identity before correcting a match. Duplicate titles and differently matched episodes can look like failed syncs.
 
@@ -52,4 +52,4 @@ Correct the cause shown in the row. If a retry is available, retry only the affe
 
 Make a backup before changing credentials, resetting history, or restoring data. Keep the event time and non-secret error text for a support report. Do not post API keys, webhook tokens, private library names, or account identifiers.
 
-Plekt can show and retry its own provider deliveries. It cannot repair a provider-side outage or guarantee a match for every title. See the [Plex integration guide](/docs/integrations/#plex), [Jellyfin integration guide](/docs/integrations/#jellyfin), and [Sync Activity guide](/docs/sync-tools/).
+Plekt can show and retry its own provider deliveries. It cannot repair a provider-side outage or guarantee a match for every title. See the [Plex integration guide](/docs/plex/), [Jellyfin integration guide](/docs/jellyfin/), and [Sync Activity guide](/docs/sync-tools/).

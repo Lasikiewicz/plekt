@@ -1,9 +1,9 @@
 ---
 title: Troubleshooting
 description: Start with the symptom, confirm the source of truth, and take the smallest safe action.
-category: Fix a problem
+category: Guides
 order: 7
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - docs/troubleshooting.md
   - docs/webhooks.md
@@ -441,7 +441,7 @@ See [watched state and resume progress](/docs/concepts/#watched-state-and-resume
 
 A provider failure should not erase the local watch archive.
 
-See [metadata and artwork providers](/docs/integrations/#metadata-and-artwork-providers).
+See [metadata and artwork providers](/docs/metadata-providers/).
 
 ## Webhook returns 401
 
@@ -486,7 +486,7 @@ For an episode-level Trakt `not_found` result, open the show group in Sync Activ
 [Fix show match & retry all](/docs/sync-tools/#trakt-show-match-repair). If the show is not
 available in Trakt, dismiss the Trakt error instead of retrying the same unresolved match.
 
-Read [Trakt setup](/docs/integrations/#trakt) for the intended ownership model.
+Read [Trakt setup](/docs/trakt/) for the intended ownership model.
 
 ## Settings or config did not save
 
@@ -538,7 +538,7 @@ during the first large burst of writes, such as a first Trakt sync, but that is 
 causes it.
 
 1. On Docker Desktop for macOS or Windows, move `/data` from a folder bind mount to a
-   named volume. See [Docker Desktop on macOS or Windows](/docs/getting-started/#docker-desktop-on-macos-or-windows).
+   named volume. See [Docker Desktop on macOS or Windows](/docs/install-docker-compose/#docker-desktop-on-macos-or-windows).
 2. Restore your latest backup into the new volume.
 3. Never open the database file (`plekt.db`, or `plembfin.db` on an older install) from the host while the container is running.
 

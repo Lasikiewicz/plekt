@@ -2217,7 +2217,7 @@
           1
         ],
         [
-          "- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed, listActiveUpNextProviderItems, listUpNextProviderFeedStates and 5 more",
+          "- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed, listActiveUpNextProviderItems and 6 more",
           1
         ]
       ]
@@ -5196,7 +5196,7 @@
           1
         ],
         [
-          "const UP_NEXT_RAIL_AUTHORIZATION = `MediaBrowser Client=\"Plembfin\", Device=\"Plembfin Up Next\", DeviceId=\"${UP_NEXT_SEED_DEVICE_ID}\", Version=\"1.0.0\"`;",
+          "const UP_NEXT_RAIL_AUTHORIZATION = `MediaBrowser Client=\"Plembfin\", Device=\"Plekt Up Next\", DeviceId=\"${UP_NEXT_SEED_DEVICE_ID}\", Version=\"1.0.0\"`;",
           1
         ],
         [
@@ -10925,6 +10925,18 @@
         [
           "<p>Practical guides for installing Plembfin, understanding the sync model, using each page, and keeping your archive safe.</p>",
           1
+        ],
+        [
+          "          data-dark-src=\"/assets/optimized/plembfin_header_logo_dark-376.webp\"",
+          1
+        ],
+        [
+          "          data-light-src=\"/assets/optimized/plembfin_header_logo_light-376.webp\"",
+          1
+        ],
+        [
+          "          src=\"/assets/optimized/plembfin_header_logo_dark-376.webp\"",
+          1
         ]
       ]
     },
@@ -11512,6 +11524,53 @@
       "lines": [
         [
           "makeTempDataDir(\"plembfin-plex-progress-newer-view-test-\");",
+          1
+        ]
+      ]
+    },
+    "test/splitEpisodeRepair.test.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "const dataDir = makeTempDataDir(\"plembfin-split-episode-repair-\");",
+          1
+        ]
+      ]
+    },
+    "website/src/content/docs/install-docker-compose.mdx": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "    image: plembfin/plekt:latest",
+          1
+        ],
+        [
+          "Stable release images are available as `plembfin/plekt:latest` on Docker Hub and as",
+          1
+        ],
+        [
+          "version, such as `plembfin/plekt:2.0.0`. Alpha and develop images are published on GHCR",
+          1
+        ],
+        [
+          "only. Installs that still use the old `plembfin/plembfin` or `ghcr.io/lasikiewicz/plembfin`",
+          1
+        ],
+        [
+          "[Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) for the safe update procedure.",
+          1
+        ],
+        [
+          "Never open the database file (`plekt.db`, or `plembfin.db` on an install that predates the",
+          1
+        ]
+      ]
+    },
+    "website/src/content/docs/install-windows.mdx": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "`%ProgramData%\\Plekt`, separate from any source checkout. An existing Plembfin service and",
           1
         ]
       ]

@@ -6,6 +6,7 @@
 import { appendSyncHistory, isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
 import { createLoopStore } from "./loopStore.js";
 import { runWithConcurrency } from "./concurrency.js";
+import { withSeriesIdentity } from "./seriesIdentity.js";
 import {
   collectServerWatchedItems,
   configuredSyncServers,
@@ -215,10 +216,32 @@ function sourceResults(config, scan) {
   });
 }
 
+// Emby and Jellyfin tag an episode with its own ids, so an import that stores
+// them as-is files every episode under a different "show" (TinyMediaManager
+// libraries showed this). Resolve the series ids before grouping and storing,
+// as every other ingestion path does (decision 15). The resolver caches per
+// series, so a library costs one lookup per show.
+export async function withLibrarySeriesIds(items = [], config = {}, resolveSeriesIdentity = withSeriesIdentity) {
+  const resolvedItems = [...items];
+  await runWithConcurrency(items, async (item, index) => {
+    if (item?.type !== "episode" || !item.seriesItemId) return;
+    const resolved = await resolveSeriesIdentity({
+      type: "episode",
+      source: item.source,
+      title: item.title,
+      seriesItemId: item.seriesItemId,
+      ids: { imdb: item.imdb || undefined, tmdb: item.tmdb || undefined, tvdb: item.tvdb || undefined },
+    }, config).catch(() => null);
+    const ids = resolved?.ids || {};
+    resolvedItems[index] = { ...item, imdb: ids.imdb || item.imdb, tmdb: ids.tmdb || item.tmdb, tvdb: ids.tvdb || item.tvdb };
+  }, 4);
+  return resolvedItems;
+}
+
 async function collectLibraryItems(config, requested, now, logger) {
   const scope = requested.source ? { servers: [requested.source] } : {};
   const scan = await collectServerWatchedItems(config, { scope, logger });
-  const remoteItems = MEDIA_SERVERS.flatMap((source) => scan.itemsByServer?.[source] || []);
+  const remoteItems = await withLibrarySeriesIds(MEDIA_SERVERS.flatMap((source) => scan.itemsByServer?.[source] || []), config);
   const groups = mergeLibraryItems(remoteItems);
   const items = groups.map((group) => plannerMediaToSyncMedia(
     group,

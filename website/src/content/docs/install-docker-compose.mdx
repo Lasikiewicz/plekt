@@ -1,0 +1,80 @@
+---
+title: Install with Docker Compose
+description: Deploy Plekt with Docker Compose and persistent application data.
+category: Start here
+order: 3
+sourceVersion: "2.2.1"
+sourcePaths:
+  - README.md
+screenshots: []
+---
+
+## Install with Docker Compose
+
+Create a folder for Plekt and put a private `.env` file beside the Compose file:
+
+```dotenv
+ADMIN_PASSWORD=choose-a-strong-private-password
+```
+
+Create `docker-compose.yml`:
+
+```yaml
+services:
+  plekt:
+    image: plembfin/plekt:latest
+    container_name: plekt
+    ports:
+      - "5056:5055"
+    volumes:
+      - ./data:/data
+    environment:
+      PLEKT_PUBLISHED_PORT: "5056"
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?Set ADMIN_PASSWORD in .env before starting}"
+    restart: unless-stopped
+```
+
+Stable release images are available as `plembfin/plekt:latest` on Docker Hub and as
+`ghcr.io/lasikiewicz/plekt:latest` on GitHub Container Registry. You can pin a stable
+version, such as `plembfin/plekt:2.0.0`. Alpha and develop images are published on GHCR
+only. Installs that still use the old `plembfin/plembfin` or `ghcr.io/lasikiewicz/plembfin`
+image names keep receiving releases for at least six months after the rebrand; see
+[Upgrading from Plembfin to Plekt](/docs/upgrading-from-plembfin/) for the safe update procedure.
+
+Start the container and open `http://localhost:5056`:
+
+```bash
+docker compose up -d
+```
+
+The `/data` volume is essential.
+
+It keeps the database, settings, credentials, artwork cache, logs, and backups across
+container recreation or upgrades.
+
+Back up this directory and use Plekt's own backup tools for a portable archive.
+
+### Docker Desktop on macOS or Windows
+
+Use a named volume for `/data` instead of the `./data` folder. Docker Desktop shares host
+folders through a file sharing layer that can corrupt the SQLite database under heavy
+writes, such as a first Trakt sync. The damage shows up as `database disk image is
+malformed`.
+
+```yaml
+services:
+  plekt:
+    # image, ports, environment, and restart as above
+    volumes:
+      - plekt-data:/data
+
+volumes:
+  plekt-data:
+```
+
+Never open the database file (`plekt.db`, or `plembfin.db` on an install that predates the
+rebrand) from the host while the container is running. Linux hosts are
+not affected. To move an existing install, take a backup in
+[Backups and operations](/docs/operations/) and restore it into the new volume.
+<p class="install-next-step"><a class="button-primary" href="/docs/onboarding/">Next step: onboarding</a></p>

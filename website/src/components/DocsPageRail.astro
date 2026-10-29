@@ -12,10 +12,12 @@ const { sourceVersion = "", sourceCount = 0 } = Astro.props;
   >
     ← Back to previous
   </button>
-  <nav class="docs-page-outline" aria-label="Sections in this guide">
-    <div class="docs-page-outline-heading">On this page</div>
-    <div class="docs-page-outline-list" data-doc-page-outline-list></div>
-  </nav>
+  <details class="docs-outline-disclosure" open>
+    <summary class="docs-page-outline-heading">On this page<span class="docs-tree-caret" aria-hidden="true">›</span></summary>
+    <nav class="docs-page-outline" aria-label="Sections in this guide">
+      <div class="docs-page-outline-list" data-doc-page-outline-list></div>
+    </nav>
+  </details>
   <div class="docs-page-meta">
     <span>Verified against v{sourceVersion}</span>
     <span>{sourceCount} source{sourceCount === 1 ? "" : "s"} in the app</span>
@@ -90,4 +92,14 @@ const { sourceVersion = "", sourceCount = 0 } = Astro.props;
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initializeDocsPageRail, { once: true });
   else initializeDocsPageRail();
+</script>
+
+<script>
+  const outlineDisclosure = document.querySelector(".docs-outline-disclosure");
+  const outlineMedia = window.matchMedia("(max-width: 760px)");
+  const syncOutlineDisclosure = () => {
+    if (outlineDisclosure instanceof HTMLDetailsElement) outlineDisclosure.open = !outlineMedia.matches;
+  };
+  syncOutlineDisclosure();
+  outlineMedia.addEventListener("change", syncOutlineDisclosure);
 </script>

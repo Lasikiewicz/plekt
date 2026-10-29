@@ -412,9 +412,13 @@ line instead. They resolve on their own once any correctly keyed record for that
 ingestion now produces. Also rejected: repairing only the symptom in the artwork lookup, which
 would have left the wrong identity stored and the records still unmatched.
 
-**Enforced by:** `server/src/utils/seriesIdentity.js`, `repairEpisodeSeriesIdentity()` and
+**Enforced by:** `server/src/utils/seriesIdentity.js`, `withLibrarySeriesIds()` in
+`server/src/utils/libraryForceSync.js` (Settings Force Sync import, added 2026-10-28 after it was
+found storing episode ids), `repairEpisodeSeriesIdentity()` and
 `seriesIdsForShowTitle()` in `server/src/utils/dataRepo.js`, and the repair's invocation in
-`server/src/workerCoordinator.js`.
+`server/src/workerCoordinator.js`. Rows a Force Sync import stored before that fix are recovered
+by the manual Repair Split Episode Shows tool (`server/src/utils/splitEpisodeRepair.js`), which
+proves each row against the media server's own episode and `SeriesId`, still never by title.
 
 ---
 
@@ -1631,3 +1635,14 @@ a large historical batch before ordinary sync status can be clear.
 **Enforced by:** `attention_required` in `tracker_observations`,
 `simklObservationAttentionItems` in `server/src/utils/trackers/simklObservations.js`, and
 `test/simklPersistence.test.js`.
+
+### 64. A provider played flag never overrides a newer local unwatch, even when its date looks newer
+**Date:** 2026-10-29 | **Status:** Active
+
+**Context:** A reporter's manually marked Emby episodes (Untamed S01E01 and S01E02) stayed "Mark watched" in Plekt. It was reproduced on the test Emby: with the Emby webhook not delivering and "Mark as watched now" set, the 15 minute library scan skips an episode Plekt holds as `unwatched` (`shouldSkipLibraryHistoryImport`), however it was marked in Emby. The most likely cause is the reporter's Emby webhook not sending "Mark played", a setup gap. The tempting fix was to let the scan import a provider mark over an older unwatch when Emby's `LastPlayedDate` is newer than the time Plekt recorded the unwatch.
+
+**Decision:** Do not build that rule, now or later. The scan keeps skipping a provider played flag while Plekt holds the item as unwatched (outside the 5 minute guard). A missed manual mark is handled by making the webhook setup visible, with the webhook delivery test (Settings > Webhooks), not by trusting the scan.
+
+**Rejected:** Importing over `unwatched` when the provider date is newer. A provider date is not proof of a play: marks can be undated (a mark on a series writes none to its episodes), clocks and restores can make a stale flag look new, and a wrong import writes a phantom watch that then syncs to Plex, Jellyfin, Trakt and Simkl (the 19 August 2026 rewatch flood). A missed watch is recoverable by hand; a phantom watch on external trackers is not.
+
+**Enforced by:** `libraryHistoryDecision` and `shouldSkipLibraryHistoryImport` in `server/src/utils/recentWatchImport.js`, and the "non-review modes keep their existing automatic policy" clause of entry 32. `plan/active/emby-reporter-feedback/step9-manual-played-missed.md` records the reproduction.

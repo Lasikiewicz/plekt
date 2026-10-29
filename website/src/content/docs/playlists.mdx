@@ -1,9 +1,9 @@
 ---
 title: Playlists
 description: Collect movies and TV shows into ordered playlists and keep them in sync with Plex, Emby, and Jellyfin.
-category: Media and discovery
+category: Features
 order: 3.33
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/playlists.js
@@ -30,6 +30,19 @@ Playlists are ordered collections of movies, TV episodes, or both. You pick the 
 yourself, or let an [automatic playlist](#automatic-playlists) fill itself from a rule. A
 playlist can stay in Plekt only, or sync to any connected Plex, Emby, or Jellyfin server.
 Playlists never change watched state.
+
+## Works on
+
+| App | Works | Notes |
+| --- | --- | --- |
+| Plex | Yes | Playlists sync out, can be imported, and edits made in the app are read back. |
+| Emby | Yes | Same as Plex. |
+| Jellyfin | Yes | Same as Plex. |
+| Trakt, Simkl | Not applicable | Playlists are not synced to them. |
+
+**Why it differs.** Each app's copy of a playlist holds only the titles that exist in that app's
+library. A title missing from one server shows as **Missing from** that app but stays in your
+Plekt playlist. Automatic playlists are one-way, from Plekt to the apps.
 
 ## Open Playlists
 

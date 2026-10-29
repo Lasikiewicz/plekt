@@ -1,4 +1,4 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.1.0"; import { renderDroppedView } from "./dropped-title-views.js?v=2.2.0.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.1.0.2"; import { renderDroppedView } from "./dropped-title-views.js?v=2.2.1.0.2";
 import {
   state, elements, explorerCardModeKey,
   EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS,
@@ -6,26 +6,26 @@ import {
   HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS,
   HISTORY_VIEW_KEY, HISTORY_FILTER_KEY,
   HISTORY_VIEW_MODES, HISTORY_FILTERS,
-} from "./state.js?v=2.2.0.1.0";
+} from "./state.js?v=2.2.1.0.2";
 import {
   escapeHtml, escapeAttribute, slug, showTitleFrom, showName, tvShowBaseHrefFromEpisode,
   movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, platformBadge, sourceClass, sourceBadgeHtml, formatDate,
   computeProgress, sanitizeTitle, episodeTitle, episodeCode, appendRestInChunks,
-} from "./utils.js?v=2.2.0.1.0";
-import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.2.0.1.0";
+} from "./utils.js?v=2.2.1.0.2";
+import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.2.1.0.2";
 import {
   historySyncPill, renderSyncStatusDot, renderMediaSyncPills,
   renderAvailabilityPills, renderShowAvailabilityPills, showAvailIssuePopup,
   isWatchedHistoryAction,
-} from "./sync.js?v=2.2.0.1.0";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.0.1.0";
-import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.2.0.1.0";
-import { renderMediaCard } from "./media-card.js?v=2.2.0.1.0";
-import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.2.0.1.0";
-import { cardArtAttribute } from "./card-art.js?v=2.2.0.1.0";
-import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.2.0.1.0";
-import { renderHistoryDayGroups } from "./history-day-view.js?v=2.2.0.1.0";
-import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.2.0.1.0";
+} from "./sync.js?v=2.2.1.0.2";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.1.0.2";
+import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.2.1.0.2";
+import { renderMediaCard } from "./media-card.js?v=2.2.1.0.2";
+import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.2.1.0.2";
+import { cardArtAttribute } from "./card-art.js?v=2.2.1.0.2";
+import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.2.1.0.2";
+import { renderHistoryDayGroups } from "./history-day-view.js?v=2.2.1.0.2";
+import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.2.1.0.2";
 // ---------------------------------------------------------------------------
 // Callback injection - functions defined outside the 2636-4016 range in app.js
 // ---------------------------------------------------------------------------
@@ -1652,6 +1652,13 @@ export function renderHistoryItems(items = state.historyViewRaw) {
   const { listClass, head, renderItem } = historyItemLayout();
   return `<div class="${listClass}">${head}${items.map(renderItem).join("")}</div>${sentinel}`;
 }
+// Restores the box from the applied search, but never while the user is typing:
+// a render from a landing response would overwrite keystrokes made since the
+// debounce fired, and the applied search is trimmed, so a typed space would vanish.
+export function syncHistorySearchInput(input) {
+  if (!input || input.value.trim() === state.historyViewSearch || document.activeElement === input) return;
+  input.value = state.historyViewSearch;
+}
 export function renderHistoryView() {
   if (state.activeView !== "history" || state.mediaDetailInline) return; renderDroppedView("history");
   const key = [state.historyViewSearch, state.historyViewFilter].join("|");
@@ -1663,9 +1670,7 @@ export function renderHistoryView() {
     elements.historyPanel.innerHTML = emptyExplorer("Loading watch history...");
     return;
   }
-  if (elements.historySearchInput && elements.historySearchInput.value !== state.historyViewSearch) {
-    elements.historySearchInput.value = state.historyViewSearch;
-  }
+  syncHistorySearchInput(elements.historySearchInput);
   for (const button of elements.historyFilterButtons || []) {
     const isActive = button.dataset.historyFilter === state.historyViewFilter;
     button.classList.toggle("active", isActive);

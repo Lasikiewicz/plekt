@@ -80,6 +80,10 @@ manifest URL in copy blocks and the webhook address in its last step, and a coll
 **Jellyfin Webhooks** box, which holds the webhook address and the Webhook plugin's notification
 types.
 
+To check that a manual mark reaches Plekt, use the Test button next to "Plugin configured" or "Webhook configured"
+in Settings > Webhooks (see [webhooks.md](webhooks.md#webhook-delivery-test)). It works with either
+sender, and the test mark is held out of history, review and the scheduled scan.
+
 ## Inbound: scheduler polling
 
 The independent live-session poller calls `/Sessions` every 10 seconds while active,

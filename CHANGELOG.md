@@ -4,6 +4,38 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.2.1 - 28 October 2026
+
+Hotfix: This update gives each added user their own scheduled sync and shared Plex Now Playing, adds Server Logs controls, and stops large Emby and Jellyfin watched imports timing out.
+
+[Visit the Plekt website](https://plekt.net)
+
+### New Features
+
+#### Sync & connection recovery
+
+- Added users now get their own scheduled sync and queued-job processing.
+- Shared Plex playback now shows in the matching user's Now Playing, while each user's credentials and history stay separate.
+- Server Logs can pause live updates, follow the newest entries and filter by text, and keep your reading position during refreshes.
+
+### Bug Fixes
+
+#### Sync & provider recovery
+
+- The initial watched-status import from Emby and Jellyfin now reads played history in pages of 500, so a large watch history no longer fails with "Upstream request timed out after 10000ms".
+- Anonymous Plex owner-ID sessions are now ignored, and the same Plex account can no longer be connected twice.
+- Completed playback now reuses its pending tracker update, so an interrupted run can no longer send conflicting updates to a tracker.
+- Same-title shows with conflicting provider identities are now kept separate in Stats.
+- AniDB anime descriptions no longer keep partial HTML tag fragments after markup is stripped.
+
+### Tweaks
+
+#### Sync & connection recovery
+
+- Watched-history reads no longer request artwork from Emby and Jellyfin, so third-party image plugins cannot slow them down.
+- Historical Simkl baseline evidence no longer shows as a persistent warning, and tracker reviews show a compact title, watch date and history buttons.
+- Idle playback checks now run every 5 minutes (every 10 seconds once playback is detected), and setup help explains how plugins or webhooks give prompt updates.
+
 ## v2.2.0 - 26 October 2026
 
 This update adds Simkl, Netflix imports and multi-user accounts, while improving sync, navigation and mobile layouts.

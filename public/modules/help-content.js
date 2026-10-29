@@ -1,6 +1,7 @@
-import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.2.0.1.0";
-import { state } from "./state.js?v=2.2.0.1.0";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.0.1.0";
+import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.2.1.0.2";
+import { state } from "./state.js?v=2.2.1.0.2";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.1.0.2";
+import { webhookTestButton } from "./webhook-test.js?v=2.2.1.0.2";
 
 function webhookAckEntry(acks, provider) {
   return acks?.[provider] || null;
@@ -36,10 +37,13 @@ function webhookMethodConfirmation(provider, method, ack = null, {
 } = {}) {
   const checked = webhookAckMethod(ack) === method;
   return `
-    <label class="field-label setup-webhook-confirmation" style="margin-top: var(--space-3);">
-      <input type="radio" name="${escapeAttribute(`${namePrefix}${provider}-webhook-method`)}" ${dataAttr}="${escapeAttribute(provider)}" data-webhook-method="${escapeAttribute(method)}" ${checked ? "checked" : ""} />
-      I have configured the ${escapeHtml(webhookMethodLabel(provider, method))}
-    </label>
+    <div class="setup-webhook-confirmation-row" style="display: flex; align-items: center; justify-content: flex-end; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3);">
+      ${webhookTestButton(provider)}
+      <label class="field-label setup-webhook-confirmation" style="margin: 0;" title="I have configured the ${escapeAttribute(webhookMethodLabel(provider, method))}">
+        <input type="radio" name="${escapeAttribute(`${namePrefix}${provider}-webhook-method`)}" ${dataAttr}="${escapeAttribute(provider)}" data-webhook-method="${escapeAttribute(method)}" ${checked ? "checked" : ""} />
+        ${method === "plugin" ? "Plugin configured" : "Webhook configured"}
+      </label>
+    </div>
   `;
 }
 
@@ -344,31 +348,24 @@ export function embyWebhookSetup({ ack = null, confirmationAttr = "", namePrefix
         <summary class="accordion-header">
           <div class="sync-tool-summary-title">
             <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-            <b>Official Plekt Emby Plugin (Recommended)</b>
+            <b>Plekt Emby Plugin (Beta)</b>
           </div>
         </summary>
         <div class="tool-item-row">
         <div class="webhook-plugin-setup" style="display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--space-2); padding-top: var(--space-1);">
-        <ol class="webhook-instruction-list" style="display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: var(--space-2);">
-          <li>
-            The plugin is currently a local beta; its public repository and release are awaiting approval. Once released, download <code>Emby.Plugin.Plekt.dll</code> from the planned GitHub Releases page below. Until then, use the built-in Emby webhook alternative.
-            <div class="copy-block" style="overflow: visible; align-self: start; margin-top: var(--space-1);">
-              <button class="copy-button" type="button" data-copy="https://github.com/Lasikiewicz/emby-plugin-plekt/releases" aria-label="Copy releases URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
-              <pre style="overflow-x: auto; overflow-y: hidden;"><code>https://github.com/Lasikiewicz/emby-plugin-plekt/releases</code></pre>
+        <ol class="webhook-instruction-list" style="display: grid; gap: var(--space-2);">
+          <li>Download <code>Emby.Plugin.Plekt.dll</code> from the <a href="https://github.com/Lasikiewicz/emby-plugin-plekt/releases" target="_blank" rel="noopener noreferrer">public beta releases</a>. Each release includes a SHA-256 checksum. The plugin is not in Emby's plugin catalog.</li>
+          <li>Copy the DLL into Emby's <code>plugins</code> folder (<code>/config/plugins</code> inside the linuxserver.io Docker container; otherwise the plugins folder in Emby's program data directory), then restart <b>Emby Server</b>.</li>
+          <li>Open <b>Settings → Plugins → Plekt</b> in Emby, paste this complete address into <b>Plekt webhook address</b>, and save:
+            <div class="copy-block" style="margin-top: var(--space-1);">
+              <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL">Copy</button>
+              <pre><code>${escapeHtml(url)}</code></pre>
             </div>
           </li>
-          <li>Copy the file into Emby's <code>plugins</code> folder (on the linuxserver.io Docker image this is <code>/config/plugins</code>; on other installs it is the <code>plugins</code> folder inside Emby's program data folder), then restart Emby. The plugin is not in Emby's plugin catalog yet, so this install is manual. It needs Emby Server 4.9.1 or newer.</li>
-          <li>
-            In Emby, open <b>Settings → Plugins → Plekt</b>, paste the webhook address below into the <b>Plekt webhook address</b> field, and save.
-            <div class="copy-block" style="overflow: visible; align-self: start; margin-top: var(--space-1);">
-              <button class="copy-button" type="button" data-copy="${escapeAttribute(url)}" aria-label="Copy Webhook URL" style="top: 50%; transform: translateY(-50%);">Copy</button>
-              <pre style="overflow-x: auto; overflow-y: hidden;"><code>${escapeHtml(url)}</code></pre>
-            </div>
-          </li>
-          <li>Emby must be able to reach the host in that address. In Docker, <code>localhost</code> or <code>127.0.0.1</code> means Emby's own container, not Plekt, so use Plekt's LAN address or hostname instead.</li>
-          <li>Turn off any built-in Emby webhook (<b>Settings → Notifications</b>) that posts to this Plekt server, otherwise every event arrives twice.</li>
+          <li>Use a hostname or LAN address reachable from Emby. In Docker, <code>localhost</code> and <code>127.0.0.1</code> refer to Emby's own container.</li>
+          <li>Disable any built-in Emby webhook posting to the same Plekt server, then play and pause an item and check Plekt's <b>Sync Activity</b> for incoming events.</li>
         </ol>
-        <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">The plugin sends playback start, pause, unpause and stop, progress at most every 30 seconds, and explicit mark played or unplayed changes. It needs no Emby Premiere and no built-in webhook. If Plekt is unreachable, Emby playback is unaffected and Plekt's scheduled Emby sync catches up.</p>
+        <p style="font-size: 0.78rem; color: var(--muted); margin: 0;">No Emby Premiere subscription is required. Tested on Emby Server 4.10.1.0; other versions are unverified. Progress is sent at most every 30 seconds. Plekt's scheduled sync catches up missed activity.</p>
         ${pluginConfirm}
         </div>
         </div>
@@ -528,15 +525,15 @@ export function webhookWarning() {
       <div style="display: grid; gap: var(--space-2); margin-top: var(--space-2); border-top: 1px solid var(--line); padding-top: var(--space-2);">
         <h3 style="margin: 0; color: var(--text); font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
           <span style="display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: #10b981;"></span>
-          2. Emby Plugin Setup (recommended)
+          2. Emby Plugin Setup (beta)
         </h3>
         <ul style="padding-left: 1.2rem; margin: 0; display: grid; gap: 4px;">
-          <li>The plugin is currently a local beta awaiting publication approval. Until it is released, use the built-in webhook alternative below. After release, download <code>Emby.Plugin.Plekt.dll</code> from <a href="https://github.com/Lasikiewicz/emby-plugin-plekt/releases" target="_blank" rel="noopener noreferrer" style="color: #4b96e6; text-decoration: underline;">github.com/Lasikiewicz/emby-plugin-plekt/releases</a>, copy it into Emby's <code>plugins</code> folder (<code>/config/plugins</code> on the linuxserver.io Docker image), and restart Emby. It needs Emby Server 4.9.1 or newer.</li>
-          <li>Open <b>Settings → Plugins → Plekt</b> in Emby, paste the complete webhook address from Plekt's <b>Settings → Media Servers → Webhooks</b> into the <b>Plekt webhook address</b> field, and save. If Emby runs in Docker, use Plekt's LAN address or hostname, not <code>localhost</code>.</li>
-          <li>The plugin sends playback, playback position, and explicit watched or unwatched events straight to Plekt. It doesn't need Emby Premiere or the built-in webhook. Turn off any built-in Emby webhook that posts to Plekt, or every event arrives twice.</li>
+          <li>Download <code>Emby.Plugin.Plekt.dll</code> from the <a href="https://github.com/Lasikiewicz/emby-plugin-plekt/releases" target="_blank" rel="noopener noreferrer">public beta releases</a>, copy it into Emby's <code>plugins</code> folder (<code>/config/plugins</code> inside the linuxserver.io Docker container), then restart Emby Server. Tested on Emby 4.10.1.0; other versions are unverified.</li>
+          <li>Open <b>Settings → Plugins → Plekt</b> in Emby, paste the complete webhook address from <b>Plekt → Settings → Media Servers → Webhooks</b>, and save. Use a reachable LAN address or hostname in Docker, not <code>localhost</code>.</li>
+          <li>The plugin needs no Premiere subscription. Disable any built-in Emby webhook posting to the same Plekt server to avoid duplicate events.</li>
         </ul>
         <details style="font-size: 0.85rem;">
-          <summary style="cursor: pointer; color: var(--text);">Alternative: use the built-in Emby webhook instead</summary>
+          <summary style="cursor: pointer; color: var(--text);">Set up the available Emby webhook</summary>
           <ul style="padding-left: 1.2rem; margin: var(--space-2) 0 0; display: grid; gap: 4px;">
             <li>In Emby Server Settings ➔ <b>Webhooks</b>, add a new webhook pointing to your Plekt webhook URL.</li>
             <li>Under <b>Events</b>, check the following boxes:

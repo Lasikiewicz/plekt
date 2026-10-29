@@ -8,29 +8,29 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.2.0.1.0" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.2.1.0.2" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.2.0.1.0"></script>
+    <script src="/theme-boot.js?v=2.2.1.0.2"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.0.1.0" />
-    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.0.1.0" />
-    <link rel="stylesheet" href="/styles.css?v=2.2.0.1.0" />
+    <link rel="modulepreload" href="/app.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.1.0.2" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.1.0.2" />
+    <link rel="stylesheet" href="/styles.css?v=2.2.1.0.2" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
@@ -2039,6 +2039,26 @@
                             </div>
                           </div>
                         </details>
+
+                        <!-- Inner Box 6: Repair Split Episode Shows -->
+                        <details id="split-episode-repair" class="sync-tool-details">
+                          <summary class="accordion-header">
+                            <div class="sync-tool-summary-title">
+                              <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                              <b>Repair Split Episode Shows</b>
+                            </div>
+                            <span id="splitEpisodeStatus" class="status-pill status-muted">Idle</span>
+                            <span>Move Emby or Jellyfin watches stored under an episode's own ids back onto their show</span>
+                          </summary>
+                          <div class="tool-item-row">
+                            <div id="splitEpisodeLog" class="import-terminal compact-terminal hidden" style="margin-top: var(--space-2);"></div>
+                            <div id="splitEpisodeList" class="playstate-alias-list hidden"></div>
+                            <div class="settings-actions" style="margin-top: var(--space-2);">
+                              <button id="splitEpisodeAuditButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Check Split Shows</button>
+                              <button id="splitEpisodeRepairButton" class="button-danger sync-tools-cancel-button hidden" type="button">Repair Ticked Shows</button>
+                            </div>
+                          </div>
+                        </details>
                       </div>
                     </article>
                   </div>
@@ -3173,7 +3193,7 @@
                         </header>
 
                         <p class="about-build-line" aria-label="Build information">
-                          <span>Version <strong id="aboutCurrentVersion">v2.2.0</strong></span>
+                          <span>Version <strong id="aboutCurrentVersion">v2.2.1</strong></span>
                           <span class="about-build-separator" aria-hidden="true">·</span>
                           <span>Channel <strong id="aboutReleaseChannel">Latest</strong></span>
                         </p>
@@ -3431,7 +3451,7 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.2.0.1.0"></script>
-    <script type="module" src="/app.js?v=2.2.0.1.0"></script>
+    <script type="module" src="/modules/analytics.js?v=2.2.1.0.2"></script>
+    <script type="module" src="/app.js?v=2.2.1.0.2"></script>
   </body>
 </html>

@@ -26,5 +26,7 @@ test("same-title shows retain separate Stats rankings and artwork across periods
     assert.deepEqual(report.topShows.map((row) => row.count).sort(), [1, 2]);
     assert.equal(new Set(report.topShows.map((row) => row.key)).size, 2);
     assert.deepEqual(new Set(report.topShows.map((row) => row.poster_url)), new Set(["/a.webp", "/b.webp"]));
+    // Same-title entries link by show id; a title route would open whichever comes first.
+    assert.deepEqual(new Set(report.topShows.map((row) => row.show_tmdb_id)), new Set(["111", "112"]));
   }
 });

@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.2.0.1.0";
-import { escapeHtml } from "./utils.js?v=2.2.0.1.0";
+import { state } from "./state.js?v=2.2.1.0.2";
+import { escapeHtml } from "./utils.js?v=2.2.1.0.2";
 
 const PROVIDERS = ["plex", "emby", "jellyfin", "trakt", "simkl"];
 const PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin", trakt: "Trakt", simkl: "Simkl" };

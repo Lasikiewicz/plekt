@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.1.0";
-import { state, elements } from "./state.js?v=2.2.0.1.0";
-import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.2.0.1.0";
-import { posterMarkup, hydratePosters } from "./images.js?v=2.2.0.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.1.0.2";
+import { state, elements } from "./state.js?v=2.2.1.0.2";
+import { escapeHtml, escapeAttribute, tvShowTmdbHref } from "./utils.js?v=2.2.1.0.2";
+import { posterMarkup, hydratePosters } from "./images.js?v=2.2.1.0.2";
 
 let _cb = {};
 
@@ -13,6 +13,9 @@ const UPCOMING_SEARCH_DEBOUNCE_MS = 220;
 // in both directions; scrolling near either end grows the range further.
 const UPCOMING_INITIAL_PAST_MONTHS = 1;
 const UPCOMING_INITIAL_FUTURE_MONTHS = 1;
+// Furthest the loaded range may grow from the current month in either
+// direction (docs/upcoming.md); every added month costs a server build.
+const UPCOMING_MAX_MONTHS_FROM_CURRENT = 24;
 // How close to either end of the scroll container the user must get before the
 // next month is appended/prepended.
 const UPCOMING_EXTEND_THRESHOLD_PX = 400;
@@ -308,20 +311,22 @@ function ensureUpcomingRange() {
 
 function extendRangePast() {
   const nextMonth = addMonths(state.upcomingRangeStart.slice(0, 7), -1);
+  if (nextMonth < addMonths(currentMonth(), -UPCOMING_MAX_MONTHS_FROM_CURRENT)) return false;
   state.upcomingRangeStart = startOfMonthIso(nextMonth);
   return true;
 }
 
 function extendRangeFuture() {
   const nextMonth = addMonths(state.upcomingRangeEnd.slice(0, 7), 1);
+  if (nextMonth > addMonths(currentMonth(), UPCOMING_MAX_MONTHS_FROM_CURRENT)) return false;
   state.upcomingRangeEnd = endOfMonthIso(nextMonth);
   return true;
 }
 
 function ensureRangeCoversMonth(monthKey) {
   ensureUpcomingRange();
-  while (monthKey < state.upcomingRangeStart.slice(0, 7)) extendRangePast();
-  while (monthKey > state.upcomingRangeEnd.slice(0, 7)) extendRangeFuture();
+  while (monthKey < state.upcomingRangeStart.slice(0, 7) && extendRangePast());
+  while (monthKey > state.upcomingRangeEnd.slice(0, 7) && extendRangeFuture());
 }
 
 // The Monday of every week a month's grid needs, including the partial weeks at
@@ -420,7 +425,10 @@ function scrollToToday(options = {}) {
 }
 
 function shiftUpcomingMonth(delta) {
-  scrollToMonth(addMonths(activeMonth(), delta));
+  const target = addMonths(activeMonth(), delta);
+  if (target < addMonths(currentMonth(), -UPCOMING_MAX_MONTHS_FROM_CURRENT)
+    || target > addMonths(currentMonth(), UPCOMING_MAX_MONTHS_FROM_CURRENT)) return;
+  scrollToMonth(target);
 }
 
 function goToToday() {

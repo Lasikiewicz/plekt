@@ -11,6 +11,7 @@ Reference for `data/plembfin.db`. The full authoritative schema is in
 | `live_tracking_cache` | Snapshot of currently-playing sessions from the scheduler | elected worker only | `handleNowPlaying` |
 | `active_sessions` | Live sessions from webhook `active` events (5-min TTL) | webhook `active` phase | `handleNowPlaying`, `active-sessions` |
 | `playback_progress` | Resume position records | webhook `ended`, sync orchestrator | resume propagation |
+| `split_episode_repair_log` | Undo log of Repair Split Episode Shows: one row per rekeyed `watch_history` row (`row_key` = row id) or `playback_progress` row (`row_key` = old `media_key`), with old and new ids and keys, the run's backup name, and `reverted_at` once undone | `applySplitEpisodeRepair` | `undoSplitEpisodeRepair`, `listSplitEpisodeRepairRuns` (`utils/splitEpisodeRepair.js`) |
 | `up_next_provider_items` | Latest generation of provider Resume/Continue Watching/Next Up observations, keyed by provider feed and native item ID | scheduled provider feed sync | unified Up Next builder, source-ledger mutation lookup |
 | `up_next_provider_feed_state` | Per-provider/feed generation, completion, freshness, count, cursor, retry, and redacted error state | scheduled provider feed sync | Up Next cache/status response |
 | `up_next_library_items` | Last library-confirmed native item id per Up Next library lookup (30-day window); a live "missing" deletes the row | Up Next library lookup | the same lookup, only while that provider cannot answer, so a restart during an outage keeps the cards it proved |

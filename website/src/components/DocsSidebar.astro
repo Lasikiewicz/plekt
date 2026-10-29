@@ -1,17 +1,13 @@
 ---
-import { docsSidebarNav, site } from "../data/site.js";
+import { docsNav } from "../data/site.js";
+import { site } from "../data/site.js";
 
-type DocsSidebarItem = {
-  id?: string;
-  slug: string;
-  label: string;
-  children?: DocsSidebarItem[];
-};
+type DocsNavItem = { slug: string; label: string };
+type DocsNavSection = { label: string; items: DocsNavItem[] };
 
 const { currentSlug = "" } = Astro.props;
 const isDocsHome = Astro.url.pathname === "/docs/";
-const isCurrentPage = (slug = "") => slug === currentSlug;
-const hasCurrentChild = (item: DocsSidebarItem) => (item.children || []).some((child: DocsSidebarItem) => isCurrentPage(child.slug));
+const sections = docsNav as DocsNavSection[];
 ---
 
 <aside class="docs-sidebar" data-doc-sidebar data-doc-current-slug={currentSlug} aria-label="Documentation navigation">
@@ -20,91 +16,109 @@ const hasCurrentChild = (item: DocsSidebarItem) => (item.children || []).some((c
     class="docs-sidebar-home"
     href="/docs/"
     aria-current={isDocsHome ? "page" : undefined}
-  >Docs Home</a>
+  >Documentation home</a>
 
-  <nav class="docs-nav-pages" aria-label="Documentation pages">
-    {(docsSidebarNav as DocsSidebarItem[]).map((item, index) => {
-      const children: DocsSidebarItem[] = item.children || [];
-      const isCurrent = isCurrentPage(item.slug);
-      const isBranchCurrent = isCurrent || hasCurrentChild(item);
-      const subnavId = `docs-nav-subnav-${item.id || index}`;
-
-      return (
-        <section
-          class:list={{ "docs-nav-section--has-children": children.length > 0, "docs-nav-section--current": isBranchCurrent }}
-          class="docs-nav-section"
-          data-doc-nav-section
-          data-doc-open={isBranchCurrent ? "true" : "false"}
-        >
-          <h2 class="docs-nav-heading">
-            {item.slug ? (
-              <a
-                class:list={{ active: isCurrent }}
-                class="docs-nav-parent"
-                href={`/docs/${item.slug}/`}
-                aria-current={isCurrent ? "page" : undefined}
-              >
-                {item.label}
-              </a>
-            ) : (
-              <span class="docs-nav-parent docs-nav-label">{item.label}</span>
-            )}
-            {children.length > 0 && (
-              <button
-                type="button"
-                class="docs-nav-toggle"
-                data-doc-nav-toggle
-                aria-controls={subnavId}
-                aria-expanded={isBranchCurrent ? "true" : "false"}
-                aria-label={`${isBranchCurrent ? "Collapse" : "Expand"} ${item.label}`}
-              >
-                <span aria-hidden="true">⌄</span>
-              </button>
-            )}
-          </h2>
-
-          {children.length > 0 && (
-            <nav
-              id={subnavId}
-              class="docs-nav-subnav"
-              aria-label={`${item.label} documentation`}
-              hidden={!isBranchCurrent}
-            >
-              {children.map((child: DocsSidebarItem) => {
-                const childIsCurrent = isCurrentPage(child.slug);
-                return (
-                  <a
-                    class:list={{ active: childIsCurrent }}
-                    class="docs-nav-child"
-                    href={`/docs/${child.slug}/`}
-                    aria-current={childIsCurrent ? "page" : undefined}
-                  >
-                    {child.label}
-                  </a>
-                );
-              })}
-            </nav>
-          )}
-        </section>
-      );
-    })}
-  </nav>
+  <details class="docs-tree-disclosure" open>
+    <summary class="docs-tree-disclosure-toggle">Browse documentation<span class="docs-tree-caret" aria-hidden="true">&#8250;</span></summary>
+    <nav class="docs-content-tree" aria-label="Documentation contents">
+      {sections.map((section, index) => {
+        const isCurrent = section.items.some((item) => item.slug === currentSlug);
+        return (
+          <details class="docs-tree-group" data-doc-accordion open={isCurrent || (isDocsHome && index === 0)}>
+            <summary>{section.label}<span class="docs-tree-caret" aria-hidden="true">&#8250;</span></summary>
+            <div class="docs-tree-panel">
+              <div class="docs-tree-panel-inner">
+                <div class="docs-tree-links">
+                  {section.items.map((item) => (
+                    <a
+                      class:list={{ active: item.slug === currentSlug }}
+                      class="docs-tree-link"
+                      href={`/docs/${item.slug}/`}
+                      aria-current={item.slug === currentSlug ? "page" : undefined}
+                    >{item.label}</a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </details>
+        );
+      })}
+    </nav>
+  </details>
   <a class="docs-source-link button-secondary" href={site.repositoryDocs} target="_blank" rel="noreferrer">Technical source docs</a>
 </aside>
 
 <script>
-  document.querySelectorAll("[data-doc-nav-toggle]").forEach((toggle) => {
-    toggle.addEventListener("click", () => {
-      const section = toggle.closest("[data-doc-nav-section]");
-      const subnav = document.getElementById(toggle.getAttribute("aria-controls") || "");
-      if (!(section instanceof HTMLElement) || !(subnav instanceof HTMLElement)) return;
+  const treeDisclosure = document.querySelector(".docs-tree-disclosure");
+  const treeMedia = window.matchMedia("(max-width: 760px)");
+  const syncTreeDisclosure = () => {
+    if (treeDisclosure instanceof HTMLDetailsElement) treeDisclosure.open = !treeMedia.matches;
+  };
+  syncTreeDisclosure();
+  treeMedia.addEventListener("change", syncTreeDisclosure);
 
-      const isOpen = toggle.getAttribute("aria-expanded") === "true";
-      const nextOpen = !isOpen;
-      toggle.setAttribute("aria-expanded", String(nextOpen));
-      toggle.setAttribute("aria-label", `${nextOpen ? "Collapse" : "Expand"} ${section.querySelector(".docs-nav-parent")?.textContent?.trim() || "section"}`);
-      section.dataset.docOpen = String(nextOpen);
-      subnav.hidden = !nextOpen;
+  const accordionTargets = new WeakMap<HTMLDetailsElement, boolean>();
+  const accordionAnimations = new WeakMap<HTMLDetailsElement, Animation>();
+  const setAccordionOpen = (group: HTMLDetailsElement, open: boolean) => {
+    const panel = group.querySelector<HTMLElement>(":scope > .docs-tree-panel");
+    if (!panel) {
+      group.open = open;
+      return;
+    }
+
+    const currentHeight = group.open ? panel.getBoundingClientRect().height : 0;
+    accordionAnimations.get(group)?.cancel();
+    accordionTargets.set(group, open);
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion || typeof panel.animate !== "function") {
+      group.open = open;
+      panel.style.height = "";
+      panel.style.opacity = "";
+      return;
+    }
+
+    if (open && !group.open) {
+      panel.style.height = "0px";
+      panel.style.opacity = "0";
+      group.open = true;
+    } else {
+      panel.style.height = `${currentHeight}px`;
+    }
+
+    const fromHeight = open && !currentHeight ? 0 : currentHeight;
+    const toHeight = open ? panel.scrollHeight : 0;
+    const animation = panel.animate(
+      [
+        { height: `${fromHeight}px`, opacity: fromHeight ? 1 : 0 },
+        { height: `${toHeight}px`, opacity: open ? 1 : 0 },
+      ],
+      { duration: 180, easing: "cubic-bezier(0.2, 0.75, 0.25, 1)" },
+    );
+    accordionAnimations.set(group, animation);
+    animation.onfinish = () => {
+      if (accordionTargets.get(group) !== open) return;
+      if (!open) group.open = false;
+      panel.style.height = "";
+      panel.style.opacity = "";
+      accordionAnimations.delete(group);
+      accordionTargets.delete(group);
+    };
+  };
+
+  document.querySelectorAll<HTMLDetailsElement>("[data-doc-accordion]").forEach((group) => {
+    group.querySelector<HTMLElement>(":scope > summary")?.addEventListener("click", (event) => {
+      event.preventDefault();
+      const currentlyOpen = accordionTargets.get(group) ?? group.open;
+      const open = !currentlyOpen;
+      if (open) {
+        Array.from(group.parentElement?.children || []).forEach((sibling) => {
+          if (sibling instanceof HTMLDetailsElement && sibling !== group && sibling.hasAttribute("data-doc-accordion")) {
+            const siblingOpen = accordionTargets.get(sibling) ?? sibling.open;
+            if (siblingOpen) setAccordionOpen(sibling, false);
+          }
+        });
+      }
+      setAccordionOpen(group, open);
     });
   });
 </script>

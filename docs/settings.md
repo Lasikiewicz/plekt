@@ -679,7 +679,15 @@ server reached over the public internet from being overwhelmed by a large sync.
   show** moves them into the show (the newest watch state wins); **Different show** leaves them
   alone and stops them being listed or repaired again. The **Dismissed** section can restore a
   dismissed entry to review. These actions change only Plekt's watch state; nothing is sent to
-  connected platforms.
+  connected platforms. **Repair Split Episode Shows** (`routes/splitEpisodeRepair.js`,
+  `utils/splitEpisodeRepair.js`) finds watches an Emby or Jellyfin Force Sync stored under an
+  episode's own ids. A row qualifies only when its ids exactly match a watched server episode
+  at the same season and episode and that episode's series resolves; other rows are listed as
+  skipped with a reason. The administrator ticks shows, Plekt re-checks them, takes a full
+  backup (stopping if it fails), and rekeys watch history and resume positions only, never
+  merging into an existing watch: an episode the show already has a watch for, under any key
+  sharing a series id, is skipped for Fix Match. Nothing is dispatched; watches already sent elsewhere under
+  the wrong ids are flagged for a manual check. Each run is listed with **Undo this repair**.
 - Trakt owns the Trakt/CSV importer; Backup and Restore own their respective workflows.
 - Wipe data (`server/src/routes/wipeData.js`, `GET/POST /api/wipe-data(/preview)`) offers four
   destructive scopes: Watch History, Sync History & Logs, Everything Tracked (both together),

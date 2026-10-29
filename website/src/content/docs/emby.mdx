@@ -1,0 +1,43 @@
+---
+title: Emby
+description: Connect Emby for library state, playback, watch history, resume progress, and playlists.
+category: Connect services
+order: 4.2
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/emby.md
+  - docs/webhooks.md
+screenshots:
+  - /assets/app-captures/settings-media-servers-emby-dark.png
+  - /assets/app-captures/settings-media-servers-emby-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Emby
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-media-servers-emby-dark.png"
+  lightSrc="/assets/app-captures/settings-media-servers-emby-light.png"
+  alt="Plekt Emby settings section showing connection and credential controls"
+  caption="The Emby settings card keeps the server connection and credential controls together."
+/>
+
+Connect with the server URL and a user login, or provide an API key and user ID.
+
+The setup guide does not store the password after obtaining a token.
+
+The Plekt Emby plugin is available as a local beta. Use the in-app Emby setup guide for
+plugin installation, or use Emby's built-in webhooks as an alternative. Enable only one
+event sender to avoid duplicate events.
+
+For the webhook alternative, open **Preferences → Notifications → Webhooks**, add the full Plekt webhook URL,
+and enable:
+
+- playback: **Start**, **Pause**, **Unpause**, and **Stop**;
+- users: **Mark Played** and **Mark Unplayed**; and
+- **Send All Properties**, so resume fields are present.
+
+Leave unrelated event categories off until the core event path works.
+
+They add noise without improving watched-state sync.

@@ -823,6 +823,9 @@ function compactStatsMedia(row = {}, { key, type, title } = {}) {
     imdb_id: row.imdb_id || null,
     tmdb_id: row.tmdb_id || null,
     tvdb_id: row.tvdb_id || null,
+    // The flat ids above are the episode's own; links need the library show's.
+    show_tmdb_id: isEpisode ? row.show_tmdb_id || null : null,
+    show_tvdb_id: isEpisode ? row.show_tvdb_id || null : null,
     latestWatch: row.watched_at || null,
   };
 }
@@ -841,7 +844,11 @@ function bumpStatsMedia(map, key, item) {
     if (item.id) existing.id = item.id;
     if (item.poster_url) existing.poster_url = item.poster_url;
     if (item.media_key) existing.media_key = item.media_key;
+    if (item.show_tmdb_id) existing.show_tmdb_id = item.show_tmdb_id;
+    if (item.show_tvdb_id) existing.show_tvdb_id = item.show_tvdb_id;
   }
+  if (!existing.show_tmdb_id && item.show_tmdb_id) existing.show_tmdb_id = item.show_tmdb_id;
+  if (!existing.show_tvdb_id && item.show_tvdb_id) existing.show_tvdb_id = item.show_tvdb_id;
 }
 
 function addRowToStatsPeriod(period, row = {}) {

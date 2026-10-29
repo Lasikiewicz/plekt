@@ -1,0 +1,50 @@
+---
+title: Metadata providers
+description: Configure TMDB, TheTVDB, Fanart.tv, OMDb, and YouTube for metadata and artwork.
+category: Connect services
+order: 4.8
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/metadata.md
+screenshots:
+  - /assets/app-captures/settings-metadata-providers-dark.png
+  - /assets/app-captures/settings-metadata-providers-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Metadata and artwork providers
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-metadata-providers-dark.png"
+  lightSrc="/assets/app-captures/settings-metadata-providers-light.png"
+  alt="Plekt Metadata Providers settings showing provider cards and connection status"
+  caption="Metadata Providers contains the keys and connection status used for enrichment and artwork."
+/>
+
+- **TMDB** supplies posters, backdrops, cast, summaries, search, trailers, reviews, and
+  recommendations. Add a TMDB API key first for the richest details.
+- **TheTVDB** supplies show identity, season/episode numbering, air dates, and fallback art.
+- **Fanart.tv** supplies community-curated poster, backdrop, and logo fallbacks.
+- **OMDb** is optional and can provide IMDb rating badges.
+- **YouTube** is optional and can supply trailer metadata.
+
+Plekt caches metadata and artwork locally. A cached poster whose file has gone missing is
+downloaded again the next time it is needed, so the artwork is restored without a manual reset.
+
+A provider outage can affect new enrichment without erasing the local watch archive.
+
+Use [Settings → Metadata](/docs/settings/#metadata) to refresh after correcting a key.
+
+## Verify a connection without guessing
+
+After any integration change, create one known test:
+
+1. Use a title that is already present in the local library.
+2. Make one watched, unwatched, or resume change from the source.
+3. Wait for the webhook or polling interval.
+4. Open [Sync Activity](/docs/concepts/#read-sync-activity).
+5. Read each destination result and follow the matching troubleshooting link if it is skipped
+   or failed.
+
+[Continue with the sync model](/docs/concepts/) or [open Settings](/docs/settings/).

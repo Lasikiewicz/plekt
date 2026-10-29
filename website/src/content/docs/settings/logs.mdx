@@ -3,7 +3,7 @@ title: Logs
 description: Review server and browser diagnostics by category and preserve useful evidence before clearing it.
 category: Settings
 order: 5.10
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/logs.js
@@ -30,6 +30,17 @@ Use the category tabs to narrow the stream:
 - **Outbound Sync** shows dispatches, watch writes, and manual propagation.
 - **Scheduled Polls** shows periodic catch-up and scheduled sync work.
 - **System Logs** shows administrative, startup, and general system events.
+
+## Live output controls
+
+The log view refreshes every 3 seconds. Use its controls to read without losing your place:
+
+- **Pause updates** freezes the current snapshot; select **Resume updates** to continue. Resume
+  before changing category.
+- **Follow latest** keeps the newest entries in view. Scrolling up turns it off, and your
+  reading position is kept while new output arrives.
+- The text filter narrows the visible lines in the current category and ignores case.
+- **Download Logs** exports all logs, not only the filtered lines.
 
 ## Review a problem
 

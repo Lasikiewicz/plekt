@@ -1,0 +1,31 @@
+---
+title: Tautulli
+description: Import completed Plex watch history from Tautulli with a preview and backup.
+category: Connect services
+order: 4.6
+sourceVersion: "2.2.1"
+sourcePaths:
+  - public/modules/tautulli-import.js
+  - server/src/routes/tautulli.js
+screenshots:
+  - /assets/app-captures/settings-connections-tautulli-dark.png
+  - /assets/app-captures/settings-connections-tautulli-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Tautulli
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-connections-tautulli-dark.png"
+  lightSrc="/assets/app-captures/settings-connections-tautulli-light.png"
+  alt="Plekt Tautulli connection settings showing the safe history import controls"
+  caption="The Tautulli card previews completed Plex history and keeps backup and identity review before commit."
+/>
+
+Tautulli is an optional import source for completed Plex history. Configure its server URL,
+API key, and user, then preview the import before committing it.
+
+Plekt creates a watch-history backup before the import, matches rows by provider identity
+where possible, and keeps ambiguous rows in the preview for review. It does not silently
+overwrite existing watch history.

@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.0.1.0";
-import { state, elements } from "./state.js?v=2.2.0.1.0";
-import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref } from "./utils.js?v=2.2.0.1.0";
-import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.2.0.1.0";
-import { renderDroppedStats } from "./dropped-title-views.js?v=2.2.0.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.1.0.2";
+import { state, elements } from "./state.js?v=2.2.1.0.2";
+import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref, tvShowBaseHrefFromEpisode } from "./utils.js?v=2.2.1.0.2";
+import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.2.1.0.2";
+import { renderDroppedStats } from "./dropped-title-views.js?v=2.2.1.0.2";
 
 let _cb = {};
 
@@ -224,8 +224,11 @@ export function statsIntroCards(report = selectedStatsReport(), periodLabel = "A
 function statsMediaHref(item = {}) {
   const title = item.title || "unknown";
   if (item.type === "movie") return movieHref({ title });
+  // By show id when known: a title route opens the first same-titled library show.
+  if (item.show_tvdb_id || item.show_tmdb_id) return tvShowBaseHrefFromEpisode(item, title);
   return `/tvshow/${encodeURIComponent(_cb.slug?.(title) || title)}`;
 }
+export { statsMediaHref };
 
 export function renderStatsKpis(report = selectedStatsReport()) {
   const container = elements.statsKpiStrip;

@@ -1,9 +1,9 @@
 ---
 title: Dashboard
 description: Read live playback, the mixed Up Next queue, and durable watch history from one screen.
-category: Dashboard and libraries
+category: Features
 order: 3
-sourceVersion: "2.2.0"
+sourceVersion: "2.2.1"
 sourcePaths:
   - public/index.html
   - public/modules/dashboard.js
@@ -112,7 +112,8 @@ while watch-state corrections stay on the selected local title's actions.
 
 ## Now Playing
 
-Now Playing is session information, not completed watch history.
+Now Playing is session information, not completed watch history. The full feature guide, with
+the apps it works on, is [Now Playing](/docs/now-playing/).
 
 It can show the title, the episode title with its season and episode, source service,
 current position, duration, and a progress bar for active sessions reported by Plex, Emby,
@@ -132,9 +133,13 @@ To use it:
 3. Check the source badge, position, and duration.
 4. Select the title to open its media details when you need more actions.
 
-Plekt refreshes active sessions independently of the normal scheduled sync: the poll is
-more frequent while something is playing, and opening the Dashboard or returning to a
-background tab requests a fresh snapshot immediately.
+Plekt refreshes active sessions independently of the normal scheduled sync: playback checks
+run every 10 seconds while something is playing and every 5 minutes while idle, and opening
+the Dashboard or returning to a background tab requests a fresh snapshot immediately. A plugin,
+webhook, or Plex notification reports a new session sooner than the idle check.
+
+Each user sees their own playback. An added user watching on a Plex server that another Plekt
+user owns still appears in their own Now Playing; see [Plex](/docs/plex/).
 
 A provider failure is kept separate from a genuinely empty session result, so a temporary
 connection problem does not falsely report that playback stopped. Disappearing from Now
@@ -168,6 +173,9 @@ If a session never appears, follow
 [Now Playing is empty or stale](/docs/troubleshooting/#now-playing-is-empty-or-stale).
 
 ## Up Next
+
+The full feature guides are [Up Next](/docs/up-next/) and [Drop and Un-drop](/docs/drop-titles/),
+including what each app receives.
 
 Use a title's menu to drop it from Up Next or restore it later from its detail page. Dropping
 does not erase its watch history or resume progress. The Movies, TV Shows and History filters

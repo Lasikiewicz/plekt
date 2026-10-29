@@ -1369,3 +1369,25 @@ CREATE TABLE IF NOT EXISTS simkl_full_sync_items (
   PRIMARY KEY (run_id, item_id),
   FOREIGN KEY (run_id) REFERENCES simkl_full_sync_runs(id) ON DELETE CASCADE
 );
+
+-- Undo log for Settings -> Database repairs -> Repair Split Episode Shows
+-- (server/src/utils/splitEpisodeRepair.js). One row per rekeyed watch_history
+-- row (row_key = row id) or playback_progress row (row_key = old media_key).
+CREATE TABLE IF NOT EXISTS split_episode_repair_log (
+  run_id TEXT NOT NULL,
+  table_name TEXT NOT NULL,
+  row_key TEXT NOT NULL,
+  show_title TEXT,
+  old_imdb_id TEXT,
+  old_tmdb_id TEXT,
+  old_tvdb_id TEXT,
+  old_media_key TEXT,
+  new_imdb_id TEXT,
+  new_tmdb_id TEXT,
+  new_tvdb_id TEXT,
+  new_media_key TEXT NOT NULL,
+  backup_name TEXT,
+  created_at INTEGER NOT NULL,
+  reverted_at INTEGER,
+  PRIMARY KEY (run_id, table_name, row_key)
+);

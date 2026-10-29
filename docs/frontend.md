@@ -751,6 +751,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Backup tools and appearance save actions | `modules/tools-backups.js`; `modules/appearance.js` owns the always-available defaults/body/loading helper |
 | Maintenance diagnostics, cache tools, sync repair tools, and sync health | `modules/tools-maintenance.js`, `modules/tools-health.js` |
 | Library-wide duplicate-watch cleanup (Settings → Tools → Database Repairs) | `modules/tools-duplicates.js` |
+| Repair Split Episode Shows card: audit, per-show repair and undo of episode-id watch rows (Settings → Tools → Database Repairs) | `modules/tools-split-episode-repair.js` |
 | Watch-state aliases card: fold or dismiss unproven episode-id playstate rows (Settings → Tools → Database Repairs) | `modules/tools-playstate-aliases.js` |
 | Wipe data (Settings → Tools → Wipe data): watch history, sync history/logs, and full factory reset | `modules/tools-wipe-data.js` |
 | Auth, session, tokens | `modules/auth.js` |

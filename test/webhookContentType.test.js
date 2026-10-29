@@ -247,3 +247,55 @@ test("Emby Up Next seed callbacks never become active sessions", async () => {
     ids: { tmdb: "329865" },
   });
 });
+
+// Emby's Notifications webhook can be set to multipart/form-data, which puts the
+// JSON event in a `data` field. Treated as Plex, every event was dropped as
+// "Plex Raw Event: missing payload" (Emby forum comment 1547206 log).
+test("an Emby multipart webhook with a data field is parsed as Emby, not Plex", async () => {
+  const boundary = "----embyboundary";
+  const event = JSON.stringify({
+    Title: "Arrival marked played",
+    Event: "item.markplayed",
+    Item: { Type: "Movie", Name: "Arrival", Id: "1787031", ProviderIds: { Tmdb: "329865" }, UserData: { Played: true } },
+    User: { Name: "tester", Id: "u1" },
+    Server: { Name: "emby", Id: "s1" },
+  });
+  const body = `--${boundary}\r\nContent-Disposition: form-data; name="data"\r\n\r\n${event}\r\n--${boundary}--\r\n`;
+  const contentType = `multipart/form-data; boundary=${boundary}`;
+  const req = request({ contentType, userAgent: "Emby Server/4.9", body });
+  req.headers = { "content-type": contentType };
+  const media = await normalizeWebhook(req);
+  assert.equal(media.source, "emby");
+  assert.notEqual(media.title, "Plex Raw Event: missing payload");
+  assert.equal(media.title, "Arrival");
+});
+
+// Exact wire shape captured from Emby 4.10's multipart webhook: quoted boundary,
+// unquoted field name, a Content-Type on the part, and a browser user agent.
+test("Emby 4.10's real multipart wire format is parsed as Emby", async () => {
+  const boundary = "2f8f5a31-8fb4-4f0c-93ca-d640937ea377";
+  const event = JSON.stringify({
+    Title: "Arrival marked played",
+    Event: "item.markplayed",
+    Item: { Type: "Movie", Name: "Arrival", Id: "1787031", ProviderIds: { Tmdb: "329865" }, UserData: { Played: true } },
+    User: { Name: "tester", Id: "u1" },
+    Server: { Name: "emby", Id: "s1" },
+  });
+  const body = `--${boundary}\r\nContent-Type: application/json; charset=utf-8\r\nContent-Disposition: form-data; name=data\r\n\r\n${event}\r\n--${boundary}--\r\n`;
+  const contentType = `multipart/form-data; boundary="${boundary}"`;
+  const req = request({ contentType, userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", body });
+  req.headers = { "content-type": contentType };
+  const media = await normalizeWebhook(req);
+  assert.equal(media.source, "emby");
+  assert.equal(media.title, "Arrival");
+});
+
+test("a multipart body with neither payload nor JSON data still records as Plex missing payload", async () => {
+  const boundary = "----b";
+  const body = `--${boundary}\r\nContent-Disposition: form-data; name="data"\r\n\r\nnot json\r\n--${boundary}--\r\n`;
+  const contentType = `multipart/form-data; boundary=${boundary}`;
+  const req = request({ contentType, body });
+  req.headers = { "content-type": contentType };
+  const media = await normalizeWebhook(req);
+  assert.equal(media.title, "Plex Raw Event: missing payload");
+});

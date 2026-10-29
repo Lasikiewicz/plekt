@@ -1,0 +1,52 @@
+---
+title: Plex
+description: Connect Plex for library state, playback events, watch history, playlists, and account watchlist sync.
+category: Connect services
+order: 4.1
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/plex.md
+  - docs/webhooks.md
+screenshots:
+  - /assets/app-captures/settings-media-servers-plex-dark.png
+  - /assets/app-captures/settings-media-servers-plex-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+## Plex
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-media-servers-plex-dark.png"
+  lightSrc="/assets/app-captures/settings-media-servers-plex-light.png"
+  alt="Plekt Plex settings section showing connection and credential controls"
+  caption="The Plex card shows its configured connection state; expand it to use account setup, manual credentials, and connection controls."
+/>
+
+Plex needs a server URL and token, or the account connection flow.
+
+Plekt attaches to Plex's notification WebSocket once the URL and token are configured, so
+no external listener is required for watched/unwatched changes. Playback checks back it up
+every 5 minutes while idle and every 10 seconds once playback is detected.
+
+Each Plekt user should connect their own Plex account. Account sign-in refuses a Plex account
+that is already connected to another Plekt user, so watch histories stay separate. When an
+added user plays on a Plex server another Plekt user owns, Now Playing uses the owner's
+session list for that server, matched by Plex user; the added user's history and writes still
+use their own connection. Sessions that carry only Plex's anonymous owner ID are left out.
+
+In Plex, turn off **Refresh library metadata periodically**.
+
+During a rematch, Plex can reset watched state, and Plekt would otherwise treat that reset
+as a real unwatch.
+
+Configure the connection in [Settings → Media servers](/docs/settings/media-servers/).
+
+The Plex card also contains the optional **Sync watchlist with Plex** toggle. It uses Plex's
+account-level Universal Watchlist; Plex is the only provider used for Watchlist sync.
+
+Open [Settings → Webhooks → Setup Guides](/docs/settings/webhooks/#setup-guides) for the
+provider-specific notification, webhook, and scheduled-task guidance.
+
+If Plex events are absent, check the token, server URL, WebSocket status, and then
+[the missing-event steps](/docs/troubleshooting/#a-watched-event-was-not-recorded).

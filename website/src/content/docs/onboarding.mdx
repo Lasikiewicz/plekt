@@ -1,0 +1,123 @@
+---
+title: Onboarding
+description: Claim your Plekt instance, complete Guided Setup, and confirm your first sync.
+category: Start here
+order: 5
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/onboarding.md
+  - docs/dashboard.md
+  - public/modules/onboarding.js
+screenshots:
+  - /assets/app-captures/settings-tools-guided-setup-dark.png
+  - /assets/app-captures/settings-tools-guided-setup-light.png
+  - /assets/app-captures/dashboard-dark.png
+  - /assets/app-captures/dashboard-light.png
+---
+
+import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
+
+Once Plekt is running, claim the instance and follow Guided Setup. A media server is
+optional during onboarding, so you can configure metadata, private lists, or backups before
+connecting Plex, Emby, or Jellyfin. Trakt, metadata providers, webhooks, and remote backups
+can also be added after the core connection is healthy.
+
+## Claim the instance
+
+On a fresh install with no administrator password, Plekt shows:
+
+**Claim this Plekt instance**
+
+Create the administrator username and password there.
+
+Claiming is a one-time action and should only be done by the person who controls the server.
+
+After claiming, Plekt opens the resumable setup guide.
+
+You can reopen it from the **Reopen Onboarding** link in [Settings → Tools](/docs/settings/tools/#reopen-onboarding).
+
+## If you forget the administrator password
+
+Plekt keeps administrator login local to the instance and does not send email reset links.
+If you can still sign in, change it under [Settings → General → Account](/docs/settings/general/#account).
+If you are locked out, stop Plekt, set a new `ADMIN_PASSWORD` in the host or container
+environment, and restart it. If the password was previously changed inside Plekt, remove
+only the `authManagedInApp` property from `data/config.json` first so the environment value can
+be applied. The old password cannot be recovered from its stored hash.
+
+A setup step can be skipped and completed later; the guide does not replace the individual
+settings pages.
+
+## Complete the guided setup
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-tools-guided-setup-dark.png"
+  lightSrc="/assets/app-captures/settings-tools-guided-setup-light.png"
+  alt="Plekt Settings Tools with the Reopen Onboarding button in the top bar"
+  caption="Use Reopen Onboarding in Settings Tools to return to the guided setup."
+/>
+
+Follow the stages in order when possible. Each step explains what it configures and can be
+skipped if you are not ready to set it up yet:
+
+1. **Overview** — confirm the instance is running and see which optional services are available.
+2. **Trakt** — optionally connect Trakt or import an existing history archive.
+3. **Metadata** — add a TMDB key first; add TheTVDB, Fanart.tv, OMDb, or YouTube when you
+   need their additional data.
+4. **Media servers** — optionally connect and test Plex, Emby, Jellyfin, or more than one server.
+5. **Webhooks** — configure Emby or Jellyfin event delivery. The in-app guide recommends the
+   Plekt Jellyfin plugin and also explains the webhook alternative; use only one sender.
+   Plex's built-in WebSocket channel does
+   not need a manual webhook.
+6. **Backup** — schedule local backups and optionally configure a Backblaze B2 mirror.
+7. **Import & sync** — watch the import and delivery status rather than starting another
+   full sync immediately.
+8. **Options** — choose watched-flag handling in Sync Tuning. **Require review** sends provider
+   Mark Played events without a reliable completion time to [Manual Watch review](/docs/manual-watch-review/);
+   Fast Local-Network Sync is available only for trusted local networks. **Sync Up Next to media
+   apps** is enabled by default and coalesces queue additions, removals, reorderings, and
+   progress changes into a background push to Plex, Emby, and Jellyfin, including when the
+   Dashboard is closed.
+9. **Review** — confirm each step and open the dashboard.
+
+The **Media servers** stage is part of Guided Setup. If you skip it, return later through
+[Settings → Media servers](/docs/settings/media-servers/) rather than repeating an
+onboarding step here.
+
+## Confirm the first sync
+
+The dashboard is the quickest health check after a server is connected.
+
+It separates **Now Playing**, a mixed **Up Next** queue containing resume items and released
+TV episodes, and completed TV and movie history rows. Before a media server is connected, use the setup steps and
+**Settings** to confirm the instance itself is healthy.
+
+The sidebar sync indicator is only a summary.
+
+For the reason behind a result, open Sync Activity and inspect the source, destination,
+outcome, and message.
+
+<ScreenshotFigure
+  darkSrc="/assets/home-dashboard-dark.jpg"
+  lightSrc="/assets/home-dashboard.jpg"
+  alt="Plekt dashboard showing Now Playing, Up Next, watch history, and movie activity"
+  caption="After connecting a server, use the dashboard to confirm that activity is being recorded and the library is populated."
+  loading="eager"
+/>
+
+If history is missing, check the [media-server connection](/docs/integrations/#media-servers).
+
+Then check [troubleshooting](/docs/troubleshooting/#a-watched-event-was-not-recorded).
+
+If an event is recorded but not delivered, use the
+[Sync Activity guide](/docs/concepts/#read-sync-activity) before running a whole-library
+repair.
+
+## What to do next
+
+- [Understand the sync model](/docs/concepts/)
+- [Connect media servers and providers](/docs/integrations/)
+- [Choose a focused guide](/docs/guides/)
+- [Browse Discover and private lists](/docs/discover/)
+- [Back up and maintain the instance](/docs/operations/)
+

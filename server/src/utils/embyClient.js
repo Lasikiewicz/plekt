@@ -880,7 +880,7 @@ export function isUpNextSeedDeviceId(value = "") {
   return String(value ?? "").trim().toLowerCase() === UP_NEXT_SEED_DEVICE_ID;
 }
 
-const UP_NEXT_RAIL_AUTHORIZATION = `MediaBrowser Client="Plembfin", Device="Plembfin Up Next", DeviceId="${UP_NEXT_SEED_DEVICE_ID}", Version="1.0.0"`;
+const UP_NEXT_RAIL_AUTHORIZATION = `MediaBrowser Client="Plembfin", Device="Plekt Up Next", DeviceId="${UP_NEXT_SEED_DEVICE_ID}", Version="1.0.0"`;
 
 async function embyRailSessionReport(config, path, payload, { lane = "interactive" } = {}) {
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}${path}`);

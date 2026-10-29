@@ -288,6 +288,7 @@ const SECTIONS = {
       { id: "remove-duplicate-watches", label: "Remove Duplicate Watches", description: "Keeps the oldest watch date for each TV episode or movie library-wide" },
       { id: "episode-title-gap-fix", label: "Restore Missing Episode Names", description: "Backfill real episode names onto watch rows that only stored a coordinate" },
       { id: "playstate-aliases", label: "Watch-State Aliases", description: "Decide which show unplaced episode watch states belong to" },
+      { id: "split-episode-repair", label: "Repair Split Episode Shows", description: "Move Emby or Jellyfin watches stored under an episode's own ids back onto their show" },
     ],
     isDisplayOnly: true,
   },

@@ -52,7 +52,7 @@ test("generated index groups modules by directory, caps long rows and has no lin
   assert.match(output, /\| `\/\^alpha\\\/\[a-z\]\+\(\?:\\\/status\\\|\\\/server\)\?\$\/i` \|/, "regex pipes are escaped for the table");
   const headings = [...output.matchAll(/^### (.+)$/gm)].map((match) => match[1]);
   assert.deepEqual(headings, ["public/modules/", "server/src/", "server/src/routes/"]);
-  assert.match(output, /- `many\.js`: a, b, c, d, e, f, g, h and 2 more\n- `widget\.js`:/);
+  assert.match(output, /- `many\.js`: a, b, c, d, e, f, g and 3 more\n- `widget\.js`:/);
   assert.match(output, /- `index\.js`: dispatch\n/);
   assert.doesNotMatch(output, /:\d+\b(?![^`]*`)/, "no file:line references");
 });

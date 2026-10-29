@@ -27,7 +27,9 @@ import { handleWatchlistSync } from "./routes/watchlistSync.js";
 import { handleDroppedTitles } from "./routes/droppedTitles.js";
 import { handleManualWatchReview } from "./routes/manualWatchReview.js";
 import { handlePlaystateAliases } from "./routes/playstateAliases.js";
+import { handleSplitEpisodeRepair } from "./routes/splitEpisodeRepair.js";
 import { handleWebhookPort } from "./routes/webhookPort.js";
+import { handleWebhookTest } from "./routes/webhookTest.js";
 import { isDemoMode } from "./utils/demoMode.js";
 import { handleTautulli } from "./routes/tautulli.js";
 import { handleNetflixImport } from "./routes/netflixImport.js";
@@ -65,10 +67,11 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^anidb(?:\/|$)/i,
   /^(?:tmdb-search|tvdb-search|fix-match-search|media-search|refresh-tmdb-metadata|refresh-tvdb-metadata)(?:\/|$)/i,
   /^(?:remote-artwork|tmdb-poster|tmdb-profile|fanart-images|tvdb-images|tmdb-images|season-poster-options|youtube-meta|omdb-rating)(?:\/|$)/i,
-  /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|likely-false-)/i,
+  /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|split-episode-|likely-false-)/i,
   /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases|show-season-source)/i,
   /^(?:diagnostic-logs|debug-plex-match|webhook)$/i,
   /^webhook-port(?:\/|$)/i,
+  /^webhook-test(?:\/|$)/i,
 ]);
 
 const DEMO_MUTATION_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
@@ -222,7 +225,9 @@ async function dispatch(req, res) {
     if (path === "manual-unwatch") return handleManualUnwatch(req, res);
     if (path === "manual-watch-review" || path.startsWith("manual-watch-review/")) return handleManualWatchReview(req, res, path);
     if (path === "playstate-aliases" || path.startsWith("playstate-aliases/")) return handlePlaystateAliases(req, res, path);
+    if (path === "split-episode-audit" || path === "split-episode-repair" || path === "split-episode-undo") return handleSplitEpisodeRepair(req, res, path);
     if (path === "webhook-port/status") return handleWebhookPort(req, res, path);
+    if (path.startsWith("webhook-test/")) return handleWebhookTest(req, res, path);
     if (path === "playback-progress") return handlePlaybackProgressList(req, res);
     if (path === "playback-progress/watch") return handlePlaybackProgressWatch(req, res);
     if (path === "playback-progress/unwatch") return handlePlaybackProgressUnwatch(req, res);

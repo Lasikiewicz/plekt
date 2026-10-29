@@ -1,0 +1,31 @@
+---
+title: Install with Node.js
+description: Install and run Plekt directly with Node.js.
+category: Start here
+order: 4
+sourceVersion: "2.2.1"
+sourcePaths:
+  - docs/development.md
+  - package.json
+screenshots: []
+---
+
+## Install with Node.js
+
+For a bare-metal install, use Node.js `22.19.0` or newer.
+
+From the repository root:
+
+```bash
+npm install
+npm start
+```
+
+Open `http://localhost:5056`.
+
+For connected-service testing, start Plekt from a host or network-enabled terminal. A
+restricted sandbox can reach the local page while still blocking requests to Plex, Emby, or
+Jellyfin.
+
+Use `npm run dev` during development when you want server files to reload as they change.
+<p class="install-next-step"><a class="button-primary" href="/docs/onboarding/">Next step: onboarding</a></p>
