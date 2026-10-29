@@ -19,16 +19,20 @@ export function assertScope(baseline, pending) {
 export function bugBacklogOverrideApplies(override, head) {
   return /^[a-f0-9]{40}$/.test(override || '') && override === head;
 }
+export function blockingBugBacklogItems(content) {
+  return content.split(/\r?\n/).filter(line => /^\s*-\s*\[\s\]/.test(line) &&
+    !/<!--\s*push-awaiting-test:\s*[^\s>][^>]*-->\s*$/.test(line));
+}
 export function assertBugBacklogClear() {
   const file = path.join(root, 'plan/bugs.md');
   if (!fs.existsSync(file)) throw Error('Cannot verify plan/bugs.md; refusing remote push.');
   const content = fs.readFileSync(file, 'utf8');
-  if (/^\s*-\s*\[\s\]/m.test(content)) {
+  if (blockingBugBacklogItems(content).length) {
     if (bugBacklogOverrideApplies(process.env.PLEKT_BUG_BACKLOG_OVERRIDE, git('rev-parse', 'HEAD'))) {
       console.log('User-authorized bug backlog exception for this exact HEAD; open reports remain unresolved.');
       return;
     }
-    throw Error('plan/bugs.md contains unchecked bug/follow-up work. Resolve and verify/close every item before any remote push; deferral does not clear the blocker.');
+    throw Error('plan/bugs.md contains blocking unchecked work. Resolve it or document an outstanding live/user test using the push-awaiting-test marker; deferral alone does not clear the blocker.');
   }
 }
 export function assertSafePaths(paths) {
@@ -46,8 +50,9 @@ const KNOWN_SECURITY_ALERTS = {
   ].map(([number, rule, file, fragments]) => [`code-scanning:${number}`, {
     matches: a => a.rule?.id === rule && a.rule?.security_severity_level === 'high' &&
       a.most_recent_instance?.location?.path === file && a.most_recent_instance?.ref === 'refs/heads/main' &&
-      a.most_recent_instance?.commit_sha === '453fc063c5ab504be2e51bb0630b4cd9bb0029bb',
-    note: 'known: the reviewed fix is in develop; this finding is from the older main scan',
+      (a.most_recent_instance?.commit_sha === '453fc063c5ab504be2e51bb0630b4cd9bb0029bb' ||
+        (number === 68 && a.most_recent_instance?.commit_sha === '02153c6f9fe558b5343da3a9ba2dfe002f21aa8d')),
+    note: 'known: the reviewed fix is present; this is a reviewed main scan finding',
     remedy: () => {
       try {
         const source = fs.readFileSync(path.join(root, file), 'utf8');

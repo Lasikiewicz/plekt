@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, versionAtLeast, vitePatched, bugBacklogOverrideApplies } from '../scripts/workflow-check.js';
+import { assertCleanup, assertScope, assertSafePaths, assertBuild, assertRestampOnly, assertCandidateLauncher, knownSecurityAlertNote, versionAtLeast, vitePatched, bugBacklogOverrideApplies, blockingBugBacklogItems } from '../scripts/workflow-check.js';
+
+test('only explicitly documented outstanding live or user tests bypass the bug gate', () => {
+  const content = '- [ ] Fix needed\n- [ ] Await test <!-- push-awaiting-test: reporter tests released fix -->\n- [ ] Empty <!-- push-awaiting-test: -->\n- [x] Done';
+  assert.deepEqual(blockingBugBacklogItems(content), ['- [ ] Fix needed', '- [ ] Empty <!-- push-awaiting-test: -->']);
+});
 
 test('bug backlog exception applies only to an explicitly supplied full HEAD', () => {
   const head = 'a'.repeat(40);
@@ -21,11 +26,16 @@ test('reviewed security fixes recognize only their older main scan', () => {
     const alert = { number, rule: { id: rule, security_severity_level: 'high' }, most_recent_instance: {
       location: { path: file }, ref: 'refs/heads/main', commit_sha: '453fc063c5ab504be2e51bb0630b4cd9bb0029bb',
     } };
-    assert.match(knownSecurityAlertNote('code-scanning', alert), /reviewed fix is in develop/);
+    assert.match(knownSecurityAlertNote('code-scanning', alert), /reviewed fix is present/);
     for (const change of [{ ref: 'refs/heads/develop' }, { commit_sha: 'new-main-commit' }, { location: { path: 'another.js' } }]) {
       assert.equal(knownSecurityAlertNote('code-scanning', { ...alert, most_recent_instance: { ...alert.most_recent_instance, ...change } }), null);
     }
   }
+  const latest68 = { number: 68, rule: { id: 'js/incomplete-multi-character-sanitization', security_severity_level: 'high' }, most_recent_instance: {
+    location: { path: 'server/src/utils/anidbProtocol.js' }, ref: 'refs/heads/main', commit_sha: '02153c6f9fe558b5343da3a9ba2dfe002f21aa8d',
+  } };
+  assert.match(knownSecurityAlertNote('code-scanning', latest68), /reviewed fix is present/);
+  assert.equal(knownSecurityAlertNote('code-scanning', { ...latest68, number: 69 }), null);
 });
 
 test('cleanup refuses running and queued jobs, accepts no run or completed', () => {

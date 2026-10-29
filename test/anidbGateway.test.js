@@ -48,6 +48,13 @@ test("AniDB chooses official English then romanized titles and retains native ep
   assert.equal(data.id, undefined); // No TMDB-shaped canonical ID or season coordinates.
 });
 
+test("AniDB descriptions cannot retain tag delimiters after nested markup is removed", () => {
+  for (const description of ["&lt;scrip&lt;script&gt;x&lt;/script&gt;t&gt;alert(1)&lt;/script&gt;", "&lt;img src=x onerror=alert(1)&gt;", "text &lt;script"]) {
+    const data = parseAnidbAnime(xml().replace(/<description>.*?<\/description>/, `<description>${description}</description>`), "101");
+    assert.doesNotMatch(data.overview, /[<>]/);
+  }
+});
+
 test("AniDB rejects malformed, mismatched, deeply nested and DTD payloads", () => {
   for (const body of ["<anime>", xml("102"), '<!DOCTYPE anime [<!ENTITY x "boom">]>' + xml(),
     `<anime id="101">${"<node>".repeat(40)}text${"</node>".repeat(40)}</anime>`, "x".repeat(ANIDB_MAX_BYTES + 1)]) {

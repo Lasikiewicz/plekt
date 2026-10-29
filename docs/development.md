@@ -37,10 +37,15 @@ fingerprint, or missing fix keeps the normal blocking rule for high/critical or 
 findings. See [decision 50](decisions.md#50-retire-the-reddit-release-app-from-the-repository).
 
 CodeQL #66-70 from main commit `453fc063c5ab504be2e51bb0630b4cd9bb0029bb` have
-reviewed fixes in develop. Their exact rule, file, severity and commit fingerprints are
-notes only while the corresponding source fixes remain present; later findings block normally.
+reviewed fixes in develop. Alert #68 also remains open on main scan commit
+`02153c6f9fe558b5343da3a9ba2dfe002f21aa8d`, which already contains the angle-bracket
+removal fix; adversarial AniDB description tests cover it. Their exact rule, file, severity
+and commit fingerprints are notes only while the corresponding source fixes remain present;
+other findings block normally.
 
-Open items in `plan/bugs.md` block pushes by default. Only after explicit user approval,
+Open items in `plan/bugs.md` block pushes unless their only remaining work is a specific
+live or user test, documented on the item with `<!-- push-awaiting-test: test description -->`.
+See `docs/agent-workflow-rules.md` for the criteria. Only after explicit user approval,
 set `PLEKT_BUG_BACKLOG_OVERRIDE` to the full SHA of the exact HEAD being pushed for
 the gate and push command. The hook logs the exception and keeps all other checks active.
 The exception stops applying when HEAD changes; it does not close or modify bug reports.

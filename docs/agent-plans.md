@@ -9,6 +9,9 @@ TODO. There is no root `TODO.md` (retired 15 September 2026).
 
 - **Links in `todo.md` are written from the project root** (`plan/<name>.md`), because the
   user opens it in the Claude desktop app, which resolves links from the project root.
+- **Plan checkboxes show progress**: use `- [ ]` for work not started and `- [-]` for work
+  in progress. The latter renders as the orange single-line checkbox in the user's Markdown
+  viewer. Apply this to TODO entries and plan/step checklist items; completed items use `- [x]`.
 - **`todo.md` layout** (user-agreed 26 October 2026): title `# Plekt TODO`, then
   **Release: vX.Y.Z (Expected)** with **Work in Progress**, **Requires Remote Testing**, and
   **Not Started** subsections; **Post Release (vX.Y.Z)**; and **Future Release**. Do not add
