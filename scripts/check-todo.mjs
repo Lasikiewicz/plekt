@@ -16,13 +16,15 @@ const SECTION_PATTERNS = [
   ["Release", /^Release: v[^)]+ \(Expected\)$/],
   ["Future Release", /^Future Release$/],
 ];
+// Optional, and always first when present: a small bug-fix release, the next patch version.
+const HOTFIX_PATTERN = /^Hotfix: v[^)]+ \(Expected\)$/;
 const STATUS_SECTIONS = ["Work in Progress", "Requires Remote Testing", "Not Started"];
-// A release-plan entry is two lines, the first ending in a `\` line break:
-// `**Title** - [](plan/<name>.md) - <date>`, then a very brief summary. The link has no text;
-// the desktop app shows it as the plan file's chip.
-const ENTRY = /^\*\*[^*]+\*\* - \[[^\]]*\]\(plan\//;
+// A plan entry is two lines, the first ending in two spaces (a hard line break):
+// `- [ ] [Title](plan/<name>.md) - <date>` (`- [-]` in progress, `Issue #54: ` before the link
+// for an issue), then a very brief summary.
+const ENTRY = /^- \[[ x-]\] (?:Issue #\d+: )?\[[^\]]+\]\(plan\//;
 // The date on the entry line: `16 October 2026` or, when the time is known, `16 October 2026, 18:42`.
-const DATE_LINE = /^\*\*.*\) - (\d{1,2} \w+ \d{4})(?:, (\d{1,2}:\d{2}))?/m;
+const DATE_LINE = /\]\(plan\/[^)\s]+\) - (\d{1,2} \w+ \d{4})(?:, (\d{1,2}:\d{2}))?/m;
 const NOT_PLANS = new Set(["README.md", "updates.md"]);
 
 function readStdin() {
@@ -111,11 +113,16 @@ function check() {
       ? "Active Post Release must appear above Release"
       : "Release must appear above Post Release until its version has been released");
   }
-  const expectedOrder = postShouldBeFirst
-    ? [postPattern, releasePattern, futurePattern]
-    : [releasePattern, postPattern, futurePattern];
+  const hotfixCount = headings.filter(({ name }) => HOTFIX_PATTERN.test(name)).length;
+  if (hotfixCount > 1) errors.push('todo.md needs at most one "Hotfix" section');
+  const expectedOrder = [
+    ...(hotfixCount ? [HOTFIX_PATTERN] : []),
+    ...(postShouldBeFirst
+      ? [postPattern, releasePattern, futurePattern]
+      : [releasePattern, postPattern, futurePattern]),
+  ];
   const orderedHeadings = headings
-    .filter(({ name }) => SECTION_PATTERNS.some(([, pattern]) => pattern.test(name)))
+    .filter(({ name }) => [HOTFIX_PATTERN, ...SECTION_PATTERNS.map(([, pattern]) => pattern)].some((pattern) => pattern.test(name)))
     .map(({ name }) => name);
   const orderIsValid = expectedOrder.every((pattern, index) => pattern.test(orderedHeadings[index] || ""))
     && orderedHeadings.length === expectedOrder.length;

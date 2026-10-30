@@ -2,38 +2,43 @@
 
 ## Documentation and backlog sync
 
-[`todo.md`](../todo.md) is the single backlog: one line per plan, linking its summary,
-never a detailed entry. Empty standing backlogs, including `plan/bugs.md` when it has no open
-bugs, are not listed. Completed plans move to [`plan/archive/`](../plan/archive/) and leave the
-TODO. There is no root `TODO.md` (retired 15 September 2026).
+[`todo.md`](../todo.md) is the single backlog: one entry per plan. Empty standing backlogs,
+including `plan/bugs.md` when it has no open bugs, are not listed. Completed plans move to
+[`plan/archive/`](../plan/archive/) and leave the TODO. There is no root `TODO.md` (retired
+15 September 2026).
 
 - **Links in `todo.md` are written from the project root** (`plan/<name>.md`), because the
   user opens it in the Claude desktop app, which resolves links from the project root.
 - **Plan checkboxes show progress**: use `- [ ]` for work not started and `- [-]` for work
   in progress. The latter renders as the orange single-line checkbox in the user's Markdown
   viewer. Apply this to TODO entries and plan/step checklist items; completed items use `- [x]`.
-- **`todo.md` layout** (user-agreed 26 October 2026): title `# Plekt TODO`, then
+- **`todo.md` layout** (user-agreed 26 October 2026, Hotfix section added 30 October 2026):
+  title `# Plekt TODO`, then the sections in order of importance. **Hotfix: vX.Y.Z (Expected)**
+  is always first: a hotfix is small, holds bug fixes only, and ships as the next patch release
+  (the released version with its third digit, Z, raised by one). It is omitted while it has no
+  entries and uses only the status subsections it needs, named like Release's. Next is
   **Release: vX.Y.Z (Expected)** with **Work in Progress**, **Requires Remote Testing**, and
-  **Not Started** subsections; **Post Release (vX.Y.Z)**; and **Future Release**. Do not add
-  separate Last edited or Deferred sections. Work deferred from the current release belongs in
-  Future Release. Keep the current Release above Post Release while both name the unreleased
-  candidate version. After that version is released, move its Post Release section above Release
-  while post-release tasks remain; when empty, keep Release above it. Each plan appears exactly
-  once in the applicable release and status subsection, as two lines, the first ending in a `\` hard line
-  break so they render separately:
-  `**Title** - [](plan/<name>.md) - 16 October 2026, 18:42` (or
-  `**Title - Not Started** - [](plan/<name>.md) - 16 October 2026, 18:42` when the plan has not
-  started; the link has no text, so the desktop app shows only the plan file's chip; the date last worked on, with the
-  time when known, then ` (<branch>)` when the work is on a branch other than `develop`), and a
-  very brief summary (a few words). A blank line separates entries, and each subsection is
-  ordered by that date, newest first. Plan bookkeeping (moves, merges, link fixes) does not count as work
-  on a plan. Keep each plan in the appropriate release and status subsection when its state changes. There is no "Waiting on"
+  **Not Started** subsections; **Post Release (vX.Y.Z)**; and **Future Release** last. Do not add separate Last
+  edited or Deferred sections. Work deferred from the current release belongs in Future Release.
+  Keep the current Release above Post Release while both name the unreleased candidate version.
+  After that version is released, move its Post Release section above Release while
+  post-release tasks remain; when empty, keep Release above it. Each plan appears exactly once,
+  in the applicable release and status subsection, as two lines, the first ending in two spaces
+  (a hard line break) so they render separately:
+  `- [-] [Title](plan/<name>.md) - 16 October 2026, 18:42` (use `- [ ]` when the plan has not
+  started, and prefix the title with `Issue #54: ` before the link when it tracks an issue), then
+  the date last worked on, with the time when known, then ` (<branch>)` when the work is on a
+  branch other than `develop`, and on the second line a very brief summary (a few words). A blank
+  line separates entries, and each subsection is ordered by that date, newest first. Plan
+  bookkeeping (moves, merges, link fixes) does not count as work on a plan. Keep each plan in the
+  appropriate release and status subsection when its state changes. There is no "Waiting on"
   section or change log: what the user must do lives in each plan's "Waiting on you", and history
   lives in the plans.
 - **Release assignment for new work**: when creating a new plan or feature, ask which release
   bucket it belongs in unless the user already specified one. Offer exactly three choices
-  (user-agreed 27 October 2026): Hotfix (a fix to the released version, listed under Post
-  Release), Next release (the expected version, listed under Release), or Future release.
+  (user-agreed 27 October 2026, Hotfix placement revised 30 October 2026): Hotfix (a fix to the
+  released version, listed in the Hotfix section at the top), Next release (the expected version,
+  listed under Release), or Future release.
   Record the answer in the
   plan and list it in that TODO section. Defer work by assigning it to a future release, not by
   creating a Deferred category. Derive the current release from the latest
