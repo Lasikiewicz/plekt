@@ -1,25 +1,7 @@
 {
-  "version": "2.2.1.0.2",
-  "build": 2,
-  "resetCommit": "bb6f0f44f6c459b207cacd8158c4f31fc04f0450",
-  "updatedAt": "2026-10-29T11:41:45.621Z",
-  "entries": [
-    {
-      "build": 2,
-      "date": "2026-10-29T11:41:45.621Z",
-      "commit": "35251fbe6f8f25508fe2cd6a4ba2c5a796570978",
-      "message": "Feature - Improve Emby sync and webhook diagnostics",
-      "author": "Lasikiewicz",
-      "details": [
-        "Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
-        "Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
-        "Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
-        "Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
-        "Align webhook setup controls and improve dialog contrast and mobile spacing.",
-        "Rename the Emby Up Next device and keep its refresh out of Now Playing.",
-        "Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
-        "Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables."
-      ]
-    }
-  ]
+  "version": "2.2.1.1.0",
+  "build": 0,
+  "resetCommit": "afb45af6d99d59411b0e2b38749f656db13ccaf3",
+  "updatedAt": "2026-10-30T15:20:54.127Z",
+  "entries": []
 }

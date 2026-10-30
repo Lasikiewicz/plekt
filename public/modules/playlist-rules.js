@@ -3,7 +3,7 @@
 // label, the rule error and held check, and the Options menu's Info, Refresh
 // now, and Stop updating. playlists.js owns the dialogs and passes its
 // injected helpers in.
-import { escapeAttribute, escapeHtml, formatDate } from "./utils.js?v=2.2.1.0.2";
+import { escapeAttribute, escapeHtml, formatDate } from "./utils.js?v=2.2.1.1.0";
 
 const APP_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
 const SOURCE_LABELS ={ library: "From your libraries", catalogue: "From the whole TMDB catalogue" };

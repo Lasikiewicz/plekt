@@ -1,8 +1,65 @@
 {
   "baseVersion": "2.2.1",
-  "build": 0,
-  "version": "2.2.1.0.0",
-  "updatedAt": "2026-10-28T00:53:10.354Z",
+  "build": 1,
+  "version": "2.2.1.1.0",
+  "updatedAt": "2026-10-30T15:20:54.127Z",
   "releaseMessage": "",
-  "entries": []
+  "entries": [
+    {
+      "build": 1,
+      "version": "2.2.1.1.0",
+      "shortVersion": "2.2.1.1.0",
+      "date": "2026-10-30T15:20:54.127Z",
+      "commit": "afb45af6d99d59411b0e2b38749f656db13ccaf3",
+      "message": "Feature - Improve Emby sync and webhook diagnostics",
+      "author": "Lasikiewicz",
+      "details": [
+        "Feature: Improve Emby sync and webhook diagnostics",
+        "Feature: Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
+        "Feature: Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
+        "Feature: Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
+        "Feature: Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
+        "Feature: Align webhook setup controls and improve dialog contrast and mobile spacing.",
+        "Feature: Rename the Emby Up Next device and keep its refresh out of Now Playing.",
+        "Feature: Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
+        "Feature: Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables."
+      ],
+      "sections": {
+        "newFeatures": [
+          "Improve Emby sync and webhook diagnostics",
+          "Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
+          "Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
+          "Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
+          "Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
+          "Align webhook setup controls and improve dialog contrast and mobile spacing.",
+          "Rename the Emby Up Next device and keep its refresh out of Now Playing.",
+          "Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
+          "Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables."
+        ],
+        "majorBugFixes": [],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Improve Emby sync and webhook diagnostics",
+              "Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
+              "Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
+              "Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
+              "Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
+              "Align webhook setup controls and improve dialog contrast and mobile spacing.",
+              "Rename the Emby Up Next device and keep its refresh out of Now Playing.",
+              "Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
+              "Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables."
+            ]
+          }
+        ],
+        "majorBugFixes": [],
+        "tweaks": []
+      }
+    }
+  ],
+  "shortVersion": "2.2.1.1.0"
 }
