@@ -26155,6 +26155,8 @@ html.light-mode .webhook-test-modal .status-pill.status-error { color: #b91c1c; 
 .webhook-test-success { display: flex; gap: var(--space-3); align-items: flex-start; padding: var(--space-3) var(--space-4, 16px); border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); }
 .webhook-test-success b { font-size: 1.1rem; }
 .webhook-test-success p { margin: 2px 0 0; font-size: 0.95rem; line-height: 1.5; color: var(--text); }
+html.light-mode .webhook-test-success-icon { color: #fff; }
+.webhook-test-item .webhook-test-note { color: var(--soft); }
 .webhook-test-success-icon { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: #04130d; font-weight: 700; font-size: 1.1rem; }
 .webhook-test-item { display: flex; gap: var(--space-3); align-items: center; padding: var(--space-3); border: 1px solid var(--line-subtle); border-radius: 10px; background: color-mix(in srgb, var(--text) 3%, transparent); }
 .webhook-test-item > div { display: grid; gap: 3px; min-width: 0; }

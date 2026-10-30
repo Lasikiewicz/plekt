@@ -78,7 +78,7 @@ const instructions = (provider, startButton) => {
   return `
   <div class="webhook-test-callout">
     <span class="webhook-test-callout-title">Safe to try</span>
-    <p>The test mark is never added to your history or sent to your other connected services, and one press of <b>Unmark</b> puts it back as it was.</p>
+    <p>The test mark is never added to your history or sent to your other connected services, and Plekt can put it back as it was when the test finishes.</p>
   </div>
   <ol class="webhook-test-steps">
     ${steps.map(([title, text]) => `<li><span class="webhook-test-step-title">${title}</span><span class="webhook-test-step-text">${text}</span></li>`).join("")}
@@ -217,8 +217,8 @@ function openWebhookTestDialog(provider) {
     stopTimers();
     overlay.remove();
     document.removeEventListener("keydown", onKey);
-    // Closing mid-test or with the item still marked releases it, same as Cancel.
-    if (view.status === "waiting" || (view.status === "passed" && !view.unmarkedAt)) {
+    // Closing mid-test, with the item still marked, or after the removed screen ends the session, same as Cancel, so reopening starts from the instructions.
+    if (view.status === "waiting" || view.status === "passed") {
       await testApi("cancel", "POST").catch(() => null);
     }
   };
