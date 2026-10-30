@@ -26095,6 +26095,21 @@ html .setup-step-body .setup-server-row > .setup-server-row-actions { margin-top
 .setup-webhook-confirmation-row .setup-webhook-confirmation:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .setup-webhook-confirmation-row .setup-webhook-confirmation:has(input:checked) { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 22%, #111820); color: var(--text); }
 .setup-webhook-confirmation-row .setup-webhook-confirmation:has(input:checked)::before { content: "\2713"; color: var(--accent); font-size: 0.95em; }
+/* The settings-pane field-label colour rules (specificity 0,7,1) force grey text on the toggle, and its fill is a fixed navy. Restate colour per theme with !important, and give light mode its own fill, so the toggle keeps readable contrast in both. */
+.setup-webhook-confirmation-row .setup-webhook-confirmation { color: var(--soft) !important; }
+.setup-webhook-confirmation-row .setup-webhook-confirmation:hover,
+.setup-webhook-confirmation-row .setup-webhook-confirmation:has(input:checked) { color: var(--text) !important; }
+html.light-mode .setup-webhook-confirmation-row .setup-webhook-confirmation { background: var(--panel-2); }
+html.light-mode .setup-webhook-confirmation-row .setup-webhook-confirmation:hover { background: var(--surface-hover); }
+html.light-mode .setup-webhook-confirmation-row .setup-webhook-confirmation:has(input:checked) { background: color-mix(in srgb, var(--accent) 14%, #fff); }
+/* Mobile: 44 px minimum tap targets for the setup-step Test button, the confirmation toggle and the pop-up close button. */
+@media (max-width: 760px) {
+  /* The settings pane forces min-height 2.05rem on ghost buttons with !important, so restate it here. */
+  html .settings-pane .setup-webhook-confirmation-row button[data-webhook-test-open],
+  .setup-webhook-confirmation-row [data-webhook-test-open],
+  .setup-webhook-confirmation-row .setup-webhook-confirmation { min-height: 44px !important; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; }
+  .webhook-test-modal .settings-modal-close { flex: 0 0 44px; width: 44px; min-width: 44px; height: 44px; }
+}
 /* Webhook delivery test pop-up: wider and larger type than the default settings modal. */
 .settings-modal.webhook-test-modal { width: min(880px, 96vw); font-size: 1.05rem; }
 .webhook-test-modal .settings-modal-head h3 { font-size: 1.3rem; }
@@ -26115,6 +26130,13 @@ html.light-mode .settings-modal.webhook-test-modal .button-primary:hover:not(:di
   background: color-mix(in srgb, var(--blue), #000 15%) !important;
   color: #fff !important;
 }
+/* White on the dark theme's emerald fill is only about 2.5:1; dark text on it is about 7:1. */
+html:not(.light-mode) .settings-modal.webhook-test-modal .button-primary,
+html:not(.light-mode) .settings-modal.webhook-test-modal .button-primary:hover:not(:disabled) {
+  color: #04130d !important;
+}
+/* The light theme's red on its pale red pill is about 4.3:1 at this size; a darker red clears 4.5:1. */
+html.light-mode .webhook-test-modal .status-pill.status-error { color: #b91c1c; }
 .webhook-test-callout { display: grid; gap: 4px; padding: var(--space-3) var(--space-4, 16px); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--accent) 8%, transparent); }
 .webhook-test-callout p { margin: 0; font-size: 0.98rem; line-height: 1.5; color: var(--text); }
 .webhook-test-callout-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
