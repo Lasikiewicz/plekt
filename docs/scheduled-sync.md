@@ -313,7 +313,10 @@ Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback 
    - **Tracker write intents.** Every Trakt history add or remove is first committed
      to `tracker_write_intents` (`trackerWriteIntents.js`, wrapped around the send by
      `trackerIntentRequest.js`), keyed by watch record, action and watched date, so two
-     plays of one title stay independent. A send whose response is lost (timeout, 5xx,
+     plays of one title stay independent. A Trakt dispatch that arrives without the
+     record id reuses the unsent intent captured for the same identity and exact
+     watched date, so one play never has two intents competing for its Trakt echo.
+     A send whose response is lost (timeout, 5xx,
      or a restart mid-send) becomes `uncertain`: the next attempt reads Trakt's history
      around the watched date first, acknowledges a matching play, and only resends when
      the history read succeeded and holds no match. A play that matches more than one

@@ -37,6 +37,13 @@ function preferredTitle(titles) {
     || titles.find((title) => title.language === "x-jat" && title.type !== "short"))?.text || "";
 }
 
+// Drops each "<...>" span in one pass. The caller still removes every remaining
+// angle bracket, so nested markup cannot rebuild a tag.
+function stripTags(text) {
+  const [first, ...rest] = String(text).split("<");
+  return first + rest.map((part) => part.slice(part.indexOf(">") + 1)).join("");
+}
+
 export function parseAnidbAnime(xml, expectedAid) {
   const aid = normalizeAnidbId(expectedAid);
   if (typeof xml !== "string" || Buffer.byteLength(xml, "utf8") > ANIDB_MAX_BYTES) throw anidbError("INVALID_XML");
@@ -58,7 +65,7 @@ export function parseAnidbAnime(xml, expectedAid) {
     aid, title, titles,
     // Plain text only: strip AniDB URL/label markup and HTML-like tags. Rendering
     // code must still escape this text as it does every other provider field.
-    overview: valueOf(anime.description).replace(/https?:\/\/[^\s\[\]]+\s+\[([^\]]+)\]/g, "$1").replace(/<[^>]*>/g, "").replace(/[<>]/g, "").trim(),
+    overview: stripTags(valueOf(anime.description).replace(/https?:\/\/[^\s\[\]]+\s+\[([^\]]+)\]/g, "$1")).replace(/[<>]/g, "").trim(),
     type: valueOf(anime.type),
     episodes: listOf(anime.episodes?.episode).map((episode) => ({
       id: String(episode["@id"] || ""),

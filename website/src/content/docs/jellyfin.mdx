@@ -3,7 +3,7 @@ title: Jellyfin
 description: Connect Jellyfin for playback events, watch history, resume progress, and playlists.
 category: Connect services
 order: 4.3
-sourceVersion: "2.2.1"
+sourceVersion: "2.2.2"
 sourcePaths:
   - docs/jellyfin.md
   - docs/webhooks.md
@@ -47,6 +47,9 @@ The body must be JSON.
 Jellyfin may label the payload `text/plain`.
 
 Plekt still reads it as JSON and records malformed bodies in Sync Activity.
+
+To confirm a manual mark reaches Plekt, use the
+[webhook Test button](/docs/settings/webhooks/#test-an-emby-or-jellyfin-sender).
 
 Jellyfin still participates in watched-state and optional personal-rating sync, but it is not
 a Watchlist provider. Explicit watched and unwatched events remain authoritative, with scheduled

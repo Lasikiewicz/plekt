@@ -116,6 +116,20 @@ export function cancelTrackerWriteIntent(id) {
   return db.prepare("UPDATE tracker_write_intents SET status='cancelled',settled_at=?,updated_at=? WHERE id=? AND status='review'").run(now, now, id).changes === 1;
 }
 
+// Dispatch can arrive without the row id, moments after the same watch row
+// captured its destinations. A second intent for that one play would leave the
+// Trakt echo matching both, and hold them as ambiguous. Exact date and identity
+// only: this may reuse an unsent intent, never merge two plays. Simkl keeps its
+// own batching path.
+function capturedUnsentTraktIntent(provider, connection, media, action) {
+  if (provider !== "trakt" || action !== "watched" || media.watchRecordId || media.trackerActionId) return null;
+  const watchedAt = media.watched_at || media.watchedAt;
+  if (!watchedAt) return null;
+  return db.prepare(`SELECT * FROM tracker_write_intents WHERE provider=? AND connection_id=? AND account_id=? AND media_key=? AND action=?
+    AND watched_at=? AND watch_record_id IS NOT NULL AND status='pending' AND attempts=0 ORDER BY created_at,id LIMIT 1`)
+    .get(provider, connection.id, connection.remoteUserId || "", getTrackerAdapter(provider).identity.key(media), action, new Date(watchedAt).toISOString()) || null;
+}
+
 export function trackerIntentForDispatch(provider, connection, media, action) {
   if (media.trackerWriteIntentId) {
     const intent = read(media.trackerWriteIntentId);
@@ -123,7 +137,8 @@ export function trackerIntentForDispatch(provider, connection, media, action) {
     if (intent.action !== action) return createTrackerWriteIntent({ provider, connection, media, action, watchRecordId: intent.watch_record_id, logicalKey: `${intent.id}:${action}` });
     return intent;
   }
-  const intent = createTrackerWriteIntent({ provider, connection, media, action, watchRecordId: media.watchRecordId || "" });
+  const intent = capturedUnsentTraktIntent(provider, connection, media, action)
+    || createTrackerWriteIntent({ provider, connection, media, action, watchRecordId: media.watchRecordId || "" });
   if (intent.attempts === 0 && intent.status === "pending") {
     // Eligibility was captured with the local identity. Dispatch may now have
     // translated compound episodes or applied an explicit Fix Match override.

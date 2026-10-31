@@ -3,7 +3,7 @@ title: Tools
 description: Reopen onboarding, repair local records, rebuild library identities, and wipe data safely.
 category: Settings
 order: 5.9
-sourceVersion: "2.2.1"
+sourceVersion: "2.2.2"
 sourcePaths:
   - public/index.html
   - public/modules/tools.js
@@ -38,8 +38,8 @@ page so recovery scope stays visible on its own.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-tools-database-repairs-dark.png"
   lightSrc="/assets/app-captures/settings-tools-database-repairs-light.png"
-  alt="Plekt Tools Database Repairs showing history-row, phantom-watch, duplicate-watch, and episode-name tools"
-  caption="Database Repairs focuses on derived rows, suspicious imports, duplicate watches, and missing episode names."
+  alt="Plekt Tools Database Repairs showing history-row, phantom-watch, duplicate-watch, episode-name, watch-state alias, and split episode tools"
+  caption="Database Repairs focuses on derived rows, suspicious imports, duplicate watches, missing episode names, and misplaced episode watches."
 />
 
 Database Repairs contains confirmed tools for repairing derived or duplicate data:
@@ -52,6 +52,8 @@ Database Repairs contains confirmed tools for repairing derived or duplicate dat
 - **Watch-State Aliases** lists episode watch states the automatic repair could not tie to
   their show, including title-only entries and newer entries that conflict with a show's
   watch state. See [Watch-State Aliases](#watch-state-aliases).
+- **Repair Split Episode Shows** moves Emby or Jellyfin watches stored under an episode's own
+  IDs back onto their show. See [Repair Split Episode Shows](#repair-split-episode-shows).
 
 The episode-name audit distinguishes resolved rows, retryable metadata failures, and episodes
 verified by the metadata source as **No title provided**. Repairs can change the rows used by
@@ -71,6 +73,22 @@ Review the reason and available show identity before choosing an action:
   They appear in **Dismissed**; choose **Restore for review** to return them to the active list.
 
 Only Plekt's own watch state changes; nothing is sent to connected platforms.
+
+### Repair Split Episode Shows
+
+Use this for Emby or Jellyfin only, when watches landed on an episode's own IDs instead of its
+show.
+
+1. Select **Check Split Shows**. This is read-only. It lists the rows it can prove against a
+   watched server episode and skips the rest with a reason.
+2. Tick the shows to repair, then select **Repair Ticked Shows**.
+3. Plekt re-checks those shows and takes a full backup. If the backup fails, it stops.
+
+A repair changes only watch history and resume positions in Plekt, and never merges into a
+watch the show already has. Those episodes are skipped for
+[Fix Match](/docs/media-details/). Nothing is sent to other apps; watches already sent
+elsewhere under the wrong IDs are flagged for you to check by hand. Each run is listed with
+**Undo this repair**.
 
 ## Library Rebuilds and Backfills
 

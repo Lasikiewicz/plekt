@@ -1,12 +1,11 @@
 {
-  "publishedVersion": "2.1.1",
+  "publishedVersion": "2.2.1",
   "unchanged": {
-    "settings/restore": "Reviewed restore modes and stale restore-lock recovery against the v2.2.0 candidate; the documented behavior remains current.",
-    "settings/sync": "Reviewed Up Next provider push, Manual Watch review, ratings and Watchlist sync against the v2.2.0 candidate; the documented controls remain current.",
-    "sync-tools": "Reviewed both Force Sync directions and the Settings Sync Tools surface against the v2.2.0 candidate; the instructions remain current.",
-    "safe-daily-workflows": "Reviewed resume guidance against the v2.2.0 candidate; it correctly points to Dashboard Now Playing and Up Next.",
-    "discover": "Reviewed feed, filter, recommendation and personal-action descriptions against the candidate and release notes; the relevant change is mobile row presentation, not these instructions.",
-    "playlists": "Reviewed playlist creation, automatic rules, imports and provider-sync guidance against the candidate and release notes; the relevant release change is mobile row presentation.",
-    "watchlist": "Reviewed membership, Plex-only projection and personal-action guidance against candidate documentation; the release changes folded card sizing on phones, not these instructions."
+    "concepts": "Reviewed webhooks, polling and scheduled work against the v2.2.2 candidate; the delivery test is covered by the Webhooks settings guide and these concepts are unchanged.",
+    "history-search": "Reviewed against the v2.2.2 candidate; keeping search input while the list refreshes is a fix that needs no change to the instructions.",
+    "navigation": "Reviewed against the v2.2.2 candidate; no routes, sidebar entries or settings pages changed.",
+    "settings/restore": "Reviewed against the v2.2.2 candidate; no restore code or controls changed in this release.",
+    "settings/sync": "Reviewed against the v2.2.2 candidate; the sync settings and controls are unchanged, and the series ID and conflict changes happen inside Force Sync.",
+    "stats": "Reviewed against the v2.2.2 candidate; linking titles by show ID corrects where a link lands, and the guide does not describe that detail."
   }
 }

@@ -3,7 +3,7 @@ title: Webhooks
 description: Configure platform event senders and protect the webhook endpoint with its secret.
 category: Settings
 order: 5.3
-sourceVersion: "2.2.1"
+sourceVersion: "2.2.2"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -39,6 +39,21 @@ polling providing reconciliation. Configure only one event sender per server.
 
 After configuring a sender, play a short portion of a known title and confirm both a new
 History row and a Sync Activity result.
+
+### Test an Emby or Jellyfin sender
+
+Emby and Jellyfin have a **Test** button beside **Plugin configured** or **Webhook configured**.
+It works for either sender. Plex has no button because it does not use a webhook.
+
+1. Select **Test**, then **Start test**. You have 5 minutes.
+2. Mark an unwatched episode or movie as played on that server, signed in as the account Plekt
+   is connected to.
+3. Read the result in the same window. It updates without a refresh and gives the likely cause
+   if nothing usable arrives, such as a rejected token or a missing mark-played event.
+
+After a pass, choose **Yes, remove it** to unmark the item on the server, or **No, leave it
+marked** to keep the mark. Plekt's next scan then treats a kept mark as a normal manual mark.
+The test itself adds nothing to your watch history and sends nothing to other apps or trackers.
 
 ## Webhook secret
 

@@ -8,29 +8,29 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.2.1.1.0" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.2.2.0.0" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.2.1.1.0"></script>
+    <script src="/theme-boot.js?v=2.2.2.0.0"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.1.1.0" />
-    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.1.1.0" />
-    <link rel="stylesheet" href="/styles.css?v=2.2.1.1.0" />
+    <link rel="modulepreload" href="/app.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.2.0.0" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.2.0.0" />
+    <link rel="stylesheet" href="/styles.css?v=2.2.2.0.0" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
@@ -2077,6 +2077,7 @@
                             <li><b>Remove Duplicate Watches</b><span>Finds repeated movie or episode watches and keeps the oldest date. The other rows are deleted and the correction is pushed to connected platforms after you confirm the exact count. This cannot be undone.</span></li>
                             <li><b>Restore Missing Episode Names</b><span>Finds episode rows with a missing or coordinate-only name and restores the real title using stored rows, cached season metadata, and a metadata lookup when needed. Read-only audit results are kept separate from retryable failures.</span></li>
                             <li><b>Watch-State Aliases</b><span>Lists unresolved episode watch states stored under episode ids or a title only, including newer conflicting entries. Per show, choose Belongs to this show (the newest watch state wins and the entries join the show) or Different show (they are left alone and hidden until restored from the Dismissed list). Only Plekt's local watch state changes; nothing is sent to connected platforms.</span></li>
+                            <li><b>Repair Split Episode Shows</b><span>Finds Emby or Jellyfin watches stored under an episode's own ids and lists what it can prove. Tick shows to move those watches back onto their show. Plekt takes a full backup first, sends nothing to connected platforms, and lists each run with an undo.</span></li>
                           </ul>
                         </div>
                       </div>
@@ -3193,7 +3194,7 @@
                         </header>
 
                         <p class="about-build-line" aria-label="Build information">
-                          <span>Version <strong id="aboutCurrentVersion">v2.2.1</strong></span>
+                          <span>Version <strong id="aboutCurrentVersion">v2.2.2</strong></span>
                           <span class="about-build-separator" aria-hidden="true">·</span>
                           <span>Channel <strong id="aboutReleaseChannel">Latest</strong></span>
                         </p>
@@ -3451,7 +3452,7 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.2.1.1.0"></script>
-    <script type="module" src="/app.js?v=2.2.1.1.0"></script>
+    <script type="module" src="/modules/analytics.js?v=2.2.2.0.0"></script>
+    <script type="module" src="/app.js?v=2.2.2.0.0"></script>
   </body>
 </html>

@@ -4,6 +4,30 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.2.2 - 31 October 2026
+
+This release improves Emby and Jellyfin sync diagnostics, adds safer webhook tests and split episode repair, and refines upcoming episode handling.
+
+[Visit the Plekt website](https://plekt.net)
+
+### New Features
+
+#### Sync & connection recovery
+
+- Improve Emby sync and webhook diagnostics
+- Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.
+- Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.
+- Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.
+- Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.
+- Align webhook setup controls and improve dialog contrast and mobile spacing.
+- Rename the Emby Up Next device and keep its refresh out of Now Playing.
+- Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.
+- Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables.
+
+### Major Bug Fixes
+
+- Stop a single Trakt play being held for review as two competing writes.
+
 ## v2.2.1 - 28 October 2026
 
 Hotfix: This update gives each added user their own scheduled sync and shared Plex Now Playing, adds Server Logs controls, and stops large Emby and Jellyfin watched imports timing out.

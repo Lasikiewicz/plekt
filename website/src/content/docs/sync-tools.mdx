@@ -3,7 +3,7 @@ title: Sync Activity and tools
 description: Read grouped per-destination results, retry safely, run repairs, and understand match reports.
 category: Sync and maintain
 order: 8
-sourceVersion: "2.2.1"
+sourceVersion: "2.2.2"
 sourcePaths:
   - public/index.html
   - public/modules/sync-activity.js
@@ -196,6 +196,9 @@ items; the current canonical remove/add pair is allowed to finish before queued 
 Only applied actions count as completed. When some items are not found on a destination,
 the result reads, for example, **Partially applied: 12 of 14 actions applied; 2 not found on
 Emby**, followed by the missing titles. A run where nothing applied finishes as failed.
+
+If an Emby or Jellyfin import left watches on an episode's own IDs instead of its show, use
+[Repair Split Episode Shows](/docs/settings/tools/#repair-split-episode-shows).
 
 ## Sync Issues and Match Report
 

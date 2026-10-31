@@ -3330,15 +3330,16 @@
         "public/modules/settings-events.js",
         "public/modules/tools-maintenance.js",
         "public/modules/tools-duplicates.js",
-        "public/modules/tools-playstate-aliases.js"
+        "public/modules/tools-playstate-aliases.js",
+        "public/modules/tools-split-episode-repair.js"
       ],
       "sizes": {
         "dark": {
-          "height": 346,
+          "height": 406,
           "width": 1231
         },
         "light": {
-          "height": 389,
+          "height": 406,
           "width": 1231
         }
       }

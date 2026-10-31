@@ -3,7 +3,7 @@ title: Emby
 description: Connect Emby for library state, playback, watch history, resume progress, and playlists.
 category: Connect services
 order: 4.2
-sourceVersion: "2.2.1"
+sourceVersion: "2.2.2"
 sourcePaths:
   - docs/emby.md
   - docs/webhooks.md
@@ -38,6 +38,7 @@ and enable:
 - users: **Mark Played** and **Mark Unplayed**; and
 - **Send All Properties**, so resume fields are present.
 
-Leave unrelated event categories off until the core event path works.
+Leave unrelated event categories off until the core event path works. To confirm a manual mark
+reaches Plekt, use the [webhook Test button](/docs/settings/webhooks/#test-an-emby-or-jellyfin-sender).
 
 They add noise without improving watched-state sync.

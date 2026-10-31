@@ -3,7 +3,7 @@ title: Upcoming
 description: Browse episode air dates with calendar navigation, search, and show context.
 category: Use the app
 order: 4
-sourceVersion: "2.2.1"
+sourceVersion: "2.2.2"
 sourcePaths:
   - public/modules/upcoming.js
   - docs/upcoming.md
@@ -27,13 +27,14 @@ view.
 
 1. Open **Upcoming**.
 2. Use **Previous month**, **Next month**, or **Today** to move through the calendar.
-3. Scroll to load adjacent months.
+3. Scroll to load adjacent months, up to 24 months either side of the current month.
 4. Enter a show, episode title, or episode code such as `S2E4` in the labelled **Search** field.
    The control bar buttons use the same pill style as the media page actions.
 5. Select an episode when you need to open its show context.
 
 The calendar uses TheTVDB-backed season and episode structure. Cached months open quickly,
-while revalidation can refresh changed air dates in the background.
+while revalidation can refresh changed air dates in the background. An episode appears once,
+even when one series is tracked as two shows in your library.
 
 ## Subscribe in a calendar app
 

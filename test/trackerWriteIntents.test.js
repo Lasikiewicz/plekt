@@ -68,6 +68,32 @@ test("lost response is correlated before retry, acknowledges exactly once and ne
   assert.equal(ledger.correlateTrackerObservation("trakt", connection, { historyId: "remote-play", media: item, watchedAt: Date.parse(item.watched_at) }).status, "known");
 });
 
+test("a dispatch without its row id sends the intent captured for that play, so the echo is not ambiguous", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  let posts = 0;
+  await trackerIntentRequest(connection, [media()], "watched", async () => { posts++; return {}; }, async () => []);
+  assert.equal(posts, 1);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM tracker_write_intents").get().n, 1);
+  assert.equal(get(captured.id).status, "settled");
+  const echo = ledger.correlateTrackerObservation("trakt", connection, { historyId: "one-play", media: media(), watchedAt: Date.parse(media().watched_at) });
+  assert.equal(echo.status, "acknowledged");
+  assert.equal(ledger.trackerWriteAttentionItems().length, 0);
+});
+
+test("a captured intent is only reused for the same unsent play", async () => {
+  const connection = connect();
+  const send = async () => ({});
+  const captured = create(connection, media(), "local-play");
+  ledger.finishTrackerWriteIntent(captured.id, "settled");
+  await trackerIntentRequest(connection, [media()], "watched", send, async () => []);
+  const pending = create(connection, media("2026-10-02T12:00:00.000Z"), "other-play");
+  await trackerIntentRequest(connection, [media("2026-10-02T12:00:01.000Z")], "watched", send, async () => []);
+  await trackerIntentRequest(connection, [{ ...media("2026-10-02T12:00:00.000Z"), trackerActionId: "manual-action" }], "watched", send, async () => []);
+  assert.equal(get(pending.id).status, "pending");
+  assert.equal(db.prepare("SELECT count(*) AS n FROM tracker_write_intents").get().n, 5);
+});
+
 test("independent plays survive snapshot replacement, recovery and out-of-order echoes", () => {
   const connection = connect();
   const first = create(connection, media(), "first");

@@ -1,7 +1,72 @@
 {
-  "version": "2.2.1",
-  "updatedAt": "2026-10-28T00:53:10.354Z",
+  "version": "2.2.2",
+  "updatedAt": "2026-10-31T08:05:36.208Z",
   "entries": [
+    {
+      "version": "2.2.2",
+      "version5Digit": "2.2.2.0.0",
+      "date": "2026-10-31T08:05:36.208Z",
+      "commit": "04090acd7ea8a5f3e68d8a41af6023f847fe53df",
+      "message": "This release improves Emby and Jellyfin sync diagnostics, adds safer webhook tests and split episode repair, and refines upcoming episode handling.",
+      "websiteUrl": "https://plekt.net",
+      "author": "Lasikiewicz",
+      "details": [
+        "Feature: Improve Emby sync and webhook diagnostics",
+        "Feature: Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
+        "Feature: Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
+        "Feature: Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
+        "Feature: Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
+        "Feature: Align webhook setup controls and improve dialog contrast and mobile spacing.",
+        "Feature: Rename the Emby Up Next device and keep its refresh out of Now Playing.",
+        "Feature: Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
+        "Feature: Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables.",
+        "Fix: Stop a single Trakt play being held for review as two competing writes."
+      ],
+      "sections": {
+        "newFeatures": [
+          "Improve Emby sync and webhook diagnostics",
+          "Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
+          "Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
+          "Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
+          "Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
+          "Align webhook setup controls and improve dialog contrast and mobile spacing.",
+          "Rename the Emby Up Next device and keep its refresh out of Now Playing.",
+          "Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
+          "Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables."
+        ],
+        "majorBugFixes": [
+          "Stop a single Trakt play being held for review as two competing writes."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Improve Emby sync and webhook diagnostics",
+              "Add an audited Emby and Jellyfin split episode repair with backup, per-show approval and undo.",
+              "Resolve series IDs during Force Sync and suppress conflicting watched and unwatched writes.",
+              "Parse Emby multipart notifications, link Stats by show ID, and preserve History search input.",
+              "Add Emby and Jellyfin webhook delivery tests with safe mark removal and cause-specific results.",
+              "Align webhook setup controls and improve dialog contrast and mobile spacing.",
+              "Rename the Emby Up Next device and keep its refresh out of Now Playing.",
+              "Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.",
+              "Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables."
+            ]
+          }
+        ],
+        "majorBugFixes": [
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Stop a single Trakt play being held for review as two competing writes."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "version": "2.2.1",
       "version5Digit": "2.2.1.0.0",
