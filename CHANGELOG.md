@@ -4,6 +4,18 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.2.3 - 31 October 2026
+
+Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.
+
+[Visit the Plekt website](https://plekt.net)
+
+### Bug Fixes
+
+#### Sync & connection recovery
+
+- Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.
+
 ## v2.2.2 - 31 October 2026
 
 This release improves Emby and Jellyfin sync diagnostics, adds safer webhook tests and split episode repair, and refines upcoming episode handling.
@@ -24,7 +36,9 @@ This release improves Emby and Jellyfin sync diagnostics, adds safer webhook tes
 - Deduplicate Upcoming episodes, cap its month range, and use recorded TVDB IDs for next-airing lookups.
 - Reorganize website installation, onboarding and provider guides, and improve documentation navigation and tables.
 
-### Major Bug Fixes
+### Bug Fixes
+
+#### Sync & connection recovery
 
 - Stop a single Trakt play being held for review as two competing writes.
 

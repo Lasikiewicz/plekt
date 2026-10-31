@@ -137,7 +137,21 @@ export function trackerIntentForDispatch(provider, connection, media, action) {
     if (intent.action !== action) return createTrackerWriteIntent({ provider, connection, media, action, watchRecordId: intent.watch_record_id, logicalKey: `${intent.id}:${action}` });
     return intent;
   }
-  const intent = capturedUnsentTraktIntent(provider, connection, media, action)
+  // The watch record is the durable identity of this dispatch. The inbound
+  // media may lack the normalized date saved during insertion; using Date.now
+  // in its logical key would otherwise create a second intent for that play.
+  // A settled intent stays out of the undated match: Retry Sync sends the row
+  // without its date, and a canonical replay has already removed the play, so
+  // skipping the add here would leave it missing from Trakt.
+  const linked = provider === "trakt" && media.watchRecordId && !media.trackerActionId
+    ? db.prepare(`SELECT * FROM tracker_write_intents WHERE provider=? AND connection_id=? AND account_id=?
+        AND watch_record_id=? AND action=? ORDER BY created_at,id`)
+      .all(provider, connection.id, connection.remoteUserId || "", media.watchRecordId, action)
+    : [];
+  const dispatchDate = media.watched_at || media.watchedAt;
+  const matching = linked.filter((item) => dispatchDate ? Date.parse(item.watched_at) === Date.parse(dispatchDate) : item.status !== "settled");
+  if (matching.length > 1) throw new Error("Multiple tracker writes match this watch record; review is required");
+  const intent = matching[0] || capturedUnsentTraktIntent(provider, connection, media, action)
     || createTrackerWriteIntent({ provider, connection, media, action, watchRecordId: media.watchRecordId || "" });
   if (intent.attempts === 0 && intent.status === "pending") {
     // Eligibility was captured with the local identity. Dispatch may now have

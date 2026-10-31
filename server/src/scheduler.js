@@ -834,7 +834,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
 
     const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
     await upsertPlaystateForMedia(media, "watched", watchedAt, { skipInvalidate: true });
-    const summary = await syncMediaPlaystate(media, config, loopStore).catch((error) => ({
+    const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
       skipped: false,
       status: "error",
       details: `Plex watch-state propagation failed: ${error.message || String(error)}`,

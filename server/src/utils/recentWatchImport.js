@@ -419,7 +419,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
-        const summary = await syncMediaPlaystate(media, config, loopStore).catch((error) => ({
+        const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
           skipped: false,
           status: "error",
           details: `Outbound sync failed: ${error.message || String(error)}`,
@@ -578,7 +578,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
-        const summary = await syncMediaPlaystate(media, config, loopStore).catch((error) => ({
+        const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
           skipped: false,
           status: "error",
           details: `Outbound sync failed: ${error.message || String(error)}`,
@@ -740,7 +740,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
-        const summary = await syncMediaPlaystate(media, config, loopStore).catch((error) => ({
+        const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
           skipped: false,
           status: "error",
           details: `Outbound sync failed: ${error.message || String(error)}`,

@@ -284,6 +284,12 @@ test("Simkl imports drop and un-drop changes from complete snapshots without ite
     return new Response("{}", { status: 200 });
   };
   try {
+    // dropTitle above also scheduled a background drain. Let it finish so it
+    // cannot race the explicit syncs below over the same fake account.
+    const drainDeadline = Date.now() + 5_000;
+    while (Date.now() < drainDeadline && db.prepare("SELECT write_status FROM dropped_title_tracker_state WHERE provider='simkl'").get()?.write_status !== "done") {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
     await syncDroppedTitleTracker("simkl", { trigger: "user" });
     let row = db.prepare("SELECT desired_dropped,remote_present,write_status FROM dropped_title_tracker_state WHERE provider='simkl'").get();
     assert.deepEqual(row, { desired_dropped: 1, remote_present: 1, write_status: "done" }, "confirmed local drop records known Simkl presence");
@@ -311,7 +317,9 @@ test("Simkl imports drop and un-drop changes from complete snapshots without ite
     assert.equal(listDroppedTitles().length, 0, "local un-drop queues restoration to Simkl");
     const restoredRows = db.prepare("SELECT desired_dropped,remote_present,previous_status,write_status FROM dropped_title_tracker_state WHERE provider='simkl'").all();
     assert.ok(restoredRows.some((state) => state.desired_dropped === 0 && state.remote_present === 0 && state.write_status === "done"));
-    assert.equal(paths.filter((path) => path.startsWith("/sync/all-items/")).length, 26);
+    // Three complete 13-partition snapshots: after the drain's own write, the
+    // Simkl un-drop and the Simkl re-drop.
+    assert.equal(paths.filter((path) => path.startsWith("/sync/all-items/")).length, 39);
     assert.equal(paths.some((path) => /sync\/(history|watched|unwatched)/.test(path)), false);
   } finally {
     globalThis.fetch = originalFetch;

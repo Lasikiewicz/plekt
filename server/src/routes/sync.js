@@ -3702,7 +3702,7 @@ export async function handleWebhook(req, res) {
             watchRecord.sync_dispatch_telemetry = formatDispatchTelemetry({ skipped: false, status: "pending", details: "Propagation queued", targetStates: [] }, episodeMedia, "watched");
             const dbResult = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
             await upsertPlaystateForMedia(episodeMedia, "watched", dbResult.record.watched_at, { skipInvalidate: true });
-            const summary = await syncMediaPlaystate(episodeMedia, config, loopStore).catch((error) => ({
+            const summary = await syncMediaPlaystate({ ...episodeMedia, watchRecordId: dbResult.id }, config, loopStore).catch((error) => ({
               skipped: false,
               status: "error",
               details: `Propagation failed: ${error.message || String(error)}`,

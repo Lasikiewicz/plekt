@@ -316,6 +316,12 @@ Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback 
      plays of one title stay independent. A Trakt dispatch that arrives without the
      record id reuses the unsent intent captured for the same identity and exact
      watched date, so one play never has two intents competing for its Trakt echo.
+     Every ingest path that saves a watch dispatches with its record id, so a
+     dispatch that translated the identity (Fix Match, a compound episode, a
+     title-only hydrate) still finds its captured intent. An undated dispatch reuses
+     the record's unsettled intent; a settled one is left alone because Retry Sync
+     replays the row undated and a canonical replay must still re-add the play.
+     Explicit dated actions remain distinct.
      A send whose response is lost (timeout, 5xx,
      or a restart mid-send) becomes `uncertain`: the next attempt reads Trakt's history
      around the watched date first, acknowledges a matching play, and only resends when

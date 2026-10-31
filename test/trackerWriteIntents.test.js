@@ -81,6 +81,46 @@ test("a dispatch without its row id sends the intent captured for that play, so 
   assert.equal(ledger.trackerWriteAttentionItems().length, 0);
 });
 
+test("dispatch with a watch record but no date reuses its captured intent", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  const { watched_at, ...undated } = media();
+  let sent;
+  await trackerIntentRequest(connection, [{ ...undated, watchRecordId: "local-play" }], "watched", async (items) => { sent = items; return {}; }, async () => []);
+  assert.equal(sent[0].watched_at, watched_at);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM tracker_write_intents").get().n, 1);
+  assert.equal(ledger.correlateTrackerObservation("trakt", connection, { historyId: "one-play", media: media(), watchedAt: Date.parse(watched_at) }).intentId, captured.id);
+});
+
+test("an undated replay of a settled watch record still sends, so a canonical remove is re-added", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  ledger.finishTrackerWriteIntent(captured.id, "settled");
+  const { watched_at, ...undated } = media();
+  let posts = 0;
+  await trackerIntentRequest(connection, [{ ...undated, watchRecordId: "local-play" }], "watched", async () => { posts++; return {}; }, async () => []);
+  assert.equal(posts, 1);
+});
+
+test("every ingest path that saves a watch dispatches with its record id", async () => {
+  const { readFile } = await import("node:fs/promises");
+  for (const file of ["../server/src/scheduler.js", "../server/src/utils/recentWatchImport.js", "../server/src/routes/sync.js"]) {
+    const source = await readFile(new URL(file, import.meta.url), "utf8");
+    const blocks = [...source.matchAll(/const (\w+) = await insertWatchRecord\([^\n]*\n(?:[^\n]*\n){0,6}?[^\n]*syncMediaPlaystate\(([^\n]*)/g)];
+    assert.ok(blocks.length, file);
+    for (const [block, id] of blocks) assert.match(block, new RegExp(`watchRecordId(: |\\s*=\\s*)${id}\\.id|watchRecordId = id`), block);
+  }
+});
+
+test("a dispatch whose identity changed after capture keeps one intent when it carries the record id", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  const rewritten = { ...media(), ids: { imdb: "tt123", tmdb: "123" }, watchRecordId: "local-play" };
+  await trackerIntentRequest(connection, [rewritten], "watched", async () => ({}), async () => []);
+  assert.equal(db.prepare("SELECT count(*) AS n FROM tracker_write_intents").get().n, 1);
+  assert.equal(ledger.correlateTrackerObservation("trakt", connection, { historyId: "one-play", media: rewritten, watchedAt: Date.parse(media().watched_at) }).intentId, captured.id);
+});
+
 test("a captured intent is only reused for the same unsent play", async () => {
   const connection = connect();
   const send = async () => ({});

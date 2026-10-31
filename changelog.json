@@ -1,7 +1,38 @@
 {
-  "version": "2.2.2",
-  "updatedAt": "2026-10-31T08:05:36.208Z",
+  "version": "2.2.3",
+  "updatedAt": "2026-10-31T10:15:55.414Z",
   "entries": [
+    {
+      "version": "2.2.3",
+      "version5Digit": "2.2.3.0.0",
+      "date": "2026-10-31T10:15:55.414Z",
+      "commit": "221ae622e065b0c4eb2ab68de27bfa4a1f974f0a",
+      "message": "Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.",
+      "websiteUrl": "https://plekt.net",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "version": "2.2.2",
       "version5Digit": "2.2.2.0.0",
