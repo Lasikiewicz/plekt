@@ -3991,6 +3991,18 @@
         [
           "\"The Windows installer moves an existing Plembfin service and data folder to the Plekt names\",",
           1
+        ],
+        [
+          "\"message\": \"This update includes stop one watch splitting into two Trakt writes (v2.2.3) and add per-show alternate episode orders, log download ranges, an opt-in install check and a Plembfin image notice.\",",
+          1
+        ],
+        [
+          "\"Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.\",",
+          1
+        ],
+        [
+          "\"Feature - Add per-show alternate episode orders, log download ranges, an opt-in install check and a Plembfin image notice\"",
+          1
         ]
       ]
     },
