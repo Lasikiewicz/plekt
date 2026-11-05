@@ -1,5 +1,6 @@
 import { db } from "../db.js";
 import { claimTrackerWriteIntent, correlateTrackerObservation, finishTrackerWriteIntent, trackerIntentForDispatch, trackerIntentConnectionCurrent } from "./trackerWriteIntents.js";
+import { partitionTraktNotFoundBatch } from "./traktNotFoundPartition.js";
 
 const HISTORY_WINDOW_MS = 60_000;
 const statusOf = (id) => db.prepare("SELECT status FROM tracker_write_intents WHERE id=?").get(id)?.status;
@@ -46,9 +47,22 @@ export async function trackerIntentRequest(connection, items, action, send, fetc
     // Send what the caller resolved now (a title-derived id fallback can differ
     // from the first attempt), with the date the intent committed to.
     const result = await send(pending.map(({ intent, media }) => ({ ...media, watched_at: intent.watched_at })));
-    const notFound = Object.values(result?.not_found || {}).some((entries) => Array.isArray(entries) && entries.length);
-    // not_found wrote nothing, so a later corrected or explicit write is safe.
-    for (const { intent } of pending) finishTrackerWriteIntent(intent.id, notFound ? "rejected" : "settled", notFound ? "Provider did not match every requested item" : "");
+    const sent = pending.map(({ intent, media }) => ({ ...media, watched_at: intent.watched_at }));
+    const partition = partitionTraktNotFoundBatch(sent, result);
+    if (partition.unidentified || (partition.entries.length && !partition.rejected.length)) {
+      // The provider reported failures but its response cannot identify which
+      // request items failed. Keep every write visible for manual review.
+      for (const { intent } of pending) finishTrackerWriteIntent(intent.id, "review", "Trakt reported not_found but the unmatched items could not be identified");
+    } else {
+      const rejected = new Set(partition.rejected);
+      // A grouped response can contain successful and unmatched items. Settle
+      // only the successful writes; only the unmatched ones may be retried.
+      for (let index = 0; index < pending.length; index++) {
+        const { intent } = pending[index];
+        const item = sent[index];
+        finishTrackerWriteIntent(intent.id, rejected.has(item) ? "rejected" : "settled", rejected.has(item) ? "Trakt did not match this item" : "");
+      }
+    }
     return result;
   } catch (error) {
     const rejected = [400, 401, 403, 404, 422, 429].includes(Number(error.status));

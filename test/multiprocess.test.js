@@ -11,6 +11,11 @@ const root = path.resolve(import.meta.dirname, "..");
 const apiKey = "multiprocess-test-api-key-32-characters";
 const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-real-multiprocess-"));
 const children = [];
+// Full-suite child startup competes with many Node/SQLite/scrypt processes.
+// Keep lease expiry much shorter than production while allowing ordinary CPU
+// scheduling pauses; an 800ms lease can churn during a healthy test run.
+const LEASE_TTL_MS = 5_000;
+const STARTUP_TIMEOUT_MS = 30_000;
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -39,9 +44,9 @@ function startProcess(role, port) {
       ADMIN_USERNAME: "admin",
       ADMIN_PASSWORD: "multiprocess-test-password",
       PLEMBFIN_TEST_MODE: "1",
-      PLEMBFIN_TEST_LEASE_ACQUIRE_MS: "100",
-      PLEMBFIN_TEST_LEASE_RENEW_MS: "150",
-      PLEMBFIN_TEST_LEASE_TTL_MS: "800",
+      PLEKT_TEST_LEASE_ACQUIRE_MS: "250",
+      PLEKT_TEST_LEASE_RENEW_MS: "500",
+      PLEKT_TEST_LEASE_TTL_MS: String(LEASE_TTL_MS),
       PLEMBFIN_TEST_FIRST_TICK_MS: "5000",
       PLEMBFIN_TEST_TICK_MS: "5000",
       PLEMBFIN_TEST_JOB_POLL_MS: "50",
@@ -77,7 +82,7 @@ function startProcess(role, port) {
   return state;
 }
 
-async function waitFor(predicate, message, timeoutMs = 8_000) {
+async function waitFor(predicate, message, timeoutMs = STARTUP_TIMEOUT_MS) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const value = await predicate();
@@ -89,7 +94,7 @@ async function waitFor(predicate, message, timeoutMs = 8_000) {
   // the observable state once more before declaring a coordination failure.
   const finalValue = await predicate();
   if (finalValue) return finalValue;
-  throw new Error(message);
+  throw new Error(`${message}\n${children.map(state => `${state.role} pid=${state.child.pid} exit=${state.child.exitCode}:\n${state.output.slice(-2000)}`).join("\n")}`);
 }
 
 async function health(port) {
@@ -106,9 +111,9 @@ async function api(port, url, options = {}) {
   });
 }
 
-async function stopProcess(state) {
+async function stopProcess(state, signal = "SIGTERM") {
   if (!state || state.child.exitCode !== null) return;
-  state.child.kill("SIGTERM");
+  state.child.kill(signal);
   await Promise.race([
     new Promise((resolve) => state.child.once("exit", resolve)),
     delay(3_000).then(() => state.child.kill()),
@@ -116,7 +121,7 @@ async function stopProcess(state) {
 }
 
 test.after(async () => {
-  await Promise.all(children.map(stopProcess));
+  await Promise.all(children.map(state => stopProcess(state)));
   fs.rmSync(dataDir, { recursive: true, force: true });
 });
 
@@ -138,7 +143,10 @@ test("real web replicas and workers coordinate through an isolated local server"
   const webA = startProcess("web", webPortA);
   const webB = startProcess("web", webPortB);
   await waitFor(() => health(webPortA), "web replica A did not start");
-  const initialHealth = await waitFor(() => health(webPortB), "web replica B did not start");
+  const initialHealth = await waitFor(async () => {
+    const value = await health(webPortB);
+    return value?.worker?.available ? value : null;
+  }, "web replica B did not start with an available worker");
   assert.equal(initialHealth.role, "web");
   assert.equal(initialHealth.worker.available, true);
 
@@ -150,11 +158,11 @@ test("real web replicas and workers coordinate through an isolated local server"
     method: "POST",
     body: JSON.stringify([{ title: "Replica Cache Movie", media_type: "movie", watched_at: "2026-07-18T10:00:00.000Z", source: "plex", imdb_id: "tt-multiprocess" }]),
   });
-  assert.equal(imported.status, 200);
+  assert.equal(imported.status, 200, `Import response: ${await imported.clone().text()}\nWeb replica: ${webA.output.slice(-4000)}`);
   const after = await waitFor(async () => {
     const body = await (await api(webPortB, "/api/history?stats=0")).json();
     return body.history?.some((row) => row.title === "Replica Cache Movie") && body.historyVersion > before.historyVersion ? body : null;
-  }, "second web replica did not observe imported history", 3_000);
+  }, "second web replica did not observe imported history", 10_000);
   assert.ok(after.history.some((row) => row.title === "Replica Cache Movie"));
 
   const cron = await api(webPortA, "/api/cron-sync", { method: "POST" });
@@ -176,15 +184,26 @@ test("real web replicas and workers coordinate through an isolated local server"
   assert.ok(logs.logs.some((line) => line.includes("[web:")), "web diagnostics were not merged");
 
   const leaseDb = new Database(path.join(dataDir, "plekt.db"), { readonly: true });
-  const holderId = String(leaseDb.prepare("SELECT holder_id FROM scheduler_lease WHERE id='scheduler'").get()?.holder_id || "");
+  const currentLease = leaseDb.prepare("SELECT holder_id, generation FROM scheduler_lease WHERE id='scheduler'").get();
+  const holderId = String(currentLease?.holder_id || "");
+  assert.ok([workerA, workerB].some(worker => holderId.includes(`:${worker.child.pid}:`)), "a running worker must own the current lease");
   leaseDb.close();
   const leader = holderId.includes(`:${workerA.child.pid}:`) ? workerA : workerB;
   const standby = leader === workerA ? workerB : workerA;
-  await stopProcess(leader);
+  // Crash the actual holder, so takeover proves lease expiry rather than just
+  // graceful release. Old log lines cannot satisfy this observation.
+  await stopProcess(leader, "SIGKILL");
   await waitFor(
-    () => standby.output.includes("leadership acquired"),
+    () => {
+      const database = new Database(path.join(dataDir, "plekt.db"), { readonly: true });
+      try {
+        const lease = database.prepare("SELECT holder_id, generation, expires_at FROM scheduler_lease WHERE id='scheduler'").get();
+        return String(lease?.holder_id || "").includes(`:${standby.child.pid}:`)
+          && lease.generation > currentLease.generation && lease.expires_at > Date.now();
+      } finally { database.close(); }
+    },
     `standby did not take leadership\nleader:\n${leader.output}\nstandby:\n${standby.output}`,
-    4_000,
+    LEASE_TTL_MS + 10_000,
   );
 
   await Promise.all([stopProcess(webA), stopProcess(webB), stopProcess(standby)]);

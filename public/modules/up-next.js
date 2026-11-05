@@ -1,20 +1,25 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.2";
-import { state, elements } from "./state.js?v=2.2.3.0.2";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.2.3.0.2";
-import { hydratePosters } from "./images.js?v=2.2.3.0.2";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.2.3.0.2";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.2.3.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.3";
+import { state, elements } from "./state.js?v=2.2.3.0.3";
+import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.2.3.0.3";
+import { hydratePosters } from "./images.js?v=2.2.3.0.3";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.2.3.0.3";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.2.3.0.3";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
-} from "./up-next-shared.js?v=2.2.3.0.2";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.2.3.0.2";
-import { renderMediaCard } from "./media-card.js?v=2.2.3.0.2";
-import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.2.3.0.2";
+} from "./up-next-shared.js?v=2.2.3.0.3";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.2.3.0.3";
+import { renderMediaCard } from "./media-card.js?v=2.2.3.0.3";
+import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.2.3.0.3";
 
 const UP_NEXT_TIMEOUT_MS = 20000;
 const UP_NEXT_DROP_SLIDE_MS = 600;
 const UP_NEXT_DISMISSED_KEY = "plembfin:upNextDismissed:v1";
+// Last cards the server sent, painted at once on a page reload (marked as
+// checking) instead of loading tiles. The server reply always replaces them.
+const UP_NEXT_SNAPSHOT_KEY = "plekt:upNextSnapshot:v1";
+const UP_NEXT_SNAPSHOT_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+const UP_NEXT_SNAPSHOT_MAX_ITEMS = 30;
 // v6 invalidates snapshots created before canonical episode identity and
 // scheduled Part Watched artwork repair were applied.
 const UP_NEXT_SYNC_TIMEOUT_MS = 60_000;
@@ -193,7 +198,9 @@ export async function removeShowFromUpNext(button) {
     button.title = "Add the next unwatched episode to the dashboard Up Next rail";
     actionSucceeded = true;
     _cb.setMessage?.(`Removed "${show.title}" from Up Next`, "success");
-    await loadUpNext({ force: true });
+    // The remove request rebuilt the cache before answering. Removing a manual
+    // show bumps the Up Next version, so this read still waits for a rebuild.
+    await loadUpNext({ afterMutation: true });
   } finally {
     if (!actionSucceeded && label) label.innerHTML = originalLabel;
     button.disabled = false;
@@ -1099,6 +1106,50 @@ function visibleUpNextItems() {
   return dedupeUpNextItems(filtered);
 }
 
+function upNextSnapshotKey() {
+  const user = state.currentUser;
+  if (!user?.uid) return "";
+  return `${UP_NEXT_SNAPSHOT_KEY}:${user.uid}:${user.activeUser || ""}`;
+}
+
+function readUpNextSnapshot() {
+  const key = upNextSnapshotKey();
+  if (!key) return null;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || "{}");
+    if (!Array.isArray(parsed.items) || !parsed.items.length) return null;
+    if (Date.now() - Number(parsed.savedAt || 0) > UP_NEXT_SNAPSHOT_TTL_MS) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function rememberUpNextSnapshot() {
+  const key = upNextSnapshotKey();
+  if (!key) return;
+  try {
+    // Only what the server confirmed: no in-flight saves or removals.
+    const items = visibleUpNextItems()
+      .filter((item) => item?.pending_sync !== true && !isUpNextWatchSaving(item) && !isUpNextRemovalPending(item))
+      .slice(0, UP_NEXT_SNAPSHOT_MAX_ITEMS);
+    if (!items.length) localStorage.removeItem(key);
+    else localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), items }));
+  } catch {
+    // Best effort; the server stays the source of truth.
+  }
+}
+
+// Paint the last confirmed cards on a page reload. They render as checking
+// (upNextFromCache) until the server reply replaces them.
+function applyUpNextSnapshot() {
+  if (state.upNextItems.length || state.upNextLoadedAt) return;
+  const snapshot = readUpNextSnapshot();
+  if (!snapshot) return;
+  state.upNextItems = snapshot.items;
+  state.upNextFromCache = true;
+}
+
 function renderUpNextSyncControl() {
   const button = elements.upNextSyncButton;
   if (!button) return;
@@ -1300,6 +1351,7 @@ export function resetUpNext({ preserveItems = false } = {}) {
   // after a manual watch (the aborted request showed as a failed revalidate).
   const reissueLoad = preserveItems && (Boolean(state.upNextAbortController) || state.upNextRefreshQueued);
   const reissueForce = state.upNextForceRefreshQueued;
+  const reissueAfterMutation = state.upNextMutationRefreshQueued && !reissueForce;
   state.upNextRequestVersion += 1;
   state.upNextAbortController?.abort();
   state.upNextAbortController = null;
@@ -1324,7 +1376,14 @@ export function resetUpNext({ preserveItems = false } = {}) {
   if (!preserveItems) state.upNextPendingWatchedRemovals = [];
   state.upNextRefreshQueued = false;
   state.upNextForceRefreshQueued = false;
-  if (reissueLoad) loadUpNext({ force: reissueForce, fromSse: !reissueForce }).catch(() => { });
+  state.upNextMutationRefreshQueued = false;
+  if (reissueLoad) {
+    loadUpNext({
+      force: reissueForce,
+      afterMutation: reissueAfterMutation,
+      fromSse: !reissueForce && !reissueAfterMutation,
+    }).catch(() => { });
+  }
 }
 
 function upNextErrorPresentation() {
@@ -1348,6 +1407,9 @@ export function renderUpNext({ exitIds = [] } = {}) {
   const section = elements.upNextSection;
   renderUpNextControls();
   if (!panel) return;
+  // The first load is deferred after startup, so the rail is drawn before it
+  // starts; without this it flashed "No movies or episodes queued" first.
+  if (state.token) applyUpNextSnapshot();
 
   renderUpNextSourceStatus();
 
@@ -1387,7 +1449,7 @@ export function renderUpNext({ exitIds = [] } = {}) {
 
   const items = oneCardPerEpisode(nowPlayingFirst(visibleUpNextItems(), state.activeSessions || []));
 
-  if (state.upNextLoading && !state.upNextItems.length) {
+  if (!state.upNextItems.length && (state.upNextLoading || (!state.upNextLoadedAt && !state.upNextError))) {
     if (section) section.classList.remove("hidden");
     commitPanel(`<div class="up-next-loading-tiles" role="status" aria-label="Loading Up Next">${Array.from({ length: 4 }, () => `
       <article class="history-page-card dashboard-history-page-card dashboard-up-next-card up-next-skeleton" aria-hidden="true">
@@ -1426,11 +1488,16 @@ export function renderUpNext({ exitIds = [] } = {}) {
   });
 }
 
-export async function loadUpNext({ force = false, fromSse = false } = {}) {
+// `afterMutation` follows a server call that already rebuilt the Up Next cache
+// before answering (Remove from Up Next). It reads that fresh snapshot instead
+// of forcing a second full rebuild, which took as long as the removal itself.
+// Like `force`, it is never dropped while another load is running.
+export async function loadUpNext({ force = false, fromSse = false, afterMutation = false } = {}) {
   if (!state.token) return;
   if (state.upNextLoading) {
-    if (fromSse || force) state.upNextRefreshQueued = true;
+    if (fromSse || force || afterMutation) state.upNextRefreshQueued = true;
     if (force) state.upNextForceRefreshQueued = true;
+    if (afterMutation) state.upNextMutationRefreshQueued = true;
     return;
   }
 
@@ -1438,6 +1505,7 @@ export async function loadUpNext({ force = false, fromSse = false } = {}) {
   state.upNextRequestVersion = requestVersion;
   const controller = new AbortController();
   state.upNextAbortController = controller;
+  applyUpNextSnapshot();
   state.upNextLoading = true;
   state.upNextError = "";
   state.upNextErrorCode = "";
@@ -1483,6 +1551,7 @@ export async function loadUpNext({ force = false, fromSse = false } = {}) {
     } else {
       await loadDismissedUpNext();
     }
+    rememberUpNextSnapshot();
   } catch (error) {
     if (requestVersion !== state.upNextRequestVersion) return;
     state.upNextErrorCode = error?.name === "AbortError"
@@ -1497,10 +1566,17 @@ export async function loadUpNext({ force = false, fromSse = false } = {}) {
       renderUpNext();
       const refreshQueued = state.upNextRefreshQueued;
       const forceRefreshQueued = state.upNextForceRefreshQueued;
+      const mutationRefreshQueued = state.upNextMutationRefreshQueued;
       state.upNextRefreshQueued = false;
       state.upNextForceRefreshQueued = false;
-      if (refreshQueued && (forceRefreshQueued || state.activeView === "dashboard")) {
-        Promise.resolve().then(() => loadUpNext({ force: forceRefreshQueued, fromSse: !forceRefreshQueued })).catch(() => { });
+      state.upNextMutationRefreshQueued = false;
+      if (refreshQueued && (forceRefreshQueued || mutationRefreshQueued || state.activeView === "dashboard")) {
+        const afterMutation = mutationRefreshQueued && !forceRefreshQueued;
+        Promise.resolve().then(() => loadUpNext({
+          force: forceRefreshQueued,
+          afterMutation,
+          fromSse: !forceRefreshQueued && !afterMutation,
+        })).catch(() => { });
       }
     }
   }

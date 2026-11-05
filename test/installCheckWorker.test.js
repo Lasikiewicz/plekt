@@ -92,7 +92,6 @@ test("malformed bodies are rejected and counted as nothing", async () => {
     JSON.stringify({ ...VALID, v: "2.2" }),
     JSON.stringify({ ...VALID, v: "2.2.3; DROP TABLE counter" }),
     JSON.stringify({ ...VALID, v: 2 }),
-    JSON.stringify({ ...VALID, channel: "develop" }),
     JSON.stringify({ ...VALID, channel: "other" }),
     JSON.stringify({ ...VALID, arch: "riscv" }),
     JSON.stringify({ first: false, week: true, month: false, v: "2.2.3", channel: "main" }),
@@ -211,4 +210,5 @@ test("parseCheckBody accepts the body the app sends", () => {
   assert.deepEqual(parseCheckBody(JSON.stringify(VALID)), VALID);
   assert.deepEqual(parseCheckBody(JSON.stringify({ ...VALID, v: "unknown" })), { ...VALID, v: "unknown" });
   assert.deepEqual(parseCheckBody(JSON.stringify({ ...VALID, v: "2.3.0-beta.1", channel: "alpha" })), { ...VALID, v: "2.3.0-beta.1", channel: "alpha" });
+  assert.deepEqual(parseCheckBody(JSON.stringify({ ...VALID, channel: "develop" })), { ...VALID, channel: "develop" });
 });

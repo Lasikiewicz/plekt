@@ -63,7 +63,10 @@ Small, automatic backups of just the data needed to restore watch state.
   `watchHistoryBackups`; run state in `runtime_state` (`watchHistoryBackups`).
 - **Storage** - always written to `data/backups/watch-history/` first: temp file →
   checksum verify → atomic rename. Local and remote retention default to 7 files (about
-  seven days; max 365) and prune the oldest.
+  seven days; max 365) and prune the oldest. Safety snapshots made before imports or
+  syncs are excluded from the ordinary file count for at least seven days; recent
+  Force Sync plan snapshots keep their existing protection too. A locked file is
+  reported and skipped so retention can continue pruning other eligible files.
 - **Restore** - `restoreWatchHistoryBackup(filename, { mode, dryRun })` supports
   **merge** (add missing, newest state wins on conflict), **replace** (clear the three
   tables first), and **dry run** (validate + report expected changes without writing).
@@ -157,8 +160,11 @@ Nightly encrypted snapshots of the entire portable backup document.
 - **Restoring** - every restore on the Restore page (a listed local backup, a remote
   backup pulled to local storage first, or an uploaded file) runs on the server, so a
   backup of any size restores. An uploaded file is sent to the server as it is (with
-  upload progress) and restored from disk. The page confirms first (the dialog says the
-  current data is not backed up first), starts the restore, then polls the job once a
+  upload progress) and restored from disk. Uploads are capped at 4 GB (413
+  `UPLOAD_TOO_LARGE`) and refused when the backups disk would keep less than 512 MB free
+  (507 `UPLOAD_NO_SPACE`). Restore and upload are for the install administrator only;
+  an added user gets 403. The page confirms first (the dialog says the
+  current database is saved as a recovery snapshot first), starts the restore, then polls the job once a
   second and shows the check and import progress. The file's recorded iteration count
   is used, so server-made backups (100k) and browser exports (250k) both restore.
   Until 27 September 2026 the browser decrypted and parsed the whole file itself, which
@@ -178,8 +184,11 @@ Nightly encrypted snapshots of the entire portable backup document.
   collections, so credential collections are left out; first batch of each collection
   resets it; watchlist restore rules; `bumpDataVersion`). A wrong passphrase or damaged
   file changes nothing. Cron catch-up is paused during the import and resumed after.
-  No automatic backup of the current data is made first (user decision, 27 September
-  2026). Plain portable exports restore the same way. A 648 MB backup restored 400,000
+  After validation and before importing, `VACUUM INTO` saves the current database to
+  `plekt-pre-restore-<job-id>.sqlite` in the configured full-backup
+  directory. If snapshot creation fails, no import starts. A partial import failure
+  reports the snapshot's absolute path; the SQLite file remains for manual recovery
+  and is excluded from encrypted-backup retention. Plain portable exports restore the same way. A 648 MB backup restored 400,000
   rows in 13 s with peak memory about 234 MB. Progress is an in-memory job (restoring
   `runtimeState` replaces that table).
 - **Remote mirroring** - optional; runs with the daily scheduled backup when remote

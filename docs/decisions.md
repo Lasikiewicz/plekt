@@ -872,7 +872,8 @@ push. A browser-only trigger would also fail when the dashboard was closed.
 
 **Decision:** Queue a durable singleton `up_next_sync` job from canonical resume/watch
 mutations, changed provider snapshots, changed projections, and dismissal changes. The
-worker builds the latest mixed queue at execution time and pushes up to 100 items through
+worker reads the shared Up Next snapshot at execution time (waiting for one deduplicated
+build when history or the queue changed, rather than building a private copy) and pushes up to 100 items through
 the configured native rails. A stable content/order fingerprint suppresses duplicate
 pushes, and a mutation observed during a push requests one follow-up job. Provider feed
 reads performed as part of that push opt out of the trigger, preventing a feedback loop.
@@ -885,7 +886,7 @@ depend on which page is currently open.
 
 **Enforced by:** `upNextAutoSync.js`, the `up_next_sync` worker job, the queue invalidation
 hooks in `dataRepo.js`, `upNextRepository.js`, `upNextDismissals.js`, and `upNextCache.js`,
-and `test/upNextAutoSync.test.js`.
+and `test/upNextAutoSync.test.js` and `test/upNextAutoSyncSnapshot.test.js`.
 
 ### 30. Scope the historical watched-sync opt-out to Plex, and make a policy skip a reported outcome
 **Date:** 2026-09-15  |  **Status:** Active
@@ -1350,7 +1351,9 @@ and fan those clears out to every connected provider.
 20% of the prior rated provider baseline disappear. Keep a persistent warning with the
 missing titles. Approval rechecks the exact removal set; dismissal keeps ratings and the
 baseline. Malformed/partial scans cannot clear missing ratings. Later scans cannot bypass
-an unresolved hold.
+an unresolved hold. On 5 November 2026 the user extended this to an entirely empty
+snapshot even when only one prior rating exists; ordinary single-item removals from
+nonempty snapshots still reconcile normally.
 
 **Rejected:** Clearing every missing item automatically risks irreversible propagation.
 Holding every individual clear adds friction to ordinary rating edits; a 50% threshold
@@ -1646,3 +1649,15 @@ a large historical batch before ordinary sync status can be clear.
 **Rejected:** Importing over `unwatched` when the provider date is newer. A provider date is not proof of a play: marks can be undated (a mark on a series writes none to its episodes), clocks and restores can make a stale flag look new, and a wrong import writes a phantom watch that then syncs to Plex, Jellyfin, Trakt and Simkl (the 19 August 2026 rewatch flood). A missed watch is recoverable by hand; a phantom watch on external trackers is not.
 
 **Enforced by:** `libraryHistoryDecision` and `shouldSkipLibraryHistoryImport` in `server/src/utils/recentWatchImport.js`, and the "non-review modes keep their existing automatic policy" clause of entry 32. `plan/active/emby-reporter-feedback/step9-manual-played-missed.md` records the reproduction.
+
+### 65. Up Next paints its last confirmed cards on reload, as checking
+
+**Date:** 2026-11-05 | **Status:** Active
+
+**Context:** On 20 October 2026 (`8f4866a5c`) the browser-local Up Next copy was removed so the first paint never showed a stale list, for example a card cleared on a phone. Since then every page reload showed loading tiles until `/api/up-next` answered. The user asked for the rail to keep showing content until changes are detected, knowing the October reason.
+
+**Decision:** A reload paints the last cards the server confirmed, saved per signed-in user and per open dashboard (`activeUser`), marked as checking, and always reads the server; its reply replaces them and removed cards slide out. Only confirmed cards are saved (no in-flight saves or removals), at most 30, for 14 days.
+
+**Rejected:** Keeping loading tiles on every reload (the user preferred content). Bringing back the old cache as it was: it could skip the server read for a recent copy and showed its cards as final.
+
+**Enforced by:** `applyUpNextSnapshot` and `rememberUpNextSnapshot` in `public/modules/up-next.js`; `test/upNextResetReissue.test.js` (saved cards paint as checking, the server reply wins, another dashboard's or an expired save never paints).

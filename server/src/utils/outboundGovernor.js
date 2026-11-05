@@ -1,4 +1,5 @@
 // Shared, hostname-scoped outbound pacing for media servers and providers.
+import { retryAfterMs } from "./retryAfter.js";
 // The governor is deliberately small: callers await admission, then release
 // in a finally block. Credentials and URL paths never enter its telemetry.
 
@@ -143,8 +144,7 @@ export function noteOutboundResponse(hostname, status, retryAfter = "") {
   const state = hostState(host);
   if (![429, 502, 503, 504].includes(Number(status))) return;
   state.throttled += Number(status) === 429 ? 1 : 0;
-  const retrySeconds = Number.parseFloat(String(retryAfter).trim());
-  const retryMs = Number.isFinite(retrySeconds) ? Math.max(0, retrySeconds * 1000) : 1000;
+  const retryMs = retryAfterMs(retryAfter);
   state.cooldownUntil = Math.max(state.cooldownUntil, Date.now() + retryMs);
   state.cooldowns += 1;
 }

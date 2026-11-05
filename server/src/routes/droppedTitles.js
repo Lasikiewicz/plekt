@@ -79,7 +79,7 @@ export async function handleDroppedTitles(req, res) {
       let projectionError = null;
       let providerItems = { plex: [], emby: [], jellyfin: [] };
       try {
-        const projection = await buildUpNextProjection({ mediaConfig: config });
+        const projection = await buildUpNextProjection({ mediaConfig: config, trigger: "private pre-drop capture" });
         providerItems = railIdentities(item, projection.items);
       } catch (error) {
         projectionError = error;

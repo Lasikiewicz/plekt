@@ -549,6 +549,19 @@ function syncSetup() {
   return { plex, deps };
 }
 
+test("an automatic playlist with a lost ledger preserves remote entries", async () => {
+  const { plex, deps } = syncSetup();
+  const id = createRuleList({ rule: {}, targets: ["plex"] });
+  applyPlaylistRuleResult(id, [{ media_key: "movie:tmdb:1", media_type: "movie", title: "M1", tmdb_id: "1", tvdb_id: "", imdb_id: "", overview: "", release_date: "", show_title: null, season: null, episode: null, poster_url: "" }], NOW);
+  await syncPlaylist(id, { config, deps });
+  const playlistId = db.prepare("SELECT remote_playlist_id FROM personal_list_targets WHERE list_id = ? AND provider = 'plex'").get(id).remote_playlist_id;
+  const remote = plex.state.playlists.get(playlistId);
+  remote.entries.push({ entryId: "untracked", itemId: "p3" });
+  db.prepare("DELETE FROM personal_list_entry_ledger WHERE list_id = ?").run(id);
+  await syncPlaylist(id, { config, deps });
+  assert.ok(remote.entries.some(entry => entry.itemId === "p3"));
+});
+
 test("an automatic playlist is synced one way out: app edits are overwritten, a rename comes back", async () => {
   const { plex, deps } = syncSetup();
   const id = createRuleList({ rule: {}, targets: ["plex"] });

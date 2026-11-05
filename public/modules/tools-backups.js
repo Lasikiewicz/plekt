@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.2";
-import { state, elements } from "./state.js?v=2.2.3.0.2";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.2.3.0.2";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.2.3.0.2";
-import { applyAppearanceToBody } from "./appearance.js?v=2.2.3.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.3";
+import { state, elements } from "./state.js?v=2.2.3.0.3";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.2.3.0.3";
+import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.2.3.0.3";
+import { applyAppearanceToBody } from "./appearance.js?v=2.2.3.0.3";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -172,7 +172,7 @@ export function selectPlektBackupFile(file) {
 function confirmPlektRestore(label) {
   return _openConfirmDialog({
     title: "Restore Plekt backup?",
-    body: `This replaces every collection included in ${label} with the backup's contents. Your current data is not backed up first; if you might want it back, make sure a recent backup is listed under Local Plekt Backups (or use Back Up Now) before you continue. Your local admin username and password stay unchanged. Nothing is changed until the whole file has been checked. Watch-history restores are safer for ordinary history rollback; use this for a full Plekt move or rebuild.`,
+    body: `This replaces every collection included in ${label} with the backup's contents. After checking the file, Plekt saves a local SQLite recovery snapshot before importing; if the import fails, the error shows its location. Your local admin username and password stay unchanged. Nothing is changed until the whole file has been checked and the snapshot saved. Watch-history restores are safer for ordinary history rollback; use this for a full Plekt move or rebuild.`,
     confirmLabel: "Restore Plekt Backup",
     danger: true,
   });
@@ -1046,14 +1046,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.2.3.0.2");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.2.3.0.3");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.2.3.0.2");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.2.3.0.3");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {

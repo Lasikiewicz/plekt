@@ -240,15 +240,56 @@ function removeStaleUploads(now = Date.now()) {
   }
 }
 
+// Upload limits (user decision, 5 November 2026: 4 GB, about eight times a
+// real encrypted full backup of ~490 MB). The upload also has to leave this
+// much free on the backups disk, so a large upload cannot fill it.
+export const MAX_UPLOAD_BYTES = 4 * 1024 ** 3;
+export const UPLOAD_FREE_SPACE_MARGIN_BYTES = 512 * 1024 ** 2;
+
+function uploadError(message, status, code) {
+  return Object.assign(new Error(message), { status, code });
+}
+
+function freeBytesAt(dir) {
+  try {
+    const stats = fs.statfsSync(dir);
+    return Number(stats.bavail) * Number(stats.bsize);
+  } catch {
+    // Some filesystems do not report free space; the size cap still applies.
+    return Infinity;
+  }
+}
+
 // Streams an uploaded backup to disk. The file is kept (a day at most) so a
 // wrong passphrase can be retried without uploading again.
-export async function saveUploadedBackup(readable) {
+export async function saveUploadedBackup(readable, {
+  declaredBytes = null,
+  maxBytes = MAX_UPLOAD_BYTES,
+  freeSpaceMarginBytes = UPLOAD_FREE_SPACE_MARGIN_BYTES,
+  freeBytes = freeBytesAt,
+} = {}) {
+  const declared = declaredBytes == null || declaredBytes === "" ? null : Number(declaredBytes);
+  const tooLarge = () => uploadError(`The backup is larger than the ${Math.round(maxBytes / 1024 ** 3)} GB upload limit.`, 413, "UPLOAD_TOO_LARGE");
+  if (Number.isFinite(declared) && declared > maxBytes) throw tooLarge();
   fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
   removeStaleUploads();
+  // Without a declared size, assume the largest allowed upload could arrive.
+  const needed = (Number.isFinite(declared) && declared >= 0 ? declared : maxBytes) + freeSpaceMarginBytes;
+  if (freeBytes(FULL_BACKUPS_DIR) < needed) {
+    throw uploadError("Not enough free disk space to receive this backup.", 507, "UPLOAD_NO_SPACE");
+  }
   const uploadId = crypto.randomUUID();
   const destination = uploadedBackupPath(uploadId);
+  let received = 0;
+  async function* capped(source) {
+    for await (const chunk of source) {
+      received += chunk.length;
+      if (received > maxBytes) throw tooLarge();
+      yield chunk;
+    }
+  }
   try {
-    await pipeline(readable, fs.createWriteStream(destination));
+    await pipeline(readable, capped, fs.createWriteStream(destination));
   } catch (error) {
     fs.rmSync(destination, { force: true });
     throw error;
@@ -301,6 +342,7 @@ export async function runPlektRestore({ filePath, passphrase = "", label = "", r
     collectionTotal: 0,
     collectionsDone: 0,
     collectionsTotal: 0,
+    safetySnapshotPath: "",
     error: "",
   };
   currentJob = job;
@@ -331,10 +373,15 @@ export async function runPlektRestore({ filePath, passphrase = "", label = "", r
     job.status = "importing";
     pauseCronSync(CRON_PAUSE_MS);
     cronPaused = true;
+    fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
+    const snapshotPath = path.join(FULL_BACKUPS_DIR, `plekt-pre-restore-${job.id}.sqlite`);
+    db.prepare("VACUUM INTO ?").run(snapshotPath);
+    try { fs.chmodSync(snapshotPath, 0o600); } catch { /* non-POSIX */ }
+    job.safetySnapshotPath = snapshotPath;
     try {
       await importBackup(open, { portable, job });
     } catch (error) {
-      throw new Error(`The restore stopped part way through and your data is incomplete: ${error.message}`);
+      throw new Error(`The restore stopped part way through and your data is incomplete: ${error.message}. The database before this restore is preserved at ${job.safetySnapshotPath}`);
     }
     job.status = "complete";
     if (removeAfter) fs.rmSync(filePath, { force: true });

@@ -1,6 +1,6 @@
 import { sendJson, sendApiError, notFound } from "./utils/http.js";
 import { isClaimRequired } from "./appConfig.js";
-import { handleLogin, handleLogout, handleAuthStatus, handleAuthApiKey, handleAuthWebhookSecret, handleAuthCredentials, handleAuthClaim, handleRevokeAllSessions, requireAdmin } from "./utils/auth.js";
+import { handleLogin, handleLogout, handleAuthStatus, handleAuthApiKey, handleAuthWebhookSecret, handleAuthCredentials, handleAuthClaim, handleRevokeAllSessions, requireAdmin, isSameOrigin } from "./utils/auth.js";
 import { backfillUnknownShowTitles } from "./utils/dataRepo.js";
 import { runScheduledTick, startPlexNotificationListener, stopPlexNotificationListener } from "./scheduler.js";
 import { handleBackupExport, handleBackupImport, handleImport, handlePlektBackups, handleWatchBackups } from "./routes/backups.js";
@@ -119,6 +119,9 @@ function demoMutationResponse(path, res) {
 async function dispatch(req, res) {
   try {
     const path = routePath(req);
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !isSameOrigin(req)) {
+      return sendJson(res, { error: "Cross-site request rejected", code: "ORIGIN_REJECTED", retryable: false }, 403);
+    }
     // Health checks poll constantly and cost nothing; only real requests hold off the warm-up.
     if (path !== "ping") noteRequestActivity();
     if (isDemoMode()) {

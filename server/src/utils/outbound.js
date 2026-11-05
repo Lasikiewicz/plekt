@@ -13,6 +13,7 @@ const OUTBOUND_POLICY_CODES = Object.freeze({
   INVALID_URL: "OUTBOUND_INVALID_URL",
   UNSUPPORTED_SCHEME: "OUTBOUND_UNSUPPORTED_SCHEME",
   CREDENTIALS: "OUTBOUND_CREDENTIALS",
+  REDIRECT_BODY: "OUTBOUND_REDIRECT_BODY",
   METADATA: "OUTBOUND_METADATA",
   REDIRECT_LIMIT: "OUTBOUND_REDIRECT_LIMIT",
   DEMO_DISABLED: "OUTBOUND_DEMO_DISABLED",
@@ -56,6 +57,7 @@ function publicOutboundPolicyError(code) {
     [OUTBOUND_POLICY_CODES.INVALID_URL]: "Outbound URL must be valid",
     [OUTBOUND_POLICY_CODES.UNSUPPORTED_SCHEME]: "Outbound URL must use http or https",
     [OUTBOUND_POLICY_CODES.CREDENTIALS]: "Outbound URL must not contain embedded credentials",
+    [OUTBOUND_POLICY_CODES.REDIRECT_BODY]: "Cross-origin redirects cannot forward request bodies",
     [OUTBOUND_POLICY_CODES.METADATA]: "Outbound URL targets a blocked metadata endpoint",
     [OUTBOUND_POLICY_CODES.REDIRECT_LIMIT]: "Upstream request exceeded the redirect limit",
     [OUTBOUND_POLICY_CODES.DEMO_DISABLED]: "Outbound requests are disabled in demo mode",
@@ -139,6 +141,14 @@ function redirectRequestOptions(options, status, fromUrl, toUrl) {
     delete redirected.body;
   }
 
+  if (fromUrl.origin !== toUrl.origin) {
+    if (redirected.body != null) {
+      throw outboundPolicyError("Cross-origin redirects cannot forward request bodies", OUTBOUND_POLICY_CODES.REDIRECT_BODY);
+    }
+    for (const name of [...toUrl.searchParams.keys()]) {
+      if (/authorization|cookie|token|api[-_]?key|secret/i.test(name)) toUrl.searchParams.delete(name);
+    }
+  }
   if (fromUrl.origin !== toUrl.origin && redirected.headers) {
     const headers = new Headers(redirected.headers);
     for (const name of [...headers.keys()]) {

@@ -1,10 +1,25 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { makeTempDataDir } from "./helpers.js";
 
 makeTempDataDir("plembfin-diagnostic-logs-");
 process.env.ROLE = "web";
 const logger = await import("../server/src/utils/diagnosticLogger.js");
+const { DATA_DIR } = await import("../server/src/paths.js");
+
+test("archive retention preserves fourteen days even with more than twenty files", () => {
+  const folder = path.join(DATA_DIR, "logs");
+  const oldFile = path.join(folder, "diagnostic-old.jsonl");
+  fs.writeFileSync(oldFile, "old");
+  const old = new Date(Date.now() - 15 * 86400000);
+  fs.utimesSync(oldFile, old, old);
+  for (let i = 0; i < 25; i += 1) fs.writeFileSync(path.join(folder, `diagnostic-recent-${i}.jsonl`), "recent");
+  logger.pruneLogArchive();
+  assert.equal(fs.existsSync(oldFile), false);
+  assert.equal(fs.readdirSync(folder).filter((name) => name.startsWith("diagnostic-recent-")).length, 25);
+});
 
 test("diagnostic logs redact secrets and clear across the shared store", async () => {
   console.log("diagnostic-test token=super-secret-value");

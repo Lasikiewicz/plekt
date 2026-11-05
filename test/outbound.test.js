@@ -48,13 +48,23 @@ test("fetchWithTimeout rejects an unsafe initial URL before fetching", async (t)
   assert.equal(fetchCalls, 0);
 });
 
+test("fetchWithTimeout refuses cross-origin redirects that preserve a request body", async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => {
+    calls++;
+    return new Response(null, { status: 307, headers: { location: "https://other.example/token" } });
+  });
+  await assert.rejects(fetchWithTimeout("https://source.example/token", { method: "POST", body: JSON.stringify({ client_secret: "test-secret" }) }), /request bodies/);
+  assert.equal(calls, 1);
+});
+
 test("fetchWithTimeout validates redirects and does not forward credentials across origins", async (t) => {
   const originalFetch = globalThis.fetch;
   const requests = [];
   globalThis.fetch = async (url, options) => {
     requests.push({ url: String(url), headers: new Headers(options.headers) });
     if (requests.length === 1) {
-      return new Response(null, { status: 302, headers: { Location: "https://cdn.example.test/image.jpg" } });
+      return new Response(null, { status: 302, headers: { Location: "https://cdn.example.test/image.jpg?api_key=secret&X-Plex-Token=plex&width=340" } });
     }
     return new Response("ok", { status: 200 });
   };
@@ -67,6 +77,10 @@ test("fetchWithTimeout validates redirects and does not forward credentials acro
   assert.equal(requests.length, 2);
   assert.equal(requests[1].headers.get("accept"), "image/*");
   assert.equal(requests[1].headers.has("x-api-key"), false);
+  const redirected = new URL(requests[1].url);
+  assert.equal(redirected.searchParams.has("api_key"), false);
+  assert.equal(redirected.searchParams.has("X-Plex-Token"), false);
+  assert.equal(redirected.searchParams.get("width"), "340");
 });
 
 test("fetchWithTimeout replaces upstream exception objects with a safe error", async (t) => {

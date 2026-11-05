@@ -25,6 +25,7 @@ const DESTINATIONS_ID = "watchBackupDestinations";
 // Secret fields that must never be returned to the browser, per destination type.
 const SECRET_FIELDS = ["password", "secretAccessKey", "appSecret", "refreshToken"];
 const FILE_PATTERN = WATCH_HISTORY_FILE_PATTERN;
+const SAFETY_SNAPSHOT_MIN_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 // Remote destinations hold watch-history and encrypted full backups (see plembfinBackups.js)
 // side by side, so remote listing/retention must be able to tell them apart.
 
@@ -515,9 +516,18 @@ function applyRetention(retention) {
     protectedFiles = new Set();
   }
   const files = listWatchBackups();
-  for (const file of files.slice(Math.max(1, retention))) {
-    if (protectedFiles.has(file.name)) continue;
-    fs.unlinkSync(backupPath(file.name));
+  const ordinaryFiles = files.filter((file) => {
+    if (protectedFiles.has(file.name)) return false;
+    const marker = `${backupPath(file.name)}.safety`;
+    return !fs.existsSync(marker) || Date.now() - fs.statSync(marker).mtimeMs >= SAFETY_SNAPSHOT_MIN_AGE_MS;
+  });
+  for (const file of ordinaryFiles.slice(Math.max(1, retention))) {
+    try {
+      fs.unlinkSync(backupPath(file.name));
+      fs.rmSync(`${backupPath(file.name)}.safety`, { force: true });
+    } catch (error) {
+      console.warn(`Watch-history retention could not remove ${file.name}: ${error.message}`);
+    }
   }
 }
 
@@ -536,6 +546,7 @@ export async function createWatchHistoryBackup({ reason = "manual", mirrorRemote
   const temporary = `${destination}.tmp-${process.pid}`;
   fs.writeFileSync(temporary, compressed);
   fs.renameSync(temporary, destination);
+  if (/^pre[-_]/.test(reason)) fs.writeFileSync(`${destination}.safety`, String(reason));
   const config = loadWatchBackupConfig();
   applyRetention(config.retention);
   const result = {

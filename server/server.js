@@ -352,12 +352,22 @@ const handleApiDispatch = (req, res) => {
     res.status(500).json({ error: "Internal error" });
   });
 };
-app.all("/api/*path", express.raw({ type: (req) => !isStreamedUpload(req), limit: "15mb" }), handleApiDispatch);
+const smallApiBody = express.raw({ type: "*/*", limit: "32kb" });
+const webhookBody = express.raw({ type: "*/*", limit: "1mb" });
+const regularApiBody = express.raw({ type: "*/*", limit: "15mb" });
+function parseApiBody(req, res, next) {
+  if (isStreamedUpload(req) || isStreamedTenantUpload(req)) return next();
+  const path = String(req.path || "").replace(/^\/u\/[^/]+/i, "");
+  const parser = /^\/api\/(?:login|auth\/claim)\/?$/i.test(path) ? smallApiBody
+    : /^\/api\/webhook\/?$/i.test(path) ? webhookBody : regularApiBody;
+  return parser(req, res, next);
+}
+app.all("/api/*path", parseApiBody, handleApiDispatch);
 // Single-process multi-user: /u/<name>/api/* resolves in this process (no child Node).
 const { createTenantApiHandler } = await import("./src/utils/tenantRouting.js");
 app.all(
   "/u/:tenant/api/*path",
-  express.raw({ type: (req) => !isStreamedTenantUpload(req), limit: "15mb" }),
+  parseApiBody,
   createTenantApiHandler(dispatch),
 );
 

@@ -15,6 +15,7 @@ import {
 import { getCachedShowProgress } from "./showProgressCache.js";
 import { getCachedTmdbExternalIdKind } from "./tmdbGateway.js";
 import { getCachedTvdbEpisodeKind } from "./tvdbGateway.js";
+import { createPerUserState } from "./perUserState.js";
 
 const EXPLICIT_PLAYED_EVENT_KEYS = new Set([
   "itemmarkplayed",
@@ -431,16 +432,20 @@ const selectPendingSignatureStmt = db.prepare(`
   WHERE status = 'pending'
 `);
 const PENDING_LIST_CACHE_MS = 15_000;
-let pendingListCache = null;
+// One slot per user's data folder: each user has its own reviews table and data
+// version, so a shared slot could hand one user another user's matching list.
+const pendingListCacheFor = createPerUserState(() => ({ entry: null }), { maxEntries: 8 });
 
 export function listPendingManualWatchReviewsCached({ now = Date.now(), includeWatchContext = true } = {}) {
   const signature = selectPendingSignatureStmt.get() || {};
   const key = `${getDataVersion()}|${signature.count}|${signature.updated}|${signature.created}|context:${includeWatchContext ? "full" : "summary"}`;
-  if (pendingListCache && pendingListCache.key === key && now - pendingListCache.builtAt < PENDING_LIST_CACHE_MS) {
-    return pendingListCache.reviews;
+  const slot = pendingListCacheFor();
+  const cached = slot.entry;
+  if (cached && cached.key === key && now - cached.builtAt < PENDING_LIST_CACHE_MS) {
+    return cached.reviews;
   }
   const reviews = listPendingManualWatchReviews({ includeWatchContext });
-  pendingListCache = { key, builtAt: now, reviews };
+  slot.entry = { key, builtAt: now, reviews };
   return reviews;
 }
 

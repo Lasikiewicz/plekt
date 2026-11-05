@@ -92,12 +92,12 @@ None of these talk to each other - they all talk to Plekt.
 ## Key Features
 
 - **Canonical sync** - Seamless two-way sync keeps watched state aligned across every connected app with intelligent auto-reconciliation
-- **Force Sync** - Flexible on-demand sync per-title (with season scoping) or library-wide with comprehensive live progress logging; confirmed plans report partially applied results with missing titles instead of counting unmatched items as done. Title pushes finish local media servers before draining a paced, retrying Trakt queue, and cancellation finishes the current history item before skipping queued items
+- **Force Sync** - Flexible on-demand sync per-title (with season scoping) or library-wide with comprehensive live progress logging; Plex watched scans page every section and report failures in the preview. Confirmed plans report partially applied results with missing titles instead of counting unmatched items as done. Library replay uses four workers while keeping each item's order; cancellation also stops preview scans between pages. Title pushes finish local media servers before draining a paced, retrying Trakt queue
 - **Instant state restoration** - Automatically synchronizes watch history to newly added media and rebuilt server libraries
 - **Cross-platform resume** - Pause playback on one server and pick up right where you left off on another
 - **Theme-aware interface** - Dark mode uses Plekt's logo green for navigation and settings accents.
 
-- **Dropped titles** - Drop or un-drop a show or movie from its detail page or an Up Next card’s three-dot menu. History and resume progress stay intact. Dropped-only library/history views and a separate current-title count in Stats make intentional drops easy to find. A completed live play after the drop restores the title; historical imports and played flags leave it dropped. Drops sync both ways with Trakt (shows) and Simkl (shows and movies), with safe list restoration on un-drop.
+- **Dropped titles** - Drop or un-drop a show or movie from its detail page or an Up Next card’s three-dot menu. History and resume progress stay intact. Dropped-only library/history views and a separate current-title count in Stats make intentional drops easy to find. A completed live play after the drop restores the title; historical imports and played flags leave it dropped. Drops sync both ways with Trakt (shows) and Simkl (shows and movies), with safe list restoration on un-drop. Failed writes retain their intent and retry after an hour; a new explicit action retries immediately. Overlapping event and scheduled runs cannot send the same action concurrently, including across processes.
 - **Rewatch tracking** - Full multi-watch history logging with smart deduplication that preserves authentic repeat viewings
 - **Mobile dashboard cards** - Compact lower rows with larger posters; posters-only history cards expand their details to the right.
 - **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plekt-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history; desktop gives the four sections equal height and reserves matching space for their titles and card-rail sliders, while phones show taller, wider featured Up Next cards with larger posters
@@ -121,10 +121,10 @@ None of these talk to each other - they all talk to Plekt.
 - **Seerr integration** - Discover and request movies and TV shows directly from detail pages via Overseerr or Jellyseerr; opening Settings skips automatic Seerr capability requests
 - **Movie collections** - Explore related franchise entries, sequels, prequels, and spin-offs from movie detail pages and collection search results
 - **Direct server deep links** - Quick one-click links to jump directly to any title in Plex, Emby, or Jellyfin
-- **Automated backups** - Built-in daily local backups with optional scheduled offsite backups to Backblaze B2; interrupted restore fences recover after a three-minute stale heartbeat, while failure notices remain until dismissed
+- **Automated backups** - Built-in daily local backups with optional scheduled offsite backups to Backblaze B2; full restores first save a SQLite recovery snapshot, safety watch snapshots survive at least seven days, and interrupted restore fences recover after a three-minute stale heartbeat, while failure notices remain until dismissed
 - **Guided first-run setup** - A one-time account claim replaces the old generated-password dead end, followed by a resumable `/setup` wizard that offers enabled watch trackers together, connects media servers, adds metadata, configures webhooks, and tunes watch and Up Next sync. Continue on Import & sync starts an add-only initial outward pass after selected imports finish; its progress chip shows destination counts and remaining items, with interrupted or uncertain sends kept for review
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
-- **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, and HMAC session signing
+- **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, cross-site mutation checks and HMAC session signing; logout revokes the individual session across restarts
 - **High-performance artwork cache** - Fast local caching for high-resolution posters, backdrops, and logos from TMDB, TheTVDB, and Fanart.tv; metadata is warmed in the background as media is discovered or a TV show is rematched so the dashboard stays cache-first
 - **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings and per show in Fix Match, where stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose Aired or DVD order for a show and review DVD-to-aired episode links before new watches are saved; choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB; optional AniDB titles and descriptions for anime you confirm, movies uniquely linked by Wikidata, or shows TheTVDB clearly links, with episode numbering unchanged
 - **Unified multi-source search** - Blazingly fast search across your local libraries, TMDB movies/shows/collections, and TheTVDB with local media prioritized
@@ -512,7 +512,8 @@ Watching and Jellyfin's Next Up. Queue additions, removals, reorderings, and pro
 coalesce into a background provider push, including when the dashboard is closed. Turn it off to
 leave those app lists unchanged; Plekt's own
 Up Next view remains available. These choices can be changed later under Settings →
-Sync → **Sync Tuning**.
+Sync → **Sync Tuning**. Automatic pushes reuse the shared Up Next snapshot. Saved library
+answers survive restarts and stay in use while expired answers are rechecked in the background.
 
 **9. Review.** Confirm the connection, metadata, webhook, backup, import, and option
 statuses, then select **Open dashboard**. A media server is optional; without one, watches
@@ -682,6 +683,7 @@ is in [`.env.example`](.env.example).
 | `PLEKT_PUBLISHED_PORT` | _none_ | Host port Plekt is published on (5056 in the compose files); used by the startup webhook port advisory, which is skipped when unset. |
 | `PLEKT_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS to enable the `Secure` cookie flag and HSTS. |
+| `TRUST_PROXY` | _unset_ | Set to `1` only behind one trusted reverse proxy; uses its forwarded client IP for login and API rate limits. Keep direct access to Plekt restricted to that proxy. |
 | `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` | _built-in_ | Optional replacement for the bundled Trakt app. Both required together. |
 | `LOG_VERBOSE` | `false` | Set `true` for full per-request tracing in Settings → Logs. |
 | `FANART_API_KEY` | _none_ | Personal Fanart.tv key for higher rate limits. |

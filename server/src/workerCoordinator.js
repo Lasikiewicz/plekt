@@ -297,7 +297,9 @@ export function createWorkerCoordinator({ holderId, role }) {
       } else if (job.type === "force_sync_plan") {
         log("Force Sync preview started...");
         const config = await loadMediaConfig();
-        const collected = await collectServerWatchedItems(config, { scope: job.payload?.scope, logger: log });
+        const isCancelled = async () => getBackgroundJob(job.id)?.cancelRequested === true;
+        const collected = await collectServerWatchedItems(config, { scope: job.payload?.scope, logger: log, isCancelled });
+        if (await isCancelled()) throw new Error("Force Sync preview cancelled.");
         const plan = buildForceSyncPlan({ ...collected, historyRows: await getCachedHistory(), config });
         const record = createSyncPlanRecord(plan);
         result = { success: true, planId: record.id, summary: record.summary, status: record.status };
@@ -330,6 +332,7 @@ export function createWorkerCoordinator({ holderId, role }) {
         } else {
           log("Force Sync started...");
           result = await runForceSync(log, {
+            concurrency: 4,
             operationOwnerId: job.id,
             planId: job.payload?.planId || "",
             isCancelled: async () => getBackgroundJob(job.id)?.cancelRequested === true,

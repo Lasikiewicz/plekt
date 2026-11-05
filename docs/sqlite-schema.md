@@ -3,10 +3,16 @@
 Reference for `data/plembfin.db`. The full authoritative schema is in
 `server/src/schema.sql`; this doc adds context on the less-obvious fields.
 
+Daily `dbMaintenance.js` work optimizes the active user's database and checkpoints
+its WAL with `TRUNCATE`. The admin pass also checkpoints `shared-metadata.db`.
+Both databases use a 16 MiB `journal_size_limit`; a busy reader can defer truncation
+until a later pass, and concurrent writes can grow the WAL again after a checkpoint.
+
 ## Table list
 
 | Table | Purpose | Written by | Read by |
 | --- | --- | --- | --- |
+| `revoked_sessions` | Install-wide SHA-256 hashes of logged-out cookies with their original expiry; shared across tenant contexts and processes | logout (also prunes expired rows) | session verification |
 | `watch_history` | Canonical watch records (one row per unique watched item) | webhook `completed`/`unplayed`, scheduled catch-up, import | history endpoints, dashboard |
 | `live_tracking_cache` | Snapshot of currently-playing sessions from the scheduler | elected worker only | `handleNowPlaying` |
 | `active_sessions` | Live sessions from webhook `active` events (5-min TTL) | webhook `active` phase | `handleNowPlaying`, `active-sessions` |
@@ -14,9 +20,9 @@ Reference for `data/plembfin.db`. The full authoritative schema is in
 | `split_episode_repair_log` | Undo log of Repair Split Episode Shows: one row per rekeyed `watch_history` row (`row_key` = row id) or `playback_progress` row (`row_key` = old `media_key`), with old and new ids and keys, the run's backup name, and `reverted_at` once undone | `applySplitEpisodeRepair` | `undoSplitEpisodeRepair`, `listSplitEpisodeRepairRuns` (`utils/splitEpisodeRepair.js`) |
 | `up_next_provider_items` | Latest generation of provider Resume/Continue Watching/Next Up observations, keyed by provider feed and native item ID | scheduled provider feed sync | unified Up Next builder, source-ledger mutation lookup |
 | `up_next_provider_feed_state` | Per-provider/feed generation, completion, freshness, count, cursor, retry, and redacted error state | scheduled provider feed sync | Up Next cache/status response |
-| `up_next_library_items` | Last library-confirmed native item id per Up Next library lookup (30-day window); a live "missing" deletes the row | Up Next library lookup | the same lookup, only while that provider cannot answer, so a restart during an outage keeps the cards it proved |
+| `up_next_library_items` | Last library answer per Up Next library lookup (30-day window): the native item id, or an empty id for "not in this library", with `resolved_at` | Up Next library lookup and its background top-up | the same lookup in every process and after a restart; an answer past its 6-hour (found) or 2-hour (missing) TTL is still used while the top-up asks again, and while a provider cannot answer only a found id is kept |
 | `dropped_titles` | Shows and movies dropped on purpose: one row per title with show/movie id and title aliases, title snapshot and `dropped_at`. Permanent and uncapped (unlike Up Next dismissals); never changes watch history. Included in full and portable backups; cleared by the Watch History and factory wipes | `droppedTitles.js` | Up Next projection filter |
-| `dropped_title_tracker_state` | Per-provider dropped-title intents, un-drop tombstones, previous Simkl status, identity aliases and connection/account fence; failures retain local state | dropped-title tracker sync | conflict resolution and outbound retries |
+| `dropped_title_tracker_state` | Per-provider dropped-title intents, un-drop tombstones, previous Simkl status and identity aliases; `sending` rows use `updated_at` as a heartbeated claim fenced by account/connection/action/state. Pending failures retain their one-hour retry clock across metadata refreshes and restarts | dropped-title tracker sync | conflict resolution and outbound retries |
 | `dropped_title_tracker_cursors` | Last validated dropped-list activity and account-bound snapshot cursor | dropped-title tracker sync | complete-snapshot change detection |
 | `playstate` | Per-item watched/unwatched state for sync targets | sync orchestrator | sync orchestrator |
 | `manual_watch_reviews` | Provider watched flags awaiting an administrator date decision, plus source mismatch notices with separate dismiss handling | scheduled library sync, incoming episode mismatch checks, Manual Watch review page | Manual Watch review page |

@@ -1026,6 +1026,21 @@ export async function handleSeerrMediaStatus(req, res) {
   }
 }
 
+// Compares two server URLs after URL normalization (case of scheme and host,
+// default ports, trailing slashes), falling back to exact text when unparsable.
+function sameServerUrl(a, b) {
+  const normalize = (value) => {
+    const textValue = String(value || "").trim().replace(/\/+$/, "");
+    try {
+      return new URL(textValue).href.replace(/\/+$/, "");
+    } catch {
+      return textValue;
+    }
+  };
+  const left = normalize(a);
+  return Boolean(left) && left === normalize(b);
+}
+
 export async function handleTestConnection(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
@@ -1037,6 +1052,9 @@ export async function handleTestConnection(req, res) {
   let token = String(body.token || body.apiKey || "");
   // The browser never receives stored secrets, so the settings form may submit a
   // blank token for an already-configured server — fall back to the saved credential.
+  // The saved token only ever goes to the saved server: a blank token with any
+  // other URL is refused, so a caller cannot have it sent to an address of their
+  // choosing (app audit, 5 November 2026).
   if ((!token || !baseUrl) && ["plex", "emby", "jellyfin"].includes(type)) {
     let config;
     try {
@@ -1049,7 +1067,15 @@ export async function handleTestConnection(req, res) {
       : type === "jellyfin"
         ? jellyfinCredential(config?.jellyfin)
         : String(config?.[type]?.apiKey || ""));
-    baseUrl = baseUrl || String(config?.[type]?.baseUrl || "").replace(/\/+$/, "");
+    const savedBaseUrl = String(config?.[type]?.baseUrl || "").replace(/\/+$/, "");
+    if (!body.token && !body.apiKey && baseUrl && !sameServerUrl(baseUrl, savedBaseUrl)) {
+      return sendJson(res, {
+        ok: false,
+        error: "Enter the token to test a server URL that differs from the saved one.",
+        code: "TOKEN_REQUIRED_FOR_NEW_URL",
+      }, 400);
+    }
+    baseUrl = baseUrl || savedBaseUrl;
   }
   if (!type || !baseUrl || !token) return sendJson(res, { ok: false, error: "type, url, and token are required" }, 400);
 

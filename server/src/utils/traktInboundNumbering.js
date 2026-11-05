@@ -2,6 +2,9 @@ import { db } from "../db.js";
 import { normalizeWatchProvenance } from "./watchProvenance.js";
 import { readShowNumbering } from "./seasonSource.js";
 import { showNumberMap } from "./showSeasonTranslation.js";
+import { yieldToEventLoop } from "./eventLoop.js";
+
+const YIELD_SLICE_MS = 25;
 
 // Inbound Trakt numbering for a show with a Fix Match season choice whose
 // plays were replaced on Trakt (showTraktReplace.js). Its plays live on Trakt
@@ -55,7 +58,14 @@ export async function buildTraktInboundTranslator() {
   }
   // Episodes watched after the replace have no row override; the show's full
   // map (cached seasons) covers them. Row overrides win where both exist.
+  // The cached-only map build never awaits real I/O, so without an explicit
+  // yield this loop over every cached show ran as one event-loop block.
+  let sliceStart = performance.now();
   for (const [tvdbId, show] of shows) {
+    if (performance.now() - sliceStart >= YIELD_SLICE_MS) {
+      await yieldToEventLoop();
+      sliceStart = performance.now();
+    }
     if (!show?.tmdbId || show.numbering.rowNumbering === "tmdb") continue;
     const built = await showNumberMap({ tvdbId, tmdbId: show.tmdbId, numbering: { ...show.numbering, source: "tmdb" }, cachedOnly: true }).catch(() => null);
     for (const [storedKey, target] of built?.map?.pairs || []) {

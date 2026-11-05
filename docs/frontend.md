@@ -216,6 +216,10 @@ state, loaded data (history, movies, shows, stats, sessions), paging offsets, ca
 object holds the DOM references bound at startup. Nothing is reactive - rendering is
 manual: change state, call the relevant `renderX()`.
 
+Retained lookup, detail, discovery and explorer caches use `SessionCache` with a
+200-entry limit per map, evicting the least recently written entry. In-flight
+request maps remain separate so eviction cannot duplicate active requests.
+
 Preferences persist in localStorage under `plembfin:*` keys (view modes, sort orders,
 filters, theme, cached pages); the constants at the top of `state.js` list them all.
 
@@ -342,8 +346,9 @@ stays set to the slug throughout, so the address bar keeps the `/tvshow/:key` fo
   by a month as the user scrolls toward either end; server-side month results persist
   locally across restarts, while search can prefetch the next 12 months to list matches
   outside the visible range - see [upcoming.md](upcoming.md).
-- Up Next loads through `/api/up-next` on every dashboard entry without a browser-local
-  first-paint snapshot or a client freshness window, and
+- Up Next loads through `/api/up-next` on every dashboard entry without a client freshness
+  window; a reload first paints the last confirmed cards from a per-user, per-dashboard
+  localStorage snapshot as checking until the reply replaces them (decision 65), and
   uses a durable mixed movie/episode server snapshot with stale-while-revalidate. A cold
   load shows animated placeholder tiles; refreshes keep existing cards in place and show
   “Refreshing…” beside the animated refresh icon instead of labeling every card “Checking…”.
@@ -356,7 +361,10 @@ stays set to the slug throughout, so the address bar keeps the `/tvshow/:key` fo
   failures/partial refreshes expose source status while retaining the last good rows.
   Watch-state history events refresh the rail after the authoritative history snapshot
   arrives. Clear progress and Remove from Up Next rebuild the shared snapshot before
-  returning success. Dashboard requests wait for current canonical state when invalidated.
+  returning success. After Remove from Up Next the rail reads that rebuilt snapshot
+  (`loadUpNext({ afterMutation: true })`, a `revalidate=1` read queued like a forced one)
+  instead of forcing a second full rebuild with `refresh=1`, and reloads history alongside it.
+  Dashboard requests wait for current canonical state when invalidated.
   Recently Watched separately refreshes the small history preview on live history events,
   without waiting for provider sync or loading detail-page patching modules.
   Provider-only staleness can revalidate in the background. Discover loads cached TMDB feeds and a bounded rolling-12-month watch-history recommendation rail
@@ -469,6 +477,10 @@ of the rule, `playlistRuleDetails`), Refresh now (`list-refresh-rule`), and Stop
 (`list-stop-rule`, asked first), so its rail is as tall as any other. Only a rule error or a held check (Confirm/Discard, `list-rule-held`) adds
 a line below the heading. Its cards have no
 remove, drag, or Move arrows, and add-to menus leave it out (`playlistAcceptsItem`).
+
+An automatic playlist push preserves remote entries when its sync ledger is empty, so a
+lost ledger cannot immediately remove app-side entries. Once a ledger exists, normal
+one-way reconciliation resumes.
 
 "Import from apps" beside New playlist opens the import dialog (`playlist-import.js`): each
 connected app's playlists not linked yet (`list-import-candidates`), with item count and type,

@@ -41,6 +41,19 @@ test("pending dispatch skips a history row deleted after the queue snapshot", as
   }), null, "the deleted history row must not recreate watched playstate");
 });
 
+test("overlapping pending dispatch sweeps skip the duplicate scheduler pass", async () => {
+  await repo.insertWatchRecord({
+    title: "Overlapping Dispatch Movie", media_type: "movie", tmdb_id: "overlapping-dispatch",
+    watched_at: "2026-10-01T00:00:00.000Z", source: "manual", sync_action: "watched",
+    sync_dispatch_telemetry: "Dispatch status: pending",
+  });
+  const first = syncPendingManualDispatches({}, createLoopStore(), () => {});
+  const second = syncPendingManualDispatches({}, createLoopStore(), () => {});
+  const results = await Promise.all([first, second]);
+  assert.equal(results.reduce((sum, value) => sum + value, 0), 1);
+  assert.equal(results.filter((value) => value === 0).length, 1);
+});
+
 test("a current row deleted immediately before promotion cannot recreate watched playstate", async () => {
   const row=await repo.insertWatchRecord({title:"Deleted Current Dispatch Movie",media_type:"movie",tmdb_id:"deleted-current-dispatch",watched_at:"2026-10-01T00:00:00Z",source:"manual",sync_action:"watched",sync_dispatch_telemetry:"Dispatch status: pending"},{prefetch:false});
   await syncPendingManualDispatches({},createLoopStore(),message=>{

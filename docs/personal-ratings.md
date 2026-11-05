@@ -31,8 +31,9 @@ or superseded. After sending, one lookup checks that list membership and watch d
 stayed unchanged; a changed or failed readback marks the source for review.
 
 Later complete scans hold removals for review when **at least two** previously rated
-items and **more than 20%** of that provider's rated baseline disappear. Exactly 20%
-or one missing rating follows normal reconciliation. Malformed or truncated scans
+items and **more than 20%** of that provider's rated baseline disappear. A completely
+empty scan also holds a single existing rating for review. Exactly 20%
+or one missing rating in a nonempty snapshot follows normal reconciliation. Malformed or truncated scans
 fail; per-item processing errors prevent the missing-rating clear pass.
 
 A persistent **Rating scan held for review** warning in this panel lists the provider,

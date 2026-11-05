@@ -17,8 +17,7 @@ const FLUSH_INTERVAL_MS = 1000;
 const MAX_PENDING = 200;
 // On-disk archive retention. The JSONL files are crash forensics only - the
 // logs panel reads SQLite - so they can be pruned aggressively.
-const ARCHIVE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const ARCHIVE_MAX_FILES = 20;
+const ARCHIVE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const LOGS_DIR = path.join(DATA_DIR, "logs");
 const role = String(process.env.ROLE || "all");
 const instance = `${role}:${process.pid}`;
@@ -147,7 +146,7 @@ function addLog(level, args) {
   scheduleFlush();
 }
 
-// Delete archive files that are too old or beyond the file-count cap. Mirrors
+// Delete archive files older than the retention window. Mirrors
 // applyRetention() in watchHistoryBackups.js. Nothing pruned this directory
 // before, so it grew one file per process start indefinitely.
 export function pruneLogArchive() {
@@ -165,7 +164,7 @@ export function pruneLogArchive() {
       })
       .sort((a, b) => b.mtime - a.mtime);
 
-    const doomed = files.filter((file, index) => index >= ARCHIVE_MAX_FILES || file.mtime < cutoff);
+    const doomed = files.filter((file) => file.mtime < cutoff);
     for (const file of doomed) {
       try {
         fs.rmSync(file.full, { force: true });

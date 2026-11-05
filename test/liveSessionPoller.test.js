@@ -6,7 +6,7 @@ makeTempDataDir("plekt-live-poller-");
 const { createLiveSessionPoller } = await import("../server/src/utils/liveSessionPoller.js");
 
 test("idle polls wait five minutes, active tracking stays fast, and explicit refresh still works", async (t) => {
-  t.mock.timers.enable({ apis: ["setTimeout"] });
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1000 });
   let calls = 0;
   let result = { hasActiveSession: false, failed: false };
   const poller = createLiveSessionPoller({ refresh: async () => { calls++; return result; } });
@@ -36,7 +36,9 @@ test("idle polls wait five minutes, active tracking stays fast, and explicit ref
     await tick(1);
     assert.equal(calls, 5, "failed polls retain the thirty-second retry");
     poller.poke();
-    await tick(50);
+    await tick(999);
+    assert.equal(calls, 5, "bursts cannot poll more than once per second");
+    await tick(1);
     assert.equal(calls, 6, "a notification/viewer refresh bypasses the idle wait");
     poller.stop();
     await tick(300_000);

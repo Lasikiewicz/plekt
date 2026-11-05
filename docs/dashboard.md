@@ -142,9 +142,12 @@ the browser as a visible failure:
   normal poster resolution (`/api/poster`, then cached artwork). Cached `/media/...`, `/api/...`
   and absolute `http(s)` URLs are kept as they are.
 
-The browser reads the shared server snapshot on every dashboard entry, without painting a
-browser-local snapshot or skipping the request for two minutes. A cold start shows animated
-placeholder tiles in the Up Next rail until the first response arrives. Refreshing an existing
+The browser reads the shared server snapshot on every dashboard entry and never skips the
+request. On a page reload it first paints the last cards the server confirmed for that signed-in
+user and that dashboard (`plekt:upNextSnapshot:v1:<user>:<activeUser>` in localStorage, up to
+30 cards, 14 day expiry), marked as checking; without a valid saved snapshot it shows loading
+tiles until the first reply, including before the deferred request starts. The server reply then replaces them, and cards it no
+longer holds slide out (decision 65). Animated placeholder tiles show only when nothing is saved. Refreshing an existing
 rail keeps its cards in place, removes per-card checking labels, and animates the refresh icon
 with a single “Refreshing…” label beside it. Clear progress and Remove
 from Up Next invalidate and rebuild that snapshot before returning success, so another device
@@ -217,7 +220,9 @@ Resume cards show progress, source badges, app links, Watch now, Mark watched, a
 progress when a positive playback position exists. The three-dot menu on all Up Next cards
 provides Mark watched, Rate, watchlist actions, Clear progress (only for resume items with
 real progress), and Remove from up next (to dismiss the card from the queue and clear progress
-across connected servers). Removing an episode dismisses its whole show from the rail, while
+across connected servers). For an alternate episode order, clear/remove first verifies the
+native media-server episode and its aired identity; an unresolved mapping returns a specific
+conflict message without changing watched state. Removing an episode dismisses its whole show from the rail, while
 clearing an episode deletes its
 positive progress and marks it unwatched, so a refresh moves it below remaining resumes as a
 zero-progress next-up card. Clearing a movie removes it from the queue. Mark watched commits
@@ -238,6 +243,11 @@ Plex and Emby receive their native watched mark; Jellyfin receives only a merged
 update, preserving its play count, watched flag, and resume position. Genuine part-watches are
 never overwritten, and an item that is already part-watched is already on its provider's rail by
 that position alone.
+
+Automatic pushes read the shared server snapshot, waiting for its deduplicated rebuild when
+history or queue state changes, instead of building a separate projection. Within each build,
+the watched and unwatched passes share row-state results, and both local queue passes share
+show-detail reads from the same episode snapshot.
 
 The push also forwards known positive resume checkpoints. It only ever adds to the native rails:
 an entry the app lists but Plekt's queue does not is reported as left in place and is never
@@ -273,16 +283,29 @@ The local fallback can queue the detail page's first unwatched released episode 
 provider feed mentions it. Watch history only records a native provider item id once something
 has been played, so a next unwatched episode never carries one; the projection resolves it against
 the configured Plex, Emby, and Jellyfin libraries with the same lookup the push uses
-(`upNextLibraryLookup.js`), caching hits for six hours and misses for two hours, so a newly added next episode can take up to
-two hours to appear. For a show whose known episodes are all watched, the projection reads the
+(`upNextLibraryLookup.js`). Found and missing answers are saved in SQLite and reused after a
+restart. Hits become due for a recheck after six hours and misses after two hours; the last
+answer stays in use while a background top-up rechecks it. Saved answers are retained for
+30 days. For a show whose known episodes are all watched, the projection reads the
 show's full episode list from each library to find an episode the metadata does not know yet; that
 list is kept for thirty minutes. A lookup that
 fails (the server is unreachable or returns an error) is not cached as a miss; instead that provider's
 lookups stand down for one minute, so an outage costs one failed request per minute rather than one
 per show on every rebuild, and cached answers keep being used meanwhile. Each build that uses the
-real library lookups writes one `Up Next build:` line to the diagnostic log with its duration and
+real library lookups writes one `Up Next build [reason]:` line to the diagnostic log with its duration and
 how many library lookups and series inventories were live, cached, or skipped for the per-build
-budget of 32 live lookups; a build with no live lookups means both caches are full. The lookups a
+budget of 32 live lookups; a build with no live lookups means both caches are full. The bracketed
+reason names who asked (`dashboard`, `auto-sync before push`, `auto-sync after push`, `mutation <route>`)
+and why the saved snapshot was not current, including the history generation and the write that moved
+it. A `started` line precedes each build, and a request that arrives while a build runs logs `joined`
+(same generation, shares that build) or `chained` (the generation moved, so one follow-up build runs),
+so two builds near one queue change can be told apart as a provider or webhook echo or a real extra build.
+A stored build that differs from the previous one writes `Up Next projection changed:` with the cards
+added, removed or reordered and the fields rewritten. The build stamps itself with the shared history
+generation read fresh, because the in-process copy lags the database by up to 500 ms and a write just
+before a build would otherwise make the new snapshot look out of date. An automatic push whose own provider
+echoes moved the generation is remembered once the queue rebuilt afterwards matches the queue pushed, so
+the follow-up run reports unchanged instead of pushing the same queue again. The lookups a
 build skips for that budget are then asked in the background, 32 at a time with a two-second pause
 between batches, so the next rebuild finds them cached; one top-up runs at a time and writes one
 `Up Next lookup top-up:` line when it finishes. An episode

@@ -276,7 +276,7 @@ function fingerprintFor(items = []) {
 
 // Inspects each configured, in-scope server and returns the mapped watched
 // items plus per-server fingerprints for later staleness checks. Read-only.
-export async function collectServerWatchedItems(config, { scope: rawScope, logger = () => {}, clients: clientOverrides } = {}) {
+export async function collectServerWatchedItems(config, { scope: rawScope, logger = () => {}, clients: clientOverrides, isCancelled = async () => false } = {}) {
   const scope = normalizeScope(rawScope);
   const clients = { ...DEFAULT_CLIENTS, ...(clientOverrides || {}) };
   const configuredServers = configuredSyncServers(config);
@@ -288,6 +288,7 @@ export async function collectServerWatchedItems(config, { scope: rawScope, logge
   const tasks = configuredServers
     .filter((server) => serverInScope(scope, server))
     .map(async (server) => {
+      if (await isCancelled()) throw new Error("Force Sync preview cancelled.");
       const verified = await verifyScopedLibraries(server, config, scope, clients, logger).catch((error) => {
         logger(`Force Sync scope ERROR: could not verify ${server} libraries: ${error.message}. Skipping ${server} (scope fails closed).`);
         return { ok: false, missing: [], error: error.message };
@@ -303,14 +304,14 @@ export async function collectServerWatchedItems(config, { scope: rawScope, logge
         let mapped = [];
         if (server === "plex") {
           logger("Plex: scanning library sections...");
-          rawItems = await clients.fetchPlexWatchedItems(config.plex, { libraryIds });
+          rawItems = await clients.fetchPlexWatchedItems(config.plex, { libraryIds, isCancelled });
           logger(`Plex: fetched ${rawItems.length} watched library items.`);
           mapped = rawItems.map((item) => mapPlexWatchedItem(item));
         } else {
           const label = server === "emby" ? "Emby" : "Jellyfin";
           logger(`${label}: querying played items...`);
           const fetchFn = server === "emby" ? clients.fetchEmbyWatchedItems : clients.fetchJellyfinWatchedItems;
-          rawItems = await fetchFn(config[server], { libraryIds });
+          rawItems = await fetchFn(config[server], { libraryIds, isCancelled });
           logger(`${label}: fetched ${rawItems.length} played library items.`);
           mapped = rawItems.map((item) => mapEmbyLikeWatchedItem(item, server));
         }
@@ -339,6 +340,7 @@ export async function collectServerWatchedItems(config, { scope: rawScope, logge
     });
 
   await Promise.all(tasks);
+  if (await isCancelled()) throw new Error("Force Sync preview cancelled.");
   scannedServers.sort((a, b) => SYNC_SERVERS.indexOf(a) - SYNC_SERVERS.indexOf(b));
   return { scope, itemsByServer, fingerprints, scopeErrors, scannedServers, configuredServers };
 }

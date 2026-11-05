@@ -84,6 +84,23 @@ test("a fresh install is unanswered and off", () => {
   assert.equal(status.needsAnswer, true);
 });
 
+test("a stored choice of on reads on for main, alpha and develop builds", () => {
+  reset();
+  answerInstallCheck(true);
+  const previous = process.env.BUILD_CHANNEL;
+  try {
+    for (const channel of ["main", "alpha", "develop"]) {
+      process.env.BUILD_CHANNEL = channel;
+      const status = installCheckStatus();
+      assert.equal(status.enabled, true, channel);
+      assert.equal(status.payload.channel, channel);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.BUILD_CHANNEL;
+    else process.env.BUILD_CHANNEL = previous;
+  }
+});
+
 test("nothing is sent before the user answers or after they decline", async () => {
   reset();
   const { calls, fetcher } = recorder();
@@ -173,15 +190,17 @@ test("turning it off stops further checks and keeps the last day", async () => {
   assert.equal(readInstallCheckState().lastCheckDay, "2026-11-04");
 });
 
-test("a development build sends nothing", async () => {
+test("a develop build sends once a day like any other channel", async () => {
   reset();
   answerInstallCheck(true);
   const previous = process.env.BUILD_CHANNEL;
   process.env.BUILD_CHANNEL = "develop";
   try {
     const { calls, fetcher } = recorder();
-    assert.equal((await sendInstallCheckIfDue({ fetcher, url: URL_BASE })).reason, "develop-build");
-    assert.equal(calls.length, 0);
+    const result = await sendInstallCheckIfDue({ fetcher, url: URL_BASE });
+    assert.equal(result.reason, "sent");
+    assert.equal(result.body.channel, "develop");
+    assert.equal(calls.length, 1);
   } finally {
     if (previous === undefined) delete process.env.BUILD_CHANNEL;
     else process.env.BUILD_CHANNEL = previous;

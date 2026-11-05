@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getDataVersion, getUpNextVersion, bumpUpNextVersion } from "../db.js";
+import { getDataVersion, getUpNextVersion, bumpUpNextVersion, dataVersionTrigger, refreshDataVersion } from "../db.js";
 import { getActiveDataDir } from "./userContext.js";
 import { getUpNextFeedSourceVersion, listUpNextProviderFeedStates } from "./upNextRepository.js";
 import { getCanonicalPosterUrl } from "./mediaArtwork.js";
@@ -44,6 +44,7 @@ function cacheState(dataDir = getActiveDataDir()) {
       writeChain: Promise.resolve(),
       buildInFlight: null,
       buildInFlightVersion: "",
+      buildInFlightLabel: "",
       lastRevalidateAt: 0,
     };
     cacheStates.set(directory, state);
@@ -110,6 +111,34 @@ function normalizeCache(parsed) {
   };
 }
 
+// What differed between two stored projections, for the build log: a rebuild
+// that "changed" queues another provider push, so the log has to say whether a
+// card appeared, left, moved, or only had a field (progress, ids) rewritten.
+export function describeProjectionChange(previous = [], next = []) {
+  const keyOf = (item) => String(item?.media_key || item?.id || "");
+  const before = new Map((Array.isArray(previous) ? previous : []).map((item) => [keyOf(item), item]));
+  const after = new Map((Array.isArray(next) ? next : []).map((item) => [keyOf(item), item]));
+  const added = [...after.keys()].filter((key) => !before.has(key));
+  const removed = [...before.keys()].filter((key) => !after.has(key));
+  const fields = [];
+  for (const [key, item] of after) {
+    const old = before.get(key);
+    if (!old) continue;
+    const names = [...new Set([...Object.keys(old), ...Object.keys(item)])]
+      .filter((name) => JSON.stringify(old[name]) !== JSON.stringify(item[name]));
+    if (names.length) fields.push(`${key}: ${names.join(",")}`);
+  }
+  const keptOrder = [...after.keys()].filter((key) => before.has(key));
+  const priorOrder = [...before.keys()].filter((key) => after.has(key));
+  const reordered = JSON.stringify(keptOrder) !== JSON.stringify(priorOrder);
+  const parts = [];
+  if (added.length) parts.push(`added ${added.join(" ; ")}`);
+  if (removed.length) parts.push(`removed ${removed.join(" ; ")}`);
+  if (reordered) parts.push("reordered");
+  if (fields.length) parts.push(`fields ${fields.slice(0, 5).join(" ; ")}`);
+  return parts.join("; ") || "source status only";
+}
+
 async function readCache(state = cacheState()) {
   const cacheFile = path.join(state.directory, "up-next-cache.json");
   try {
@@ -159,6 +188,9 @@ async function storeCache(result, fallbackSourceVersion, builtFrom = null, state
     const changed = !current.builtAt
       || JSON.stringify({ items: current.items, sourceStatus: comparableSourceStatus(current.sourceStatus) })
         !== JSON.stringify({ items: nextItems, sourceStatus: comparableSourceStatus(nextSourceStatus) });
+    if (changed && current.builtAt) {
+      console.log(`Up Next projection changed: ${describeProjectionChange(current.items, nextItems)}`);
+    }
     const currentGlobalVersion = getUpNextVersion();
     const cachedVersion = Number(current.upNextVersion || 0);
     const outdated = Boolean(builtFrom)
@@ -202,8 +234,35 @@ async function storeCache(result, fallbackSourceVersion, builtFrom = null, state
   return stored;
 }
 
-function buildAndStore(build, state = cacheState()) {
-  const builtFrom = { upNextVersion: getUpNextVersion(), historyVersion: getDataVersion() };
+// One line per build decision, so the diagnostic log shows which caller asked
+// for each build, why the served snapshot was not current, and which write moved
+// the history generation (plan/archive/up-next-build-speed/summary.md, step 2). `cause` is
+// supplied by the reader; `cached` is the snapshot generation it found.
+export function describeUpNextBuildRequest(trigger, cause = "", cached = null) {
+  const parts = [String(trigger || "unattributed")];
+  if (cause) parts.push(cause);
+  const history = getDataVersion();
+  const queue = getUpNextVersion();
+  if (cached && Number(cached.historyVersion || 0) !== history) {
+    parts.push(`history v${cached.historyVersion || 0} to v${history} (${dataVersionTrigger(history)})`);
+  }
+  if (cached && Number(cached.upNextVersion || 0) !== queue) {
+    parts.push(`queue v${cached.upNextVersion || 0} to v${queue}`);
+  }
+  return parts.join("; ");
+}
+
+function logBuildDecision(kind, label) {
+  console.log(`Up Next build ${kind}: ${label}`);
+}
+
+function buildAndStore(build, state = cacheState(), label = "unattributed") {
+  // getDataVersion() re-reads the shared generation at most every 500 ms. A
+  // canonical write that landed just before this build (an Emby unplayed echo
+  // during a removal) is read by the build but, with the lagging version,
+  // stamped as newer than the snapshot once the poll adopts it, which cost a
+  // second build per removal. Read the shared generation fresh instead.
+  const builtFrom = { upNextVersion: getUpNextVersion(), historyVersion: refreshDataVersion() };
   const requestedVersion = `${builtFrom.upNextVersion}:${builtFrom.historyVersion}`;
   if (state.buildInFlight) {
     // A manual queue change can arrive while a projection is already being
@@ -211,17 +270,22 @@ function buildAndStore(build, state = cacheState()) {
     // as current; wait for it to finish, then build against the new queue
     // generation.
     if (state.buildInFlightVersion !== requestedVersion) {
-      return state.buildInFlight.then(() => buildAndStore(build, state));
+      logBuildDecision("chained", `${label}; behind ${state.buildInFlightLabel} (generation moved to ${requestedVersion})`);
+      return state.buildInFlight.then(() => buildAndStore(build, state, label));
     }
+    logBuildDecision("joined", `${label}; shares ${state.buildInFlightLabel}`);
     return state.buildInFlight;
   }
   state.buildInFlightVersion = requestedVersion;
+  state.buildInFlightLabel = label;
+  logBuildDecision("started", label);
   state.buildInFlight = Promise.resolve()
-    .then(() => build())
+    .then(() => build({ trigger: label }))
     .then((result) => storeCache(result, getUpNextFeedSourceVersion(), builtFrom, state))
     .finally(() => {
       state.buildInFlight = null;
       state.buildInFlightVersion = "";
+      state.buildInFlightLabel = "";
     });
   return state.buildInFlight;
 }
@@ -232,7 +296,7 @@ export async function refreshUpNextAfterMutation(mediaConfig, reason) {
   const { invalidateHistoryDerivedCaches } = await import("./dataRepo.js");
   const { buildUpNextProjection } = await import("./upNextService.js");
   await invalidateHistoryDerivedCaches(reason);
-  return buildAndStore(() => buildUpNextProjection({ mediaConfig }));
+  return buildAndStore((ctx) => buildUpNextProjection({ mediaConfig, ...ctx }), cacheState(), `mutation ${reason}`);
 }
 
 function publicSnapshot(cache, stale = false, sourceStatus = cache.sourceStatus) {
@@ -259,14 +323,14 @@ function currentPublicSourceStatus() {
 
 // `force` skips the provider-feed throttle. It is used when the served snapshot
 // predates the latest watch history, where a rebuild must always follow.
-function queueBackgroundRebuild(build, { force = false } = {}, state = cacheState()) {
+function queueBackgroundRebuild(build, { force = false, label = "background" } = {}, state = cacheState()) {
   if (!force && Date.now() - state.lastRevalidateAt < REVALIDATE_MIN_INTERVAL_MS) return false;
   state.lastRevalidateAt = Date.now();
   // Start on a later timer turn rather than a promise microtask. A stale
   // dashboard response should finish before the provider-backed projection
   // can begin its synchronous cache assembly and compete with sibling APIs.
   const timer = setTimeout(() => {
-    buildAndStore(build, state)
+    buildAndStore(build, state, label)
       .then((result) => {
         console.log(`Up Next cache background rebuild complete: ${result.items.length} item${result.items.length === 1 ? "" : "s"}${result.changed ? ", cache updated" : ", unchanged"}.`);
       })
@@ -286,17 +350,19 @@ export async function getUpNextCacheSnapshot(build, {
   refresh = false,
   revalidate = false,
   allowStale = false,
+  trigger = "snapshot",
 } = {}) {
   const state = cacheState();
-  if (refresh) return publicSnapshot(await buildAndStore(build, state));
+  if (refresh) return publicSnapshot(await buildAndStore(build, state, describeUpNextBuildRequest(trigger, "explicit refresh")));
 
   const cache = await readCache(state);
   if (!cache.builtAt) {
+    const label = describeUpNextBuildRequest(trigger, "no cached snapshot");
     if (allowStale) {
-      queueBackgroundRebuild(build, { force: true }, state);
+      queueBackgroundRebuild(build, { force: true, label: `background ${label}` }, state);
       return publicSnapshot(cache, true, currentPublicSourceStatus());
     }
-    return publicSnapshot(await buildAndStore(build, state));
+    return publicSnapshot(await buildAndStore(build, state, label));
   }
 
   const sourceVersion = getUpNextFeedSourceVersion();
@@ -308,18 +374,20 @@ export async function getUpNextCacheSnapshot(build, {
   // in the rail. Provider-feed-only staleness keeps the old fast revalidate
   // behavior, but a history mismatch waits for the authoritative projection.
   if (historyChanged || upNextChanged) {
+    const label = describeUpNextBuildRequest(trigger, "snapshot out of date", cache);
     if (allowStale) {
       // Always rebuild here: the throttle below is for provider-feed staleness,
       // and skipping it would leave an already-watched episode in the rail.
-      queueBackgroundRebuild(build, { force: true }, state);
+      queueBackgroundRebuild(build, { force: true, label: `background ${label}` }, state);
       return publicSnapshot(cache, true, currentPublicSourceStatus());
     }
-    return publicSnapshot(await buildAndStore(build, state));
+    return publicSnapshot(await buildAndStore(build, state, label));
   }
   if (!stale) return publicSnapshot(cache);
+  const feedLabel = describeUpNextBuildRequest(trigger, sourceVersion !== cache.sourceVersion ? "provider feeds changed" : "snapshot older than its time limit");
   if (revalidate) {
-    queueBackgroundRebuild(build, {}, state);
+    queueBackgroundRebuild(build, { label: `background ${feedLabel}` }, state);
     return publicSnapshot(cache, true, currentPublicSourceStatus());
   }
-  return publicSnapshot(await buildAndStore(build, state));
+  return publicSnapshot(await buildAndStore(build, state, feedLabel));
 }

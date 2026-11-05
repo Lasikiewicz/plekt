@@ -6,6 +6,11 @@ caches every source (the CSP is `connect-src 'self'`).
 
 ## Files
 
+TMDB retries rate limits at most twice, parses both Retry-After seconds and HTTP
+dates, and caps each requested wait at 120 seconds. After repeated 429 responses it
+fails new requests quickly for 30 seconds, allowing callers to use stale cached data.
+TVDB retries preserve the caller's interactive, sync or enrichment lane.
+
 AniDB is an optional, anime-only source of titles and descriptions (Settings > Metadata
 providers > AniDB, off by default). It never changes seasons, episode numbering, artwork,
 watch history or outbound identities. A movie or show uses AniDB only through a match the

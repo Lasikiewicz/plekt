@@ -1273,10 +1273,11 @@ export async function handleUpNext(req, res) {
     // The projection resolves an unwatched next episode against the real
     // libraries, so the build needs the media config. It is loaded lazily:
     // a warm cache hit never calls the build at all.
-    const build = async () => buildUpNextProjection({
+    const build = async (ctx) => buildUpNextProjection({
       mediaConfig: mediaConfig || await loadMediaConfig().catch(() => null),
+      ...ctx,
     });
-    const snapshot = await getUpNextCacheSnapshot(build, { refresh, revalidate, allowStale });
+    const snapshot = await getUpNextCacheSnapshot(build, { refresh, revalidate, allowStale, trigger: "dashboard" });
     // The body carries live provider feed status and the server keeps its own
     // snapshot cache, so an HTTP-cached copy would only hide an outage.
     return sendJson(res, {

@@ -5,9 +5,11 @@ makeTempDataDir("plekt-force-accounting-");
 const { db } = await import("../server/src/db.js");
 const { createSyncPlanRecord, getSyncPlanSummary } = await import("../server/src/utils/syncPlans.js");
 const { executeForceSyncPlan } = await import("../server/src/utils/forceSyncExecutor.js");
+const { __resetEmbySeriesCache } = await import("../server/src/utils/embyClient.js");
 const config = { emby: { baseUrl: "https://emby.example.test", apiKey: "key", userId: "user" } };
 const originalFetch = globalThis.fetch;
-test.afterEach(() => { globalThis.fetch = originalFetch; });
+test.beforeEach(() => { __resetEmbySeriesCache(); });
+test.afterEach(() => { globalThis.fetch = originalFetch; __resetEmbySeriesCache(); });
 test.after(() => db.close());
 const missing = { kind: "mark_played", target: "emby", media: { title: "Missing Movie", type: "movie", tmdb: "123" } };
 function plan(actions, destructive = 0) {

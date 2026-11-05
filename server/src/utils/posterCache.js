@@ -44,10 +44,10 @@ export async function writeArtworkFile(absolutePath, buffer, { sameContent = fal
   await fs.writeFile(tempPath, buffer);
   try {
     await fs.rename(tempPath, absolutePath);
-  } catch {
+  } catch (error) {
     await fs.rm(tempPath, { force: true }).catch(() => null);
     if (sameContent && existsSync(absolutePath)) return;
-    await fs.writeFile(absolutePath, buffer);
+    throw error;
   }
 }
 
@@ -310,11 +310,28 @@ export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source 
 
     const contentLength = Number(response.headers.get("content-length") || 0);
     if (contentLength > MAX_ARTWORK_BYTES) {
+      await response.body?.cancel();
       await markPosterFailure(mediaKey, source, `Artwork exceeds ${MAX_ARTWORK_BYTES} bytes`, remoteUrl, variant);
       return null;
     }
 
-    return persistBuffer(Buffer.from(await response.arrayBuffer()), contentType, remoteUrl);
+    const chunks = [];
+    let received = 0;
+    const reader = response.body.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.byteLength;
+        if (received > MAX_ARTWORK_BYTES) {
+          await reader.cancel();
+          await markPosterFailure(mediaKey, source, `Artwork exceeds ${MAX_ARTWORK_BYTES} bytes`, remoteUrl, variant);
+          return null;
+        }
+        chunks.push(Buffer.from(value));
+      }
+    } finally { reader.releaseLock(); }
+    return persistBuffer(Buffer.concat(chunks, received), contentType, remoteUrl);
   } catch (error) {
     if (error?.name !== "AbortError") {
       await markPosterFailure(mediaKey, source, error?.message || String(error), remoteUrl, variant).catch(() => null);

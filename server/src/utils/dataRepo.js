@@ -30,6 +30,7 @@ import {
 } from "./watchDerivedFields.js";
 import { yieldToEventLoop } from "./eventLoop.js";
 import { brandEnv } from "./brandEnv.js";
+import { historyCaches } from "./historyCacheState.js";
 
 // Initialize TV show progress cache on startup
 initShowProgressCache().catch((err) => {
@@ -41,31 +42,10 @@ const MAX_HISTORY_LIMIT = 25000;
 const HISTORY_VISIBILITY_CACHE_VERSION = 4;
 const HISTORY_PREVIEW_SCAN_LIMIT = 600;
 
-let historyCache = { version: null, rows: [] };
-// History pages return episode rows, but each row also needs the canonical
-// artwork and series identity from its show. Build that lookup once per
-// history generation instead of regrouping the entire episode library for
-// every page, filter, or pagination request.
-let historyArtworkCache = { version: null, byId: null, byMediaKey: null, byCoordinate: null };
-const historyArtworkBuilds = new Map();
-let showCache = { version: null, shows: [] };
-let historyPreviewCache = { version: null, rows: new Map() };
-const historyPreviewBuilds = new Map();
+// The history-derived caches are kept per user in historyCacheState.js.
 // Longest synchronous run a background-capable cache build does before
 // letting other requests in (see groupShowRowsYielding).
 const REBUILD_SLICE_MS = 25;
-// The includeScheduledLibraryHistory variant returns a different show set, so it
-// needs its own slot. Without one it was recomputed from the full watch history
-// on every call - the Upcoming calendar asks for it once per month requested.
-let scheduledShowCache = { version: null, shows: [] };
-let movieCache = { version: null, rows: null };
-let movieSummaryCache = { version: null, rows: null };
-let statsCache = { version: null, stats: null };
-// A cache invalidation can wake several API requests at once (for example while
-// a Plex season notification is updating sibling episodes). Keep one rebuild in
-// flight per show-set variant so those requests share the expensive synchronous
-// per-show work instead of multiplying it and starving the HTTP health check.
-const showCacheBuilds = new Map();
 
 function assertRestoreWriteAllowed(source = "", { allowDuringRestore = false } = {}) {
   // An explicit manual unwatch is allowed to commit its local canonical marker
@@ -981,22 +961,24 @@ function finalizeStatsPeriod(period) {
 // invalidation; before adding any more full-table caches, move hot paths that need
 // pagination or large installations to indexed SQL with LIMIT/OFFSET.
 export async function getCachedHistory() {
+  const caches = historyCaches();
   const version = getDataVersion();
-  if (historyCache.version === version) return historyCache.rows;
+  if (caches.historyCache.version === version) return caches.historyCache.rows;
   const rows = timeCacheRebuild("history", version, dataVersionTrigger(version), () => (
     selectAllHistoryStmt.all().map(rowToWatch)
   ));
-  historyCache = { version, rows };
+  caches.historyCache = { version, rows };
   return rows;
 }
 
 export async function getCachedMovies() {
+  const caches = historyCaches();
   const version = getDataVersion();
-  if (movieCache.version === version && Array.isArray(movieCache.rows)) return movieCache.rows;
+  if (caches.movieCache.version === version && Array.isArray(caches.movieCache.rows)) return caches.movieCache.rows;
   const rows = timeCacheRebuild("movies", version, dataVersionTrigger(version), () => (
     selectMoviesStmt.all().map(rowToWatch).filter(isPlektTrackedWatchRow)
   ));
-  movieCache = { version, rows };
+  caches.movieCache = { version, rows };
   return rows;
 }
 
@@ -1004,18 +986,21 @@ export async function getCachedMovies() {
 // immutable generation. Collapse the expensive identity clustering once, then
 // let each request only filter/sort/slice that list.
 async function getCachedMovieSummaries() {
+  const caches = historyCaches();
   const version = getDataVersion();
-  if (movieSummaryCache.version === version && Array.isArray(movieSummaryCache.rows)) return movieSummaryCache.rows;
+  if (caches.movieSummaryCache.version === version && Array.isArray(caches.movieSummaryCache.rows)) return caches.movieSummaryCache.rows;
   const rows = dedupeMovies(await getCachedMovies());
-  movieSummaryCache = { version, rows };
+  caches.movieSummaryCache = { version, rows };
   return rows;
 }
 
 export async function getCachedShows({ includeScheduledLibraryHistory = false } = {}) {
   const cacheKey = includeScheduledLibraryHistory ? "scheduled" : "default";
+  const caches = historyCaches();
+  const { showCacheBuilds } = caches;
   while (true) {
     const version = getDataVersion();
-    const memo = includeScheduledLibraryHistory ? scheduledShowCache : showCache;
+    const memo = includeScheduledLibraryHistory ? caches.scheduledShowCache : caches.showCache;
     // Empty is a valid cached result. Rebuilding it on every read made a new or
     // fully-unwatched library repeatedly pay the same full-table cost.
     if (memo.version === version) return memo.shows;
@@ -1109,8 +1094,8 @@ export async function getCachedShows({ includeScheduledLibraryHistory = false } 
           total_episodes: cachedProgress?.total_episodes || 0,
         });
       }
-      if (includeScheduledLibraryHistory) scheduledShowCache = { version, shows };
-      else showCache = { version, shows };
+      if (includeScheduledLibraryHistory) caches.scheduledShowCache = { version, shows };
+      else caches.showCache = { version, shows };
       return shows;
     });
 
@@ -1497,6 +1482,7 @@ function patchCachedRow(rows, freshRow) {
 // result is provably unchanged. Leaving a cache at its old version is the safe
 // fallback: its next reader performs the existing full rebuild.
 async function invalidateAfterRowMetaWrite(id, oldRow, changed) {
+  const caches = historyCaches();
   const previousVersion = getDataVersion();
   await flushShowProgressUpdates().catch((err) => {
     console.error("[dataRepo] Failed to flush show progress updates", err);
@@ -1505,35 +1491,35 @@ async function invalidateAfterRowMetaWrite(id, oldRow, changed) {
   const freshRow = id ? selectByIdStmt.get(String(id)) : null;
   if (!oldRow || !freshRow || version !== previousVersion + 1) return;
 
-  if (historyCache.version === previousVersion) {
-    const rows = patchCachedRow(historyCache.rows, freshRow);
-    if (rows) historyCache = { version, rows };
+  if (caches.historyCache.version === previousVersion) {
+    const rows = patchCachedRow(caches.historyCache.rows, freshRow);
+    if (rows) caches.historyCache = { version, rows };
   }
 
   const trackedFlipped = isPlektTrackedWatchRow(oldRow) !== isPlektTrackedWatchRow(freshRow);
-  if (movieCache.version === previousVersion && Array.isArray(movieCache.rows) && !trackedFlipped) {
+  if (caches.movieCache.version === previousVersion && Array.isArray(caches.movieCache.rows) && !trackedFlipped) {
     if (freshRow.media_type === "movie") {
-      const rows = patchCachedRow(movieCache.rows, freshRow);
-      if (rows) movieCache = { version, rows };
+      const rows = patchCachedRow(caches.movieCache.rows, freshRow);
+      if (rows) caches.movieCache = { version, rows };
     } else {
-      movieCache = { version, rows: movieCache.rows };
+      caches.movieCache = { version, rows: caches.movieCache.rows };
     }
   }
 
   if (trackedFlipped || changed === "artwork") return;
 
-  if (statsCache.version === previousVersion && statsCache.stats) {
-    statsCache = { version, stats: statsCache.stats };
+  if (caches.statsCache.version === previousVersion && caches.statsCache.stats) {
+    caches.statsCache = { version, stats: caches.statsCache.stats };
   }
 
   const showCacheUnaffected = changed === "retry" || freshRow.media_type === "movie";
-  if (showCacheUnaffected && showCache.version === previousVersion) {
-    showCache = { version, shows: showCache.shows };
+  if (showCacheUnaffected && caches.showCache.version === previousVersion) {
+    caches.showCache = { version, shows: caches.showCache.shows };
   }
   // Same reasoning for the scheduled-history show set: a retry counter or a
   // movie row cannot change which shows it contains.
-  if (showCacheUnaffected && scheduledShowCache.version === previousVersion) {
-    scheduledShowCache = { version, shows: scheduledShowCache.shows };
+  if (showCacheUnaffected && caches.scheduledShowCache.version === previousVersion) {
+    caches.scheduledShowCache = { version, shows: caches.scheduledShowCache.shows };
   }
 }
 
@@ -3622,29 +3608,30 @@ export async function queryWatchHistoryPreview({ limit = 120 } = {}) {
   // Regrouping every episode is the whole cost of this endpoint (~1 s on a real
   // library), and its inputs are fixed for a data generation, so reuse the
   // result until the version moves.
+  const caches = historyCaches();
   const previewVersion = getDataVersion();
-  if (historyPreviewCache.version === previewVersion && historyPreviewCache.rows.has(safeLimit)) {
-    return withSeasonPosterArtwork(historyPreviewCache.rows.get(safeLimit));
+  if (caches.historyPreviewCache.version === previewVersion && caches.historyPreviewCache.rows.has(safeLimit)) {
+    return withSeasonPosterArtwork(caches.historyPreviewCache.rows.get(safeLimit));
   }
   // The build yields part-way, so share one build between concurrent callers
   // (the background warm-up and a dashboard request) instead of running two.
   const buildKey = `${previewVersion}|${safeLimit}`;
-  let pending = historyPreviewBuilds.get(buildKey);
+  let pending = caches.historyPreviewBuilds.get(buildKey);
   if (!pending) {
     pending = buildHistoryPreview(all, safeLimit);
-    historyPreviewBuilds.set(buildKey, pending);
+    caches.historyPreviewBuilds.set(buildKey, pending);
   }
   try {
     const combined = await pending;
     // A write can land while the build is yielding: still answer this request
     // from the generation it started on, but never cache that under a newer one.
     if (getDataVersion() === previewVersion) {
-      if (historyPreviewCache.version !== previewVersion) historyPreviewCache = { version: previewVersion, rows: new Map() };
-      historyPreviewCache.rows.set(safeLimit, combined);
+      if (caches.historyPreviewCache.version !== previewVersion) caches.historyPreviewCache = { version: previewVersion, rows: new Map() };
+      caches.historyPreviewCache.rows.set(safeLimit, combined);
     }
     return withSeasonPosterArtwork(combined);
   } finally {
-    if (historyPreviewBuilds.get(buildKey) === pending) historyPreviewBuilds.delete(buildKey);
+    if (caches.historyPreviewBuilds.get(buildKey) === pending) caches.historyPreviewBuilds.delete(buildKey);
   }
 }
 
@@ -3772,11 +3759,7 @@ function allNonSuccessTargetsNotFound(telemetry) {
 export async function querySyncJobs({ limit = 100, offset = 0, status = "outstanding", fresh = false } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
   const safeOffset = Math.max(Number(offset) || 0, 0);
-  const rows = await loadHistoryRows({
-    limit: Math.min(Math.max(safeLimit * 5, safeLimit), MAX_HISTORY_LIMIT),
-    offset: safeOffset,
-    fresh,
-  });
+  const rows = fresh ? selectAllHistoryStmt.all().map(rowToWatch) : await getCachedHistory();
 
   const filtered = rows.filter((row) => {
     const dispatchStatus = dispatchStatusFromTelemetry(row.sync_dispatch_telemetry);
@@ -3794,12 +3777,13 @@ export async function querySyncJobs({ limit = 100, offset = 0, status = "outstan
     return dispatchStatus !== "success";
   });
 
-  return filtered.slice(0, safeLimit);
+  return filtered.slice(safeOffset, safeOffset + safeLimit);
 }
 
 export async function getWatchStats() {
+  const caches = historyCaches();
   const version = getDataVersion();
-  if (statsCache.version === version && statsCache.stats) return statsCache.stats;
+  if (caches.statsCache.version === version && caches.statsCache.stats) return caches.statsCache.stats;
   const statsRebuildStartedAt = performance.now();
 
   // Suppress same-event echoes consistently with the history views.
@@ -3877,7 +3861,7 @@ export async function getWatchStats() {
     durationMs: performance.now() - statsRebuildStartedAt,
     items: stats?.reports?.months?.length ?? null,
   });
-  statsCache = { version, stats };
+  caches.statsCache = { version, stats };
   return stats;
 }
 
@@ -6292,11 +6276,12 @@ function finishShowGroup(group) {
 }
 
 async function getCachedHistoryArtworkIndex() {
+  const caches = historyCaches();
   while (true) {
     const version = getDataVersion();
-    if (historyArtworkCache.version === version) return historyArtworkCache;
+    if (caches.historyArtworkCache.version === version) return caches.historyArtworkCache;
 
-    let pending = historyArtworkBuilds.get(version);
+    let pending = caches.historyArtworkBuilds.get(version);
     if (!pending) {
       pending = timeCacheRebuildAsync("historyArtwork", version, dataVersionTrigger(version), async () => {
         const allEpisodeRows = (await getCachedHistory()).filter((row) => (
@@ -6320,7 +6305,7 @@ async function getCachedHistoryArtworkIndex() {
         }
         return { version, byId, byMediaKey, byCoordinate };
       });
-      historyArtworkBuilds.set(version, pending);
+      caches.historyArtworkBuilds.set(version, pending);
     }
 
     try {
@@ -6328,11 +6313,11 @@ async function getCachedHistoryArtworkIndex() {
       // A write can land while the grouping work is yielding. Do not retain or
       // return an index built against an older generation.
       if (getDataVersion() === version) {
-        historyArtworkCache = index;
+        caches.historyArtworkCache = index;
         return index;
       }
     } finally {
-      if (historyArtworkBuilds.get(version) === pending) historyArtworkBuilds.delete(version);
+      if (caches.historyArtworkBuilds.get(version) === pending) caches.historyArtworkBuilds.delete(version);
     }
   }
 }

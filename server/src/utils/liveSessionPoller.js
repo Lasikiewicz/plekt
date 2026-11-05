@@ -19,11 +19,13 @@ export function createLiveSessionPoller({ logger = console.log, refresh = refres
   let timer = null;
   let running = false;
   let hasActiveSession = false;
+  let lastStartedAt = 0;
 
   async function tick() {
     if (stopped) return;
     if (running) return;
     running = true;
+    lastStartedAt = Date.now();
     let nextDelay = DEFAULT_IDLE_INTERVAL_MS;
 
     try {
@@ -71,7 +73,7 @@ export function createLiveSessionPoller({ logger = console.log, refresh = refres
     // is likely stale right now, without changing the steady-state interval.
     poke() {
       if (stopped || running) return;
-      scheduleNext(50);
+      scheduleNext(Math.max(50, 1000 - (Date.now() - lastStartedAt)));
     },
   };
 }

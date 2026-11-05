@@ -71,8 +71,9 @@ tick no longer calls the same fetch itself - that would just poll the same
 session endpoints a second time for no benefit - it only reads the cache the
 poller already keeps current.
 
-Two things poke the poller to run immediately instead of waiting out its
-current interval:
+Two things poke the poller to run promptly instead of waiting out its
+current interval. Pokes keep at least one second between poll starts, so a
+burst of notifications cannot produce a continuous request loop:
 
 - Plex's notification WebSocket (`server/src/utils/plexNotificationListener.js`,
   see [plex.md](plex.md)) also carries a `playing` frame the instant a Plex

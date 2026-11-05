@@ -116,7 +116,11 @@ test("rating scheduler imports and clears stored observations without refreshing
   assert.equal(db.prepare("SELECT rating FROM personal_ratings").get().rating, 8);
   persist(partitions(null), "2026-10-22T12:01:00Z", "2026-10-22T12:00:00Z");
   const second = await sync.runRatingSync({ providers: ["simkl"], drain: false });
-  assert.equal(second.providers[0].cleared, 1);
+  assert.equal(second.providers[0].status, "held");
+  assert.equal(second.providers[0].cleared, 0);
+  const held = db.prepare("SELECT run_id FROM personal_rating_sync_runs WHERE provider='simkl'").get();
+  const approved = await sync.resolveRatingScanHold({ provider: "simkl", runId: held.run_id, decision: "approve" });
+  assert.equal(approved.providers[0].cleared, 1);
   assert.equal(db.prepare("SELECT count(*) AS n FROM personal_ratings").get().n, 0);
 });
 

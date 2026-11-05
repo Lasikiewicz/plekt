@@ -102,6 +102,13 @@ CREATE TABLE IF NOT EXISTS shared_provider_keys (
 );
 `;
 
+const SHARED_INDEXES = `
+CREATE INDEX IF NOT EXISTS idx_tmdb_metadata_cache_type_tmdb_id ON tmdb_metadata_cache(media_type, tmdb_id, updated_at_ms);
+CREATE INDEX IF NOT EXISTS idx_tmdb_season_cache_show ON tmdb_season_cache(tmdb_id, season_number);
+CREATE INDEX IF NOT EXISTS idx_tvdb_metadata_cache_tvdb_id ON tvdb_metadata_cache(tvdb_id, updated_at_ms);
+CREATE INDEX IF NOT EXISTS idx_tvdb_season_cache_show ON tvdb_season_cache(tvdb_id, season_number);
+`;
+
 const PROVIDER_KEYS_ROW_ID = "providerKeys";
 const TVDB_TOKEN_ROW_ID = "tvdbToken";
 const cache = new Map();
@@ -143,6 +150,7 @@ export function getSharedMetadataDb(rootDataDir = DATA_DIR) {
   try { fs.chmodSync(dbPath, 0o600); } catch { /* non-POSIX */ }
   pragmaWithRetry(database, "busy_timeout = 5000");
   pragmaWithRetry(database, "journal_mode = WAL");
+  pragmaWithRetry(database, "journal_size_limit = 16777216");
   pragmaWithRetry(database, "foreign_keys = ON");
   database.exec(SHARED_SCHEMA);
 
@@ -153,6 +161,11 @@ export function getSharedMetadataDb(rootDataDir = DATA_DIR) {
   if (!tmdbCols.has("status")) {
     database.exec("ALTER TABLE tmdb_metadata_cache ADD COLUMN status TEXT");
   }
+  // Show-level lookups (every season of a show, a series' newest details) run
+  // per show in loops such as the Trakt inbound numbering map. Without these
+  // each one scanned the whole table, JSON included, and a pass over a real
+  // library held the event loop for tens of seconds.
+  database.exec(SHARED_INDEXES);
 
   cache.set(resolved, database);
   return database;

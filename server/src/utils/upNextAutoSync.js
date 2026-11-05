@@ -7,6 +7,7 @@ import {
 } from "./configStore.js";
 import { enqueueBackgroundJob } from "./backgroundJobs.js";
 import { buildUpNextProjection } from "./upNextService.js";
+import { getUpNextCacheSnapshot } from "./upNextCache.js";
 import { syncUpNextToProviders } from "./upNextProviderSync.js";
 import { listUpNextProviderFeedStates } from "./upNextRepository.js";
 
@@ -149,7 +150,11 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
 
   const beforeDataVersion = getDataVersion();
   const beforeUpNextVersion = getUpNextVersion();
-  const projection = await buildUpNextProjection({ mediaConfig: config, limit: 100 });
+  // Read the shared snapshot rather than building a private projection: it is
+  // served as is while current and waits for one deduplicated build when the
+  // history or queue changed, so a queue change costs one build, not two.
+  const build = (ctx) => buildUpNextProjection({ mediaConfig: config, limit: 100, ...ctx });
+  const projection = await getUpNextCacheSnapshot(build, { trigger: "auto-sync before push" });
   const items = Array.isArray(projection?.items) ? projection.items.slice(0, 100) : [];
   const fingerprint = fingerprintWithOutages(
     upNextQueueFingerprint(items),
@@ -190,13 +195,22 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
   // a follow-up only when its fingerprint differs from the one just pushed.
   let rerun = getDataVersion() !== beforeDataVersion || getUpNextVersion() !== beforeUpNextVersion;
   if (rerun) {
-    const afterProjection = await buildUpNextProjection({ mediaConfig: config, limit: 100 });
+    const afterProjection = await getUpNextCacheSnapshot(build, { trigger: "auto-sync after push" });
     const afterItems = Array.isArray(afterProjection?.items) ? afterProjection.items.slice(0, 100) : [];
     const afterFingerprint = fingerprintWithOutages(
       upNextQueueFingerprint(afterItems),
       unreachableProviders(providers, summary?.feeds),
     );
-    if (afterFingerprint === fingerprint) rerun = false;
+    if (afterFingerprint === fingerprint) {
+      rerun = false;
+      // The queue rebuilt after the push is the one that was pushed, so the
+      // push's own echoes were all that moved the versions. Remember it:
+      // otherwise the "projection changed" run that follows pushes the same
+      // queue again and pays another build (plan/archive/up-next-build-speed/summary.md).
+      if (settled && pushedStale) {
+        await rememberUpNextSync(items, { unreachable: complete ? [] : unreachable });
+      }
+    }
   }
   return {
     status: complete ? "succeeded" : "partial",

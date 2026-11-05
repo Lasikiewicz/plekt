@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Readable } from "node:stream";
+import Database from "better-sqlite3";
 
 import { makeTempDataDir } from "./helpers.js";
 
@@ -243,4 +244,30 @@ test("an uploaded plain backup is streamed to disk, restored, and removed", asyn
   assert.deepEqual(runtimeRow("upload599"), { index: 599 });
   assert.equal(db.prepare("SELECT COUNT(*) AS n FROM runtime_state WHERE id LIKE 'upload%'").get().n, 600);
   assert.equal(fs.existsSync(filePath), false);
+});
+
+test("a later import batch failure preserves the pre-restore database and names its snapshot", async () => {
+  upsertRuntime.run("beforeFailedRestore", JSON.stringify({ keep: true }), Date.now());
+  const filePath = backupFile("later-batch-failure.json");
+  fs.writeFileSync(filePath, JSON.stringify({
+    format: "plekt-backup", version: 1,
+    collections: { runtimeState: Array.from({ length: 251 }, (_, index) => ({ id: `batch-${index}`, data: { index } })) },
+  }));
+  db.exec("CREATE TRIGGER fail_later_restore_batch BEFORE INSERT ON runtime_state WHEN NEW.id = 'batch-250' BEGIN SELECT RAISE(ABORT, 'later batch failed'); END");
+  try {
+    const job = await runPlektRestore({ filePath });
+    assert.equal(job.status, "failed");
+    assert.equal(job.imported, 250, "the first batch committed before the second failed");
+    assert.match(job.error, /later batch failed/);
+    assert.ok(job.error.includes(job.safetySnapshotPath));
+    assert.ok(fs.existsSync(job.safetySnapshotPath));
+    const snapshot = new Database(job.safetySnapshotPath, { readonly: true });
+    try {
+      assert.deepEqual(JSON.parse(snapshot.prepare("SELECT data FROM runtime_state WHERE id = 'beforeFailedRestore'").get().data), { keep: true });
+      assert.equal(snapshot.prepare("SELECT COUNT(*) AS n FROM runtime_state WHERE id LIKE 'batch-%'").get().n, 0);
+    } finally { snapshot.close(); }
+  } finally {
+    db.exec("DROP TRIGGER fail_later_restore_batch");
+    fs.rmSync(filePath);
+  }
 });

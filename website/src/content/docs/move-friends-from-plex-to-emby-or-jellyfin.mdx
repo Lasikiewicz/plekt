@@ -1,0 +1,63 @@
+---
+title: Move friends' Plex history to Emby or Jellyfin
+description: Import each friend's Tautulli watch history into a separate Plekt user and their Emby or Jellyfin account.
+category: Guides
+order: 4.6
+sourceVersion: "2.2.3"
+sourcePaths:
+  - public/modules/settings-users.js
+  - public/modules/tautulli-import.js
+  - server/src/routes/users.js
+  - server/src/routes/tautulli.js
+  - server/src/utils/tautulliImport.js
+screenshots: []
+---
+
+Use this guide when Tautulli has a separate history for each person and you want to move
+those histories into matching Emby or Jellyfin users. Plekt keeps each person's history and
+connections in a separate Plekt user. The administrator can set up the accounts; friends do
+not need to sign in.
+
+This requires Tautulli to distinguish the viewers. If everyone appears as one Tautulli user,
+Plekt cannot split that combined history into individual accounts.
+
+## Set up one Plekt user per friend
+
+1. Sign in to Plekt as an administrator and open [Settings → Users](/docs/settings/users/).
+2. Expand **Add user → New user**, enter a username and starting password, and select **Add user**.
+3. Expand the new user in the list and choose **Open** to switch into that user's Plekt instance.
+   You can manage the instance yourself without giving your friend the Plekt login.
+
+Repeat these steps for each friend. Complete the remaining steps inside the matching Plekt
+user's instance each time.
+
+## Connect Emby or Jellyfin and import history
+
+1. In the friend's Plekt instance, open [Settings → Media servers](/docs/settings/media-servers/)
+   and connect the Emby or Jellyfin account you created for them. See the [Emby guide](/docs/emby/)
+   or [Jellyfin guide](/docs/jellyfin/) for connection details.
+2. Open [Settings → Connections](/docs/settings/connections/) and find **Tautulli** under
+   **One Time Imports**. Enter your Tautulli server address and API key, test the connection,
+   then select the Tautulli user for this friend.
+3. Preview the import. Confirm you selected the right Tautulli user, spot-check the history,
+   and make sure the matching media server appears in the destination list. Review any
+   ambiguous plays before continuing.
+4. Create the recommended watch-history backup, or skip it if you already have a recent one,
+   then import the reviewed history.
+5. Check [Sync Activity](/docs/sync-tools/) to confirm the imported watches were sent to Emby or Jellyfin.
+
+The Tautulli import reads completed plays for the selected user and safely merges them into
+that Plekt user's history. Importing again does not duplicate plays that Plekt already has.
+The preview shows which connected services will receive the imported watches, so review it
+before confirming. Since each Plekt user has separate connections, the connected Emby or
+Jellyfin account in this instance is the one Plekt sends this friend's history to.
+
+## Import once more at the Plex handover
+
+Tautulli is an import source only; it does not continuously sync new Plex watches into Plekt.
+After the friend stops using Plex and moves to Emby or Jellyfin, repeat the Tautulli import in
+that same Plekt user and select the same Tautulli user. This catches any Plex watches recorded
+since the previous import. Repeat for each friend, then use Emby or Jellyfin for their ongoing
+watch activity.
+
+For details about the import preview, backups, and review choices, see the [Tautulli guide](/docs/tautulli/).

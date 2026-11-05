@@ -114,11 +114,14 @@ polling remains enabled to recover missed events and reconcile session state. Se
 (every 15 minutes by default) pulls:
 
 - **Recently watched** - `fetchEmbyWatchedItems` (user's items filtered to
-  `IsPlayed`, ordered by play date) → `syncRecentlyWatchedFromEmby` records watches
+  `IsPlayed`, ordered by play date for bounded recent reads) → `syncRecentlyWatchedFromEmby` records watches
   whose webhooks were missed. Full-history reads (initial import, Force Sync, restore
   clears) fetch this feed in pages of 500 with `EnableImages=false`, so a large history
   never depends on one response finishing inside the outbound timeout and Emby skips
-  image-enhancer plugins for these items.
+  image-enhancer plugins for these items. Full scans use stable item-ID ordering instead
+  of sorting the entire watched library by play date. Short or duplicate-only pages do
+  not end a scan before the reported total or an empty page. Movie lookup misses are
+  cached for 30 seconds; failed requests are never cached as missing items.
 - **Resumable items** - `fetchEmbyResumableItems` (`/Users/<id>/Items/Resume`) →
   `syncRecentlyResumableFromEmby` replicates resume positions to the other platforms.
   The query asks for `Fields=UserDataLastPlayedDate`: Emby 4.9 otherwise omits the last-played

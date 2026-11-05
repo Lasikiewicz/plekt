@@ -489,7 +489,7 @@ async function runProviderSnapshotUnfenced(provider, { config, mode, logger = ()
   const removalKeys = missing.map(row => row.media_key).sort();
   const approved = held && approvedHold && JSON.stringify(removalKeys) === JSON.stringify(held.keys);
   if (!preflightErrors && previousRun?.baseline_complete && !approved && missing.length
-      && (held || (missing.length >= 2 && missing.length / baseline.length > 0.2))) {
+      && (held || !records.length || (missing.length >= 2 && missing.length / baseline.length > 0.2))) {
     const hold = { keys: removalKeys, baselineCount: baseline.length, missingCount: missing.length,
       items: missing.map(row => ({ mediaKey: row.media_key, title: row.media?.title || row.media_key })) };
     finishPersonalRatingSyncRun(provider, { status: "partial", scanned_count: records.length,

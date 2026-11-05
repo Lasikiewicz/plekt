@@ -621,7 +621,8 @@ When on, the scheduler sends at most one `POST <collector>/v1/active` per UTC da
   `arm64` or `other`.
 - There is no install ID, token, account, server address, hostname, library, provider name
   or watch data. The collector still sees the connection's source IP, as any server does.
-- A development build (`BUILD_CHANNEL=develop`, which local `npm start` defaults to), the
+- Main, alpha and develop builds all send (local `npm start` is a develop build, so a local
+  checkout with the switch on sends too; set `PLEKT_INSTALL_CHECK_URL=off` to stop that). The
   public demo, an unanswered install, and an install with the switch off send nothing.
 - The collector defaults to `https://active.plekt.net` (a Cloudflare Worker, source in
   `workers/install-check/`). `PLEKT_INSTALL_CHECK_URL` points it at another base address

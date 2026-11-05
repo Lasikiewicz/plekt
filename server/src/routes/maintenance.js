@@ -1036,6 +1036,46 @@ export async function handleRematchTvShows(req, res) {
 // needs an absolute URL (or a /media/ path), so resolve the proxy form back to
 // its upstream TMDB image URL before caching.
 
+// Statting every artwork file one at a time took 10-60 s on a real library
+// (12,500 files) for each Settings visit. Totals are reused for a few minutes
+// and dropped when Clear cache removes files; the database totals beside them
+// stay live.
+const ARTWORK_DIR_TOTALS_TTL_MS = 10 * 60_000;
+const ARTWORK_STAT_BATCH = 64;
+const artworkDirTotalsMemo = new Map();
+
+function forgetArtworkDirTotals() {
+  artworkDirTotalsMemo.clear();
+}
+
+async function scanArtworkDir(dir) {
+  let count = 0;
+  let size = 0;
+  let entries = [];
+  try {
+    entries = await fs.promises.readdir(dir, { withFileTypes: true });
+  } catch {
+    return { count, size };
+  }
+  const files = entries.filter((entry) => entry.isFile()).map((entry) => nodePath.join(dir, entry.name));
+  for (let i = 0; i < files.length; i += ARTWORK_STAT_BATCH) {
+    const stats = await Promise.all(files.slice(i, i + ARTWORK_STAT_BATCH).map((file) => fs.promises.stat(file).catch(() => null)));
+    for (const stat of stats) {
+      if (stat?.isFile()) { size += stat.size; count++; }
+    }
+  }
+  return { count, size };
+}
+
+function artworkDirTotals(dir) {
+  const memo = artworkDirTotalsMemo.get(dir);
+  if (memo && Date.now() - memo.at < ARTWORK_DIR_TOTALS_TTL_MS) return memo.totals;
+  // The promise is stored, so concurrent requests share one scan.
+  const totals = scanArtworkDir(dir);
+  artworkDirTotalsMemo.set(dir, { at: Date.now(), totals });
+  return totals;
+}
+
 export async function handleCacheStats(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
@@ -1047,20 +1087,7 @@ export async function handleCacheStats(req, res) {
     { key: "profiles", dir: PROFILES_DIR },
   ];
   const disk = {};
-  for (const { key, dir } of dirs) {
-    let count = 0;
-    let size = 0;
-    try {
-      const files = await fs.promises.readdir(dir);
-      for (const file of files) {
-        try {
-          const stat = await fs.promises.stat(nodePath.join(dir, file));
-          if (stat.isFile()) { size += stat.size; count++; }
-        } catch {}
-      }
-    } catch {}
-    disk[key] = { count, size };
-  }
+  for (const { key, dir } of dirs) disk[key] = await artworkDirTotals(dir);
 
   const dbRows = db.prepare(
     "SELECT variant, COUNT(*) as count, COALESCE(SUM(size_bytes), 0) as size FROM poster_cache WHERE status = 'cached' GROUP BY variant"
@@ -1101,6 +1128,7 @@ export async function handleClearCache(req, res) {
         }
       } catch {}
     }
+    forgetArtworkDirTotals();
   }
 
   if (type === "all") {
@@ -1403,17 +1431,37 @@ export function mergeChangelogEntries(localEntries = [], remoteEntries = []) {
   return merged;
 }
 
+// The merged changelog (about 0.5 MB) was re-read, re-parsed and re-merged on
+// every request, which is public. Its inputs are the bundled files and the
+// remote copies, already cached for REMOTE_CHANGELOG_TTL_MS, so the built
+// payload is shared for that long; an admin's refresh rebuilds it.
+let changelogPayloadMemo = { at: 0, channelEnv: "", payload: null };
+
 export async function handleChangelog(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "GET") return methodNotAllowed(res);
 
+  const isForceRefresh = req.query?.refresh === "1" && Boolean(resolveAdminPrincipal(req));
+  const channelEnv = String(process.env.BUILD_CHANNEL || "");
+  if (isForceRefresh || !changelogPayloadMemo.payload || changelogPayloadMemo.channelEnv !== channelEnv
+    || Date.now() - changelogPayloadMemo.at >= REMOTE_CHANGELOG_TTL_MS) {
+    const payload = buildChangelogPayload({ isForceRefresh });
+    changelogPayloadMemo = { at: Date.now(), channelEnv, payload };
+    // A failed build is not kept: the next request tries again.
+    payload.catch(() => {
+      if (changelogPayloadMemo.payload === payload) changelogPayloadMemo = { at: 0, channelEnv: "", payload: null };
+    });
+  }
+  return sendJson(res, await changelogPayloadMemo.payload, 200, { "Cache-Control": "no-store" });
+}
+
+async function buildChangelogPayload({ isForceRefresh = false } = {}) {
   const local = readLocalChangelog();
   const currentVersion = local?.version || null;
   const localEntries = Array.isArray(local?.entries) ? local.entries : [];
 
   let remote = null;
   let remoteError = null;
-  const isForceRefresh = req.query?.refresh === "1" && Boolean(resolveAdminPrincipal(req));
 
   try {
     remote = await fetchRemoteChangelog({ force: isForceRefresh });
@@ -1498,21 +1546,16 @@ export async function handleChangelog(req, res) {
     }
   }
 
-  return sendJson(
-    res,
-    {
-      current: currentVersion,
-      channel,
-      developBuild,
-      alphaBuild,
-      latest: latestVersion,
-      updateAvailable: compareSemver(latestVersion, currentVersion) > 0,
-      remoteAvailable,
-      remoteError,
-      newer,
-      entries,
-    },
-    200,
-    { "Cache-Control": "no-store" }
-  );
+  return {
+    current: currentVersion,
+    channel,
+    developBuild,
+    alphaBuild,
+    latest: latestVersion,
+    updateAvailable: compareSemver(latestVersion, currentVersion) > 0,
+    remoteAvailable,
+    remoteError,
+    newer,
+    entries,
+  };
 }

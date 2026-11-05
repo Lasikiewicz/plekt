@@ -42,13 +42,14 @@ async function fetchJson(url, config, media = null) {
   return response.json();
 }
 
-async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferredPageSize = 100 } = {}) {
+async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferredPageSize = 100, isCancelled = async () => false } = {}) {
   const requestedLimit = Number(limit) > 0 ? Math.max(1, Math.round(Number(limit))) : 0;
   const maximumPageSize = Math.min(Math.max(1, Math.round(Number(preferredPageSize) || 100)), 500);
   const pageSize = requestedLimit ? Math.min(requestedLimit, maximumPageSize) : maximumPageSize;
   const items = [];
   const seen = new Set();
   for (let start = 0; start <= 10_000_000;) {
+    if (await isCancelled()) throw new Error("Jellyfin scan cancelled.");
     const data = await fetchJson(buildUrl(start, pageSize), config);
     const page = Array.isArray(data?.Items) ? data.Items : [];
     let newItems = 0;
@@ -417,7 +418,7 @@ async function findByProviderIds(config, media, itemTypes) {
   const settled = await Promise.allSettled(lookups);
   settled.forEach((result, index) => {
     if (result.status === "rejected") {
-      console.error("Jellyfin lookup failed for providerTerm: %s", terms[index], result.reason);
+      console.error(`Jellyfin lookup failed for providerTerm: ${terms[index]}`, result.reason);
       return;
     }
     for (const item of result.value.items) {
@@ -751,7 +752,7 @@ function buildJellyfinWatchedItemsUrl(config, { limit = 0, parentId = "" } = {})
 
 // Paged so a large watch history never depends on one response finishing
 // inside the outbound timeout; a single unpaged request timed out on big libraries.
-export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds } = {}) {
+export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds, isCancelled } = {}) {
   requireJellyfinConfig(config);
   const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
   const items = [];
@@ -765,7 +766,7 @@ export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds 
         return url;
       },
       limit,
-      { pageSize: 500 },
+      { pageSize: 500, isCancelled },
     ));
   }
   return items;

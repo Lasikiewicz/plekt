@@ -14,10 +14,10 @@ import {
   verifyUsername,
 } from "../appConfig.js";
 import { claimAccount } from "./onboardingStore.js";
-import { writeAuditLog } from "../db.js";
+import { adminDb, writeAuditLog } from "../db.js";
 import { readJson } from "./requestBody.js";
 import { sendJson } from "./http.js";
-import { checkRateLimit } from "./rateLimit.js";
+import { checkRateLimit, resetRateLimit } from "./rateLimit.js";
 import { isDemoMode } from "./demoMode.js";
 import {
   ADMIN_KEY,
@@ -48,6 +48,8 @@ function callerIp(req) {
 // server-to-server API/webhook callers) are allowed through - this guards
 // browser-driven CSRF, not general API access.
 export function isSameOrigin(req) {
+  const fetchSite = String(req.get("sec-fetch-site") || "").toLowerCase();
+  if (fetchSite === "cross-site" || fetchSite === "same-site") return false;
   const origin = req.get("origin");
   if (!origin) return true;
   try {
@@ -95,6 +97,7 @@ export function signSession(username, { role = ADMIN_ROLE, activeUser = null } =
     role: effectiveRole,
     activeUser: effectiveActive,
     iat: Date.now(),
+    nonce: crypto.randomBytes(16).toString("hex"),
   })).toString("base64url");
   const secret = getRootSessionSecret();
   const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
@@ -112,7 +115,9 @@ export function setSessionCookie(res, username, options = {}) {
 }
 
 export function verifySession(token = "") {
-  const [payload, sig] = String(token).split(".");
+  const parts = String(token).split(".");
+  if (parts.length !== 2) return null;
+  const [payload, sig] = parts;
   if (!payload || !sig) return null;
   const secret = getRootSessionSecret();
   if (!secret) return null;
@@ -123,6 +128,7 @@ export function verifySession(token = "") {
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (!data.iat || Date.now() - data.iat > SESSION_TTL_MS) return null;
+    if (adminDb.prepare("SELECT 1 FROM revoked_sessions WHERE token_hash = ?").get(crypto.createHash("sha256").update(token).digest("hex"))) return null;
     const role = data.role === USER_ROLE ? USER_ROLE : ADMIN_ROLE;
     if (role === USER_ROLE) {
       const user = findUser(data.u, DATA_DIR);
@@ -161,7 +167,11 @@ export function verifySession(token = "") {
 // in the root admin context.
 export function resolveSessionTenantContext(req) {
   if (!multiUserEnabled(DATA_DIR)) return null;
-  if (apiKeyFromRequest(req)) return null;
+  // Only the install's real API key keeps a request in the root context. Any
+  // other X-Api-Key or Bearer value used to skip this routing, which left a
+  // user's session cookie being read in the admin's context (app audit,
+  // 5 November 2026). No user context is active yet, so this is the admin key.
+  if (matchesApiKey(apiKeyFromRequest(req))) return null;
   const cookieToken = req.cookies?.[COOKIE_NAME];
   if (!cookieToken) return null;
   const session = verifySession(cookieToken);
@@ -196,7 +206,12 @@ function matchesApiKey(value) {
 // active context's API key, without sending a response.
 export function resolveAdminPrincipal(req) {
   const cookieToken = req.cookies?.[COOKIE_NAME];
-  const session = cookieToken ? verifySession(cookieToken) : null;
+  let session = cookieToken ? verifySession(cookieToken) : null;
+  // A non-admin user's session only ever authenticates inside that user's own
+  // context. In the root (install admin) context it is ignored, so it can never
+  // read the admin's API key, webhook secret or settings; an API key sent with
+  // it is still checked below.
+  if (session?.role === USER_ROLE && !isNonAdminTenantContext(DATA_DIR)) session = null;
   if (session) {
     // When running on an explicit /u/<tenant>/api/* route, a non-admin user's
     // session cookie may only access their own tenant; the install admin may
@@ -234,10 +249,27 @@ export function resolveAdminPrincipal(req) {
   return null;
 }
 
+// A signed-in added user reaching a root-context route (such as /api/users) is
+// refused as not allowed (403 ADMIN_ONLY) rather than signed out (401).
+// Explicit /u/<name>/api/* routes keep their 401 for another user's session.
+function rootContextUserSession(req) {
+  if (req.plektTenant || isNonAdminTenantContext(DATA_DIR)) return false;
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  return Boolean(cookieToken) && verifySession(cookieToken)?.role === USER_ROLE;
+}
+
+function sendUnauthorized(req, res, adminOnlyMessage = "Only the administrator can do this.") {
+  if (rootContextUserSession(req)) {
+    sendJson(res, { error: adminOnlyMessage, code: "ADMIN_ONLY" }, 403);
+  } else {
+    sendJson(res, { error: "Unauthorized" }, 401);
+  }
+}
+
 export async function requireAdmin(req, res) {
   const principal = resolveAdminPrincipal(req);
   if (!principal) {
-    sendJson(res, { error: "Unauthorized" }, 401);
+    sendUnauthorized(req, res);
     return null;
   }
   return principal;
@@ -246,7 +278,7 @@ export async function requireAdmin(req, res) {
 export async function requireInstallAdmin(req, res) {
   const principal = resolveAdminPrincipal(req);
   if (!principal) {
-    sendJson(res, { error: "Unauthorized" }, 401);
+    sendUnauthorized(req, res, "Only the administrator can manage users.");
     return null;
   }
   if (principal.role !== ADMIN_ROLE) {
@@ -271,6 +303,7 @@ export async function handleLogin(req, res) {
   // 1. Check root admin credentials first.
   if (verifyRootAdminUsername(username) && verifyRootAdminPassword(password)) {
     const adminUsername = getRootAdminUsername();
+    resetRateLimit(`login:${ip}`);
     if (!isDemoMode()) runAsAdmin(() => writeAuditLog("login.success", { ip, detail: { username: adminUsername, role: ADMIN_ROLE } }));
     setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY });
     return sendJson(res, { ok: true, username: adminUsername, role: ADMIN_ROLE, activeUser: ADMIN_KEY });
@@ -281,6 +314,7 @@ export async function handleLogin(req, res) {
     const user = findUser(username, DATA_DIR);
     if (user && user.role !== ADMIN_ROLE && !user.disabled && !user.stopped && verifyUserPasswordHash(password, user.passwordHash)) {
       const role = user.role === ADMINISTRATOR_ROLE ? ADMIN_ROLE : USER_ROLE;
+      resetRateLimit(`login:${ip}`);
       if (!isDemoMode()) {
         runAsAdmin(() => writeAuditLog("login.success", { ip, detail: { username: user.name, role } }));
       }
@@ -295,6 +329,12 @@ export async function handleLogin(req, res) {
 
 export async function handleLogout(req, res) {
   if (req.method !== "POST") return sendJson(res, { error: "Method not allowed" }, 405);
+  const token = req.cookies?.[COOKIE_NAME];
+  const session = token && verifySession(token);
+  if (session) {
+    adminDb.prepare("DELETE FROM revoked_sessions WHERE expires_at <= ?").run(Date.now());
+    adminDb.prepare("INSERT OR IGNORE INTO revoked_sessions (token_hash, expires_at) VALUES (?, ?)").run(crypto.createHash("sha256").update(token).digest("hex"), session.iat + SESSION_TTL_MS);
+  }
   res.clearCookie(COOKIE_NAME, { path: "/" });
   return sendJson(res, { ok: true });
 }

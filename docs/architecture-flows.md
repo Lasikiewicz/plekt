@@ -36,7 +36,8 @@ browser ──/changelog.json▶ Express ──▶ bundled changelog.json
 5. Outbound HTTP: every server-side call to an external service goes through
    `fetchWithTimeout` (`server/src/utils/outbound.js`, configurable 10s default; backup
    transfers use 60s). The helper validates initial and redirected URLs, blocks
-   cloud-metadata targets, and removes credentials from cross-origin redirects.
+   cloud-metadata targets, removes credentials from cross-origin redirects, and
+   refuses cross-origin redirects that would retain a request body (including OAuth secrets).
    The build check (`scripts/build-check.js`) fails on any bare `fetch(` outside
    that shared boundary.
    Plex HTTP requests send `X-Plex-Token` as a header rather than a query
@@ -51,6 +52,10 @@ redacted before request log formatting.
 Morgan `combined`-format request logs are written to `data/logs/access.log`. The file
 rotates daily and the last 14 days of logs are retained. Logs are never written to
 stdout - only to the file - so container log streams stay clean.
+
+Diagnostic JSONL archives in `data/logs/` retain fourteen days (the active file is
+preserved). Startup and daily database maintenance prune older archives; there is
+no file-count cap that would discard newer forensic logs early.
 
 ## Security headers
 

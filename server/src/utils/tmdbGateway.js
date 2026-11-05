@@ -1,6 +1,7 @@
 import crypto from "node:crypto"; import { episodeOrderSeason } from "./episodeOrder.js";
 import { bumpDiscoverVersion, db, parseJson, toJson } from "../db.js";
 import { fetchWithTimeout } from "./outbound.js";
+import { retryAfterMs } from "./retryAfter.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
 import { cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, getPosterCache, markPosterMissing, usableCachedPoster } from "./posterCache.js";
 import { getFanartMovieArt, getFanartTvArt } from "./fanartGateway.js";
@@ -420,7 +421,13 @@ async function apiKey() {
   return config.tmdb.apiKey;
 }
 
+let rateLimitCooldownUntil = 0;
 async function upstream(path, params = {}, attempt = 0, { lane = "enrichment" } = {}) {
+  if (Date.now() < rateLimitCooldownUntil) {
+    const error = new Error("TMDB requests are cooling down after repeated 429 responses");
+    error.status = 429;
+    throw error;
+  }
   await throttle({ lane });
   const key = await apiKey();
   const url = new URL(`${API_ROOT}/${String(path).replace(/^\/+/, "")}`);
@@ -430,11 +437,11 @@ async function upstream(path, params = {}, attempt = 0, { lane = "enrichment" } 
   }
   const response = await fetchWithTimeout(url, { headers: { Accept: "application/json" }, lane });
   if (response.status === 429 && attempt < 2) {
-    const retryAfter = Math.max(1, Number(response.headers.get("retry-after") || 1));
-    await wait(retryAfter * 1000 + Math.floor(Math.random() * 250));
+    await wait(Math.max(1000, retryAfterMs(response.headers.get("retry-after"))) + Math.floor(Math.random() * 250));
     return upstream(path, params, attempt + 1, { lane });
   }
   if (!response.ok) {
+    if (response.status === 429) rateLimitCooldownUntil = Date.now() + 30_000;
     const error = new Error(`TMDB request failed with ${response.status}`);
     error.status = response.status;
     throw error;

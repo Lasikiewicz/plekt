@@ -91,6 +91,9 @@ export function onAuthChange(callback) {
       applyTenantStatusFlags(data);
       if (data.authenticated) {
         setSession(data.username);
+        // Which dashboard is open (an admin can view an added user's), so
+        // per-user browser caches never show one user's data on another's.
+        cachedUser.activeUser = String(data.activeUser || "");
         await Promise.all([fetchAndCacheApiKey(), fetchAndCacheWebhookToken()]);
         callback(cachedUser, "session", data.mustChangePassword === true, false);
       } else {

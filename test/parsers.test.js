@@ -258,7 +258,7 @@ test("parsePlexGuids supports modern and legacy agent formats", () => {
       { id: "com.plexapp.agents.themoviedb://238?lang=en" },
       { id: "com.plexapp.agents.thetvdb://81189?lang=en" },
     ],
-  }), { imdb: "tt0068646?lang=en", tmdb: "238?lang=en", tvdb: "81189?lang=en" });
+  }), { imdb: "tt0068646", tmdb: "238", tvdb: "81189" });
 });
 
 test("decodeHtmlEntities decodes once without double-unescaping", () => {

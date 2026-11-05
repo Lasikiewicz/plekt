@@ -1,4 +1,4 @@
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.3.0.2";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.3.0.3";
 
 const trackerHistory = {
   simkl: {

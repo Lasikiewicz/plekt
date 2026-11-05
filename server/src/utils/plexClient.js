@@ -1220,13 +1220,14 @@ export async function fetchPlexLibraryItems(config, { libraryIds } = {}) {
   return libraryItems;
 }
 
-export async function fetchPlexWatchedItems(config, { libraryIds } = {}) {
+export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = async () => false } = {}) {
   requirePlexConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const accountId = await resolvePlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
 
   const watchedItems = [];
+  const pageSize = 200;
 
   for (const dir of selectPlexSections(directories, libraryIds)) {
     const sectionId = dir.key;
@@ -1244,15 +1245,41 @@ export async function fetchPlexWatchedItems(config, { libraryIds } = {}) {
       allUrl.searchParams.set("type", "4");
     }
 
-    try {
+    let start = 0;
+    const seen = new Set();
+    while (true) {
+      if (start > 10_000_000) throw new Error(`Plex watched scan exceeded paging limit for section ${sectionId}`);
+      if (await isCancelled()) throw new Error("Plex watched scan cancelled.");
+      allUrl.searchParams.set("X-Plex-Container-Start", String(start));
+      allUrl.searchParams.set("X-Plex-Container-Size", String(pageSize));
       const allRes = await fetchPlexWithRefresh(config, allUrl);
-      if (allRes.ok) {
-        const allData = await allRes.json();
-        const metadata = allData?.MediaContainer?.Metadata || [];
-        watchedItems.push(...metadata.filter((item) => Number(item.viewCount || 0) > 0));
+      if (!allRes.ok) {
+        throw new Error(`Plex watched scan failed with status ${allRes.status} for section ${sectionId}`);
       }
-    } catch (err) {
-      console.error(`Plex failed to fetch watched items for section ${sectionId}`, err);
+      const allData = await allRes.json();
+      const container = allData?.MediaContainer;
+      if (!container || typeof container !== "object" || Array.isArray(container)
+          || (!Array.isArray(container.Metadata) && container.size !== 0)) {
+        throw new Error(`Plex watched scan returned incomplete metadata for section ${sectionId}`);
+      }
+      const totalSize = Number(container.totalSize || 0);
+      if ((container.Metadata != null && !Array.isArray(container.Metadata)) || (!container.Metadata && totalSize > start)) {
+        throw new Error(`Plex watched scan returned incomplete metadata for section ${sectionId}`);
+      }
+      const page = Array.isArray(container.Metadata) ? container.Metadata : [];
+      let newItems = 0;
+      for (const item of page) {
+        const id = String(item?.ratingKey || item?.key || "").trim();
+        if (id && seen.has(id)) continue;
+        if (id) seen.add(id);
+        newItems += 1;
+        if (Number(item.viewCount || 0) > 0) watchedItems.push(item);
+      }
+      if ((!page.length && totalSize > start) || (page.length && !newItems)) {
+        throw new Error(`Plex watched scan paging did not advance for section ${sectionId}`);
+      }
+      if (!page.length || (totalSize > 0 && start + page.length >= totalSize)) break;
+      start += page.length;
     }
   }
 

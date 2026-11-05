@@ -398,12 +398,15 @@ function addTitleEvidence(titleIds, keys, item) {
   }
 }
 
-function buildShowStateKeys(episodeRows = [], playstateIndex, showIdentities, expectedState, titleIds = null, ambiguousTitles = null) {
+function buildShowStateKeys(episodeRows = [], playstateIndex, showIdentities, expectedState, titleIds = null, ambiguousTitles = null, rowStates = new WeakMap()) {
   const keys = new Set();
   for (const row of episodeRows) {
+    if (!rowStates.has(row)) {
+      const aliases = rowStateAliases(row, { showIdentities, ambiguousTitles });
+      rowStates.set(row, newestStateForAliases(aliases, playstateIndex)?.state);
+    }
+    if (rowStates.get(row) !== expectedState) continue;
     const candidate = rowCandidate(row, { queueKind: "next_up", showIdentities });
-    const aliases = rowStateAliases(row, { showIdentities, ambiguousTitles });
-    if (newestStateForAliases(aliases, playstateIndex)?.state !== expectedState) continue;
     const candidateKeys = showIdentityKeys(candidate);
     for (const key of candidateKeys) keys.add(key);
     addTitleEvidence(titleIds, candidateKeys, candidate);
@@ -411,8 +414,8 @@ function buildShowStateKeys(episodeRows = [], playstateIndex, showIdentities, ex
   return keys;
 }
 
-function buildWatchedShowKeys(episodeRows = [], playstateIndex, showIdentities, shows = [], titleIds = null, ambiguousTitles = null) {
-  const watchedShowKeys = buildShowStateKeys(episodeRows, playstateIndex, showIdentities, "watched", titleIds, ambiguousTitles);
+function buildWatchedShowKeys(episodeRows = [], playstateIndex, showIdentities, shows = [], titleIds = null, ambiguousTitles = null, rowStates = new WeakMap()) {
+  const watchedShowKeys = buildShowStateKeys(episodeRows, playstateIndex, showIdentities, "watched", titleIds, ambiguousTitles, rowStates);
   for (const show of Array.isArray(shows) ? shows : []) {
     if (!text(show.latest_watched_at)) continue;
     const showKeys = showIdentityKeys(show);
@@ -844,6 +847,7 @@ export function publicUpNextItems(items = []) {
 }
 
 async function localNextUpForShow(show, {
+  showDetails,
   playstateIndex,
   progressCandidates,
   providerCandidates = [],
@@ -855,14 +859,21 @@ async function localNextUpForShow(show, {
   ambiguousTitles = null,
   laneMarkers = null,
 }) {
-  const detail = await queryShowDetail({
-    episodeRows,
-    id: show.id,
-    title: show.title,
-    tmdbId: show.tmdb_id,
-    tvdbId: show.tvdb_id,
-    imdbId: show.imdb_id,
-  }).catch(() => null);
+  // Both passes use the same immutable episode snapshot. Cache the promise as
+  // well as its result so concurrent workers share the read within this build.
+  let detailPromise = showDetails.get(show);
+  if (!detailPromise) {
+    detailPromise = queryShowDetail({
+      episodeRows,
+      id: show.id,
+      title: show.title,
+      tmdbId: show.tmdb_id,
+      tvdbId: show.tvdb_id,
+      imdbId: show.imdb_id,
+    }).catch(() => null);
+    showDetails.set(show, detailPromise);
+  }
+  const detail = await detailPromise;
   const episodes = Array.isArray(detail?.episodes) ? detail.episodes : [];  const watched = new Set();
   for (const row of episodes) {
     const canonicalState = newestStateForAliases(rowStateAliases(row, { ambiguousTitles }), playstateIndex)?.state;
@@ -1191,6 +1202,7 @@ export function collapseUncertainEpisodeQueues(items = []) {
 }
 
 async function localNextUpCandidates({
+  showDetails,
   shows,
   playstateIndex,
   watchedShowKeys,
@@ -1245,6 +1257,7 @@ async function localNextUpCandidates({
       const show = selectedShows[cursor++];
       if (!show) break;
       const candidates = await localNextUpForShow(show, {
+        showDetails,
         playstateIndex,
         progressCandidates,
         providerCandidates,
@@ -1268,15 +1281,16 @@ async function localNextUpCandidates({
 // One line per production build, so the diagnostic log shows how many live
 // provider lookups each rebuild paid and whether the lookup caches have
 // filled (docs/dashboard.md, Up Next).
-export function formatUpNextBuildSummary(stats = {}, itemCount = 0, durationMs = 0) {
+export function formatUpNextBuildSummary(stats = {}, itemCount = 0, durationMs = 0, trigger = "") {
   const n = (value) => Number(value) || 0;
-  return `Up Next build: ${itemCount} item${itemCount === 1 ? "" : "s"} in ${(n(durationMs) / 1000).toFixed(1)}s; `
+  const label = String(trigger || "").trim();
+  return `Up Next build${label ? ` [${label}]` : ""}: ${itemCount} item${itemCount === 1 ? "" : "s"} in ${(n(durationMs) / 1000).toFixed(1)}s; `
     + `library lookups ${n(stats.itemLive)} live, ${n(stats.itemCached)} cached, ${n(stats.itemOverBudget)} over budget; `
     + `series inventories ${n(stats.inventoryFetched)} fetched, ${n(stats.inventoryCached)} cached.`;
 }
 
-function logUpNextBuildSummary(stats, itemCount, durationMs) {
-  console.log(formatUpNextBuildSummary(stats, itemCount, durationMs));
+function logUpNextBuildSummary(stats, itemCount, durationMs, trigger) {
+  console.log(formatUpNextBuildSummary(stats, itemCount, durationMs, trigger));
 }
 
 export async function buildUpNextProjection({
@@ -1292,6 +1306,8 @@ export async function buildUpNextProjection({
   // production this is built from the media config below.
   resolveProviderItems = null,
   resolveProviderEpisodes = null,
+  // Names why this build ran, for the build summary line (plan/archive/up-next-build-speed/summary.md).
+  trigger = "",
 } = {}) {
   const buildStartedAt = Date.now();
   // Only the production path (real library lookups) logs its summary.
@@ -1342,16 +1358,27 @@ export async function buildUpNextProjection({
   const trackedEpisodeRows = (localFallback || rawProviderCandidates.some((candidate) => candidate.media_type === "episode"))
     ? loadTrackedEpisodeRows()
     : [];
+  // Each phase below takes 0.2-0.5 s on a large library and together they held
+  // the event loop for over 1 s. Their inputs are the snapshots loaded above,
+  // so yielding between phases cannot change the result.
+  await yieldToEventLoop();
   const playstateIndex = buildCanonicalStateIndex(
     playstateRows || selectPlaystateRowsStmt.all(),
     trackedEpisodeRows,
     showIdentities,
   );
+  await yieldToEventLoop();
   const watchedTitleIds = new Map();
-  const watchedShowKeys = buildWatchedShowKeys(trackedEpisodeRows, playstateIndex, showIdentities, showRows, watchedTitleIds, ambiguousTitles);
-  const unwatchedShowKeys = buildShowStateKeys(trackedEpisodeRows, playstateIndex, showIdentities, "unwatched", null, ambiguousTitles);
+  // Both state passes use the same rows and alias index. Resolve each row's
+  // state once, including rows with no matching canonical state.
+  const rowStates = new WeakMap();
+  const watchedShowKeys = buildWatchedShowKeys(trackedEpisodeRows, playstateIndex, showIdentities, showRows, watchedTitleIds, ambiguousTitles, rowStates);
+  await yieldToEventLoop();
+  const unwatchedShowKeys = buildShowStateKeys(trackedEpisodeRows, playstateIndex, showIdentities, "unwatched", null, ambiguousTitles, rowStates);
+  await yieldToEventLoop();
   const completedShowKeys = buildCompletedShowKeys(showRows);
   const showRecency = showRecencyIndex(showRows);
+  await yieldToEventLoop();
   const canonicalResume = rawProgressRows
     .map((row) => rowCandidate(row, { queueKind: "resume", canonical: true, showIdentities, ambiguousTitles }))
     .map((candidate) => ensureDemoSeriesIdentity(candidate, showIdentities))
@@ -1365,12 +1392,14 @@ export async function buildUpNextProjection({
 
   // Rewatch-lane positions held by a resume card rather than a next-up one.
   const laneMarkers = [];
+  const showDetails = new WeakMap();
   // The media detail page is the source of truth for episode progression: its
   // episode list marks the first released episode not currently watched as
   // next. Resolve those coordinates before accepting native provider rails so
   // a stale Continue Watching/Next Up snapshot cannot jump to a later episode.
   const authoritativeNextEpisodes = localFallback
     ? await localNextUpCandidates({
+      showDetails,
       shows: showRows,
       playstateIndex,
       watchedShowKeys,
@@ -1464,6 +1493,7 @@ export async function buildUpNextProjection({
   let localNextUp = [];
   if (localFallback) {
     localNextUp = await localNextUpCandidates({
+      showDetails,
       shows: showRows,
       playstateIndex,
       watchedShowKeys,
@@ -1509,7 +1539,7 @@ export async function buildUpNextProjection({
     .filter((feed) => UP_NEXT_PROVIDERS.has(String(feed?.provider || "").toLowerCase()))
     .map(({ cursor: _cursor, ...feed }) => feed);
   const items = publicUpNextItems(merged.slice(0, safeLimit).map((item) => withUsableArtwork(withLocalShowIdentity(item, showIdentities))));
-  if (lookupStats) logUpNextBuildSummary(lookupStats, items.length, Date.now() - buildStartedAt);
+  if (lookupStats) logUpNextBuildSummary(lookupStats, items.length, Date.now() - buildStartedAt, trigger);
   // Ask the lookups this build skipped for budget in the background, so the
   // next rebuild finds them cached (speed finding AK).
   if (deferredLookups?.length) topUpUpNextLibraryLookups(mediaConfig, deferredLookups);

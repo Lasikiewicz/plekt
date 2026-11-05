@@ -40,5 +40,9 @@ export async function recordSimklBacklogResult(intent,results) {
   const overall=required.every(p=>isTargetSynced(telemetry,p,row.source))?'success':status==='error'?'error':'pending';
   const next=lines.filter(line=>!/^Dispatch status:/i.test(line));
   next.push(`Dispatch status: ${overall}`);
-  await updateWatchTelemetry(intent.watch_record_id,next.join('\n'),{skipInvalidate:true});
+  const updated=next.join('\n');
+  // Rewriting identical telemetry still fires the history version trigger.
+  if(updated===String(row.sync_dispatch_telemetry||''))return false;
+  await updateWatchTelemetry(intent.watch_record_id,updated,{skipInvalidate:true});
+  return true;
 }

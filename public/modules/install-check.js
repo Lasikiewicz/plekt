@@ -34,7 +34,6 @@ function lastSentText(value) {
 
 function statusText(info) {
   if (info.demo) return "Not available in the demo.";
-  if (info.developBuild) return "Development build: nothing is ever sent.";
   if (!info.enabled) return info.asked ? "Off. Nothing is sent." : "Off until you choose. Nothing is sent.";
   if (!info.collectorConfigured) return "On, but no collector address is set on this server yet, so nothing is sent.";
   return `On. ${lastSentText(info.lastSentAt)}`;
@@ -46,7 +45,7 @@ function renderPanel() {
   const payload = document.querySelector("#installCheckPayload");
   if (!toggle || !text || !payload || !status) return;
   toggle.checked = status.enabled === true;
-  toggle.disabled = status.demo === true || status.developBuild === true;
+  toggle.disabled = status.demo === true;
   text.textContent = statusText(status);
   payload.textContent = JSON.stringify(status.payload, null, 2);
 }
@@ -103,7 +102,7 @@ async function refresh() {
   renderPanel();
   if (promptChecked) return;
   promptChecked = true;
-  if (status.needsAnswer && !status.demo && !status.developBuild) showPrompt();
+  if (status.needsAnswer && !status.demo) showPrompt();
 }
 
 export function initInstallCheck(initCallbacks = {}) {

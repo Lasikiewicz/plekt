@@ -39,6 +39,13 @@ function seed(count = 7) {
 const run = () => sync.runRatingSync({ providers: ["emby"], config, drain: false });
 const remaining = () => db.prepare("SELECT COUNT(*) AS n FROM personal_ratings").get().n;
 
+test("an empty provider scan holds even a single existing rating for review", async () => {
+  seed(1); respond({ Items: [], TotalRecordCount: 0 });
+  assert.equal((await run()).providers[0].status, "held");
+  assert.equal(remaining(), 1);
+  assert.equal(repo.listPersonalRatingQueue().length, 0);
+});
+
 for (const [provider, fetchSnapshot] of [["emby", fetchEmbyPersonalRatingSnapshot], ["jellyfin", fetchJellyfinPersonalRatingSnapshot]]) {
   for (const body of [{}, { Items: {} }, { Items: [], TotalRecordCount: 1 }, { Items: [item(1)], TotalRecordCount: 2 }]) {
     test(`${provider} rejects malformed or truncated snapshot ${JSON.stringify(body)}`, async () => {

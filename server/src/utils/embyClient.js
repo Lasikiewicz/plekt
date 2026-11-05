@@ -61,13 +61,16 @@ async function fetchJson(url, config, media = null) {
   return response.json();
 }
 
-async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferredPageSize = 100 } = {}) {
+async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferredPageSize = 100, isCancelled = async () => false, completeScan = false } = {}) {
   const requestedLimit = Number(limit) > 0 ? Math.max(1, Math.round(Number(limit))) : 0;
   const maximumPageSize = Math.min(Math.max(1, Math.round(Number(preferredPageSize) || 100)), 500);
   const pageSize = requestedLimit ? Math.min(requestedLimit, maximumPageSize) : maximumPageSize;
   const items = [];
   const seen = new Set();
-  for (let start = 0; start <= 10_000_000;) {
+  let duplicatePages = 0;
+  for (let start = 0; ;) {
+    if (start > 10_000_000) throw new Error("Emby scan exceeded paging limit.");
+    if (await isCancelled()) throw new Error("Emby scan cancelled.");
     const data = await fetchJson(buildUrl(start, pageSize), config);
     const page = Array.isArray(data?.Items) ? data.Items : [];
     let newItems = 0;
@@ -76,11 +79,18 @@ async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferred
       if (id && seen.has(id)) continue;
       if (id) seen.add(id);
       items.push(item);
-      newItems++;
+      newItems += 1;
       if (requestedLimit && items.length >= requestedLimit) return items.slice(0, requestedLimit);
     }
     const total = Number(data?.TotalRecordCount || 0);
-    if (!page.length || !newItems || (total > 0 && start + page.length >= total) || (total <= 0 && page.length < pageSize)) break;
+    if (page.length && !newItems) {
+      if (!completeScan) break;
+      if (++duplicatePages >= 10) throw new Error("Emby scan paging did not advance.");
+    } else {
+      duplicatePages = 0;
+    }
+    if (!page.length || (total > 0 && start + page.length >= total)) break;
+    if (!completeScan && total <= 0 && page.length < pageSize) break;
     // Some Emby-compatible servers cap Limit below the requested size. Move
     // by the response length so a server-side cap cannot skip a range.
     start += page.length;
@@ -310,6 +320,7 @@ async function resolveEmbySeriesIdentity(config, media) {
 export function __resetEmbySeriesCache() {
   embySeriesCache.clear();
   embySeriesInFlight.clear();
+  movieMisses.clear();
   embyCacheNow = () => Date.now();
 }
 
@@ -368,7 +379,7 @@ async function searchEmbyFallback(config, media, targetType) {
   return [];
 }
 
-async function findByProviderIds(config, media, itemTypes) {
+async function findByProviderIds(config, media, itemTypes, onLookupError = () => {}) {
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const allMatched = new Map();
   const terms = providerTerms(media.ids);
@@ -395,6 +406,7 @@ async function findByProviderIds(config, media, itemTypes) {
   const settled = await Promise.allSettled(lookups);
   settled.forEach((result, index) => {
     if (result.status === "rejected") {
+      onLookupError(result.reason);
       console.error("Emby lookup failed for providerTerm: %s", terms[index], result.reason);
       return;
     }
@@ -431,13 +443,23 @@ export function embyEpisodeMatchesCoordinates(item = {}, season, episode) {
   return Number(item.ParentIndexNumber) === Number(season) && Number(item.IndexNumber) === Number(episode);
 }
 
+const movieMisses = new Map();
+const MOVIE_MISS_TTL_MS = 30_000;
 export async function findEmbyItems(config, media) {
   const direct = nativeEmbyItems(media);
   if (direct.length) return direct;
   if (media.type === "movie") {
-    let movies = await findByProviderIds(config, media, "Movie");
+    const missKey = JSON.stringify([config.baseUrl, config.userId, config.apiKey, media.ids, media.title]);
+    if ((movieMisses.get(missKey) || 0) > embyCacheNow()) return [];
+    movieMisses.delete(missKey);
+    let lookupFailed = false;
+    let movies = await findByProviderIds(config, media, "Movie", () => { lookupFailed = true; });
     if (!movies || movies.length === 0) {
       movies = await searchEmbyFallback(config, media, "Movie");
+    }
+    if (!movies.length && !lookupFailed) {
+      if (movieMisses.size >= 1000) movieMisses.delete(movieMisses.keys().next().value);
+      movieMisses.set(missKey, embyCacheNow() + MOVIE_MISS_TTL_MS);
     }
     return movies;
   }
@@ -697,10 +719,10 @@ function buildEmbyWatchedItemsUrl(config, { limit = 0, parentId = "" } = {}) {
   url.searchParams.set("Filters", "IsPlayed");
   url.searchParams.set("IncludeItemTypes", "Movie,Episode");
   url.searchParams.set("Fields", "ProviderIds,SeriesProviderIds,UserData,PremiereDate,ProductionYear");
-  // SortName breaks DatePlayed ties so items marked played without a date keep
-  // a stable order across pages.
-  url.searchParams.set("SortBy", "DatePlayed,SortName");
-  url.searchParams.set("SortOrder", "Descending");
+  // Full scans use cheap stable identity ordering; only bounded recent feeds
+  // need the more expensive play-date sort.
+  url.searchParams.set("SortBy", Number(limit) > 0 ? "DatePlayed,SortName,Id" : "Id");
+  url.searchParams.set("SortOrder", Number(limit) > 0 ? "Descending" : "Ascending");
   url.searchParams.set("EnableTotalRecordCount", "true");
   // No caller reads artwork from this feed. Skipping image tags also skips
   // per-item image enhancer plugins, which slowed this query on a reported server.
@@ -713,7 +735,7 @@ function buildEmbyWatchedItemsUrl(config, { limit = 0, parentId = "" } = {}) {
 
 // Paged so a large watch history never depends on one response finishing
 // inside the outbound timeout; a single unpaged request timed out on big libraries.
-export async function fetchEmbyWatchedItems(config, { limit = 0, libraryIds } = {}) {
+export async function fetchEmbyWatchedItems(config, { limit = 0, libraryIds, isCancelled } = {}) {
   requireEmbyConfig(config);
   const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
   const items = [];
@@ -721,13 +743,13 @@ export async function fetchEmbyWatchedItems(config, { limit = 0, libraryIds } = 
     items.push(...await fetchPagedFeed(
       config,
       (start, pageSize) => {
-        const url = buildEmbyWatchedItemsUrl(config, { parentId });
+        const url = buildEmbyWatchedItemsUrl(config, { parentId, limit });
         url.searchParams.set("StartIndex", String(start));
         url.searchParams.set("Limit", String(pageSize));
         return url;
       },
       limit,
-      { pageSize: 500 },
+      { pageSize: 500, isCancelled, completeScan: true },
     ));
   }
   return items;

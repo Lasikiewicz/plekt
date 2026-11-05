@@ -14,6 +14,16 @@ worker runs an added user's tick or claims that user's queued job. Jobs and sync
 remain in that user's database. Catch-up, playlist, maintenance and tick cadence state
 are kept per user, so the admin's run cannot consume an added user's scheduled turn.
 
+Dropped-title drains also keep their timers and in-flight runs per user/provider.
+Overlapping event and scheduled passes join the current connection generation's
+run and drain again when a newer action arrives. Each remote write claims its
+durable outbox row atomically, fencing connection, account, action and desired state,
+so a separate web/worker process cannot send the same action concurrently. Claims
+heartbeat every thirty seconds and recover after three minutes without a heartbeat.
+Unrelated remote observations preserve claim ownership and failed-write cooldowns.
+Failed writes retain their intent for an hour before retry; a new explicit action
+clears that cooldown and remains eligible immediately.
+
 Before applying the restore admission gate, the worker recovers an operation whose
 heartbeat is more than three minutes old. Recovery rechecks the owner and heartbeat
 inside the SQLite transaction, so a replacement operation or renewed heartbeat stays
@@ -65,6 +75,9 @@ The scheduled provider-feed catch-up remains the 15-minute backstop described be
 so an external provider change is still discovered even when no local queue mutation
 has occurred.
 
+Force Sync runs history reconciliation with four bounded workers. Its read-only preview
+checks cancellation between watched-library pages and does not save a cancelled plan.
+Series/season watched-state webhook batches also process at most four episodes at once.
 Force Sync also supports an opt-in read-only preview. `POST /api/force-sync/plan` queues
 the preview and returns a job id. Once the job result contains a `planId`,
 `GET /api/force-sync/plan/:id` returns the summary and paged action details, while

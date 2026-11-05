@@ -218,6 +218,12 @@ function matchingRows(identity, rows = listDroppedTitles()) {
 // Shared identity comparison for operations that must affect the exact same
 // title as drop/undrop. Aliases identify possible matches; contradictory IDs
 // or release years always win over a shared title alias.
+// isSameDroppedTitle is true only for titles sharing one of these aliases, so
+// callers comparing many titles can index by them and compare only those.
+export function droppedTitleAliases(item = {}) {
+  return titleIdentity(item).aliases;
+}
+
 export function isSameDroppedTitle(left = {}, right = {}) {
   const leftIdentity = titleIdentity(left);
   const rightIdentity = titleIdentity(right);

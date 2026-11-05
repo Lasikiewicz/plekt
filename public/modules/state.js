@@ -1,10 +1,20 @@
-import { readStoredAdminToken } from "./auth.js?v=2.2.3.0.2";
-import { readStoredDebugLogs } from "./logs.js?v=2.2.3.0.2";
-import { isDemoMode } from "./utils.js?v=2.2.3.0.2";
+import { readStoredAdminToken } from "./auth.js?v=2.2.3.0.3";
+import { readStoredDebugLogs } from "./logs.js?v=2.2.3.0.3";
+import { isDemoMode } from "./utils.js?v=2.2.3.0.3";
 
 const TOKEN_KEY = "adminToken";
 const LEGACY_UPPER_TOKEN_KEY = "ADMIN_TOKEN";
 const LEGACY_TOKEN_KEY = "sync_admin_token";
+
+// Bound retained session data while leaving in-flight request maps untouched.
+export class SessionCache extends Map {
+  set(key, value) {
+    this.delete(key);
+    super.set(key, value);
+    if (this.size > 200) this.delete(this.keys().next().value);
+    return this;
+  }
+}
 
 export const ACTIVE_VIEW_KEY = "history_active_view";
 export const ACTIVE_SETTINGS_TAB_KEY = "history_active_settings_tab";
@@ -178,16 +188,17 @@ const initialState = {
   upNextConnectionRetryErrorProvider: "",
   upNextRefreshQueued: false,
   upNextForceRefreshQueued: false,
+  upNextMutationRefreshQueued: false,
   upNextRequestVersion: 0,
   upNextAbortController: null,
   explorerViewMovies: localStorage.getItem(EXPLORER_VIEW_KEY_MOVIES) || "posters",
   explorerViewShows: localStorage.getItem(EXPLORER_VIEW_KEY_SHOWS) || "posters",
-  posterLookupCache: new Map(),
+  posterLookupCache: new SessionCache(),
   posterLookupInflight: new Map(),
-  tmdbDetailsCache: new Map(),
-  tmdbSeasonCache: new Map(),
-  tmdbPersonCache: new Map(),
-  globalDiscoveryResults: new Map(),
+  tmdbDetailsCache: new SessionCache(),
+  tmdbSeasonCache: new SessionCache(),
+  tmdbPersonCache: new SessionCache(),
+  globalDiscoveryResults: new SessionCache(),
   globalSearchRequestToken: 0,
   searchQuery: "",
   searchFilter: "all",
@@ -198,7 +209,7 @@ const initialState = {
   searchPeopleTotalResults: 0,
   searchPeopleLoading: false,
   searchPeopleError: "",
-  searchCollectionDetails: new Map(),
+  searchCollectionDetails: new SessionCache(),
   searchCollectionLoading: new Set(),
   globalSearchRemoteTimer: undefined,
   discoverFeeds: {},
@@ -222,7 +233,7 @@ const initialState = {
   personalLists: [],
   personalDeletedLists: [],
   playlistProviders: [],
-  explorerPageCache: new Map(),
+  explorerPageCache: new SessionCache(),
   explorerLoadObserver: undefined,
   dashboardPosterObserver: undefined,
   explorerScrollArmed: false,
@@ -265,11 +276,11 @@ const initialState = {
   // detail page asks for the same show through several different code paths
   // and parameter shapes, so a URL-keyed cache misses; this is keyed on
   // identity instead. Cleared by clearDerivedUiCaches() on any mutation.
-  showDetailCache: new Map(),
-  showDetailAliases: new Map(),
+  showDetailCache: new SessionCache(),
+  showDetailAliases: new SessionCache(),
   // Identity token -> timestamp of a /api/show lookup that returned 404, so a
   // title absent from the library is not re-asked for on every re-render.
-  showDetailMisses: new Map(),
+  showDetailMisses: new SessionCache(),
   mediaDetailInline: false,
   mediaDetailReturnView: "explorer",
   mediaDetailReturnExplorerMode: "movies",
@@ -307,7 +318,7 @@ const initialState = {
   configLoaded: false,
   seerrConfigured: false,
   seerrSupports4k: { movie: false, tv: false },
-  seerrMediaStatusCache: new Map(),
+  seerrMediaStatusCache: new SessionCache(),
   fullSyncActive: false,
   // Shared live sync snapshot used by media detail pages to pause controls
   // only when the visible item's own watch state is in flight.

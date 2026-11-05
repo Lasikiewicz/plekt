@@ -1391,3 +1391,9 @@ CREATE TABLE IF NOT EXISTS split_episode_repair_log (
   reverted_at INTEGER,
   PRIMARY KEY (run_id, table_name, row_key)
 );
+-- Install-wide session revocations survive process restarts and tenant switches.
+CREATE TABLE IF NOT EXISTS revoked_sessions (
+  token_hash TEXT PRIMARY KEY,
+  expires_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_revoked_sessions_expiry ON revoked_sessions(expires_at);

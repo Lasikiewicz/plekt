@@ -86,9 +86,10 @@ refresh fails, Plekt retries with exponential backoff and marks the connection a
 
 All state-changing routes (`POST`, `PUT`, `DELETE`, `PATCH`) enforce CSRF defense:
 
-1. **Origin check**: the `Origin` header (or `Referer` fallback) must match the server's
-   host and port. Requests without either header are rejected, except when authenticated
-   via API key (which browsers cannot send cross-origin without CORS preflight).
+1. **Origin check**: when present, `Origin` must match the server's host and port.
+   `Sec-Fetch-Site: cross-site` and `same-site` are rejected for mutations. Headerless
+   server-to-server API and webhook callers remain supported. Interactive authorization
+   routes additionally require proof of a same-origin browser request.
 2. **SameSite=Lax**: session cookies are not sent on cross-site subrequests (images,
    fetch, XHR). Top-level cross-site navigations send cookies but only with `GET`, which
    cannot trigger mutations.
@@ -98,6 +99,9 @@ tied to the administrator session that initiated them. Flows cannot be completed
 unauthenticated callers.
 
 ## Brute-force & rate limiting
+
+Login and claim bodies are limited to 32 KiB; webhook bodies to 1 MiB, before parsing.
+Other buffered API bodies retain their 15 MiB limit; streamed backup uploads use their own cap.
 
 - `POST /api/login` and `POST /api/auth/claim` are limited to **10 attempts per 15-minute
   window per IP**. Exceeding the limit returns `429 Too Many Requests`.
@@ -132,7 +136,7 @@ The access logger redacts the `token` query parameter.
 | Route | Handler | Notes |
 | --- | --- | --- |
 | `POST /api/login` | `handleLogin` | Rate-limited 10/15min per IP; signs in admin or any enabled user in `users.json`; audit-logged success/failure |
-| `POST /api/logout` | `handleLogout` | Clears the cookie |
+| `POST /api/logout` | `handleLogout` | Revokes that cookie in the install database and clears it; replay stays invalid after restart |
 | `GET /api/auth/status` | `handleAuthStatus` | `{ authenticated, username, role, activeUser, supervised, webhookPath, mustChangePassword, claimRequired }` - never 401s |
 | `POST /api/auth/claim` | `handleAuthClaim` | One-time pristine-install account claim; public route, rate-limited and origin-checked like login, with an artificial delay |
 | `GET /api/auth/apikey` | `handleAuthApiKey` | Returns the active user's API key; fetched on demand by the UI |
@@ -175,7 +179,13 @@ The frontend boots through `app.js` → `checkAuth()`:
   characters, no control characters.
 - Non-admin tenant isolation: tenant files live in `data/users/<name>/` with 0700/0600
   permissions; non-admin users cannot call administrative endpoints (`/api/users`,
-  `/api/users/manage`, `/api/auth/credentials`, `/api/auth/sessions/revoke-all`).
+  `/api/users/manage`, `/api/auth/credentials`, `/api/auth/sessions/revoke-all`, backup
+  restore and upload).
+- A non-admin user's session only authenticates inside that user's own context. Only the
+  install's real API key keeps a request in the root context; any other `X-Api-Key` or
+  Bearer value no longer skips session tenant routing (app audit, 5 November 2026).
+- `/api/test-connection` sends a saved server token only to the saved server URL; testing a
+  different URL needs the token typed in (400 `TOKEN_REQUIRED_FOR_NEW_URL`).
 - Path traversal guards on user names: validated against `/^[a-zA-Z0-9_-]{2,32}$/`,
   Windows reserved filenames (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) forbidden,
   and case-insensitive duplicate prevention.

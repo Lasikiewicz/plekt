@@ -229,6 +229,12 @@
     "sourcePaths": ["public/modules/tautulli-import.js", "server/src/routes/tautulli.js"]
   },
   {
+    "id": "move-friends-from-plex-to-emby-or-jellyfin",
+    "label": "Move friends' Plex history to Emby or Jellyfin",
+    "docSlug": "move-friends-from-plex-to-emby-or-jellyfin",
+    "sourcePaths": ["public/modules/settings-users.js", "public/modules/tautulli-import.js", "server/src/routes/users.js", "server/src/routes/tautulli.js", "server/src/utils/tautulliImport.js"]
+  },
+  {
     "id": "seerr-connection",
     "label": "Seerr connection",
     "docSlug": "seerr",

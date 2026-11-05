@@ -238,7 +238,7 @@ function planEntries(groups, entries, ledger, { oneWay = false } = {}) {
   }
 
   const removeEntryIds = entries
-    .filter((entry) => (oneWay || ledgerByEntry.has(entry.entryId)) && !claimed.has(entry.entryId))
+    .filter((entry) => (oneWay ? ledger.length > 0 : ledgerByEntry.has(entry.entryId)) && !claimed.has(entry.entryId))
     .map((entry) => entry.entryId);
   return { desired, removeEntryIds };
 }

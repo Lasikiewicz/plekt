@@ -31,6 +31,13 @@ const clients = [
   ["Jellyfin", fetchJellyfinWatchedItems, { baseUrl: "https://jellyfin.example.test", apiKey: "api-key", userId: "jellyfin-user" }],
 ];
 
+test("Emby full scan bounds repeated pages without silently returning a partial result", async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, "fetch", async () => { calls++; return jsonResponse({ Items: [{ Id: "stuck" }] }); });
+  await assert.rejects(fetchEmbyWatchedItems(clients[0][2]), /paging did not advance/);
+  assert.equal(calls, 11);
+});
+
 for (const [name, fetchWatched, config] of clients) {
   test(`${name} watched-items feed pages a large history instead of one unbounded request`, async (t) => {
     const calls = mockWatchedFeed(t, 1201);
@@ -43,8 +50,8 @@ for (const [name, fetchWatched, config] of clients) {
     for (const url of calls) {
       assert.equal(url.searchParams.get("Limit"), "500");
       assert.equal(url.searchParams.get("Filters"), "IsPlayed");
-      assert.equal(url.searchParams.get("SortBy"), "DatePlayed,SortName");
-      assert.equal(url.searchParams.get("SortOrder"), "Descending");
+      assert.equal(url.searchParams.get("SortBy"), name === "Emby" ? "Id" : "DatePlayed,SortName");
+      assert.equal(url.searchParams.get("SortOrder"), name === "Emby" ? "Ascending" : "Descending");
       assert.equal(url.searchParams.get("EnableImages"), "false");
     }
   });
@@ -57,6 +64,7 @@ for (const [name, fetchWatched, config] of clients) {
     assert.deepEqual(items.map((item) => item.Id), Array.from({ length: 25 }, (_, i) => `item-${i}`));
     assert.equal(calls.length, 1);
     assert.equal(calls[0].searchParams.get("Limit"), "25");
+    if (name === "Emby") assert.equal(calls[0].searchParams.get("SortBy"), "DatePlayed,SortName,Id");
   });
 
   test(`${name} watched-items feed pages each selected library separately`, async (t) => {
@@ -66,5 +74,27 @@ for (const [name, fetchWatched, config] of clients) {
 
     assert.equal(items.length, 6);
     assert.deepEqual(calls.map((url) => url.searchParams.get("ParentId")), ["movies", "shows"]);
+  });
+}
+
+test("Emby full scan continues through capped and duplicate-only pages without a total", async (t) => {
+  const originalFetch = globalThis.fetch;
+  t.after(() => { globalThis.fetch = originalFetch; });
+  const pages = [[{ Id: "one" }], [{ Id: "one" }], [{ Id: "two" }], []];
+  const starts = [];
+  globalThis.fetch = async (input) => {
+    starts.push(new URL(String(input)).searchParams.get("StartIndex"));
+    return jsonResponse({ Items: pages.shift() });
+  };
+  const items = await fetchEmbyWatchedItems(clients[0][2]);
+  assert.deepEqual(items.map(item => item.Id), ["one", "two"]);
+  assert.deepEqual(starts, ["0", "1", "2", "3"]);
+});
+
+for (const [name, fetchWatched, config] of clients) {
+  test(`${name} watched scan cancels between pages`, async (t) => {
+    const calls = mockWatchedFeed(t, 1201);
+    await assert.rejects(fetchWatched(config, { isCancelled: async () => calls.length > 0 }), /cancelled/);
+    assert.equal(calls.length, 1);
   });
 }

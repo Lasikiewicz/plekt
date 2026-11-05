@@ -157,9 +157,9 @@ test("catalogues are cached per app, re-read after the cache age or on force, an
   const now = Date.now();
   const first = await readLibraryCatalogue("plex", config, { readers, now });
   assert.equal(first.status, "ok");
-  assert.equal((await readLibraryCatalogue("plex", config, { readers, now: now + 1000 })).items[0].item_id, "p1");
+  assert.equal((await readLibraryCatalogue("plex", config, { readers, now: first.fetched_at + 1000 })).items[0].item_id, "p1");
   assert.equal(reads, 1);
-  assert.equal((await readLibraryCatalogue("plex", config, { readers, now: now + CATALOGUE_CACHE_TTL_MS + 1 })).items[0].item_id, "p2");
+  assert.equal((await readLibraryCatalogue("plex", config, { readers, now: first.fetched_at + CATALOGUE_CACHE_TTL_MS + 1 })).items[0].item_id, "p2");
   assert.equal((await readLibraryCatalogue("plex", config, { readers, force: true })).items[0].item_id, "p3");
 
   fail = true;

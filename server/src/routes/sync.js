@@ -42,12 +42,12 @@ import {
 } from "../utils/resumeAuthority.js";
 import { watchedPlayedSyncEnabled } from "../utils/syncFlags.js";
 import { forceSyncMediaState, normalizeMediaForceSyncRequest } from "../utils/mediaForceSync.js";
-import { forceSyncLibraryState, normalizeLibraryForceSyncRequest } from "../utils/libraryForceSync.js";
+import { acquirePendingDispatch } from "../utils/pendingDispatchGuard.js"; import { forceSyncLibraryState, normalizeLibraryForceSyncRequest } from "../utils/libraryForceSync.js";
 import { appendMediaForceSyncActivity, createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested, requestMediaForceSyncCancellation } from "../utils/mediaForceSyncActivity.js";
 import { dispatchTrackerWatchBatch } from "../utils/trackerBulkDispatch.js"; import { checkTrackersAfterMediaEvent } from "../utils/trackerSync.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "../utils/watchProvenance.js";
 import { checkIncomingEpisodeSourceMismatch } from "../utils/sourceMismatch.js";
-import { releaseDateForItem, resolveWatchImportDate, runtimeMinutesForSourceItem } from "../utils/watchDates.js";
+import { localCalendarDay, releaseDateForItem, resolveWatchImportDate, runtimeMinutesForSourceItem } from "../utils/watchDates.js";
 import { watchImportMode } from "../utils/tuning.js";
 import { formatProviderOutcomeSummary, normalizeWatchSyncIntent, summarizeProviderOutcomes } from "../utils/watchSyncPolicy.js";
 import {
@@ -2521,7 +2521,7 @@ export async function handlePlaybackProgressUnwatch(req, res) {
     });
   } catch (error) {
     console.error("Playback progress unwatch failed", error);
-    return sendJson(res, { error: "Playback progress unwatch failed" }, 500);
+    return sendJson(res, { error: error.code === "EPISODE_MAPPING_REQUIRED" ? error.message : "Playback progress unwatch failed", code: error.code }, error.code === "EPISODE_MAPPING_REQUIRED" ? 409 : 500);
   }
 }
 
@@ -2610,7 +2610,7 @@ export async function handleUpNextRemove(req, res) {
     });
   } catch (error) {
     console.error("Up Next clear failed", error);
-    return sendJson(res, { error: "Up Next clear failed" }, 500);
+    return sendJson(res, { error: error.code === "EPISODE_MAPPING_REQUIRED" ? error.message : "Up Next clear failed", code: error.code }, error.code === "EPISODE_MAPPING_REQUIRED" ? 409 : 500);
   }
 }
 
@@ -2885,7 +2885,7 @@ export async function handleActiveSessions(req, res) {
 
 export async function handleCronSync(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!["GET", "POST"].includes(req.method)) return methodNotAllowed(res);
+  if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
   if (isAuthoritativeRestoreActive()) {
     return sendJson(res, { ok: false, code: "RESTORE_ACTIVE", error: "An authoritative watch-history restore is active; scheduled sync is paused until it completes." }, 409);
@@ -3057,7 +3057,7 @@ export async function handleForceSyncPlan(req, res) {
 
 export async function handleStopForceSync(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!["GET", "POST"].includes(req.method)) return methodNotAllowed(res);
+  if (req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
 
   const job = getLatestBackgroundJob("force_sync");
@@ -3173,7 +3173,7 @@ export async function handleWebhook(req, res) {
     observeWebhookForTest(media);
   } catch (error) {
     console.error("Webhook body parsing failed", error);
-    return sendJson(res, { error: "Invalid webhook body", details: error.message }, 400);
+    return sendJson(res, { error: "Invalid webhook body" }, 400);
   }
 
   const config = await loadMediaConfig();
@@ -3555,8 +3555,8 @@ export async function handleWebhook(req, res) {
 
     console.log(`Syncing ${filteredEpisodes.length} episodes with target played state: ${targetPlayed}`);
 
-    await Promise.all(
-      filteredEpisodes.map(async (ep) => {
+    await runWithConcurrency(
+      filteredEpisodes, async (ep) => {
         try {
           let episodeMedia = {
             title: `${ep.SeriesName || media.title || "Unknown Show"} - S${String(ep.ParentIndexNumber ?? "?").padStart(2, "0")}E${String(ep.IndexNumber ?? "?").padStart(2, "0")}`,
@@ -3710,7 +3710,7 @@ export async function handleWebhook(req, res) {
           console.error(`Failed to sync episode ${ep.Id} / ${ep.Name}`, err);
           results.push({ episodeId: ep.Id, success: false, error: err.message });
         }
-      })
+      }, 4
     );
 
     await invalidateHistoryDerivedCaches("embyLikeUserDataState").catch(() => null);
@@ -4096,8 +4096,8 @@ export async function handleWebhook(req, res) {
       // rewatch - the calendar day it happens to land on is meaningless. Real
       // rewatches arrive as playback events (media.scrobble, playback.stop) and
       // fall through to be recorded below.
-      const lastWatchedDay = String(existingPlaystate.watched_at || "").slice(0, 10);
-      const today = new Date().toISOString().slice(0, 10);
+      const lastWatchedDay = localCalendarDay(existingPlaystate.watched_at);
+      const today = localCalendarDay(new Date());
       const isPlayedFlagEcho = Boolean(media.playedFlagOnly);
       if (isPlayedFlagEcho || !lastWatchedDay || lastWatchedDay === today) {
         console.log("Webhook: skipped watched echo", {
@@ -4168,10 +4168,10 @@ export async function handleWebhook(req, res) {
     watchRecord.sync_action = "watched";
     watchRecord.sync_dispatch_telemetry = formatDispatchTelemetry({ skipped: false, status: "pending", details: "Propagation queued", targetStates: [] }, media, "watched");
     const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
-    // Resolve a movie's provider ids before its first outbound dispatch. The
-    // prefetch still runs in the background for episodes and for callers that
-    // do not need the result synchronously, but a movie with no identity must
-    // give Trakt the same complete metadata that is persisted on the row.
+    const releasePendingDispatch = acquirePendingDispatch(result.id);
+    if (!releasePendingDispatch) return sendJson(res, { ok: true, inserted: true, id: result.id, record: result.record, reason: "Propagation already queued" });
+    try {
+    // Resolve movie ids before dispatch so Trakt sees the row's complete identity.
     if (media.type === "movie") await result.assetPrefetch?.catch(() => null);
     media.watchRecordId = result.id;
     media.ids = {
@@ -4203,11 +4203,11 @@ export async function handleWebhook(req, res) {
     await updateWatchTelemetry(result.id, formatDispatchTelemetry(summary, media, "watched"), { skipInvalidate: true });
     await recordSyncHistory(media, summary, "watched");
     await deletePlaybackProgress(media).catch(() => null);
-    // Ensure TMDB metadata + artwork finish caching before the instance freezes,
-    // so the detail page is instant on first click. Overlaps with the sync above.
+    // Finish metadata/artwork caching before the response; it overlaps the sync above.
     await result.assetPrefetch?.catch(() => null);
     await invalidateHistoryDerivedCaches("embyLikeUserDataState").catch(() => null);
     return sendJson(res, { ok: true, inserted: true, id: result.id, record: result.record });
+    } finally { releasePendingDispatch(); }
   } catch (error) {
     console.error("Webhook insert failed", error);
     await invalidateHistoryDerivedCaches("embyLikeUserDataState").catch(() => null);

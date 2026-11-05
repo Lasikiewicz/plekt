@@ -55,6 +55,7 @@ function pragmaWithRetry(statement, { attempts = 20, delayMs = 50, database = ad
 
 pragmaWithRetry("busy_timeout = 5000");
 pragmaWithRetry("journal_mode = WAL");
+pragmaWithRetry("journal_size_limit = 16777216");
 pragmaWithRetry("foreign_keys = ON");
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -1836,13 +1837,11 @@ function runSchemaMigrations(database = adminDb) {
 }
 
 function applyCompatibilityGuards(database = adminDb) {
-  try {
-    const watchCols = database.pragma("table_info(watch_history)").map((c) => c.name);
-    if (!watchCols.includes("logo_url")) database.exec("ALTER TABLE watch_history ADD COLUMN logo_url TEXT");
-    if (!watchCols.includes("backdrop_url")) database.exec("ALTER TABLE watch_history ADD COLUMN backdrop_url TEXT");
-    if (!watchCols.includes("watch_provenance")) database.exec("ALTER TABLE watch_history ADD COLUMN watch_provenance TEXT");
-    if (!watchCols.includes("sync_match_ignored_at")) database.exec("ALTER TABLE watch_history ADD COLUMN sync_match_ignored_at INTEGER");
-  } catch { /* column already exists */ }
+  for (const [column, type] of [["logo_url", "TEXT"], ["backdrop_url", "TEXT"], ["watch_provenance", "TEXT"], ["sync_match_ignored_at", "INTEGER"]]) {
+    try {
+      if (!database.pragma("table_info(watch_history)").some((c) => c.name === column)) database.exec(`ALTER TABLE watch_history ADD COLUMN ${column} ${type}`);
+    } catch (error) { console.warn(`Compatibility column ${column} failed: ${error.message}`); }
+  }
   try {
     database.exec(`CREATE TABLE IF NOT EXISTS show_merge_history (
       id TEXT PRIMARY KEY,

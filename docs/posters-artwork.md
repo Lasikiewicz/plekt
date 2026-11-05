@@ -5,6 +5,14 @@ cached, and rendered. This pipeline exists so the browser never loads images dir
 from media servers (mixed content, LAN-only addresses, tokens in URLs) and so remote
 artwork is fetched once, not per page view.
 
+Daily admin maintenance removes settled cache image files that have no `poster_cache`
+reference in any user's database. It preserves unknown filenames, uploads, temporary
+files and files modified within ten minutes, allowing concurrent downloads to commit
+their rows. If a user's references cannot be read, sweeping fails closed. There is
+no size or age cap for referenced artwork. Artwork writes use a temporary file and
+rename; a refused rename keeps the previous complete file instead of overwriting it
+in place. Rebuilt show-progress JSON uses the same temporary-file/rename pattern.
+
 ## Batch poster lookup (`POST /api/poster-batch`)
 
 A library page renders many cards at once, and each missing poster used to be
@@ -66,7 +74,7 @@ The first candidate that downloads successfully goes through `cacheArtworkFromUr
 (`posterCache.js`):
 
 - Plex tokens are stripped from the URL and sent as an `X-Plex-Token` header
-- body limits (10 MB), content-type checks, 12s timeout
+- body limits (10 MiB, counted while streaming even without Content-Length), content-type checks, 12s timeout
 - resized with **sharp** to webp - poster 340w/q80, backdrop 1600w/q82, profile
   780w/q82, logo 800w/q90 (falls back to the original bytes if sharp fails)
 - newly fetched artwork is written atomically (`<path>.<pid>.<rand>.tmp` then renamed) to

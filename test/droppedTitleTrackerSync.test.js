@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import path from "node:path";
 import { makeTempDataDir } from "./helpers.js";
 
 makeTempDataDir("plekt-dropped-title-tracker-sync-");
@@ -20,11 +22,151 @@ const trackerConnections = await import("../server/src/utils/trackerConnectionRe
 const movie = { media_type: "movie", title: "Arrival", year: 2016, tmdb_id: "329865", imdb_id: "tt2543164" };
 const show = { media_type: "tv", title: "Severance", year: 2022, tmdb_id: "95396", tvdb_id: "366972" };
 
+test("failed dropped writes remain durable but retry only after an hour, while a new action is immediate", () => {
+  const connection = { id: "c", remoteUserId: "a" };
+  const row = { write_status: "pending", connection_id: "c", account_id: "a", last_error: "readback failed", updated_at: 1000 };
+  assert.deepEqual(pendingDroppedTitleRowsForConnection([row], connection, 1001), []);
+  assert.deepEqual(pendingDroppedTitleRowsForConnection([row], connection, 1000 + 3600000), [row]);
+  const newAction = { ...row, last_error: null, updated_at: 1001 };
+  assert.deepEqual(pendingDroppedTitleRowsForConnection([newAction], connection, 1001), [newAction]);
+  const claimed = { ...row, write_status: "sending", last_error: null };
+  assert.deepEqual(pendingDroppedTitleRowsForConnection([claimed], connection, 1001), []);
+  assert.deepEqual(pendingDroppedTitleRowsForConnection([claimed], connection, 1000 + 180000), [claimed], "orphan claims recover after three minutes without a heartbeat");
+});
+
 function clear() {
   db.prepare("DELETE FROM dropped_title_tracker_state").run();
   db.prepare("DELETE FROM dropped_title_tracker_cursors").run();
   db.prepare("DELETE FROM dropped_titles").run();
 }
+
+test("overlapping drop drains claim once and preserve a new explicit action during the write", async () => {
+  clear();
+  db.prepare("DELETE FROM tracker_connections").run();
+  trackerConnections.saveTrackerConnection({ provider: "trakt", clientId: "client", remoteUserId: "drop-race-account", accessToken: "token", refreshToken: "refresh", accessTokenExpiresAt: Date.now() + 86400000 });
+  const originalFetch = globalThis.fetch;
+  let writes = 0;
+  let releaseFirst;
+  let started;
+  const firstStarted = new Promise(resolve => { started = resolve; });
+  const firstGate = new Promise(resolve => { releaseFirst = resolve; });
+  globalThis.fetch = async (input, options = {}) => {
+    const pathname = new URL(input).pathname;
+    if (options.method === "POST") {
+      writes += 1;
+      if (writes === 1) { started(); await firstGate; }
+      return new Response(JSON.stringify({ added: { shows: 1 }, not_found: { shows: [] } }));
+    }
+    return new Response(JSON.stringify(pathname === "/sync/last_activities" ? { shows: { dropped_at: "2026-01-01T00:00:00Z" } } : []));
+  };
+  try {
+    dropTitle(show);
+    const first = syncDroppedTitleTracker("trakt");
+    await firstStarted;
+    const newerActionAt = Date.now() + 100;
+    dropTitle(show, { now: newerActionAt });
+    const joined = syncDroppedTitleTracker("trakt", { trigger: "user" });
+    releaseFirst();
+    await Promise.all([first, joined]);
+    await syncDroppedTitleTracker("trakt");
+    assert.equal(writes, 2, "one attempt per explicit action, with no duplicate event/scheduled write");
+    const row = db.prepare("SELECT action_at,write_status,last_error FROM dropped_title_tracker_state WHERE provider='trakt'").get();
+    assert.equal(row.action_at, newerActionAt);
+    assert.equal(row.write_status, "pending");
+    assert.match(row.last_error, /not confirmed by readback/);
+  } finally {
+    releaseFirst();
+    trackerConnections.deleteTrackerConnection("trakt");
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("changed remote activity preserves a failed un-drop cooldown", async () => {
+  clear();
+  db.prepare("DELETE FROM tracker_connections").run();
+  trackerConnections.saveTrackerConnection({ provider: "trakt", clientId: "client", remoteUserId: "drop-cooldown-account", accessToken: "token", refreshToken: "refresh", accessTokenExpiresAt: Date.now() + 86400000 });
+  const originalFetch = globalThis.fetch;
+  let writes = 0;
+  let activity = "2026-01-01T00:00:00Z";
+  globalThis.fetch = async (input, options = {}) => {
+    if (options.method === "POST") {
+      writes += 1;
+      return new Response(JSON.stringify({ deleted: { shows: 1 }, not_found: { shows: [] } }));
+    }
+    return new Response(JSON.stringify(new URL(input).pathname === "/sync/last_activities"
+      ? { shows: { dropped_at: activity } }
+      : [{ listed_at: "2026-01-01T00:00:00Z", show: { title: show.title, ids: { tmdb: show.tmdb_id, tvdb: show.tvdb_id } } }]));
+  };
+  try {
+    const dropped = dropTitle(show);
+    undropTitle(dropped.id);
+    await syncDroppedTitleTracker("trakt");
+    const failed = db.prepare("SELECT last_error,updated_at FROM dropped_title_tracker_state WHERE provider='trakt'").get();
+    assert.match(failed.last_error, /not confirmed by readback/);
+    activity = "2026-01-02T00:00:00Z";
+    await syncDroppedTitleTracker("trakt");
+    assert.equal(writes, 1, "metadata-only remote activity must not make the failure retry immediately");
+    assert.deepEqual(db.prepare("SELECT last_error,updated_at FROM dropped_title_tracker_state WHERE provider='trakt'").get(), failed);
+  } finally {
+    trackerConnections.deleteTrackerConnection("trakt");
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("a second process's changed snapshot preserves an active dropped-write claim", async (t) => {
+  clear();
+  db.prepare("DELETE FROM tracker_connections").run();
+  trackerConnections.saveTrackerConnection({ provider: "trakt", clientId: "client", remoteUserId: "drop-claim-account", accessToken: "token", refreshToken: "refresh", accessTokenExpiresAt: Date.now() + 86400000 });
+  const originalFetch = globalThis.fetch;
+  const originalSetInterval = globalThis.setInterval;
+  let heartbeatTick;
+  t.mock.method(globalThis, "setInterval", (fn, delay, ...args) => {
+    if (delay === 30_000) heartbeatTick = fn;
+    return originalSetInterval(fn, delay, ...args);
+  });
+  let writes = 0;
+  const remote = [{ listed_at: "2026-01-01T00:00:00Z", show: { title: show.title, ids: { tmdb: show.tmdb_id, tvdb: show.tvdb_id } } }];
+  globalThis.fetch = async (input, options = {}) => {
+    if (options.method === "POST") {
+      writes += 1;
+      const claimedAt = db.prepare("SELECT updated_at FROM dropped_title_tracker_state WHERE provider='trakt'").get().updated_at;
+      await new Promise(resolve => setTimeout(resolve, 2));
+      assert.equal(typeof heartbeatTick, "function");
+      heartbeatTick();
+      assert.ok(db.prepare("SELECT updated_at FROM dropped_title_tracker_state WHERE provider='trakt'").get().updated_at > claimedAt, "heartbeat renews the durable claim before a concurrent snapshot");
+      const child = spawnSync(process.execPath, ["--input-type=module", "-e", `
+        import assert from 'node:assert/strict';
+        import {db} from './server/src/db.js';
+        import {syncDroppedTitleTracker} from './server/src/utils/droppedTitleTrackerSync.js';
+        let writes=0;
+        const before=db.prepare("SELECT write_status,updated_at FROM dropped_title_tracker_state WHERE provider='trakt'").get();
+        assert.equal(before.write_status,'sending');
+        globalThis.fetch=async(input,options={})=>{
+          if(options.method==='POST') writes++;
+          return new Response(JSON.stringify(new URL(input).pathname==='/sync/last_activities'
+            ?{shows:{dropped_at:'2026-01-02T00:00:00Z'}}:${JSON.stringify(remote)}));
+        };
+        await syncDroppedTitleTracker('trakt');
+        assert.equal(writes,0);
+        assert.deepEqual(db.prepare("SELECT write_status,updated_at FROM dropped_title_tracker_state WHERE provider='trakt'").get(),before);
+        db.close();
+      `], { cwd: path.resolve(import.meta.dirname, ".."), env: { ...process.env }, encoding: "utf8", timeout: 10000 });
+      assert.equal(child.status, 0, child.stderr || child.stdout);
+      return new Response(JSON.stringify({ deleted: { shows: 1 }, not_found: { shows: [] } }));
+    }
+    return new Response(JSON.stringify(new URL(input).pathname === "/sync/last_activities" ? { shows: { dropped_at: "2026-01-01T00:00:00Z" } } : remote));
+  };
+  try {
+    const dropped = dropTitle(show);
+    undropTitle(dropped.id);
+    await syncDroppedTitleTracker("trakt");
+    assert.equal(writes, 1);
+    assert.match(db.prepare("SELECT last_error FROM dropped_title_tracker_state WHERE provider='trakt'").get().last_error, /not confirmed by readback/);
+  } finally {
+    trackerConnections.deleteTrackerConnection("trakt");
+    globalThis.fetch = originalFetch;
+  }
+});
 
 test("local drop and un-drop leave durable provider intents and retain the un-drop tombstone", () => {
   clear();
@@ -326,5 +468,52 @@ test("Simkl imports drop and un-drop changes from complete snapshots without ite
     trackerConnections.deleteTrackerConnection("simkl");
     clear();
     simklTransport.resetForTests();
+  }
+});
+
+test("the duplicate pass over many Simkl rows compares only rows sharing an alias", async () => {
+  // A startup pass over 1,000 Simkl rows once reread and reparsed every row
+  // for each row and held the event loop for 3 s. It must stay linear and
+  // still merge a real duplicate.
+  clear();
+  db.prepare("DELETE FROM tracker_connections").run();
+  simklTransport.resetForTests();
+  trackerConnections.saveTrackerConnection({ provider: "simkl", clientId: "client", remoteUserId: "simkl-user", accessToken: "token", refreshToken: "refresh", accessTokenExpiresAt: Date.now() + 3600_000 });
+  const connection = trackerConnections.getTrackerConnection("simkl", { includeCredentials: true });
+  const activity = new Date(Date.now() - 60_000).toISOString();
+  db.prepare("INSERT INTO dropped_title_tracker_cursors(provider,connection_id,account_id,activities_json,updated_at) VALUES('simkl',?,?,?,?)")
+    .run(connection.id, connection.remoteUserId, JSON.stringify({ all: activity }), Date.now());
+  const insert = db.prepare(`INSERT INTO dropped_title_tracker_state
+    (id,provider,connection_id,account_id,identity_key,media_json,desired_dropped,action_at,source,remote_present,write_status,updated_at)
+    VALUES (?,'simkl',?,?,?,?,?,?,'local',?,'done',?)`);
+  const seed = (key, media, dropped, actionAt) => insert.run(`simkl:${key}`, connection.id, connection.remoteUserId, key,
+    JSON.stringify(media), dropped, actionAt, dropped, actionAt);
+  db.transaction(() => {
+    for (let i = 0; i < 2000; i++) {
+      seed(`movie-${i}`, { type: "movie", title: `Filler Movie ${i}`, year: 2000 + (i % 20), ids: { tmdb: String(100000 + i) } }, 1, 1000 + i);
+    }
+    seed("arrival-old", { type: "movie", title: "Arrival", year: 2016, ids: { tmdb: "329865" } }, 1, 1000);
+    seed("arrival-new", { type: "movie", title: "Arrival", year: 2016, ids: { tmdb: "329865", imdb: "tt2543164" } }, 0, 5000);
+  })();
+
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url) => {
+    if (new URL(url).pathname === "/sync/activities") return new Response(JSON.stringify({ all: activity }), { status: 200 });
+    throw new Error(`unexpected request ${url}`);
+  };
+  try {
+    const started = performance.now();
+    await syncDroppedTitleTracker("simkl", { trigger: "user" });
+    const elapsed = performance.now() - started;
+    const arrival = db.prepare("SELECT identity_key,desired_dropped,action_at FROM dropped_title_tracker_state WHERE provider='simkl' AND media_json LIKE '%Arrival%'").all();
+    assert.equal(arrival.length, 1, "the duplicate pair is merged");
+    assert.equal(arrival[0].desired_dropped, 0);
+    assert.equal(arrival[0].action_at, 5000);
+    assert.equal(db.prepare("SELECT COUNT(*) AS n FROM dropped_title_tracker_state WHERE provider='simkl'").get().n, 2001);
+    // The quadratic pass took several seconds at this size; the indexed one well under one.
+    assert.ok(elapsed < 1500, `duplicate pass took ${Math.round(elapsed)} ms`);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clear();
   }
 });

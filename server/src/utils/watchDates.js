@@ -1,6 +1,13 @@
 // Shared watched-date/release-date helpers used by the scheduled sync engine
 // (scheduled.js) and the force-sync planner (forceSyncPlanner.js).
 
+export function localCalendarDay(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export function dateOnlyIso(value = "") {
   if (!value) return "";
   const date = new Date(value);

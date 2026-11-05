@@ -6,6 +6,7 @@ makeTempDataDir("plekt-write-intents-");
 const { db } = await import("../server/src/db.js");
 const repo = await import("../server/src/utils/trackerConnectionRepo.js");
 const ledger = await import("../server/src/utils/trackerWriteIntents.js");
+const { syncPendingTrackerWriteIntents } = await import("../server/src/utils/trackerIntentWorker.js");
 const { trackerIntentRequest } = await import("../server/src/utils/trackerIntentRequest.js");
 const { migrateLegacyTrackerIntents } = await import("../server/src/utils/trackerIntentMigration.js");
 const adapter = (await import("../server/src/utils/trackers/registry.js")).getTrackerAdapter("trakt");
@@ -197,6 +198,78 @@ test("a provider match failure can be resent; a cancelled review write cannot", 
   await assert.rejects(trackerIntentRequest(connection, [{ ...media(), trackerWriteIntentId: held.id }], "watched", async () => { posts++; }, async () => []), /cancelled/);
   assert.equal(posts, 2);
   assert.equal(ledger.trackerWriteAttentionItems().length, 0);
+});
+
+test("a partial Trakt not_found result settles accepted items and retries only the unmatched item", async () => {
+  const connection = connect();
+  const accepted = { ...media(), ids: { tmdb: "123" }, watchRecordId: "accepted" };
+  const rejected = { ...media(), ids: { tmdb: "456" }, watchRecordId: "rejected" };
+  const secondAccepted = { ...media(), ids: { tmdb: "789" }, watchRecordId: "second-accepted" };
+  const acceptedIntent = create(connection, accepted, "accepted");
+  const secondAcceptedIntent = create(connection, secondAccepted, "second-accepted");
+  const rejectedIntent = create(connection, rejected, "rejected");
+
+  await trackerIntentRequest(connection, [accepted, rejected, secondAccepted], "watched", async (items) => {
+    assert.equal(items.length, 3);
+    return { added: { movies: 2 }, not_found: { movies: [{ ids: { tmdb: "456" } }] } };
+  }, async () => []);
+  assert.equal(get(acceptedIntent.id).status, "settled");
+  assert.equal(get(secondAcceptedIntent.id).status, "settled");
+  assert.equal(get(rejectedIntent.id).status, "rejected");
+
+  let retryItems;
+  await trackerIntentRequest(connection, [accepted, rejected, secondAccepted], "watched", async (items) => {
+    retryItems = items;
+    return { added: { movies: 1 }, not_found: {} };
+  }, async () => []);
+  assert.equal(retryItems.length, 1);
+  assert.equal(retryItems[0].ids.tmdb, "456");
+  assert.equal(get(acceptedIntent.id).status, "settled");
+  assert.equal(get(rejectedIntent.id).status, "settled");
+});
+
+test("a partly identifiable not_found response holds every write for review", async () => {
+  const connection = connect();
+  const items = ["123", "456", "789"].map((tmdb, index) => ({ ...media(), ids: { tmdb }, watchRecordId: `mixed-${index}` }));
+  const intents = items.map(item => create(connection, item, item.watchRecordId));
+  await trackerIntentRequest(connection, items, "watched", async () => ({ not_found: { movies: [{ ids: { tmdb: "456" } }, { ids: { tmdb: "unknown" } }] } }), async () => []);
+  assert.deepEqual(intents.map(intent => get(intent.id).status), ["review", "review", "review"]);
+});
+
+test("unidentifiable Trakt not_found results hold the batch for review", async () => {
+  const connection = connect();
+  const a = create(connection, { ...media(), watchRecordId: "a" }, "a");
+  const b = create(connection, { ...media("2026-10-02T12:00:00.000Z"), watchRecordId: "b" }, "b");
+  await trackerIntentRequest(connection, [
+    { ...media(), watchRecordId: "a" },
+    { ...media("2026-10-02T12:00:00.000Z"), watchRecordId: "b" },
+  ], "watched", async () => ({ not_found: { movies: [{ ids: { tmdb: "unknown" } }] } }), async () => []);
+  assert.equal(get(a.id).status, "review");
+  assert.equal(get(b.id).status, "review");
+});
+
+test("one throwing tracker intent is held for review and the worker continues", async () => {
+  const connection = connect();
+  const broken = create(connection, { ...media(), watchRecordId: "broken" }, "broken", Date.now() - 10);
+  const next = create(connection, { ...media("2026-10-02T12:00:00.000Z"), watchRecordId: "next" }, "next", Date.now());
+  db.prepare("UPDATE tracker_write_intents SET media_json='{' WHERE id=?").run(broken.id);
+  const originalFetch = globalThis.fetch;
+  const requests = [];
+  globalThis.fetch = async (url) => {
+    requests.push(String(url));
+    if (String(url) === "https://api.trakt.tv/sync/history") {
+      return new Response(JSON.stringify({ added: { movies: 1 }, not_found: {} }), { status: 201, headers: { "content-type": "application/json" } });
+    }
+    throw new Error(`Unexpected fetch: ${String(url)}`);
+  };
+  try {
+    await syncPendingTrackerWriteIntents(() => {});
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+  assert.equal(get(broken.id).status, "review");
+  assert.equal(get(next.id).status, "settled");
+  assert.deepEqual(requests, ["https://api.trakt.tv/sync/history"]);
 });
 
 test("30-day cleanup removes settled intents, retains permanent acknowledgements and surfaces unresolved work", () => {

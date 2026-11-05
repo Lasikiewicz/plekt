@@ -76,6 +76,24 @@ export async function resolveOrderMediaForPolling(media, config, log = console.w
   }
 }
 
+// Up Next actions are manual, but their coordinates and native item hints came
+// from a media server. Verify that episode before the local unwatch lookup or
+// insertion, just as we do for a provider event. Keep manual dispatch semantics.
+export async function resolveOrderUpNextAction(media, config) {
+  if (!isEpisode(media) || readEpisodeOrder(idOf(media)).order === AIRED_ORDER
+    || provenanceOf(media).episode_order) return media;
+  const items = media.providerItems || media.provider_items || {};
+  const provider = ["plex", "emby", "jellyfin"].find(p => {
+    const ids = items[p];
+    return config?.[p]?.baseUrl && (Array.isArray(ids) ? ids.length : ids);
+  });
+  if (!provider) throw episodeOrderError("This Up Next episode needs a verified media-server item before it can be removed. No watched state was changed.");
+  const resolved = await resolveOrderWatch({ ...media, source: provider }, config, { stateType: "unwatched" });
+  // A request-side key still names the displayed/native coordinates. Let local
+  // state lookups derive their key from the verified aired identity instead.
+  return { ...resolved, source: media.source, media_key: undefined };
+}
+
 // Provenance builders replace media.watchProvenance wholesale; this carries the
 // verified episode_order identity (and any provider overrides) across, since the
 // insert guard refuses a translated row that has lost it.

@@ -42,12 +42,15 @@ const EPISODE_INVENTORY_TTL_MS = 30 * 60 * 1000;
 // each logged with a stack trace, in a few minutes. Stand the provider down for
 // about one scheduler tick after a failure; cached answers are still used.
 const PROVIDER_OUTAGE_BACKOFF_MS = 60 * 1000;
-// Resolved answers are also kept in SQLite, read only when the provider cannot
-// answer. The in-memory cache is empty after a restart, so restarting during a
-// Jellyfin outage dropped every local next-up card only Jellyfin could prove
-// (The Assembly S01E01) and the Jellyfin ids of others until it came back
-// (defect V). A remembered id is the last thing the library itself said; a
-// live answer replaces it, and a live "missing" deletes it.
+// Library answers (found and missing) are also kept in SQLite, so a restart or
+// another process starts from the last answers instead of an empty cache. A
+// cold cache after a restart showed 20 cards that fell to 14 as the answers
+// came back 32 per build (plan/archive/up-next-build-speed/summary.md step 1). Restarting
+// during a Jellyfin outage also dropped every local next-up card only Jellyfin
+// could prove (The Assembly S01E01, defect V). A remembered answer is the last
+// thing the library itself said; a live answer replaces it. An answer past its
+// TTL above is still used (the user's choice, step 3) while the background
+// top-up asks again; only a key never answered stays unanswered.
 const REMEMBERED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REMEMBERED_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
 let lastRememberedPrune = 0;
@@ -288,39 +291,50 @@ function cacheKey(provider, config, media) {
   return `${provider}:${base}:${ids}:${title}:s${season}e${episode}`;
 }
 
-function readCache(key) {
-  const entry = lookupCache.get(key);
-  if (!entry) return null;
+function entryExpired(entry) {
   const ttl = entry.providerItemId ? RESOLVED_TTL_MS : MISSING_TTL_MS;
-  if (outageNow() - entry.at >= ttl) {
-    lookupCache.delete(key);
-    return null;
-  }
-  return entry;
+  return outageNow() - entry.at >= ttl;
 }
 
-function writeCache(key, providerItemId) {
-  if (lookupCache.size >= MAX_CACHE_ENTRIES) {
+function storeInMemory(key, entry) {
+  if (!lookupCache.has(key) && lookupCache.size >= MAX_CACHE_ENTRIES) {
     const oldest = lookupCache.keys().next().value;
     if (oldest !== undefined) lookupCache.delete(oldest);
   }
-  lookupCache.set(key, { at: outageNow(), providerItemId });
+  lookupCache.set(key, entry);
 }
 
-function rememberAnswer(key, provider, providerItemId) {
-  const now = Date.now();
-  try {
-    if (providerItemId) {
-      db.prepare(`
-        INSERT INTO up_next_library_items (lookup_key, provider, provider_item_id, resolved_at)
-        VALUES (?, ?, ?, ?)
-        ON CONFLICT(lookup_key) DO UPDATE SET
-          provider_item_id = excluded.provider_item_id,
-          resolved_at = excluded.resolved_at
-      `).run(key, provider, providerItemId, now);
-    } else {
-      db.prepare("DELETE FROM up_next_library_items WHERE lookup_key = ?").run(key);
+// The last answer for a key, from memory or else the saved answers, with
+// `stale` set once it is past its TTL. A stale memory entry is checked against
+// the saved answer, which another process may have refreshed since.
+function readCache(key) {
+  let entry = lookupCache.get(key) || null;
+  if (!entry || entryExpired(entry)) {
+    const saved = rememberedEntry(key);
+    if (saved && (!entry || saved.at > entry.at)) {
+      entry = saved;
+      storeInMemory(key, entry);
     }
+  }
+  if (!entry) return null;
+  return { ...entry, stale: entryExpired(entry) };
+}
+
+function writeCache(key, providerItemId) {
+  storeInMemory(key, { at: outageNow(), providerItemId });
+}
+
+// An empty provider_item_id is a saved "not in this library" answer.
+function rememberAnswer(key, provider, providerItemId) {
+  const now = outageNow();
+  try {
+    db.prepare(`
+      INSERT INTO up_next_library_items (lookup_key, provider, provider_item_id, resolved_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT(lookup_key) DO UPDATE SET
+        provider_item_id = excluded.provider_item_id,
+        resolved_at = excluded.resolved_at
+    `).run(key, provider, text(providerItemId), now);
     if (now - lastRememberedPrune >= REMEMBERED_PRUNE_INTERVAL_MS) {
       lastRememberedPrune = now;
       db.prepare("DELETE FROM up_next_library_items WHERE resolved_at < ?").run(now - REMEMBERED_TTL_MS);
@@ -330,17 +344,23 @@ function rememberAnswer(key, provider, providerItemId) {
   }
 }
 
-function rememberedAnswer(key) {
+function rememberedEntry(key) {
   try {
     const row = db.prepare(
-      "SELECT provider_item_id FROM up_next_library_items WHERE lookup_key = ? AND resolved_at >= ?",
-    ).get(key, Date.now() - REMEMBERED_TTL_MS);
-    return text(row?.provider_item_id);
+      "SELECT provider_item_id, resolved_at FROM up_next_library_items WHERE lookup_key = ? AND resolved_at >= ?",
+    ).get(key, outageNow() - REMEMBERED_TTL_MS);
+    return row ? { at: Number(row.resolved_at) || 0, providerItemId: text(row.provider_item_id) } : null;
   } catch {
-    return "";
+    return null;
   }
 }
 
+function rememberedAnswer(key) {
+  return rememberedEntry(key)?.providerItemId || "";
+}
+
+// Clears this process's memory only (what a restart loses); the saved answers
+// in up_next_library_items stay.
 export function clearUpNextLibraryLookupCache() {
   lookupCache.clear();
   episodeInventoryCache.clear();
@@ -477,9 +497,11 @@ export function createUpNextLibraryEpisodeLookup(config = {}, { stats = null } =
 //
 // `stats`, when given, counts cache hits, live lookups, and lookups skipped
 // for lack of budget, for the build's summary log line. `deferred`, when given,
-// collects the `{ candidate, provider }` pairs skipped for lack of budget so
-// the caller can hand them to topUpUpNextLibraryLookups.
-export function createUpNextLibraryLookup(config = {}, { stats = null, deferred = null } = {}) {
+// collects the `{ candidate, provider }` pairs skipped for lack of budget, and
+// those answered from an expired answer, so the caller can hand them to
+// topUpUpNextLibraryLookups. `recheck` (the top-up) asks the library again for
+// an expired answer instead of using it.
+export function createUpNextLibraryLookup(config = {}, { stats = null, deferred = null, recheck = false } = {}) {
   const providers = PROVIDERS.filter((provider) => configuredProvider(config, provider));
   if (!providers.length) return null;
   let budget = MAX_LOOKUPS_PER_BUILD;
@@ -495,7 +517,7 @@ export function createUpNextLibraryLookup(config = {}, { stats = null, deferred 
     for (const provider of asked) {
       const key = cacheKey(provider, config, media);
       const cached = readCache(key);
-      if (cached) {
+      if (cached && !cached.stale) {
         if (stats) stats.itemCached = (stats.itemCached || 0) + 1;
         if (cached.providerItemId) providerItems[provider] = [cached.providerItemId];
         continue;
@@ -509,6 +531,14 @@ export function createUpNextLibraryLookup(config = {}, { stats = null, deferred 
       };
       if (providerInOutage(provider, config)) {
         useRemembered();
+        continue;
+      }
+      // An expired answer keeps its card and is asked again in the background,
+      // so the card set does not change while answers are refreshed.
+      if (cached && !recheck) {
+        if (stats) stats.itemCached = (stats.itemCached || 0) + 1;
+        if (deferred) deferred.push({ candidate, provider });
+        if (cached.providerItemId) providerItems[provider] = [cached.providerItemId];
         continue;
       }
       if (budget <= 0) {
@@ -573,7 +603,7 @@ export function topUpUpNextLibraryLookups(config = {}, deferred = [], {
     try {
       for (let start = 0; start < entries.length; start += MAX_LOOKUPS_PER_BUILD) {
         if (start > 0 && pauseMs > 0) await new Promise((resolve) => setTimeout(resolve, pauseMs));
-        const lookup = createUpNextLibraryLookup(config, { stats });
+        const lookup = createUpNextLibraryLookup(config, { stats, recheck: true });
         if (!lookup) break;
         for (const { candidate, provider } of entries.slice(start, start + MAX_LOOKUPS_PER_BUILD)) {
           await lookup(candidate, { only: [provider] });

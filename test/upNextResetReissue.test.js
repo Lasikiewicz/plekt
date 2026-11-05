@@ -75,13 +75,10 @@ test("a full reset (sign-out, view change) does not reissue", async () => {
   assert.equal(state.upNextLoading, false);
 });
 
-test("dashboard entry ignores another device's old browser snapshot and always reads the server", async () => {
-  resetUpNext();
-  state.token = "token";
-  state.activeView = "dashboard";
-  localStorage.setItem("plembfin:upNextCache:v6", JSON.stringify({
-    savedAt: Date.now(), version: 1, items: [{ id: "cleared-on-phone" }],
-  }));
+// Decision 20 October 2026 reversed 5 November 2026 (docs/decisions.md): a
+// reload paints the last confirmed cards as checking, but the server is always
+// read and its reply replaces them, so a card cleared on another device leaves.
+function deferredRail() {
   let finish;
   let requests = 0;
   globalThis.fetch = (url) => {
@@ -91,10 +88,53 @@ test("dashboard entry ignores another device's old browser snapshot and always r
     }
     return Promise.resolve({ ok: true, json: async () => ({ items: [], upNextVersion: 2 }) });
   };
+  return { finish: (body) => finish({ ok: true, json: async () => body }), requests: () => requests };
+}
+
+test("a reload paints the saved cards as checking, then the server reply replaces them", async () => {
+  resetUpNext();
+  localStorage.clear();
+  state.token = "token";
+  state.activeView = "dashboard";
+  state.currentUser = { uid: "owner", activeUser: "admin" };
+  localStorage.setItem("plekt:upNextSnapshot:v1:owner:admin", JSON.stringify({
+    savedAt: Date.now(), items: [{ id: "kept" }, { id: "cleared-on-phone" }],
+  }));
+  const rail = deferredRail();
   const loading = loadUpNext();
-  assert.deepEqual(state.upNextItems, [], "old local cards must never paint");
-  finish({ ok: true, json: async () => ({ items: [], upNextVersion: 2 }) });
+  assert.deepEqual(state.upNextItems.map((item) => item.id), ["kept", "cleared-on-phone"], "saved cards paint at once");
+  assert.equal(state.upNextFromCache, true, "saved cards show as checking");
+  assert.equal(rail.requests(), 1, "the server is still read");
+  rail.finish({ items: [{ id: "kept" }], upNextVersion: 3 });
+  await loading;
+  assert.deepEqual(state.upNextItems.map((item) => item.id), ["kept"], "the server reply wins");
+  assert.equal(state.upNextFromCache, false);
+  const saved = JSON.parse(localStorage.getItem("plekt:upNextSnapshot:v1:owner:admin"));
+  assert.deepEqual(saved.items.map((item) => item.id), ["kept"], "the confirmed list is saved for the next reload");
+});
+
+test("saved cards never paint for another dashboard, an expired save, or once the rail has loaded", async () => {
+  resetUpNext();
+  localStorage.clear();
+  state.token = "token";
+  state.activeView = "dashboard";
+  localStorage.setItem("plekt:upNextSnapshot:v1:owner:admin", JSON.stringify({ savedAt: Date.now(), items: [{ id: "admins" }] }));
+  // The admin viewing an added user's dashboard.
+  state.currentUser = { uid: "owner", activeUser: "friend" };
+  let rail = deferredRail();
+  let loading = loadUpNext();
+  assert.deepEqual(state.upNextItems, [], "another dashboard's cards must never paint");
+  rail.finish({ items: [], upNextVersion: 2 });
+  await loading;
+
+  resetUpNext();
+  state.currentUser = { uid: "owner", activeUser: "admin" };
+  localStorage.setItem("plekt:upNextSnapshot:v1:owner:admin", JSON.stringify({ savedAt: Date.now() - 15 * 24 * 60 * 60 * 1000, items: [{ id: "old" }] }));
+  rail = deferredRail();
+  loading = loadUpNext();
+  assert.deepEqual(state.upNextItems, [], "an expired save must not paint");
+  rail.finish({ items: [{ id: "fresh" }], upNextVersion: 2 });
   await loading;
   await loadUpNext();
-  assert.equal(requests, 2, "a recent load must not suppress the next server read");
+  assert.deepEqual(state.upNextItems.map((item) => item.id), [], "a later load reads the server again");
 });

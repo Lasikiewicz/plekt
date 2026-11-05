@@ -49,6 +49,13 @@ test("Trakt restore isolates rejected plays so the remaining batch can continue"
   assert.deepEqual(partition.rejected, [rejected]);
 });
 
+test("Trakt restore does not assume acceptance when a rejection is unidentifiable", () => {
+  const items = ["100", "200", "300"].map(tmdb => ({ type: "movie", ids: { tmdb } }));
+  const partition = partitionTraktNotFoundBatch(items, { not_found: { movies: [{ ids: { tmdb: "200" } }, { ids: { tmdb: "unknown" } }] } });
+  assert.equal(partition.unidentified, true);
+  assert.deepEqual(partition.accepted, []);
+});
+
 test("Trakt restore isolates nested grouped episode rejections by coordinate", () => {
   const accepted = { type: "episode", mediaType: "episode", title: "Good Show - S06E20", season: 6, episode: 20, ids: { tmdb: "100" } };
   const rejected = { type: "episode", mediaType: "episode", title: "Good Show - S06E21", season: 6, episode: 21, ids: { tmdb: "100" } };

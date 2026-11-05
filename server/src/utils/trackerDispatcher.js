@@ -11,8 +11,10 @@ import { runTraktWrite, withTraktRateLimitRetry } from "./trackers/traktWrites.j
 import { dispatchSimklWatchState } from "./trackers/simklDispatch.js";
 import { trackerBacklogSkipReason } from "./trackers/backlogGate.js";
 import { TARGET_DECISIONS } from "./watchSyncPolicy.js"; import { resolveOrderWatch } from "./episodeOrderWatch.js"; import { loadMediaConfig } from "./configStore.js";
+import { partitionTraktNotFoundBatch } from "./traktNotFoundPartition.js";
 
 export { withTraktRateLimitRetry } from "./trackers/traktWrites.js";
+export { partitionTraktNotFoundBatch } from "./traktNotFoundPartition.js";
 const traktAdapter = getTrackerAdapter("trakt");
 const { refreshToken: refreshTraktToken } = traktAdapter.auth;
 const { keys: trackerMediaIdentityKeys, key: trackerMediaKey, matches: trackerMediaMatches } = traktAdapter.identity;
@@ -641,84 +643,6 @@ function replayCancellationError() {
   return Object.assign(new Error("Authoritative watch-history restore was cancelled before Trakt replay completed"), { code: "restore_cancelled" });
 }
 
-function traktNotFoundEntries(result = {}) {
-  return Object.entries(result?.not_found || {})
-    .filter(([, entries]) => Array.isArray(entries))
-    .flatMap(([category, entries]) => entries.map((entry) => ({ category, entry })));
-}
-
-function traktNotFoundEntryValue(entry = {}) {
-  return entry?.episode || entry?.movie || entry?.show || entry?.season || entry;
-}
-
-function traktNotFoundEntryCoordinates(entry = {}) {
-  const value = traktNotFoundEntryValue(entry);
-  const coordinates = [];
-  const add = (seasonValue, episodeValue) => {
-    const season = Number(seasonValue);
-    const episode = Number(episodeValue);
-    if (!Number.isInteger(season) || !Number.isInteger(episode)) return;
-    if (!coordinates.some((coordinate) => coordinate.season === season && coordinate.episode === episode)) {
-      coordinates.push({ season, episode });
-    }
-  };
-
-  // Trakt returns an episode rejection in the same grouped shape accepted by
-  // /sync/history: { ids, seasons: [{ number, episodes: [{ number }] }] }.
-  // Also accept the flatter shape used by older responses and our unit tests.
-  add(
-    value?.season ?? value?.season_number ?? value?.seasonNumber,
-    value?.number ?? value?.episode ?? value?.episode_number ?? value?.episodeNumber,
-  );
-  for (const seasonEntry of Array.isArray(value?.seasons) ? value.seasons : []) {
-    const season = seasonEntry?.number ?? seasonEntry?.season ?? seasonEntry?.season_number ?? seasonEntry?.seasonNumber;
-    for (const episodeEntry of Array.isArray(seasonEntry?.episodes) ? seasonEntry.episodes : []) {
-      add(
-        season,
-        episodeEntry?.number ?? episodeEntry?.episode ?? episodeEntry?.episode_number ?? episodeEntry?.episodeNumber,
-      );
-    }
-  }
-  return coordinates;
-}
-
-function providerIdsOverlap(media = {}, entry = {}) {
-  const value = traktNotFoundEntryValue(entry);
-  const entryIds = value?.ids || entry?.ids || {};
-  const mediaIds = media?.ids || {};
-  return Object.entries(entryIds).some(([provider, value]) => (
-    value != null
-    && String(value) !== ""
-    && mediaIds[provider] != null
-    && String(mediaIds[provider]).trim().toLowerCase() === String(value).trim().toLowerCase()
-  ));
-}
-
-function traktNotFoundMatchesMedia(media = {}, category = "", entry = {}) {
-  if (!providerIdsOverlap(media, entry)) return false;
-  const type = media.type || media.mediaType;
-  if (type === "movie") return category === "movies";
-  if (type === "tv" || type === "show" || type === "series") return category === "shows";
-  if (type !== "episode") return false;
-  if (category === "shows") return true;
-  const entryCoordinates = traktNotFoundEntryCoordinates(entry);
-  if (!entryCoordinates.length) return true;
-  return entryCoordinates.some(({ season, episode }) => (
-    Number(media.season) === season && Number(media.episode) === episode
-  ));
-}
-
-export function partitionTraktNotFoundBatch(batch = [], result = {}) {
-  const entries = traktNotFoundEntries(result);
-  if (!entries.length) return { accepted: [], rejected: [], entries };
-  const rejected = batch.filter((media) => entries.some(({ category, entry }) => traktNotFoundMatchesMedia(media, category, entry)));
-  return {
-    accepted: batch.filter((media) => !rejected.includes(media)),
-    rejected,
-    entries,
-  };
-}
-
 function trackerHistoryEntryBatches(entries = [], batchSize = 100) {
   const batches = [];
   const keys = new Set();
@@ -901,7 +825,7 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
       const rejectedKeys = new Set(partition.rejected.map((media) => trackerMediaKey(media)));
       for (const entry of batch) {
         const key = trackerMediaKey(entry.media);
-        if (!rejectedKeys.size || rejectedKeys.has(key)) {
+        if (partition.unidentified || !rejectedKeys.size || rejectedKeys.has(key)) {
           const dismissed = isTraktNotFoundDismissed(entry.media);
           results[entry.index] = dismissed
             ? {
@@ -1098,7 +1022,7 @@ export async function replayTraktWatchHistory(rows = [], {
     const notFound = traktNotFoundCount(result);
     if (notFound) {
       const partition = partitionTraktNotFoundBatch(batch, result);
-      if (!partition.rejected.length) {
+      if (partition.unidentified || !partition.rejected.length) {
         logger(`Trakt restore: ${notFound} rejected play(s) could not be isolated from the batch response.`);
         const restoreIssues = batch.map((media, index) => {
           const source = restoreSourceByMedia.get(media);

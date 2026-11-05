@@ -20,6 +20,7 @@ import {
 } from "./dataRepo.js";
 import { syncMediaPlaystate, syncMediaUnplayedPlaystate } from "./syncOrchestrator.js";
 import { removeWatchlistAfterCompletedWatch } from "./personalWatchlistRepository.js";
+import { resolveOrderUpNextAction } from "./episodeOrderWatch.js";
 
 // Cross-platform mass-false-unwatch circuit breaker. applyUnwatchedTransition
 // below is the single choke point every *automatic* (non-manual) unwatch path
@@ -296,6 +297,7 @@ export async function applyUnwatchedTransition(media, config, loopStore, {
   const localTransitionBlocked = () => restoreBlocksTransition(media) && !allowLocalDuringRestore;
 
   if (localTransitionBlocked()) return deferredUnwatchedResult();
+  if (includeSourcePlatform) media = await resolveOrderUpNextAction(media, config);
   const existingRecord = recordId
     ? await getWatchRecordByIdLight(recordId).catch(() => null)
     : await getWatchRecordByMediaKey(mediaKeyFor(media)).catch(() => null);

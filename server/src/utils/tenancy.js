@@ -79,33 +79,88 @@ function emptyRegistry() {
   return { version: 1, users: [] };
 }
 
-export function loadUsersRegistry(rootDataDir = DATA_DIR) {
-  const filePath = usersRegistryPath(rootDataDir);
-  if (!fs.existsSync(filePath)) return emptyRegistry();
+// The registry and config.json are consulted on every database statement in a
+// user context (to tell the admin from other users), so reading and parsing
+// them each time held the event loop for seconds during scheduled work. Parsed
+// results are reused while the file's identity, mtime and size are unchanged;
+// any rewrite (saveUsersRegistry renames a new file into place, so the inode
+// changes too) is picked up on the next read, in this or another process.
+// Even the stat cost over a second per scheduled pass at thousands of
+// statements, so a checked result is reused for FRESH_CHECK_MS; writes made by
+// this process drop it at once (forgetParsedFile), so only another process's
+// edit can be that late.
+const parsedFileMemo = new Map();
+const FRESH_CHECK_MS = 1000;
+
+export function forgetParsedFile(filePath) {
+  parsedFileMemo.delete(path.resolve(filePath));
+}
+
+function readParsedFile(rawPath, parse) {
+  const filePath = path.resolve(rawPath);
+  const now = Date.now();
+  const recent = parsedFileMemo.get(filePath);
+  if (recent && recent.parse === parse && now - recent.checkedAt < FRESH_CHECK_MS) return recent.value;
+  let stat;
   try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, "utf8"));
-    const users = Array.isArray(parsed?.users) ? parsed.users : [];
-    return {
-      version: Number(parsed?.version) || 1,
-      users: users
-        .map((entry) => {
-          const name = normalizeUserName(entry?.name);
-          if (!name) return null;
-          const role = [ADMIN_ROLE, ADMINISTRATOR_ROLE].includes(entry?.role) ? entry.role : USER_ROLE;
-          return {
-            name,
-            role,
-            disabled: Boolean(entry?.disabled),
-            stopped: Boolean(entry?.stopped),
-            sessionsValidAfter: Number(entry?.sessionsValidAfter) || 0,
-            passwordHash: typeof entry?.passwordHash === "string" ? entry.passwordHash : null,
-          };
-        })
-        .filter(Boolean),
-    };
+    stat = fs.statSync(filePath);
   } catch {
-    return emptyRegistry();
+    parsedFileMemo.set(filePath, { signature: null, parse, value: undefined, checkedAt: now });
+    return undefined;
   }
+  const signature = `${stat.ino}:${stat.mtimeMs}:${stat.size}`;
+  const memo = parsedFileMemo.get(filePath);
+  if (memo && memo.signature === signature && memo.parse === parse) {
+    memo.checkedAt = now;
+    return memo.value;
+  }
+  let value;
+  try {
+    value = parse(fs.readFileSync(filePath, "utf8"));
+  } catch {
+    value = null;
+  }
+  parsedFileMemo.set(filePath, { signature, parse, value, checkedAt: now });
+  return value;
+}
+
+function copyRegistry(registry) {
+  return { version: registry.version, users: registry.users.map((user) => ({ ...user })) };
+}
+
+export function loadUsersRegistry(rootDataDir = DATA_DIR) {
+  const parsed = readParsedFile(usersRegistryPath(rootDataDir), parseUsersRegistry);
+  // Callers edit and save what they load, so each gets its own copy.
+  return parsed ? copyRegistry(parsed) : emptyRegistry();
+}
+
+// A malformed file throws here and loadUsersRegistry falls back to empty.
+function parseUsersRegistry(text) {
+  const parsed = JSON.parse(text);
+  const users = Array.isArray(parsed?.users) ? parsed.users : [];
+  return {
+    version: Number(parsed?.version) || 1,
+    users: users
+      .map((entry) => {
+        const name = normalizeUserName(entry?.name);
+        if (!name) return null;
+        const role = [ADMIN_ROLE, ADMINISTRATOR_ROLE].includes(entry?.role) ? entry.role : USER_ROLE;
+        return {
+          name,
+          role,
+          disabled: Boolean(entry?.disabled),
+          stopped: Boolean(entry?.stopped),
+          sessionsValidAfter: Number(entry?.sessionsValidAfter) || 0,
+          passwordHash: typeof entry?.passwordHash === "string" ? entry.passwordHash : null,
+        };
+      })
+      .filter(Boolean),
+  };
+}
+
+function parseConfigAdminName(text) {
+  const config = JSON.parse(text);
+  return normalizeUserName(config?.username || config?.ADMIN_USERNAME || config?.adminUsername) || "";
 }
 
 export function saveUsersRegistry(registry, rootDataDir = DATA_DIR) {
@@ -118,6 +173,7 @@ export function saveUsersRegistry(registry, rootDataDir = DATA_DIR) {
   const tmp = `${filePath}.${process.pid}.tmp`;
   fs.writeFileSync(tmp, `${JSON.stringify(payload, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   fs.renameSync(tmp, filePath);
+  forgetParsedFile(filePath);
   try { fs.chmodSync(filePath, 0o600); } catch { /* non-POSIX */ }
   return payload;
 }
@@ -151,15 +207,7 @@ export function findUser(name, rootDataDir = DATA_DIR) {
 export function resolveAdminUserName(rootDataDir = DATA_DIR) {
   const listed = loadUsersRegistry(rootDataDir).users.find((user) => user.role === ADMIN_ROLE);
   if (listed?.name) return listed.name;
-  try {
-    const configPath = path.join(rootDataDir, "config.json");
-    if (fs.existsSync(configPath)) {
-      const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
-      const fromConfig = normalizeUserName(config?.username || config?.ADMIN_USERNAME || config?.adminUsername);
-      if (fromConfig) return fromConfig;
-    }
-  } catch { /* ignore */ }
-  return "admin";
+  return readParsedFile(path.join(rootDataDir, "config.json"), parseConfigAdminName) || "admin";
 }
 
 export function isAdminUserName(name, rootDataDir = DATA_DIR) {

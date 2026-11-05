@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import { CONFIG_PATH, ensureDataDirs } from "./paths.js";
 import { detectAndMarkPristineInstall, isAccountClaimed } from "./utils/onboardingStore.js";
 import { getActiveDataDir, getUserContext, isNonAdminTenantContext } from "./utils/userContext.js";
+import { forgetParsedFile } from "./utils/tenancy.js";
 
 ensureDataDirs();
 
@@ -17,8 +18,12 @@ function readConfigFile(filePath = CONFIG_PATH) {
 
 function writeConfigFile(config, filePath = CONFIG_PATH) {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(config, null, 2));
-  try { fs.chmodSync(filePath, 0o600); } catch { /* non-POSIX FS (Windows, some Docker volumes) */ }
+  const fd = fs.openSync(filePath, "w", 0o600);
+  try {
+    try { fs.fchmodSync(fd, 0o600); } catch { /* non-POSIX FS */ }
+    fs.writeFileSync(fd, JSON.stringify(config, null, 2));
+  } finally { fs.closeSync(fd); }
+  forgetParsedFile(filePath);
 }
 
 function hashPassword(plain, salt = crypto.randomBytes(16).toString("hex")) {

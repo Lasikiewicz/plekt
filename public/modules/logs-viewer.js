@@ -1,4 +1,4 @@
-import { escapeHtml, fetchDiagnosticLogs, formatLogLineToHtml, replaceLogContent } from "./logs.js?v=2.2.3.0.2";
+import { escapeHtml, fetchDiagnosticLogs, formatLogLineToHtml, replaceLogContent } from "./logs.js?v=2.2.3.0.3";
 
 export function filterLogLines(lines, query = "") {
   const needle = query.trim().toLowerCase();
@@ -122,7 +122,11 @@ export function createLogsViewer({ state, elements, authHeaders, logsText,
     const visible = state.activeView === "settings" && state.activeSettingsRoute?.panel === "logs" && state.token;
     if (visible && !state.logsRefreshInterval) {
       if (!state.hasLoadedLogsOnce) renderLogs(true).catch(() => {});
-      state.logsRefreshInterval = globalThis.setInterval(() => { renderLogs().catch(() => {}); }, 3000);
+      // A background tab skips its polls; the next visible tick catches up.
+      state.logsRefreshInterval = globalThis.setInterval(() => {
+        if (globalThis.document?.visibilityState === "hidden") return;
+        renderLogs().catch(() => {});
+      }, 3000);
     } else if (!visible) {
       globalThis.clearInterval(state.logsRefreshInterval);
       state.logsRefreshInterval = undefined;

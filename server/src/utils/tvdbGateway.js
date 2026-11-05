@@ -368,7 +368,7 @@ async function upstream(endpoint, params = {}, attempt = 0, { lane = "enrichment
     const retryMs = Number.isFinite(retryAfterSec) && retryAfterSec > 0 ? retryAfterSec * 1000 : 2000 * (attempt + 1);
     if (attempt < 2 && retryMs <= 15_000) {
       await wait(retryMs + Math.floor(Math.random() * 250));
-      return upstream(endpoint, params, attempt + 1);
+      return upstream(endpoint, params, attempt + 1, { lane });
     }
     rateLimitCooldownUntil = Date.now() + Math.max(60_000, Math.min(retryMs, 15 * 60_000));
   }

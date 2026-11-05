@@ -84,6 +84,24 @@ test('changed watch date and unwatched playstate cancel linked backlog without s
   }
 });
 
+test('an alternate-order policy skip closes the intent and a later pass writes nothing', async () => {
+  const { getDataVersion } = await import('../server/src/db.js');
+  reset(); const fixture = addWatch(3);
+  const media = JSON.parse(fixture.intent.media_json);
+  db.prepare('UPDATE tracker_write_intents SET media_json=? WHERE id=?')
+    .run(JSON.stringify({ ...media, watch_provenance: { ...(media.watch_provenance || {}), episode_order: 'dvd' } }), fixture.intent.id);
+  await withFetch(async calls => { await syncPendingTrackerWriteIntents(() => {}); assert.equal(calls.length, 0); });
+  const intent = db.prepare('SELECT status,last_error FROM tracker_write_intents WHERE id=?').get(fixture.intent.id);
+  assert.equal(intent.status, 'cancelled');
+  assert.match(intent.last_error, /alternate episode orders/);
+  assert.match(db.prepare('SELECT sync_dispatch_telemetry t FROM watch_history WHERE id=?').get(fixture.id).t, /Target simkl status: skipped/);
+  // The closed intent is not due again, so a second pass changes no row and
+  // leaves the data version (and every history cache) alone.
+  const version = getDataVersion();
+  await withFetch(async calls => { await syncPendingTrackerWriteIntents(() => {}); assert.equal(calls.length, 0); });
+  assert.equal(getDataVersion(), version);
+});
+
 test('uncertain Simkl sends move to review and are never blindly resent', async () => {
   reset(); const fixture = addWatch(2);
   db.prepare("UPDATE tracker_write_intents SET status='uncertain',attempts=1 WHERE id=?").run(fixture.intent.id);

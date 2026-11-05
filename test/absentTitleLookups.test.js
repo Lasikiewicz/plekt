@@ -67,7 +67,7 @@ test("TVDB-backed show metadata hydrates seasons through its TVDB identity", () 
 });
 
 test("the miss cache is cleared by the same mutation hook as the positive cache", () => {
-  assert.match(stateSource, /showDetailMisses: new Map\(\)/);
+  assert.match(stateSource, /showDetailMisses: new SessionCache\(\)/);
   const clearBody = appSource.match(/function clearDerivedUiCaches[\s\S]*?\n}/)?.[0] || "";
   assert.match(clearBody, /state\.showDetailCache\.clear\(\)/);
   assert.match(clearBody, /state\.showDetailMisses\.clear\(\)/);

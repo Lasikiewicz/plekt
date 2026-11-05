@@ -5,12 +5,13 @@ import { getTrackerConnection } from "./trackerConnectionRepo.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { provenanceTelemetryLines } from "./watchProvenance.js";
 import { dispatchGroupsForRows, getCachedHistory, invalidateHistoryDerivedCaches, updateWatchSyncRetry, updateWatchTelemetry, upsertPlaystateForMediaSync } from "./dataRepo.js";
-import { db } from "../db.js";
+import { db, getDataVersion } from "../db.js";
 import { recordSyncHistory, isTargetSynced, targetTelemetryLine, traktTelemetryLine } from "./syncHistoryTelemetry.js";
 import { runWithConcurrency } from "./scheduledConcurrency.js";
 import { syncPendingTrackerWriteIntents } from "./trackerIntentWorker.js";
 import { trackerRetryRecordIds } from "./trackerWriteIntents.js";
 import { trackerProviderIds } from "./trackers/registry.js";
+import { acquirePendingDispatch } from "./pendingDispatchGuard.js";
 
 // Automatic re-dispatch backoff for records whose sync targets keep failing.
 // Attempt N waits SYNC_RETRY_BACKOFF_MS[N-1] (last entry repeats) before the
@@ -74,13 +75,61 @@ function samePendingDispatchSnapshot(snapshot, current) {
     && Number(current.updated_at || 0) === Number(snapshot.updated_at || 0);
 }
 const pendingRowNow = db.prepare("SELECT sync_action,watched_at,updated_at FROM watch_history WHERE id=?");
+let pendingManualDispatchSweepInFlight = false;
+let retryCandidateCache = { key: "", rows: [] };
+const dispatchGroupCache = new WeakMap();
+
+function pendingRetryCandidates(rows, activeTargets, includeTrakt, intentRetryIds, traktConnection) {
+  const key = [
+    getDataVersion(),
+    activeTargets.join(","),
+    includeTrakt ? `${traktConnection?.id || ""}:${traktConnection?.remoteUserId || ""}` : "no-trakt",
+    [...intentRetryIds].sort().join(","),
+  ].join("|");
+  if (retryCandidateCache.key !== key || retryCandidateCache.historyRows !== rows) {
+    const candidates = [];
+    for (const row of rows) {
+      const action = String(row.sync_action || "watched").toLowerCase();
+      if (!["watched", "unwatched", "unplayed"].includes(action)) continue;
+      const source = dispatchSourceForPendingRow(row, action);
+      const telemetry = row.sync_dispatch_telemetry || "";
+      let needsSync = telemetry.includes("Dispatch status: pending");
+      if (!needsSync && activeTargets.length > 0) {
+        needsSync = !activeTargets.every((target) => isTargetSynced(telemetry, target, source));
+      }
+      if (!needsSync && includeTrakt) {
+        needsSync = traktNeedsRetry(telemetry, source) || intentRetryIds.has(String(row.id));
+      }
+      if (needsSync) candidates.push(row);
+    }
+    retryCandidateCache = { key, rows: candidates, historyRows: rows };
+  }
+  return retryCandidateCache.rows;
+}
+
+function cachedDispatchGroups(candidateRows, contextRows) {
+  let cache = dispatchGroupCache.get(contextRows);
+  if (!cache) {
+    cache = new Map();
+    dispatchGroupCache.set(contextRows, cache);
+  }
+  const key = candidateRows.map((row) => String(row.id)).join(",");
+  if (cache.has(key)) return cache.get(key);
+  const groups = dispatchGroupsForRows(candidateRows, contextRows);
+  cache.set(key, groups);
+  if (cache.size > 8) cache.delete(cache.keys().next().value);
+  return groups;
+}
 
 export async function syncPendingManualDispatches(config, loopStore, logger = console.log) {
-  if (isAuthoritativeRestoreActive()) return 0;
-  if (!watchedPlayedSyncEnabled()) {
-    logger("Pending watched dispatch sync is disabled.");
-    return 0;
-  }
+  if (pendingManualDispatchSweepInFlight) return 0;
+  pendingManualDispatchSweepInFlight = true;
+  try {
+    if (isAuthoritativeRestoreActive()) return 0;
+    if (!watchedPlayedSyncEnabled()) {
+      logger("Pending watched dispatch sync is disabled.");
+      return 0;
+    }
   let syncedCount = await syncPendingTrackerWriteIntents(logger);
   try {
     // History is already cached in memory. Inspect the complete canonical set
@@ -89,37 +138,14 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
     const rows = await getCachedHistory();
 
     const activeTargets = getActiveTargetsForConfig(config);
-    const includeTrakt = traktRetryActive();
+    const traktConnection = getTrackerConnection("trakt");
+    const includeTrakt = traktConnection?.status === "connected";
     // Durable intents also schedule a retry when the telemetry line alone
     // would not (an interrupted send, or an intent-recorded transient failure).
     const intentRetryIds = includeTrakt ? trackerRetryRecordIds() : new Set();
-    const needsTrakt = (row, telemetry, source) => traktNeedsRetry(telemetry, source) || intentRetryIds.has(String(row.id));
-    const toRetry = [];
     const now = Date.now();
-
-    for (const row of rows) {
-      const action = String(row.sync_action || "watched").toLowerCase();
-      if (!["watched", "unwatched", "unplayed"].includes(action)) continue;
-      const dispatchSource = dispatchSourceForPendingRow(row, action);
-
-      const telemetry = row.sync_dispatch_telemetry || "";
-      const isPending = telemetry.includes("Dispatch status: pending");
-
-      let needsSync = isPending;
-      if (!isPending && activeTargets.length > 0) {
-        const allSynced = activeTargets.every((target) =>
-          isTargetSynced(telemetry, target, dispatchSource)
-        );
-        if (!allSynced) {
-          needsSync = true;
-        }
-      }
-      if (!isPending && includeTrakt && needsTrakt(row, telemetry, dispatchSource)) needsSync = true;
-
-      if (needsSync && syncRetryEligible(row, now)) {
-        toRetry.push(row);
-      }
-    }
+    const toRetry = pendingRetryCandidates(rows, activeTargets, includeTrakt, intentRetryIds, traktConnection)
+      .filter((row) => syncRetryEligible(row, now));
 
     // A bulk historical import (e.g. the onboarding Trakt reconcile) can queue
     // thousands of rows needing outbound dispatch at once, and this batch is
@@ -139,10 +165,13 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
     // tick that contains many aliases still processes the same 15 rows it did
     // before. Identity is derived from the complete history, ensuring bridge
     // rows outside this selected batch cannot split one real item.
-    const dispatchGroups = dispatchGroupsForRows(batchToRetry, rows);
+    const dispatchGroups = cachedDispatchGroups(batchToRetry, rows);
     await runWithConcurrency(dispatchGroups, 6, async (group) => {
       for (const row of group.rows) {
         if (isAuthoritativeRestoreActive()) return;
+        const inFlightKey = String(row.id);
+        const releasePendingDispatch = acquirePendingDispatch(inFlightKey);
+        if (!releasePendingDispatch) continue;
         try {
       const id = row.id;
       const stillCurrent = () => samePendingDispatchSnapshot(row, pendingRowNow.get(id));
@@ -178,7 +207,10 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       const targetsStillNeeded = activeTargets.filter(
         (target) => !isTargetSynced(row.sync_dispatch_telemetry || "", target, dispatchSource)
       );
-      const retryTrakt = includeTrakt && needsTrakt(row, row.sync_dispatch_telemetry || "", dispatchSource);
+      const retryTrakt = includeTrakt && (
+        traktNeedsRetry(row.sync_dispatch_telemetry || "", dispatchSource)
+        || intentRetryIds.has(String(row.id))
+      );
       if (retryTrakt) {
         targetsStillNeeded.push("trakt");
         // The failed write may have reached Trakt before its response was
@@ -263,6 +295,8 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       syncedCount++;
         } catch (error) {
           logger(`Background Queue: failed to process ${row.title} (${row.id}): ${error.message || String(error)}`);
+        } finally {
+          releasePendingDispatch();
         }
       }
     });
@@ -271,4 +305,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
   }
   if (syncedCount) await invalidateHistoryDerivedCaches("syncPendingManualDispatches").catch(() => null);
   return syncedCount;
+  } finally {
+    pendingManualDispatchSweepInFlight = false;
+  }
 }

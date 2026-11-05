@@ -62,7 +62,7 @@ export function parsePlexGuids(metadata = {}) {
   ].filter(Boolean);
 
   for (const rawGuid of rawGuids) {
-    const guid = String(rawGuid);
+    const guid = String(rawGuid).split("?")[0];
     // Flexible parsing supporting both slug styles (proto://id and proto/id)
     // and both the modern (tmdb/tvdb) and legacy Plex agent (themoviedb/thetvdb) prefixes.
     if (guid.includes("imdb")) ids.imdb = guid.split(/:\/\/|\//).pop();

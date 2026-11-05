@@ -24,8 +24,10 @@ export function isNonAdminTenantContext(rootDataDir = DATA_DIR) {
   const context = getUserContext();
   if (!context) return false;
   if (context.role === ADMIN_ROLE) return false;
-  if (context.name && context.name === resolveAdminUserName(rootDataDir)) return false;
+  // Called for every database statement: the cheap folder check goes before
+  // the admin-name lookup, which reads the users registry or config.json.
   if (context.dataDir && path.resolve(context.dataDir) === path.resolve(rootDataDir)) return false;
+  if (context.name && context.name === resolveAdminUserName(rootDataDir)) return false;
   return true;
 }
 

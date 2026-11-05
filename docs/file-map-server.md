@@ -66,6 +66,10 @@ Part of the file map (with [file-map-public.md](file-map-public.md) and [file-ma
 | `recentWatchImport.js` | Catch-up watched-history import per platform: `syncRecentlyWatchedFromPlex` / `Emby` / `Jellyfin`, the library-history authority rules (`libraryHistoryDecision`, `recentUnwatchBlocksLibraryImport`), and the provider watch fingerprint. |
 | `unwatchedStatusPoll.js` | Fallback unwatched-status polls for Plex, Emby and Jellyfin (`checkPlexUnwatchedStatus`, `checkEmbyUnwatchedStatus`, `checkJellyfinUnwatchedStatus`), the Jellyfin confirmation window, and `runDueUnwatchedPolls`, which runs the due polls on their own intervals. |
 | `syncDispatchQueue.js` | Plekt-canonical dispatch backlog: `syncPendingManualDispatches` retries pending target dispatches, with the retry delay and attempt cap (`syncRetryDelayMs`, `SYNC_RETRY_MAX_ATTEMPTS`) and Trakt retry checks (`traktNeedsRetry`). |
+| `pendingDispatchGuard.js` | Shared in-process ownership of a history row's first webhook send and scheduler retry, preventing concurrent dispatch of the same row. |
+| `traktNotFoundPartition.js` | Pure shared matching of grouped Trakt `not_found` entries to a sent batch; ambiguous responses cannot establish which remaining writes succeeded. |
+| `retryAfter.js` | Bounded Retry-After parsing for numeric delays and HTTP dates, shared by the governor and metadata clients. |
+| `diskMaintenance.js` | Sweeps settled orphan artwork only after reading all tenants' file references; any unreadable tenant fails the sweep closed. |
 | `syncHistoryTelemetry.js` | Sync-history rows and dispatch telemetry: `recordSyncHistory`, `buildTelemetry`, `buildProgressTelemetry`, and the per-target telemetry readers. |
 | `forceSyncRun.js` | `runForceSync`: the on-demand force sync run, its plan, and its progress. |
 | `scheduledConcurrency.js` | A small local worker pool for scheduled sync. It is kept separate from `concurrency.js` because its argument order differs. |
@@ -105,7 +109,8 @@ Part of the file map (with [file-map-public.md](file-map-public.md) and [file-ma
 | `plexFetch.js` | Plex-account HTTP boundary with Plex client identity headers and structured failures. |
 | `plexTokenManager.js` | Managed Plex account/server-token validity checks and refresh/recovery. |
 | `plexAccountClaims.js` | Detects another Plekt user connected to the same Plex account before account sign-in completes. |
-| `perUserState.js` | Keeps in-memory cadence and in-flight work separate for each user's data folder. |
+| `perUserState.js` | Keeps in-memory cadence, in-flight work and the history-derived caches separate for each user's data folder, with an optional cap on resident users. |
+| `historyCacheState.js` | Holds the history-derived caches that `dataRepo.js` builds (history, artwork, preview, shows, movies, stats), one set per user's data folder, at most 8 users resident. |
 | `trackerConnectionRepo.js` | Encrypted tracker connection and expiring device-flow persistence. |
 | `trackerWriteIntents.js`, `trackerIntentRequest.js`, `trackerIntentWorker.js`, `trackerIntentMigration.js` | Durable tracker write-intent ledger: destination capture, claim/settle, history correlation of lost responses, review holds for Sync Attention and lazy 30-day cleanup; the send wrapper the Trakt client calls; retry of intents with no surviving watch record; one-time legacy migration (schema migration 56). See [scheduled-sync.md](scheduled-sync.md). |
 | `onboardingStore.js` | `accountClaimed`/onboarding progress persisted in its own `settings` row; the atomic (SQLite immediate-transaction) account-claim check-and-write; pristine-vs-upgraded install detection. |
@@ -150,7 +155,7 @@ Part of the file map (with [file-map-public.md](file-map-public.md) and [file-ma
 | `outbound.js` | `fetchWithTimeout` (configurable 10s default - **all** server-side outbound HTTP must use it; enforced by the build check), `normalizeHttpUrl`, and `assertSafeOutboundUrl`. The shared boundary permits configured LAN media servers while rejecting unsafe schemes, embedded credentials, cloud-metadata targets, and unsafe redirect targets; credentials are removed from cross-origin redirects. |
 | `http.js` | `sendJson` / `sendApiError` / `sendOptions` / `methodNotAllowed` / `notFound` response helpers; restore conflicts preserve HTTP 409/code/message. Same-origin only - no CORS headers are ever sent. |
 | `restoreFailureNotice.js` | Preserves an interrupted restore's failure during owner-checked stale recovery, independently of the released fence. |
-| `installCheck.js` | Opt-in anonymous daily check: consent state (`settings` row `install_check`), payload flags, and the once-per-UTC-day sender run by the scheduler's "Install check" step. Skipped for develop builds, the demo and `PLEKT_INSTALL_CHECK_URL=off`. |
+| `installCheck.js` | Opt-in anonymous daily check: consent state (`settings` row `install_check`), payload flags, and the once-per-UTC-day sender run by the scheduler's "Install check" step. Skipped for the demo and `PLEKT_INSTALL_CHECK_URL=off`. |
 | `httpPerformance.js` | Response compression (gzip over eligible text/JSON above 1KB, with the live update stream excluded), the CSP image-origin memo keyed to the settings revision, and the public asset cache headers. A request carrying the canonical `?v=<version>` query is one immutable version of a file and is cached for a year; anything else revalidates, and `index.html` and the manifest are never cached hard. |
 | `statsPayload.js` | Shapes the stats response around the period actually being viewed: full totals, a lightweight `{period, label}` index of every year and month, and only the selected report. The page previously received every ranked report on every load. |
 | `requestBody.js` | `readJson` and `readFormData` (urlencoded + multipart via busboy) over the raw body captured by `server.js`. |

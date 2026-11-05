@@ -164,6 +164,9 @@ concurrent handlers, queueing the rest. Show and season containers fan out at mo
 episode handlers at a time, and repeated same-state notifications are coalesced for one
 minute. A notification burst therefore cannot multiply into a provider and database storm
 while the current state is being verified.
+Config reloads invalidate pending connection attempts, so a settings restart cannot
+open a second socket. Briefly successful connections retain reconnect backoff; it
+resets after a connection has remained open for at least 30 seconds.
 
 Reverse proxies in front of Plex (Cloudflare, nginx, Traefik, etc.) commonly drop an idle
 WebSocket after a timeout without ever sending a close frame, leaving a "zombie"
@@ -217,6 +220,11 @@ proves the full path works - including any reverse proxy's WebSocket upgrade in 
 Plex.
 
 ## Inbound channel 3: scheduler polling
+
+Full watched-library scans used by Force Sync and restore page each selected section
+in containers of 200 items. A failed section/page rejects the scan; Force Sync records
+a scope error and excludes that server rather than treating a partial scan as empty.
+Repeated or missing pages advertised by Plex also fail the scan.
 
 `/status/sessions` (via `fetchLiveSessions`) is polled for Now Playing and
 completed-session detection by the independent live-session poller

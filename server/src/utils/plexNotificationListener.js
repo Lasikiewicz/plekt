@@ -162,13 +162,15 @@ export function parsePlexNotificationRatingKeys(raw) {
 // firing at the same moment.
 const MAX_CONCURRENT_HANDLERS = 2;
 
-export function createPlexNotificationListener({ getPlexConfig, onLibraryItemChange, onPlaySessionActivity, logger = console.log }) {
+export function createPlexNotificationListener({ getPlexConfig, onLibraryItemChange, onPlaySessionActivity, logger = console.log, socketFactory = (url) => new WebSocket(url) }) {
   let socket = null;
   let stopped = true;
   let reconnectTimer = null;
   let watchdogTimer = null;
   let attempt = 0;
   let lastActivityAt = 0;
+  let connecting = false;
+  let connectionGeneration = 0;
   const pending = new Map(); // ratingKey -> debounce timeout
   const handlerQueue = [];
   let activeHandlers = 0;
@@ -200,7 +202,6 @@ export function createPlexNotificationListener({ getPlexConfig, onLibraryItemCha
       if (stopped || !socket) return;
       if (Date.now() - lastActivityAt > IDLE_WATCHDOG_MS) {
         logger(`Plex notifications: no activity for ${Math.round(IDLE_WATCHDOG_MS / 1000)}s, recycling the connection (a reverse proxy may have silently dropped it)`);
-        attempt = 0;
         closeSocket();
         connect();
       }
@@ -271,17 +272,23 @@ function handleFrame(raw, onPlaySessionActivity) {
 }
 
   async function connect() {
-    if (stopped) return;
+    if (stopped || socket || connecting) return;
+    const generation = ++connectionGeneration;
+    connecting = true;
     clearReconnect();
 
     let config;
     try {
       config = await getPlexConfig();
     } catch (error) {
+      if (generation !== connectionGeneration || stopped) return;
+      connecting = false;
       logger(`Plex notifications: failed to load config: ${error?.message || error}`);
       scheduleReconnect();
       return;
     }
+    if (generation !== connectionGeneration || stopped) return;
+    connecting = false;
 
     if (!config?.baseUrl || !config?.token || config.disabled) {
       // Plex not configured (or disabled) yet - back off and re-check later. A settings
@@ -292,7 +299,7 @@ function handleFrame(raw, onPlaySessionActivity) {
 
     let ws;
     try {
-      ws = new WebSocket(buildNotificationsUrl(config.baseUrl, config.token, config.clientIdentifier));
+      ws = socketFactory(buildNotificationsUrl(config.baseUrl, config.token, config.clientIdentifier));
     } catch (error) {
       logger(`Plex notifications: failed to open socket: ${error?.message || error}`);
       scheduleReconnect();
@@ -300,9 +307,10 @@ function handleFrame(raw, onPlaySessionActivity) {
     }
 
     socket = ws;
+    let openedAt = 0;
     ws.onopen = () => {
       if (socket !== ws) return;
-      attempt = 0;
+      openedAt = Date.now();
       lastActivityAt = Date.now();
       logger("Plex notifications: connected");
     };
@@ -315,6 +323,7 @@ function handleFrame(raw, onPlaySessionActivity) {
     };
     ws.onclose = () => {
       if (socket !== ws) return;
+      if (openedAt && Date.now() - openedAt >= 30_000) attempt = 0;
       socket = null;
       if (!stopped) {
         logger("Plex notifications: socket closed, scheduling reconnect");
@@ -334,6 +343,8 @@ function handleFrame(raw, onPlaySessionActivity) {
     },
     stop() {
       stopped = true;
+      connectionGeneration++;
+      connecting = false;
       clearReconnect();
       clearWatchdog();
       flushPending();
@@ -348,6 +359,8 @@ function handleFrame(raw, onPlaySessionActivity) {
       }
       clearReconnect();
       attempt = 0;
+      connectionGeneration++;
+      connecting = false;
       lastActivityAt = Date.now();
       closeSocket();
       connect();

@@ -440,7 +440,9 @@ export async function rebuildShowProgressCache(state = cacheState()) {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(cacheFile, JSON.stringify(state.progressCache, null, 2), "utf8");
+    const tempPath = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
+    fs.writeFileSync(tempPath, JSON.stringify(state.progressCache, null, 2), "utf8");
+    fs.renameSync(tempPath, cacheFile);
     state.cacheMtimeMs = fs.statSync(cacheFile).mtimeMs;
     console.log(`[ShowProgressCache] Rebuilt and saved ${Object.keys(state.progressCache).length} shows to cache file.`);
   } catch (e) {

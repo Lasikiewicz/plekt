@@ -1,12 +1,17 @@
 import crypto from "node:crypto";
 import { db, parseJson, toJson } from "../db.js";
-import { dropTitle, isSameDroppedTitle, listDroppedTitles, publishDroppedTitleMutation, setDroppedTitleMutationHandler, undropTitle } from "./droppedTitles.js";
+import { droppedTitleAliases, dropTitle, isSameDroppedTitle, listDroppedTitles, publishDroppedTitleMutation, setDroppedTitleMutationHandler, undropTitle } from "./droppedTitles.js";
 import { freshTrackerConnection } from "./trackers/connections.js";
 import { assertTrackerGeneration, runInTrackerGeneration } from "./trackers/generation.js";
 import {
   fetchTraktDroppedShows, fetchTraktLastActivities, setTraktDroppedShow,
 } from "./trackers/traktClient.js";
 import { fetchSimklDroppedTitleSnapshot, setSimklDroppedTitleStatus } from "./trackers/simklClient.js";
+import { createPerUserState } from "./perUserState.js";
+
+const STALE_WRITE_MS = 3 * 60 * 1000;
+const localDrains = createPerUserState(() => new Map());
+const syncFlights = createPerUserState(() => new Map());
 
 const selectRows = db.prepare("SELECT * FROM dropped_title_tracker_state WHERE provider=?");
 const selectAllRows = db.prepare("SELECT * FROM dropped_title_tracker_state");
@@ -21,8 +26,13 @@ const upsertState = db.prepare(`INSERT INTO dropped_title_tracker_state
   write_status=excluded.write_status,last_error=excluded.last_error,updated_at=excluded.updated_at`);
 const saveCursor = db.prepare(`INSERT INTO dropped_title_tracker_cursors(provider,connection_id,account_id,activities_json,updated_at)
   VALUES(?,?,?,?,?) ON CONFLICT(provider) DO UPDATE SET connection_id=excluded.connection_id,account_id=excluded.account_id,activities_json=excluded.activities_json,updated_at=excluded.updated_at`);
-const setWriteStatus = db.prepare("UPDATE dropped_title_tracker_state SET write_status=?,last_error=?,updated_at=? WHERE provider=? AND identity_key=? AND action_at=?");
-const setSimklWriteStatus = db.prepare("UPDATE dropped_title_tracker_state SET write_status='done',last_error=NULL,remote_present=?,updated_at=? WHERE provider='simkl' AND identity_key=? AND action_at=?");
+const setWriteStatus = db.prepare("UPDATE dropped_title_tracker_state SET write_status=?,last_error=?,updated_at=? WHERE provider=? AND identity_key=? AND action_at=? AND write_status='sending' AND updated_at=? AND connection_id=? AND account_id=? AND desired_dropped=?");
+const setSimklWriteStatus = db.prepare("UPDATE dropped_title_tracker_state SET write_status='done',last_error=NULL,remote_present=?,updated_at=? WHERE provider='simkl' AND identity_key=? AND action_at=? AND write_status='sending' AND updated_at=? AND connection_id=? AND account_id=? AND desired_dropped=?");
+const claimWrite = db.prepare(`UPDATE dropped_title_tracker_state SET write_status='sending',last_error=NULL,updated_at=@now
+  WHERE id=@id AND connection_id=@connection_id AND account_id=@account_id AND action_at=@action_at AND desired_dropped=@desired_dropped
+  AND ((write_status='pending' AND (last_error IS NULL OR last_error='' OR updated_at<=@retryCutoff))
+    OR (write_status='sending' AND updated_at<=@staleCutoff))`);
+const heartbeatWrite = db.prepare("UPDATE dropped_title_tracker_state SET updated_at=? WHERE id=? AND connection_id=? AND account_id=? AND action_at=? AND write_status='sending' AND updated_at=? AND desired_dropped=?");
 const currentAccountStmt = db.prepare("SELECT id,remote_user_id FROM tracker_connections WHERE provider=?");
 
 function titleMedia(dropped) {
@@ -51,19 +61,27 @@ export function snapshotContainsDroppedIdentity(snapshot, media) {
   return (snapshot || []).some((item) => sameTrackerTitle(item.media || item, media));
 }
 
-export function pendingDroppedTitleRowsForConnection(rows, connection) {
-  return (rows || []).filter((row) => row.write_status === "pending"
-    && row.connection_id === connection?.id && row.account_id === connection?.remoteUserId);
+export function pendingDroppedTitleRowsForConnection(rows, connection, now = Date.now()) {
+  return (rows || []).filter((row) => (row.write_status === "pending" || row.write_status === "sending" && now - Number(row.updated_at || 0) >= STALE_WRITE_MS)
+    && row.connection_id === connection?.id && row.account_id === connection?.remoteUserId
+    && (!row.last_error || now - Number(row.updated_at || 0) >= 60 * 60 * 1000));
 }
 
 function stateId(provider, identity) { return `${provider}:${identity}`; }
 
 function persist(provider, media, patch, connection = null) {
+  // Claim and metadata updates share SQLite's write lock. Reading ownership
+  // outside this transaction could copy a stale pending row over another
+  // process's newly acquired sending claim.
+  return db.transaction(() => {
   const account = connection || currentAccountStmt.get(provider) || {};
   const matches = matchingStates(provider, media);
   const old = matches[0];
+  if (old && patch.action_at != null && Number(patch.action_at) < Number(old.action_at)) return old;
   const identity = old?.identity_key || stableIdentity(media);
   const now = Date.now();
+  const newIntent = !old || patch.action_at != null && patch.action_at !== old.action_at
+    || patch.desired_dropped != null && Number(patch.desired_dropped) !== Number(old.desired_dropped);
   const row = {
     id: old?.id || stateId(provider, identity), provider, connection_id: account.id || "", account_id: account.remoteUserId || account.remote_user_id || "", identity_key: identity,
     media_json: toJson(media), desired_dropped: patch.desired_dropped ?? old?.desired_dropped ?? 0,
@@ -71,12 +89,14 @@ function persist(provider, media, patch, connection = null) {
     remote_changed_at: patch.remote_changed_at ?? old?.remote_changed_at ?? null,
     remote_present: patch.remote_present ?? old?.remote_present ?? null,
     previous_status: patch.previous_status ?? matches.find(item => item.previous_status)?.previous_status ?? null,
-    write_status: patch.write_status ?? old?.write_status ?? "done",
-    last_error: patch.last_error ?? null, updated_at: now,
+    write_status: old?.write_status === "sending" && !newIntent ? "sending" : patch.write_status ?? old?.write_status ?? "done",
+    last_error: Object.hasOwn(patch, "last_error") ? patch.last_error : newIntent ? null : old?.last_error ?? null,
+    updated_at: old && !newIntent ? old.updated_at : now,
   };
   for (const duplicate of matches.slice(1)) db.prepare("DELETE FROM dropped_title_tracker_state WHERE id=?").run(duplicate.id);
   upsertState.run(row);
   return row;
+  }).immediate();
 }
 
 // Local mutations enter a durable outbox before this callback returns. The
@@ -95,9 +115,9 @@ setDroppedTitleMutationHandler((action, dropped, { source = "local", actionAt = 
   }
 });
 
-const scheduledLocalDrains = new Map();
 export function scheduleDroppedTitleTrackerDrain(trigger = "user") {
   if (!['event', 'user'].includes(trigger)) return;
+  const scheduledLocalDrains = localDrains();
   for (const provider of ["trakt", "simkl"]) {
     if (scheduledLocalDrains.has(provider)) continue;
     const timer = setTimeout(() => {
@@ -142,6 +162,41 @@ function matchingStates(provider, media) {
   return rows.filter((row) => {
     try { return sameTrackerTitle(parseJson(row.media_json, {}), media); } catch { return false; }
   }).sort((a, b) => Number(b.action_at) - Number(a.action_at) || Number(b.updated_at) - Number(a.updated_at));
+}
+
+// Same count as matchingStates(provider, media).length, for many lookups in a
+// row. Calling matchingStates per row reread and reparsed every row each time
+// (a million comparisons at 1,000 Simkl rows held the event loop for 3 s after
+// startup). A match needs a shared alias, so only rows sharing one are compared.
+function matchCounter(provider) {
+  const account = currentAccountStmt.get(provider) || {};
+  const byAlias = new Map();
+  for (const row of selectRows.all(provider)) {
+    if (row.connection_id !== (account.id || "") || row.account_id !== (account.remote_user_id || "")) continue;
+    let entry;
+    try {
+      const media = parseJson(row.media_json, {});
+      entry = { media, aliases: droppedTitleAliases(media) };
+    } catch { continue; }
+    for (const alias of entry.aliases) {
+      if (!byAlias.has(alias)) byAlias.set(alias, []);
+      byAlias.get(alias).push(entry);
+    }
+  }
+  return (media) => {
+    let aliases;
+    try { aliases = droppedTitleAliases(media); } catch { return 0; }
+    const compared = new Set();
+    let count = 0;
+    for (const alias of aliases) {
+      for (const entry of byAlias.get(alias) || []) {
+        if (compared.has(entry)) continue;
+        compared.add(entry);
+        try { if (sameTrackerTitle(entry.media, media)) count += 1; } catch { /* as matchingStates */ }
+      }
+    }
+    return count;
+  };
 }
 
 function matchingState(provider, media) {
@@ -286,19 +341,34 @@ async function syncSimkl(connection, trigger) {
 async function flushPending(provider, connection, trigger) {
   // Old versions could give a re-dropped title a second outbox identity. Keep
   // its newest explicit action before selecting work, including after restart.
+  let countMatches = matchCounter(provider);
   for (const row of selectRows.all(provider)) {
     if (row.connection_id !== connection.id || row.account_id !== connection.remoteUserId) continue;
     const media = parseJson(row.media_json, {});
-    if (matchingStates(provider, media).length > 1) persist(provider, media, {}, connection);
+    if (countMatches(media) > 1) {
+      persist(provider, media, {}, connection);
+      countMatches = matchCounter(provider);
+    }
   }
   const candidates = pendingDroppedTitleRowsForConnection(selectRows.all(provider), connection).sort((a, b) => a.action_at - b.action_at);
   for (const row of candidates) {
     assertTrackerGeneration(provider);
+    const now = Date.now();
+    if (!claimWrite.run({ id: row.id, connection_id: connection.id, account_id: connection.remoteUserId,
+      action_at: row.action_at, desired_dropped: row.desired_dropped, now, retryCutoff: now - 60 * 60 * 1000, staleCutoff: now - STALE_WRITE_MS }).changes) continue;
     const media = parseJson(row.media_json, {});
     if (provider === "trakt" && media.type !== "show") {
-      setWriteStatus.run("done", null, Date.now(), provider, row.identity_key, row.action_at);
+      setWriteStatus.run("done", null, Date.now(), provider, row.identity_key, row.action_at, now, connection.id, connection.remoteUserId, row.desired_dropped);
       continue;
     }
+    let claimStamp = now;
+    const heartbeat = setInterval(() => {
+      const next = Date.now();
+      try {
+        if (heartbeatWrite.run(next, row.id, connection.id, connection.remoteUserId, row.action_at, claimStamp, row.desired_dropped).changes) claimStamp = next;
+      } catch { /* completion keeps its conditional owner guard */ }
+    }, 30_000);
+    heartbeat.unref?.();
     try {
       if (provider === "trakt") {
         const ids = Object.fromEntries(Object.entries(media.ids || {}).filter(([key, value]) => ["trakt", "tmdb", "tvdb", "imdb"].includes(key) && value));
@@ -314,13 +384,15 @@ async function flushPending(provider, connection, trigger) {
         await setSimklDroppedTitleStatus(connection, media, status, { trigger });
       }
       assertTrackerGeneration(provider);
-      if (provider === "simkl") setSimklWriteStatus.run(row.desired_dropped ? 1 : 0, Date.now(), row.identity_key, row.action_at);
-      else setWriteStatus.run("done", null, Date.now(), provider, row.identity_key, row.action_at);
+      if (provider === "simkl") setSimklWriteStatus.run(row.desired_dropped ? 1 : 0, Date.now(), row.identity_key, row.action_at, claimStamp, connection.id, connection.remoteUserId, row.desired_dropped);
+      else setWriteStatus.run("done", null, Date.now(), provider, row.identity_key, row.action_at, claimStamp, connection.id, connection.remoteUserId, row.desired_dropped);
     } catch (error) {
       // Keep the local canonical state and durable pending intent. A provider
       // outage can never roll back a drop or un-drop.
-      setWriteStatus.run("pending", String(error?.message || error).slice(0, 300), Date.now(), provider, row.identity_key, row.action_at);
+      setWriteStatus.run("pending", String(error?.message || error).slice(0, 300), Date.now(), provider, row.identity_key, row.action_at, claimStamp, connection.id, connection.remoteUserId, row.desired_dropped);
       console.error(`[dropped-titles] ${provider} sync failed; local state kept`, error?.message || error);
+    } finally {
+      clearInterval(heartbeat);
     }
   }
 }
@@ -329,10 +401,30 @@ export async function syncDroppedTitleTracker(provider, { trigger = "scheduled" 
   if (!["trakt", "simkl"].includes(provider)) return { skipped: true };
   const connection = await freshTrackerConnection(provider);
   if (!connection || connection.status !== "connected") return { skipped: true, reason: "not-connected" };
-  return runInTrackerGeneration(provider, connection.id, async () => {
-    assertTrackerGeneration(provider);
-    const fresh = await freshTrackerConnection(provider);
-    if (!fresh || fresh.id !== connection.id) return { skipped: true, reason: "connection-changed" };
-    return provider === "trakt" ? syncTrakt(fresh, trigger) : syncSimkl(fresh, trigger);
-  });
+  const flights = syncFlights();
+  const existing = flights.get(provider);
+  if (existing?.connectionId === connection.id) {
+    existing.rerun = true;
+    if (trigger !== "scheduled") existing.trigger = trigger;
+    return existing.promise;
+  }
+  const flight = { connectionId: connection.id, rerun: false, trigger, promise: null };
+  flights.set(provider, flight);
+  flight.promise = (async () => {
+    let result;
+    let failure;
+    do {
+      flight.rerun = false;
+      failure = null;
+      try { result = await runInTrackerGeneration(provider, connection.id, async () => {
+        assertTrackerGeneration(provider);
+        const fresh = await freshTrackerConnection(provider);
+        if (!fresh || fresh.id !== connection.id) return { skipped: true, reason: "connection-changed" };
+        return provider === "trakt" ? syncTrakt(fresh, flight.trigger) : syncSimkl(fresh, flight.trigger);
+      }); } catch (error) { failure = error; }
+    } while (flight.rerun);
+    if (failure) throw failure;
+    return result;
+  })().finally(() => { if (flights.get(provider) === flight) flights.delete(provider); });
+  return flight.promise;
 }

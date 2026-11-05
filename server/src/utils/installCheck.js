@@ -154,14 +154,16 @@ export function previewInstallCheckBody(now = new Date(), state = readInstallChe
 export function installCheckStatus(now = new Date()) {
   const state = readInstallCheckState();
   const url = installCheckUrl();
+  const demo = isDemoMode();
   return {
-    enabled: state.enabled,
+    // The demo never sends, so the switch reads off there even when an earlier
+    // choice is still stored; the stored choice is kept.
+    enabled: state.enabled && !demo,
     asked: state.asked,
     needsAnswer: installCheckNeedsAnswer(state),
     lastSentAt: state.lastSentAt,
     collectorConfigured: Boolean(url),
-    demo: isDemoMode(),
-    developBuild: installChannel() === "develop",
+    demo,
     payload: previewInstallCheckBody(now, state),
   };
 }
@@ -173,7 +175,6 @@ export async function sendInstallCheckIfDue({ now = new Date(), fetcher = fetchW
   const initial = readInstallCheckState();
   if (!installCheckAllowed(initial)) return { sent: false, reason: "off" };
   if (!url) return { sent: false, reason: "no-collector" };
-  if (installChannel() === "develop") return { sent: false, reason: "develop-build" };
   const nowMs = new Date(now).getTime();
   if (nowMs < retryAt) return { sent: false, reason: "retry-wait" };
   if (sending) return { sent: false, reason: "in-flight" };

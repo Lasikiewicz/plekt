@@ -1,8 +1,12 @@
-import { requireAdmin } from "../utils/auth.js";
+import { requireInstallAdmin } from "../utils/auth.js";
 import { readJson } from "../utils/requestBody.js";
 import { methodNotAllowed, sendJson, sendOptions } from "../utils/http.js";
 import { plektBackupFilePath } from "../utils/plektBackups.js";
 import { getPlektRestoreJob, saveUploadedBackup, startPlektRestore, uploadedBackupPath } from "../utils/plektRestore.js";
+
+// Restore and upload replace the whole install's data and write to the shared
+// backups folder, so only the install administrator may use them; an added
+// user's session in their own context is refused (app audit, 5 November 2026).
 
 // GET  /api/plembfin-backups/restore  - status of the current or last restore.
 // POST /api/plembfin-backups/restore  - {filename | uploadId, passphrase}; starts
@@ -10,7 +14,7 @@ import { getPlektRestoreJob, saveUploadedBackup, startPlektRestore, uploadedBack
 //      for this restore and is never logged or stored.
 export async function handlePlektRestore(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requireInstallAdmin(req, res))) return;
   if (req.method === "GET") return sendJson(res, { ok: true, job: getPlektRestoreJob() });
   if (req.method !== "POST") return methodNotAllowed(res);
 
@@ -47,13 +51,17 @@ export async function handlePlektRestore(req, res) {
 export async function handlePlektRestoreUpload(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!(await requireAdmin(req, res))) {
+  if (!(await requireInstallAdmin(req, res))) {
     req.resume();
     return;
   }
   try {
-    return sendJson(res, { ok: true, ...(await saveUploadedBackup(req)) });
+    return sendJson(res, { ok: true, ...(await saveUploadedBackup(req, { declaredBytes: req.get?.("content-length") ?? req.headers?.["content-length"] ?? null })) });
   } catch (error) {
+    if (error.code === "UPLOAD_TOO_LARGE" || error.code === "UPLOAD_NO_SPACE") {
+      req.resume();
+      return sendJson(res, { error: error.message, code: error.code }, error.status);
+    }
     console.error("Backup upload failed", error.message);
     return sendJson(res, { error: "Backup upload failed" }, 500);
   }
