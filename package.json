@@ -29,6 +29,7 @@
     "push:prepare": "node scripts/prepare-push.js",
     "push:precheck": "node scripts/workflow-check.js precheck push",
     "alpha:precheck": "node scripts/workflow-check.js precheck alpha",
+    "codeql:local": "node scripts/codeql-local.js",
     "release:precheck": "node scripts/workflow-check.js precheck main",
     "release:candidate": "node scripts/workflow-check.js candidate",
     "release:reconcile": "node scripts/workflow-check.js reconcile",

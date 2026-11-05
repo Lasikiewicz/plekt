@@ -43,6 +43,17 @@ removal fix; adversarial AniDB description tests cover it. Their exact rule, fil
 and commit fingerprints are notes only while the corresponding source fixes remain present;
 other findings block normally.
 
+**Local CodeQL scan.** GitHub scans only `alpha`, `main` and the daily schedule, never
+`develop`, so a finding in new code would first appear after the alpha push. The push, alpha and
+main prechecks therefore run `scripts/codeql-local.js` (`npm run codeql:local`), which scans a
+clean copy of the repository files with the same query suite, `.github/codeql/codeql-config.yml`
+exclusions and High/Critical severity gate as CI, and fails the precheck on any blocking finding
+or when the scan cannot run. There is no skip option. It takes roughly 10 to 15 minutes and writes
+only to the temp folder. One-time setup: download `codeql-bundle-win64.tar.gz` (or the platform's
+bundle) from the latest `github/codeql-action` release, verify its published checksum, extract it
+to `~/tools/codeql` (or set `CODEQL_PATH` to the `codeql` executable). Fix a finding in code on
+`develop`; never dismiss an alert or weaken the scan to pass.
+
 Open items in `plan/bugs.md` block pushes unless their only remaining work is a specific
 live or user test, documented on the item with `<!-- push-awaiting-test: test description -->`.
 See `docs/agent-workflow-rules.md` for the criteria. Only after explicit user approval,

@@ -298,6 +298,12 @@ async function main() {
       }
       if (blocked) throw Error('Unreviewed security alert requires an explicit user decision before push. Never dismiss alerts to clear this check.');
     }
+    // GitHub only scans alpha, main and the schedule, never develop, so a finding in new code
+    // would first appear after the alpha push. Run the same CodeQL scan and High/Critical gate
+    // locally, with no skip option; it takes several minutes and writes only to the temp folder.
+    console.log('Running the local CodeQL scan (the same gate as CI; this takes several minutes)...');
+    const scan = spawnSync(process.execPath, [path.join(root, 'scripts', 'codeql-local.js')], { cwd: root, stdio: 'inherit' });
+    if (scan.status !== 0) throw Error('The local CodeQL scan found a High/Critical finding or could not run. Fix it on develop; never dismiss alerts or skip the scan to clear this check.');
     if (workflow === 'alpha') {
       const stable = JSON.parse(git('show', 'origin/main:changelog.json')).version;
       if (json(path.join(root, 'changelog.json')).version !== stable) throw Error('Develop stable base differs from origin/main. Stop and ask; do not promote a stale base.');
