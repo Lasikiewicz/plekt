@@ -153,7 +153,7 @@ In Cloudflare:
    | Root directory | `website` |
    | Build command | `npm run check:deploy && npm run build` |
    | Build output directory | `dist` |
-   | Node version | `22.19.0` via `NODE_VERSION` in Pages environment variables |
+   | Node version | `22.23.1` via `NODE_VERSION` in Pages environment variables (Astro 7 needs 22.22.0 or newer) |
 
 Set `NODE_VERSION` for both Production and Preview environments so Pages matches the
 Node version used by the local setup guide. The shared website layout embeds the Plekt

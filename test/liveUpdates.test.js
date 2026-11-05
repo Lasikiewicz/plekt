@@ -598,12 +598,15 @@ test("client live-updates does not occupy a connection while the tab is hidden",
   document.removeEventListener = (type, listener) => {
     if (type === "visibilitychange" && visibilityListener === listener) visibilityListener = null;
   };
-  globalThis.fetch = async () => {
+  // The stream must end when the request is aborted, as a real one does. With
+  // Web Locks (navigator.locks, present in newer Node and every browser) a
+  // stream that never ends keeps the cross-tab lock and blocks later tests.
+  globalThis.fetch = async (_url, { signal } = {}) => {
     fetchCount += 1;
     return {
       ok: true,
       status: 200,
-      body: new ReadableStream({ start() {} }),
+      body: openStream(signal),
     };
   };
 
