@@ -1513,6 +1513,30 @@
         [
           "\"Use port 5056 as Plembfin's default so it can run alongside Seerr on 5055; Docker still listens internally on 5055.\"",
           2
+        ],
+        [
+          "\"message\": \"Adds per-show alternate episode orders, a Download range for logs, an opt-in anonymous install check and a Plembfin image notice, and fixes Trakt double writes, Up Next responsiveness, sync, restore and disk-growth gaps, and sign-in and per-user cache security.\",",
+          1
+        ],
+        [
+          "\"Tweak: This update includes stop one watch splitting into two Trakt writes (v2.2.3), add per-show alternate episode orders, log download ranges, an opt-in install check and a Plembfin image notice, and keep Up Next responsive, close sync, restore and disk-growth gaps, and harden sign-in and per-user caches.\",",
+          1
+        ],
+        [
+          "\"Tweak: Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.\",",
+          1
+        ],
+        [
+          "\"Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.\",",
+          2
+        ],
+        [
+          "\"This update includes stop one watch splitting into two Trakt writes (v2.2.3), add per-show alternate episode orders, log download ranges, an opt-in install check and a Plembfin image notice, and keep Up Next responsive, close sync, restore and disk-growth gaps, and harden sign-in and per-user caches.\",",
+          1
+        ],
+        [
+          "\"Feature - Add per-show alternate episode orders, log download ranges, an opt-in install check and a Plembfin image notice\",",
+          1
         ]
       ]
     },
