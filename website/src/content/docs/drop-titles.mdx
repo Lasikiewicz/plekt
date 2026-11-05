@@ -3,7 +3,7 @@ title: Drop and Un-drop
 description: Take a title out of Up Next everywhere without losing its watch history.
 category: Features
 order: 3.3
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/modules/dropped-titles.js
   - public/modules/dropped-title-views.js
@@ -38,6 +38,11 @@ Trakt for shows only, and Simkl's list rules limit what Un-drop can safely put b
 
 Plekt saves the drop first. It then asks Plex and Emby to hide the matching rail entry. If an app
 refuses, the drop still stands and Plekt reports the failure instead of reversing it.
+
+Drops sync to Trakt and Simkl separately for each Plekt user, using that user's own connection.
+If a write to Trakt or Simkl fails, Plekt tries that title again after an hour. A new drop or
+Un-drop is sent straight away instead of waiting, and two Plekt processes do not send the same
+change at once.
 
 ## Bring a title back
 

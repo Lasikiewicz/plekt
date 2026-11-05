@@ -1,14 +1,15 @@
 ---
 title: General
-description: Manage the administrator account, inspect system health, and maintain the local artwork cache.
+description: Manage the administrator account, inspect system health, choose the optional anonymous install check, and maintain the local artwork cache.
 category: Settings
 order: 5.1
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
   - public/modules/tools-maintenance.js
   - public/modules/tools-backups.js
+  - public/modules/install-check.js
   - docs/settings.md
 screenshots:
   - /assets/app-captures/settings-general-account-dark.png
@@ -61,6 +62,26 @@ fail together.
 
 An integrity warning is a starting point for investigation, not a reason to wipe data. Follow
 the named feature guide and review [Logs](/docs/settings/logs/) for the first useful error.
+
+## Privacy
+
+Privacy holds one optional switch, **Send an anonymous daily check**. It lets the maintainer
+count how many installs are active and which versions they run. It is off until you turn it on.
+
+- **What is sent:** at most once a day, a small message saying Plekt is running, with its
+  version, release type, and CPU type, plus flags saying whether this is a new install or its
+  first check of the week or month.
+- **What is never sent:** your name, server address, library, watch history, connected
+  services, or any install ID. The receiving server still sees the connection's IP address, as
+  any website does.
+- **Exactly what is sent:** the panel prints the message, so you can read it before turning
+  the switch on. Turning it off stops it straight away.
+
+The status line under the switch reads **Off. Nothing is sent**, or **On** with the time of the
+last send. The switch is greyed out in the public demo. If you have not answered yet, Plekt
+asks once with a **Help count Plekt installs?** card for the administrator; **Keep it off**
+leaves it off, and you can change your mind here at any time. The check also runs on alpha and
+develop builds.
 
 ## Storage and cache
 

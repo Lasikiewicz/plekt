@@ -90,6 +90,7 @@ $env:BUILD_CHANNEL = "main"
 npm start                 # application, http://localhost:5056
 # In a separate terminal at the main checkout:
 Set-Location website
+$env:PLEMBFIN_WEBSITE_RELEASE_REF = "HEAD"   # required: without it the homepage and changelog read origin/main and still show the previous version
 npm run dev               # website, http://localhost:4321
 ```
 

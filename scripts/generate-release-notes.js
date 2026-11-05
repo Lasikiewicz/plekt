@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { changelogSectionGroups } from "./changelog-sections.js";
+import { officialLinksMarkdown } from "./official-links.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -102,7 +103,7 @@ export function generateReleaseNotes({ channel, manifest, repository = "Lasikiew
     "",
   ];
   if (entry.websiteUrl) {
-    lines.push(`[Visit the Plekt website](${normalizeText(entry.websiteUrl)})`, "");
+    lines.push(officialLinksMarkdown(), "");
   }
 
   const sections = changelogSectionGroups(entry);

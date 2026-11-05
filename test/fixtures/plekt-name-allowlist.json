@@ -72,6 +72,10 @@
         [
           "Do not deploy when a check or the build fails, and never deploy the `plembfin`",
           1
+        ],
+        [
+          "$env:PLEMBFIN_WEBSITE_RELEASE_REF = \"HEAD\"   # required: without it the homepage and changelog read origin/main and still show the previous version",
+          1
         ]
       ]
     },
@@ -1351,6 +1355,14 @@
         [
           "Merge branch 'main' of https://github.com/Lasikiewicz/plembfin",
           16
+        ],
+        [
+          "This update adds per-show alternate episode orders, a Download range for logs, an opt-in anonymous install check and a Plembfin image notice, and fixes Trakt double writes and many sync, restore and sign-in gaps.",
+          1
+        ],
+        [
+          "- Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.",
+          1
         ]
       ]
     },
@@ -2186,6 +2198,18 @@
         [
           "\"message\": \"Merge branch 'main' of https://github.com/Lasikiewicz/plembfin\",",
           16
+        ],
+        [
+          "\"message\": \"This update adds per-show alternate episode orders, a Download range for logs, an opt-in anonymous install check and a Plembfin image notice, and fixes Trakt double writes and many sync, restore and sign-in gaps.\",",
+          1
+        ],
+        [
+          "\"Feature: Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.\",",
+          1
+        ],
+        [
+          "\"Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.\",",
+          2
         ]
       ]
     },

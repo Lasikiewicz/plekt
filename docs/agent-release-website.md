@@ -55,6 +55,8 @@ insufficient and which commit changed it. If none differ, explicitly hand off no
 On a resumed handoff, the user's narrowed scope takes precedence over the inherited list;
 reconcile it before creating live state or taking further images.
 
+Check the homepage comparison table (`website/src/pages/index.astro`) as part of this review, as `docs/websiteupdate.md` rule 15 requires: verify every project's ticks against its current documentation and update the "accurate as of" date only after doing so.
+
 Review affected guides and shared site surfaces against the running candidate. New or renamed
 guides get their `website/src/data/app-surface.json` entry in this review (`npm run check:content`
 in `website/` must pass). Make website copy edits on `develop`, identify required captures, and start the website preview

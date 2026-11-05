@@ -3,7 +3,7 @@ title: Dashboard
 description: Read live playback, the mixed Up Next queue, and durable watch history from one screen.
 category: Features
 order: 3
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/index.html
   - public/modules/dashboard.js
@@ -208,6 +208,10 @@ the media servers where it is available. A resume card shows its progress bar ab
 **Watch Now** apps; Up Next cards carry no availability line. **Watch Now** links open a matching
 item in Plex, Emby, or Jellyfin when a connected server can provide one. A cached local
 resume card remains useful without a provider connection.
+
+After a page reload, the rail first shows the last cards your browser confirmed (kept up to 14
+days) while Plekt checks for changes, and the server's answer then replaces them. See
+[Reloads and rebuilds](/docs/up-next/#reloads-and-rebuilds).
 
 When **Sync Up Next to media apps** is enabled in [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning),
 Plekt queues one coalesced background push whenever the unified queue changes. Additions,

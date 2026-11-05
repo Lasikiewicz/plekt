@@ -3,7 +3,7 @@ title: Sync Activity and tools
 description: Read grouped per-destination results, retry safely, run repairs, and understand match reports.
 category: Sync and maintain
 order: 8
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/index.html
   - public/modules/sync-activity.js
@@ -98,7 +98,16 @@ Use a row-level retry after correcting the specific cause:
    the show-match repair described below.
 6. Confirm that the result updates in place and shows success or a useful reason.
 
-Retrying is safe because duplicate delivery is protected by the event and media identity.
+Retrying is safe because duplicate delivery is protected by the event and media identity. A
+watch is not sent twice when a live play and the background retry overlap, and the retry pass
+skips rows that do not need it.
+
+When Trakt rejects only some items in a batch, the accepted items keep their success and only
+the rejected ones show a Trakt `not_found` result for the repair below.
+
+A Simkl result of **skipped** with a policy reason is final: for example, a show in a non-Aired
+[episode order](/docs/tv-shows/media-page/#episode-order) is closed as skipped instead of being
+resent every minute. Plex, Emby, Jellyfin, and Trakt still receive that show's watches.
 
 Do not use a full replay to fix one wrong title when a targeted retry is available.
 
@@ -193,6 +202,11 @@ all-destination title push, local media-server writes complete before the Trakt 
 Trakt history writes are paced, retried after bounded `429` responses, and cancelled between
 items; the current canonical remove/add pair is allowed to finish before queued items stop.
 
+A library scan reads Plex in pages and Emby and Jellyfin with cheaper paging. A scan that fails
+or comes back incomplete is reported as a failed scan rather than treated as an empty library,
+so nothing is wrongly replayed from it. The replay runs several items at once while keeping each
+item's own order, and cancelling a preview stops it between pages.
+
 Only applied actions count as completed. When some items are not found on a destination,
 the result reads, for example, **Partially applied: 12 of 14 actions applied; 2 not found on
 Emby**, followed by the missing titles. A run where nothing applied finishes as failed.
@@ -247,7 +261,9 @@ Adding the title to that server allows a later catch-up to apply the local state
 **Sync History** shows recent synchronization and maintenance operations, including repairs,
 imports, Force Sync, and restore work.
 
-The [Settings → Logs](/docs/settings/logs/) page contains the server and browser diagnostic stream. Each expanded activity
+The [Settings → Logs](/docs/settings/logs/) page contains the server and browser diagnostic stream;
+its **Download range** choice limits an export to the last hour, 6 hours, 24 hours, 3 days, or all
+kept logs. Each expanded activity
 group also provides **Download all logs**, which saves the group's events as one plain-text
 log for local review. Redact private values before sharing any exported evidence.
 

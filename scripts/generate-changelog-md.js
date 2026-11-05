@@ -10,6 +10,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { changelogSectionGroups } from "./changelog-sections.js";
+import { officialLinksMarkdown } from "./official-links.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const changelogPath = path.join(root, "changelog.json");
@@ -41,7 +42,7 @@ export function generateChangelogMarkdown() {
     const websiteUrl = String(entry.websiteUrl || "").trim();
     if (websiteUrl) {
       lines.push("");
-      lines.push(`[Visit the Plekt website](${websiteUrl})`);
+      lines.push(officialLinksMarkdown());
     }
     lines.push("");
     const sectionGroups = changelogSectionGroups(entry);

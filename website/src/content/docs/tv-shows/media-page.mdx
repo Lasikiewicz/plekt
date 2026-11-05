@@ -3,7 +3,7 @@ title: TV Shows media page
 description: Read and use a single TV show media page in Plekt.
 category: Features
 order: 3.1
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/app.js
   - public/index.html
@@ -266,6 +266,38 @@ Choose **Fix Match** when the show is attached to the wrong series. Search for t
 then compare each result's title, poster, overview, source labels, and provider IDs before
 confirming. TMDB results are resolved to their TheTVDB series identity. A TV match applies
 to the series and its episode records.
+
+#### Episode order
+
+Choose **Episode order** when your media server numbers a show differently from TheTVDB's
+aired order, for example by DVD order. The control is for the administrator and appears on a
+show that has a TheTVDB ID. When a non-Aired order is in use, its name follows the label, for
+example **Episode order: DVD order**.
+
+The dialog offers **Aired order** plus every other order TheTVDB lists for that show, such as
+DVD, absolute or alternate, under TheTVDB's own names. A show with no alternatives says so and
+keeps the aired order.
+
+1. Select an order to preview it. Each row shows what your media server calls the episode on
+   the left and the aired episode it becomes in Plekt and Trakt on the right. **Show all**
+   includes episodes whose numbers do not change.
+2. If an episode has no matching aired episode, the row reads **No match**. Choose the aired
+   episode and select **Link**. A hand-made link carries a **Manual link** badge; **Remove
+   link** returns that episode to automatic matching. Links belong to the order they were made
+   in, and links saved before orders were added count as DVD.
+3. Select **Use** with the order's name to switch. The page reloads. Existing watch history is
+   not rewritten.
+
+Once an order is in use, Plekt translates each new watch to the aired episode before saving it
+or sending it on. This covers live playback, Plex library-change notifications, and the
+scheduled recently-watched import for Plex, Emby, and Jellyfin. A watch that cannot be
+translated is skipped and logged with the reason, and the rest of the run carries on.
+
+Plex, Emby, Jellyfin, and Trakt still receive the show's watches. Simkl cannot confirm which
+episode a non-Aired watch is, so Plekt does not send that show's watches to Simkl while the
+order is in use; other shows are unaffected. When Simkl is connected, the dialog explains this
+and requires you to tick a checkbox before the order can be used. Without Simkl it shows a
+shorter note. See [Simkl](/docs/simkl/).
 
 #### Merge
 

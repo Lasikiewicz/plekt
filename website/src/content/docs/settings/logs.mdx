@@ -3,7 +3,7 @@ title: Logs
 description: Review server and browser diagnostics by category and preserve useful evidence before clearing it.
 category: Settings
 order: 5.10
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/index.html
   - public/modules/logs.js
@@ -40,7 +40,13 @@ The log view refreshes every 3 seconds. Use its controls to read without losing 
 - **Follow latest** keeps the newest entries in view. Scrolling up turns it off, and your
   reading position is kept while new output arrives.
 - The text filter narrows the visible lines in the current category and ignores case.
-- **Download Logs** exports all logs, not only the filtered lines.
+- **Download Logs** exports all categories, not only the filtered lines, for the **Download
+  range** you pick: the last hour, 6 hours, 24 hours (the default), 3 days, or all kept logs.
+  Plekt keeps about the last 20,000 lines, and the export includes every kept line in the range
+  rather than only the newest 500. Browser debug lines in the same range are added at the end.
+- The log view stops refreshing while its browser tab is hidden and catches up when you return.
+
+On disk, earlier diagnostic log files are kept for 14 days and then removed automatically.
 
 ## Review a problem
 

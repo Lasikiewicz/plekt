@@ -3,7 +3,7 @@ title: Ratings
 description: Give movies, TV shows, and episodes private scores from 1 to 10.
 category: Features
 order: 3.32
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/index.html
   - public/modules/personal-media.js
@@ -106,8 +106,9 @@ scorebook. Local changes commit to Plekt first and are delivered through a durab
 so a provider outage does not roll back a rating or affect watched state.
 
 If a later scan finds at least two previously rated items and more than 20% of that
-provider's ratings missing, Plekt holds the removals for review instead of clearing them.
-The panel shows **Rating scan held for review** with the provider, counts and missing titles.
+provider's ratings missing, Plekt holds the removals for review instead of clearing them. A
+scan that comes back completely empty from a provider is held the same way, even for a small
+list, so an empty answer never wipes your ratings on its own. The panel shows **Rating scan held for review** with the provider, counts and missing titles.
 **Approve these removals** rechecks the provider and applies the same removals only if they
 still match; **Dismiss and keep ratings** keeps every rating. Scheduled scans cannot bypass a
 hold, and holds survive restarts.

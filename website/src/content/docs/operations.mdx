@@ -3,7 +3,7 @@ title: Backups and operations
 description: Keep Plekt recoverable with backups, safe imports, hardening, and routine maintenance.
 category: Sync and maintain
 order: 6
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - docs/backups.md
   - docs/watch-history-backups.md
@@ -54,6 +54,11 @@ Plekt supports two local backup families:
 Each has its own schedule, retention, and **Back Up Now** action.
 
 The remote backup option can mirror either type to Backblaze B2 on its own schedule.
+
+Watch-history snapshots that Plekt takes as a safety net before an import or sync are kept for
+at least seven days, even when the retention count would otherwise remove them. One backup file
+that is locked or cannot be removed no longer stops the rest of the old backups from being
+cleaned up.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-backup-local-dark.png"
@@ -109,6 +114,10 @@ Before restoring:
 
 A restore changes local state and may queue follow-up sync work.
 
+Restoring a full Plekt backup saves a recovery copy of your current database first, and only
+the install administrator can restore or upload a backup (uploads are limited to 4 GB). See
+[Restore](/docs/settings/restore/).
+
 If a server was offline, let it reconnect before deciding that the archive is wrong.
 
 If a bulk operation produced unexpected unwatches, stop making further changes and identify
@@ -151,6 +160,10 @@ Once a week or after an upgrade:
 - check provider keys and rate-limit errors if artwork is missing; and
 - keep one known-good restore point before changing release channels.
 
+Plekt also tidies its own disk use. Diagnostic log files are kept for 14 days, artwork files
+that no record refers to any more are removed daily, and the database's write-ahead log
+file is trimmed so it stops growing without limit. You do not need to clean these up by hand.
+
 ## Security basics
 
 <ScreenshotFigure
@@ -170,7 +183,10 @@ Once a week or after an upgrade:
 - Remove private-list titles and runtime/build details before sharing screenshots or logs.
 
 Plekt applies password hashing, signed sessions, rate limits, security headers, and
-authenticated routes.
+authenticated routes. Logging out ends that session for good, even after a restart. Changes sent
+from another website or an untrusted origin are rejected, while Plekt's own pages and
+server-to-server callers such as webhooks keep working. Redirects to another site do not carry
+your tokens, API keys, or request bodies with them.
 
 These controls reduce risk.
 

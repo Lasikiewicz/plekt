@@ -3,7 +3,7 @@ title: Up Next
 description: One queue of resume cards and next episodes, pushed to the Plex, Emby, and Jellyfin rails.
 category: Features
 order: 3.2
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/modules/up-next.js
   - public/modules/dropped-titles.js
@@ -64,6 +64,15 @@ Each card shows the episode name, its season and episode code, and **Watch Now**
 a matching item in Plex, Emby, or Jellyfin when a connected server can provide one. A cached local
 resume card stays useful without a provider connection.
 
+## Reloads and rebuilds
+
+After a page reload, Plekt paints the last Up Next cards your browser remembers (up to 30 cards,
+kept for up to 14 days) while it checks for changes, and the server's answer then replaces them.
+Only cards the server had confirmed are remembered, never a save or removal still in progress.
+
+The server reuses shared snapshots and saved library answers, so one queue change causes fewer
+rebuilds, and pages stay responsive while tracker polls, cache warm-ups, and rebuilds run.
+
 ## Card actions
 
 Use a card's **More options** menu for **Mark Watched**, **Rate**, **Add to watch list**,
@@ -87,6 +96,9 @@ remove it in Plekt, so stale entries you never touched can stay on a rail until 
 or you remove them. To take a whole title out of the queue everywhere, use
 [Drop](/docs/drop-titles/).
 
+When an app echoes Plekt's own push back, the automatic push does not send the same queue to your
+providers a second time.
+
 If an app does not answer, Plekt skips it, keeps its last good observation, and queues a new push
 as soon as it answers again. Turning the setting off leaves those app lists unchanged while Plekt's
 own Up Next stays available.
@@ -94,7 +106,10 @@ own Up Next stays available.
 ## Remove and restore
 
 **Remove from Up Next** hides the card at once, clears its local resume progress, marks it
-unwatched, and records the removal on the server, so it applies on every device. When a show has
+unwatched, and records the removal on the server, so it applies on every device. For a show set
+to a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order), Plekt first checks that
+it can identify the episode in every place the change must reach, and refuses rather than
+changing the wrong one. When a show has
 two cards because of a rewatch, Plekt asks whether to hide only that card's season or the whole show.
 
 When items are removed, the count button beside the **Up Next** heading opens **Dismissed Up

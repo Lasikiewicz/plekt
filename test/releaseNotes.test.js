@@ -58,7 +58,7 @@ test("release notes render categorized changes and shared release guidance", () 
   assert.match(notes, /### New Features\n\n- Explainable Sync Activity/);
   assert.match(notes, /### Bug Fixes\n\n- Repair provider identity matches/);
   assert.match(notes, /## Start safely/);
-  assert.match(notes, /\[Visit the Plekt website\]\(https:\/\/plembfin\.com\)/);
+  assert.ok(notes.includes("[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5)"));
   assert.match(notes, /## Known limitations/);
   assert.match(notes, /ghcr\.io\/lasikiewicz\/plekt:latest/);
   assert.match(notes, /v1\.0\.0/);

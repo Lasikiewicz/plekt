@@ -3,7 +3,7 @@ title: Restore
 description: Restore watch history or a full encrypted Plekt backup from local or remote storage.
 category: Settings
 order: 5.8
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/index.html
   - public/modules/tools-backups.js
@@ -48,12 +48,21 @@ connected app, then reapplies only the backup set.
   caption="Local Watch History Restore lets you choose merge or replace before restoring a stored backup."
 />
 
+Restoring a full Plekt backup, and uploading a backup file to restore from, are for the install
+administrator only; a household user added under [Users](/docs/settings/users/) cannot do
+either. An upload is limited to 4 GB and is refused when the server would be left with too
+little free disk space.
+
+Before a full Plekt restore replaces anything, Plekt saves a recovery copy of your current
+database in the full-backups folder. If the restore stops part way, the error names where that
+copy is, so you can return to the state from just before the restore.
+
 ## Remote restore
 
 Choose a configured remote destination, select the backup family, and review the file and scope
 before confirming. A full Plekt restore requires its encryption passphrase.
 
-Safe restore sequence:
+Safe restore sequence (the recovery copy Plekt saves does not replace step 2):
 
 1. Stop unrelated playback and sync changes.
 2. Make a current backup of the existing archive.

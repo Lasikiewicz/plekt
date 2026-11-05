@@ -3,7 +3,7 @@ title: Media details and actions
 description: Understand the detail page, watch dates, Fix Match, artwork, the Options menu, and provider content.
 category: Features
 order: 5
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - public/modules/media-detail.js
   - public/modules/media-detail-context.js
@@ -67,7 +67,7 @@ actions together so a correction can be made against the correct record.
 | Emby | Yes | The same actions work, and the original watch date is kept. |
 | Jellyfin | Yes | The same actions work, and the original watch date is kept. |
 | Trakt | Partly | Watched state is pushed to Trakt, but Force Sync never pulls it back. |
-| Simkl | Partly | Marking watched is pushed. Unwatching is disabled. Whether Force Sync can pull from it is not documented. |
+| Simkl | Partly | Marking watched is pushed. Unwatching is disabled. Whether Force Sync can pull from it is not documented. A TV show set to a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order) is not sent to Simkl at all. |
 
 Delete and Merge change only Plekt's record, whichever app a title came from. They never remove
 files or items from your media servers. Merge is for TV shows only.
@@ -97,6 +97,9 @@ show **Hide Spoilers** beside the show-level actions:
   sends the correction through the normal sync pipeline.
 - **Edit Images** opens the artwork picker described in [Edit Images](#edit-images).
 - **Fix Match** opens the provider identity search described in [Fix Match](#fix-match).
+- **Episode order** (TV shows, administrator only) tells Plekt which numbering your media
+  server uses for the show, such as DVD order, so each watch is translated to the aired
+  episode before it is saved or sent on. See [Episode order](/docs/tv-shows/media-page/#episode-order).
 - **Merge** combines the current TV show's episode records with another show. Make a backup
   and check the preview before confirming because this changes the local record structure.
 - **Delete** removes the tracked title after confirmation. It is not a way to remove a file

@@ -4,11 +4,87 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.2.4 - 5 November 2026
+
+This update adds per-show alternate episode orders, a Download range for logs, an opt-in anonymous install check and a Plembfin image notice, and fixes Trakt double writes and many sync, restore and sign-in gaps.
+
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
+
+### New Features
+
+#### Sync & connection recovery
+
+- Choose Aired, DVD or any other order TVDB lists for a show from its Episode order menu, using TVDB's own name for the order. The dialog says plainly when a show has no alternative orders.
+- Review, save, replace and remove DVD-to-aired episode links from the show menu. Each link records which order it belongs to, and links saved before this count as DVD.
+- Plex library-change notifications, the scheduled recently-watched import for Plex, Emby and Jellyfin, and live-session completion now translate the chosen episode order before saving, so nothing is stored under the media server's own numbers.
+- A watch whose episode cannot be translated is skipped and logged with the reason, and the rest of the poll carries on.
+- Choosing a non-Aired episode order for a show now warns that Simkl cannot confirm the episode and requires a checkbox before it can be used; without Simkl connected, a shorter note explains the same.
+- Watches for a show in a non-Aired order are no longer sent to Simkl, while Plex, Emby, Jellyfin and Trakt still receive them. Other shows are not affected, and a Simkl item skipped by this policy is closed instead of being resent every minute.
+- Download Logs on the Logs screen now has a Download range choice (last hour, 6 hours, 24 hours, 3 days or all kept logs) and exports up to the 20,000 lines Plekt keeps instead of the newest 500, and its Clear, Download and Copy buttons stay visible on shorter windows.
+- Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.
+- The notice returns after each update until the install switches, and never appears on the Plekt image.
+- Added four short switch steps for Docker Compose, Docker run, Unraid and Watchtower to the README and the upgrade guide, and stated that the old image names keep receiving updates until at least 11 April 2027.
+- Add an optional anonymous daily install check in the Privacy section of General. It is off until you turn it on, shows the exact payload it would send, and sends no identifier, server address or library data.
+
+### Bug Fixes
+
+#### Sync & provider recovery
+
+- Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.
+
+### Tweaks
+
+#### Up Next & watch-state
+
+- Block watch-state changes when episode identities cannot be verified for every required destination, including before clearing progress or removing episodes.
+- Show the last confirmed Up Next cards while checking for changes after a reload
+- Pages and the API stay responsive while tracker polls, cache warm-ups and Up Next rebuilds run; requests that took up to 22 seconds now answer in well under one
+- Up Next: one queue change now causes fewer rebuilds (a removal went from 5 builds to 3), and an automatic push no longer sends the same queue to your providers twice after their own echo
+- Up Next: the diagnostic log now shows who asked for each build, why the saved queue was out of date, and exactly which cards were added, removed or reordered
+
+#### Sync & connection recovery
+
+- Prevent stale background retries from restoring a deleted or superseded watch.
+- The Logs screen fills the window with the same gap at the bottom as the other edges, and the filter box and Download range dropdown now match the rest of the app, with their labels beside them.
+- Log entries on a phone show the message on its own full-width line instead of one word per line.
+- The show and movie Info panel on a phone starts below the top bars, so its poster and title are no longer hidden, and a long title wraps by words instead of one letter per line.
+- Reuse shared snapshots and saved library answers to reduce repeated queue builds
+- Settings storage totals load quickly on large artwork caches, the changelog loads quickly after the first view, and the Logs page stops polling while its tab is hidden
+- Restoring a full Plekt backup now saves a recovery copy of your current database first, and the error names where it is if the restore fails part way
+- Safety snapshots taken before imports or syncs are kept for at least seven days, and one locked backup file no longer stops old backups being cleaned up
+- Diagnostic logs are kept for fourteen days instead of being cut at twenty files, orphaned artwork is cleaned up daily, and the database log file is trimmed so it stops growing without limit
+- Artwork and show-progress files are written safely so a failed write keeps the previous complete file, and oversized artwork downloads are stopped early
+- Force Sync reads every Plex section in pages and reports a failed or incomplete library scan instead of treating it as empty, so nothing is wrongly replayed
+- Force Sync is faster: library replay runs four items at once while keeping each item's order, Emby and Jellyfin scans use cheaper paging, and cancelling a preview stops it between pages
+- A watch is no longer sent twice when a live play and the background retry overlap, and the retry pass no longer repeats work for rows that do not need it
+- Trakt rejecting only some items in a batch now keeps the successful ones settled and retries just the rejected ones, and an unidentifiable rejection is held for review instead of being retried blindly
+- Dropped titles sync to Trakt and Simkl per user, a failed write is retried after an hour, and a new drop or un-drop retries immediately without two processes sending the same change
+- A rating list that comes back completely empty from a provider is held for review instead of clearing your ratings, and a lost playlist ledger no longer removes entries from the connected server
+- TMDB and TVDB rate limits are handled with bounded retries and a short cool-down, and Plex live-connection restarts no longer open duplicate sockets or poll in a tight loop
+- Watching the same title twice in one local day is judged by your server's calendar day, Plex ids with query strings are read correctly, and the Sync jobs list pages correctly
+- Browser caches for posters, details and search results are capped so a long session no longer keeps growing
+- A signed-in added user can no longer read the administrator's API key or webhook secret by sending any API key header
+- Backup restore and backup upload on the Restore page are now for the install administrator only
+- Backup uploads are limited to 4 GB and are refused when the server would be left with too little free disk space
+- Testing a Plex, Emby or Jellyfin connection only uses the saved token for the saved server address; a different address needs the token entered
+- An added user no longer sees the admin's watch history, shows, movies, stats or dashboard preview when both happen to be at the same data version
+- The pending manual-review list is cached per user as well
+- Switching between users no longer forces their caches to rebuild; up to 8 users stay cached in memory
+- Logging out now revokes that session for good, even after a restart or from another process, and each session cookie is unique
+- Changes made from another website or an untrusted origin are rejected, while your own pages and server-to-server callers such as webhooks keep working
+- The cron and stop endpoints now refuse plain GET requests, and webhook errors no longer reveal internal error details
+- Successful logins no longer count against the failed-login allowance
+- Login and claim requests are limited to 32 KiB and webhooks to 1 MiB before they are read
+- The saved settings file is created readable only by Plekt before any secrets are written to it
+- Redirects to another site no longer carry your tokens, API keys or request bodies with them
+- New website guide on importing each friend's Tautulli watch history into their own Plekt user and Emby or Jellyfin account
+- The Guides list, the Users settings guide and the Tautulli guide now link to it
+
 ## v2.2.3 - 31 October 2026
 
 Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### Bug Fixes
 
@@ -20,7 +96,7 @@ Stop a saved watch from being split into two Trakt writes and held for review, a
 
 This release improves Emby and Jellyfin sync diagnostics, adds safer webhook tests and split episode repair, and refines upcoming episode handling.
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -46,7 +122,7 @@ This release improves Emby and Jellyfin sync diagnostics, adds safer webhook tes
 
 Hotfix: This update gives each added user their own scheduled sync and shared Plex Now Playing, adds Server Logs controls, and stops large Emby and Jellyfin watched imports timing out.
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -78,7 +154,7 @@ Hotfix: This update gives each added user their own scheduled sync and shared Pl
 
 This update adds Simkl, Netflix imports and multi-user accounts, while improving sync, navigation and mobile layouts.
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -168,7 +244,7 @@ This update adds Simkl, Netflix imports and multi-user accounts, while improving
 
 This update improves watch state and season matching, restyles the appearance and login page, and hides Card Art on media detail pages.
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -211,7 +287,7 @@ This update improves watch state and season matching, restyles the appearance an
 
 This update adds season posters and redesigned TV season pages, text size controls, safer rating sync, simpler Docker setup, and improvements to Up Next, dashboard history, and playback recovery.
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### Bug Fixes
 
@@ -261,7 +337,7 @@ This update adds season posters and redesigned TV season pages, text size contro
 
 This update renames Plembfin to Plekt with a new logo and icons, moves the default port to 5056, and keeps existing settings, backups and data working. Upgrade guide: https://plekt.net/docs/upgrading-from-plembfin/
 
-[Visit the Plekt website](https://plekt.net)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -316,7 +392,7 @@ This update renames Plembfin to Plekt with a new logo and icons, moves the defau
 
 This update speeds up page loading and server recovery, tidies dashboard cards with a per-library Posters only setting, and makes playback, Up Next and Trakt sync more accurate.
 
-[Visit the Plekt website](https://plembfin.com)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### Bug Fixes
 
@@ -352,7 +428,7 @@ This update speeds up page loading and server recovery, tidies dashboard cards w
 
 This update adds the Modern style, two-way playlist sync with Plex, Emby, and Jellyfin, automatic playlists, and stacked watched runs, fixes large backups and restores, and makes loading faster throughout.
 
-[Visit the Plekt website](https://plembfin.com)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -412,7 +488,7 @@ This update adds the Modern style, two-way playlist sync with Plex, Emby, and Je
 
 This update keeps shows that share a title apart, makes Up Next sync with Plex, Emby and Jellyfin more reliable, syncs rating changes made on any service, and adds a Watch-State Aliases repair card.
 
-[Visit the Plekt website](https://plembfin.com)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### New Features
 
@@ -460,7 +536,7 @@ This update keeps shows that share a title apart, makes Up Next sync with Plex, 
 
 This hotfix improves Plembfin's watch-state review, mobile media navigation, and playback refresh reliability.
 
-[Visit the Plekt website](https://plembfin.com)
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
 
 ### Bug Fixes
 

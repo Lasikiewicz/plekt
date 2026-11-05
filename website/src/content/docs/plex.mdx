@@ -3,7 +3,7 @@ title: Plex
 description: Connect Plex for library state, playback events, watch history, playlists, and account watchlist sync.
 category: Connect services
 order: 4.1
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - docs/plex.md
   - docs/webhooks.md
@@ -34,6 +34,21 @@ that is already connected to another Plekt user, so watch histories stay separat
 added user plays on a Plex server another Plekt user owns, Now Playing uses the owner's
 session list for that server, matched by Plex user; the added user's history and writes still
 use their own connection. Sessions that carry only Plex's anonymous owner ID are left out.
+
+If the live connection drops, Plekt restarts it without opening duplicate sockets or polling in
+a tight loop.
+
+**Test** sends the saved token only to the saved server address. If you change the
+address, enter the token again before testing. This applies to [Emby](/docs/emby/) and
+[Jellyfin](/docs/jellyfin/) too.
+
+[Force Sync](/docs/sync-tools/#force-sync) reads each Plex library section in pages. A section
+that fails to load, or loads incompletely, is reported as a failed scan instead of being treated
+as empty, so nothing is wrongly replayed. Cancelling a preview stops it between pages.
+
+For a show set to a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order), Plex
+library-change notifications, the scheduled recently-watched import, and live playback
+completion are translated to the aired episode before they are saved.
 
 In Plex, turn off **Refresh library metadata periodically**.
 

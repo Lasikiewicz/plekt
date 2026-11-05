@@ -207,7 +207,7 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `calendar-picker.js`: calendarStateFromIso, formatCalendarDisplay, mountCalendarPicker, renderCalendarPickerHtml
 - `card-art.js`: ART_RETRY_DELAYS_MS, artKey, cardArtAttribute, mediaArtKey, observeCardArtwork, requestArtKey
 - `cast-disclosure.js`: hydrateDeferredCastDisclosure, renderCastActor
-- `changelog-channels.js`: baseVersionOf, bindChangelogChannelTabs, defaultChangelogChannel, developVersionForBuild, formatBuildVersion, initChangelog, loadChangelogData and 6 more
+- `changelog-channels.js`: OFFICIAL_LINKS, baseVersionOf, bindChangelogChannelTabs, defaultChangelogChannel, developVersionForBuild, formatBuildVersion, initChangelog and 7 more
 - `dashboard-modern.js`: bindDashboardRuns, createDashboardHistoryLiveRefresh, dashboardTvRowUnits, isDashboardRowCompact, renderDashboardTvRowUnit, sessionMatchesCardArt, setDashboardRowCompact and 1 more
 - `dashboard.js`: dedupePlaybackProgress, getRowFitLimit, initDashboard, loadPartWatched, mergeDashboardHistoryEntries, observeDashboardPosters, partWatchedProgress and 13 more
 - `discover.js`: dontRecommendDiscoverItem, initDiscover, loadDiscover, renderDiscover, resetDiscover

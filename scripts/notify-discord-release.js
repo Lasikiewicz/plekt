@@ -7,6 +7,7 @@
 
 import fs from "node:fs";
 import { changelogSectionGroups } from "./changelog-sections.js";
+import { officialLinksMarkdown } from "./official-links.js";
 
 const channel = process.argv[2];
 if (channel !== "main" && channel !== "alpha") {
@@ -71,7 +72,7 @@ function buildMainEmbed() {
     const list = bulletList(entry.details);
     if (list) fields.push({ name: "Changes", value: list });
   }
-  if (entry.websiteUrl) fields.push({ name: "Website", value: String(entry.websiteUrl).slice(0, 1024) });
+  if (entry.websiteUrl) fields.push({ name: "Official links", value: officialLinksMarkdown().slice(0, 1024) });
 
   return {
     title: `Plekt v${entry.version} released`.slice(0, 256),

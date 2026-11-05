@@ -3,7 +3,7 @@ title: Troubleshooting
 description: Start with the symptom, confirm the source of truth, and take the smallest safe action.
 category: Guides
 order: 7
-sourceVersion: "2.2.3"
+sourceVersion: "2.2.4"
 sourcePaths:
   - docs/troubleshooting.md
   - docs/webhooks.md
@@ -159,6 +159,14 @@ provider rail is unavailable.
 If an episode name is missing, run [Settings → Tools → Database Repairs → Restore Missing
 Episode Names](/docs/settings/tools/#database-repairs). Retryable metadata failures remain
 actionable; confirmed metadata without a title is displayed as **No title provided**.
+
+After a page reload, the dashboard shows the last Up Next cards your browser remembers (up to
+14 days old) while Plekt checks for changes, and the server's answer then replaces them. A card
+that vanishes a moment later was already out of date. Only cards the server had confirmed are
+remembered, never a save or removal still in progress. Pages and the API stay responsive while
+Up Next rebuilds in the background. If it still seems slow, the diagnostic log now says who asked
+for each build, why the saved queue was out of date, and which cards were added, removed, or
+reordered; see [Logs](/docs/settings/logs/).
 
 ## Discover is empty or unavailable
 
@@ -402,6 +410,21 @@ a destination.
 
 Do not immediately run a whole-library Force Sync unless the scope is understood.
 
+Some skips and holds are deliberate:
+
+- **Simkl skipped for a show in a non-Aired order.** Simkl cannot confirm which episode such a
+  watch is, so Plekt closes that item as skipped by policy instead of resending it every minute.
+  Plex, Emby, Jellyfin, and Trakt still receive the watch. To change this, set the show back to
+  **Aired order** under [Episode order](/docs/tv-shows/media-page/#episode-order).
+- **A watch skipped with an episode-order reason in Logs.** The watch used a numbering Plekt
+  could not translate to an aired episode. Open the show's **Episode order** dialog, link the
+  episode marked **No match**, and replay the watch.
+- **Trakt accepted only part of a batch.** The items Trakt took stay marked as delivered, and
+  only the rejected ones show a Trakt `not_found` result to repair with
+  [Fix show match & retry all](/docs/sync-tools/#trakt-show-match-repair). If Trakt's rejection
+  cannot be matched to a specific item, no item in that batch is marked delivered, so nothing
+  is hidden as a success.
+
 The [sync-model guide](/docs/concepts/#the-event-lifecycle) explains why a skipped
 destination is different from a failed delivery.
 
@@ -487,6 +510,21 @@ For an episode-level Trakt `not_found` result, open the show group in Sync Activ
 available in Trakt, dismiss the Trakt error instead of retrying the same unresolved match.
 
 Read [Trakt setup](/docs/trakt/) for the intended ownership model.
+
+## A change is rejected as a cross-site request
+
+A save, button, or sign-in that fails with **Cross-site request rejected** (HTTP 403) means
+Plekt did not accept a change that appeared to come from another website or address.
+
+1. Open Plekt from the same address you normally use, not from another site's page or frame.
+2. Behind a reverse proxy, make the proxy pass the original `Host` header. Plekt compares the
+   address the browser used with the `Host` header it receives, so a proxy that rewrites `Host`
+   makes your own page look foreign.
+3. Retry from a browser tab where you are signed in.
+
+Webhooks and other server-to-server calls send no browser origin, so they are not affected. A
+webhook that returns 401 is a different problem; see
+[Webhook returns 401](#webhook-returns-401).
 
 ## Settings or config did not save
 

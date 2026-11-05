@@ -12,8 +12,8 @@
 // version and never raises an update prompt - the server forces
 // alphaBuild.newerBuildAvailable false off the alpha channel for exactly that
 // reason.
-import { state, elements } from "./state.js?v=2.2.3.2.0";
-import { escapeAttribute, escapeHtml, formatBuildVersion, formatListDate, versionDisplayLabel } from "./utils.js?v=2.2.3.2.0";
+import { state, elements } from "./state.js?v=2.2.4.0.0";
+import { escapeAttribute, escapeHtml, formatBuildVersion, formatListDate, versionDisplayLabel } from "./utils.js?v=2.2.4.0.0";
 
 export function renderChangelogText(value) {
   const text = String(value || "");
@@ -111,10 +111,21 @@ export function baseVersionOf(version) {
   return parts.slice(0, 3).join(".");
 }
 
+// The official places shown under a release entry. Keep in step with
+// scripts/official-links.js (test/officialLinks.test.js checks they match).
+export const OFFICIAL_LINKS = [
+  { label: "Plekt.net", url: "https://plekt.net" },
+  { label: "Discord", url: "https://discord.gg/7ZmEGKcRC5" },
+  { label: "Reddit", url: "https://www.reddit.com/r/plekt/" },
+  { label: "GitHub", url: "https://github.com/Lasikiewicz/plekt" },
+];
+
 function renderWebsiteLink(entry) {
   const websiteUrl = String(entry?.websiteUrl || "").trim();
   if (!/^https:\/\/(?:plekt\.net|plembfin\.com)(?:\/|$)/i.test(websiteUrl)) return "";
-  return `<p class="changelog-entry-website"><a href="${escapeAttribute(websiteUrl)}" target="_blank" rel="noopener noreferrer">Visit the Plekt website</a></p>`;
+  const links = OFFICIAL_LINKS.map(({ label, url }) =>
+    `<a href="${escapeAttribute(url)}" target="_blank" rel="noopener noreferrer">${label}</a>`);
+  return `<p class="changelog-entry-website">${links.join('<span aria-hidden="true"> · </span>')}</p>`;
 }
 
 // Splits alpha build entries into the ones built on the installed release and
