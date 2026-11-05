@@ -1,4 +1,4 @@
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.3.0.3";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.3.1.0";
 
 // Status comes from the server registry. No separate frontend provider list
 // can expose a tracker whose synchronization is still gated off.
