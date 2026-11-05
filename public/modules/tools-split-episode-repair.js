@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.1";
-import { state } from "./state.js?v=2.2.3.0.1";
-import { escapeAttribute, escapeHtml, episodeCode, formatDate } from "./utils.js?v=2.2.3.0.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.2";
+import { state } from "./state.js?v=2.2.3.0.2";
+import { escapeAttribute, escapeHtml, episodeCode, formatDate } from "./utils.js?v=2.2.3.0.2";
 
 // ── Repair Split Episode Shows ──────────────────────────────────────────────
 // Watch rows an Emby/Jellyfin Force Sync import stored under an episode's own
