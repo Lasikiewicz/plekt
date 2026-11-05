@@ -1,7 +1,18 @@
 {
-  "version": "2.2.3.1.0",
-  "build": 0,
+  "version": "2.2.3.1.1",
+  "build": 1,
   "resetCommit": "df821f8962bc75dd617fe9cc5a557a5351effd7c",
-  "updatedAt": "2026-11-05T20:27:24.468Z",
-  "entries": []
+  "updatedAt": "2026-11-05T21:18:24.448Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-11-05T21:18:24.448Z",
+      "commit": "92870fe35bb7549ab4c19fbb28a311e76889c0e6",
+      "message": "Fix - Stop keeping a hash of provider keys for the episode order check and tidy a Jellyfin lookup log line",
+      "author": "Lasikiewicz",
+      "details": [
+        "Episode-order watches no longer build a hash from your server tokens and API keys to confirm the connection is unchanged between checking and sending."
+      ]
+    }
+  ]
 }
