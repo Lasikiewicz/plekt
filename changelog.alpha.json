@@ -1,8 +1,39 @@
 {
   "baseVersion": "2.2.3",
-  "build": 1,
+  "build": 2,
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 2,
+      "version": "2.2.3.2.0",
+      "shortVersion": "2.2.3.2.0",
+      "date": "2026-11-05T21:18:34.717Z",
+      "commit": "dbb796d346da990fe4c379715092d54ceee6a6ab",
+      "message": "Fixes a security-scan finding in the episode order check so provider tokens and API keys are no longer hashed, and tidies a Jellyfin lookup log line.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Episode-order watches no longer build a hash from your server tokens and API keys to confirm the connection is unchanged between checking and sending."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Episode-order watches no longer build a hash from your server tokens and API keys to confirm the connection is unchanged between checking and sending."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Episode-order watches no longer build a hash from your server tokens and API keys to confirm the connection is unchanged between checking and sending."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 1,
       "version": "2.2.3.1.0",
@@ -236,7 +267,7 @@
       ]
     }
   ],
-  "version": "2.2.3.1.0",
-  "shortVersion": "2.2.3.1.0",
-  "updatedAt": "2026-11-05T20:27:24.468Z"
+  "version": "2.2.3.2.0",
+  "shortVersion": "2.2.3.2.0",
+  "updatedAt": "2026-11-05T21:18:34.717Z"
 }
