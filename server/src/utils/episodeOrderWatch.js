@@ -5,11 +5,11 @@ export { assertOrderInsert } from "./episodeOrder.js";
 import { getTvdbOrderCatalogue, getCachedTvdbOrderCatalogue } from "./tvdbOrderGateway.js";
 import { readShowNumbering } from "./seasonSource.js";
 import { resolveEpisodeOrderTargets, resolveSourceOrderEpisode } from "./episodeOrderTargets.js";
-import crypto from "node:crypto";
 import { loadMediaConfig } from "./configStore.js";
 
 const verifiedOrder = Symbol("verified episode-order dispatch");
-const binding = section => crypto.createHash("sha256").update(JSON.stringify([section?.baseUrl,section?.token,section?.apiKey,section?.userId,section?.disabled,section?.sync])).digest("hex");
+// Compared in memory only, within seconds of being made; deliberately not hashed or stored.
+const binding = section => JSON.stringify([section?.baseUrl,section?.token,section?.apiKey,section?.userId,section?.disabled,section?.sync]);
 
 function provenanceOf(record) {
   const value = record.watch_provenance || record.watchProvenance || {};

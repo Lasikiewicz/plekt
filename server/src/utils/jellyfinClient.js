@@ -418,7 +418,7 @@ async function findByProviderIds(config, media, itemTypes) {
   const settled = await Promise.allSettled(lookups);
   settled.forEach((result, index) => {
     if (result.status === "rejected") {
-      console.error(`Jellyfin lookup failed for providerTerm: ${terms[index]}`, result.reason);
+      console.error("Jellyfin lookup failed for providerTerm: %s", terms[index], result.reason);
       return;
     }
     for (const item of result.value.items) {
