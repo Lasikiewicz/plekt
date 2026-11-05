@@ -18,7 +18,10 @@ const SECTION_PATTERNS = [
 ];
 // Optional, and always first when present: a small bug-fix release, the next patch version.
 const HOTFIX_PATTERN = /^Hotfix: v[^)]+ \(Expected\)$/;
-const STATUS_SECTIONS = ["Work in Progress", "Requires Remote Testing", "Not Started"];
+const STATUS_SECTIONS = ["Work in Progress", "Not Started"];
+// Top-level, right after the Hotfix section (or first when there is none): checks that can be
+// run on develop against remote services, so they are done before any Force to alpha.
+const REMOTE_TESTING_PATTERN = /^Requires Remote Testing$/;
 // A plan entry is two lines, the first ending in two spaces (a hard line break):
 // `- [ ] [Title](plan/<name>.md) - <date>` (`- [-]` in progress, `Issue #54: ` before the link
 // for an issue), then a very brief summary.
@@ -115,14 +118,17 @@ function check() {
   }
   const hotfixCount = headings.filter(({ name }) => HOTFIX_PATTERN.test(name)).length;
   if (hotfixCount > 1) errors.push('todo.md needs at most one "Hotfix" section');
+  const remoteCount = headings.filter(({ name }) => REMOTE_TESTING_PATTERN.test(name)).length;
+  if (remoteCount > 1) errors.push('todo.md needs at most one "Requires Remote Testing" section');
   const expectedOrder = [
     ...(hotfixCount ? [HOTFIX_PATTERN] : []),
+    ...(remoteCount ? [REMOTE_TESTING_PATTERN] : []),
     ...(postShouldBeFirst
       ? [postPattern, releasePattern, futurePattern]
       : [releasePattern, postPattern, futurePattern]),
   ];
   const orderedHeadings = headings
-    .filter(({ name }) => [HOTFIX_PATTERN, ...SECTION_PATTERNS.map(([, pattern]) => pattern)].some((pattern) => pattern.test(name)))
+    .filter(({ name }) => [HOTFIX_PATTERN, REMOTE_TESTING_PATTERN, ...SECTION_PATTERNS.map(([, pattern]) => pattern)].some((pattern) => pattern.test(name)))
     .map(({ name }) => name);
   const orderIsValid = expectedOrder.every((pattern, index) => pattern.test(orderedHeadings[index] || ""))
     && orderedHeadings.length === expectedOrder.length;

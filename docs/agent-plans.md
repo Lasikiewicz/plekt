@@ -16,8 +16,11 @@ including `plan/bugs.md` when it has no open bugs, are not listed. Completed pla
   title `# Plekt TODO`, then the sections in order of importance. **Hotfix: vX.Y.Z (Expected)**
   is always first: a hotfix is small, holds bug fixes only, and ships as the next patch release
   (the released version with its third digit, Z, raised by one). It is omitted while it has no
-  entries and uses only the status subsections it needs, named like Release's. Next is
-  **Release: vX.Y.Z (Expected)** with **Work in Progress**, **Requires Remote Testing**, and
+  entries and uses only the status subsections it needs, named like Release's. Next is the
+  top-level **Requires Remote Testing** section (added 5 November 2026): plans whose remaining
+  work is a check against remote services, which runs on `develop` and so is done before any
+  Force to alpha; it sits directly after Hotfix (first when there is no Hotfix) and is omitted
+  while empty. Then **Release: vX.Y.Z (Expected)** with **Work in Progress** and
   **Not Started** subsections; **Post Release (vX.Y.Z)**; and **Future Release** last. Do not add separate Last
   edited or Deferred sections. Work deferred from the current release belongs in Future Release.
   Keep the current Release above Post Release while both name the unreleased candidate version.
