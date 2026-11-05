@@ -5,12 +5,12 @@
 // parsed when Settings is opened. app-events.js wires this module through
 // onRouteModuleLoaded() with the same callbacks object it received, so each
 // wrapper below reads the app.js implementation at call time.
-import { rotateWebhookSecret } from "./auth.js?v=2.2.3.0.0";
-import { clearDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.2.3.0.0";
-import { state, elements } from "./state.js?v=2.2.3.0.0";
-import { loadSyncHistory, loadSyncJobs, triggerCronSync, triggerStopSync } from "./sync.js?v=2.2.3.0.0";
-import { initSettingsUsers, loadSettingsUsers } from "./settings-users.js?v=2.2.3.0.0";
-import { ifLoaded, lazyExport } from "./route-modules.js?v=2.2.3.0.0";
+import { rotateWebhookSecret } from "./auth.js?v=2.2.3.0.1";
+import { clearDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.2.3.0.1";
+import { state, elements } from "./state.js?v=2.2.3.0.1";
+import { loadSyncHistory, loadSyncJobs, triggerCronSync, triggerStopSync } from "./sync.js?v=2.2.3.0.1";
+import { initSettingsUsers, loadSettingsUsers } from "./settings-users.js?v=2.2.3.0.1";
+import { ifLoaded, lazyExport } from "./route-modules.js?v=2.2.3.0.1";
 
 const lazyTools = (name) => lazyExport("tools", name);
 const lazyBackups = (name) => lazyExport("tools-backups", name);
@@ -48,10 +48,18 @@ export function initSettingsEvents(callbacks = {}) {
 
   elements.downloadLogsButton?.addEventListener("click", async () => {
     try {
-      const backendLogs = await fetchDiagnosticLogs(authHeaders(), "all");
-      const localLogs = logsText();
+      const hours = Number(elements.downloadLogsRange?.value) || 0;
+      const rangeLabel = elements.downloadLogsRange?.selectedOptions?.[0]?.textContent || "All kept logs";
+      const backendLogs = await fetchDiagnosticLogs(authHeaders(), "all", { hours, limit: 21000 });
+      // Browser debug lines start with an ISO timestamp, so the same window applies to them.
+      const cutoff = hours > 0 ? Date.now() - hours * 3600 * 1000 : 0;
+      const localLogs = logsText().split("\n").filter((line) => {
+        if (!cutoff) return true;
+        const stamp = Date.parse(/^\[([^\]]+)\]/.exec(line)?.[1] || "");
+        return !Number.isFinite(stamp) || stamp >= cutoff;
+      }).join("\n");
       const content = [
-        `=== PLEKT DIAGNOSTIC LOGS EXPORT (${new Date().toISOString()}) ===`,
+        `=== PLEKT DIAGNOSTIC LOGS EXPORT (${new Date().toISOString()}, ${rangeLabel}) ===`,
         ...backendLogs,
         "",
         "=== FRONTEND DEBUG LOGS ===",
@@ -63,7 +71,7 @@ export function initSettingsEvents(callbacks = {}) {
       const link = document.createElement("a");
       const dateStr = new Date().toISOString().slice(0, 10);
       link.href = url;
-      link.download = `plekt-logs-${dateStr}.log`;
+      link.download = `plekt-logs-${dateStr}${hours > 0 ? `-last-${hours}h` : ""}.log`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

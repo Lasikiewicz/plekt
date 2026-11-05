@@ -738,6 +738,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Person profiles and filmography | `modules/media-person.js` |
 | Edit dialogs and watched-date/image/match tools | `modules/edit-dialogs.js` |
 | Fix Match per-show TVDB/TMDB season and episode numbers, its preview confirmation and the Trakt second confirmation | `modules/show-season-source.js` |
+| Per-show episode order selection (Aired or any TVDB alternate order) and reviewed links to aired episodes on the show detail page | `modules/episode-order.js`; TV show rendering and its menu entry in `modules/media-detail-show.js` |
 | Season Posters tab in Edit Images (season list, per-season options) | `modules/season-posters-panel.js` |
 | Manual watched/unwatched actions | `modules/watch-action.js` |
 | Shared calendar/time picker (used by edit dialogs and mark-watched prompts) | `modules/calendar-picker.js` |
@@ -766,6 +767,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Shared settings modal, picker, and card-grid primitives | `modules/settings-ui.js` |
 | Media-server and metadata-provider settings cards/modals | `modules/settings-services.js` |
 | Personal Rating Sync settings, provider directions, status polling, and manual actions | `modules/rating-sync-settings.js` |
+| Anonymous daily check: Settings → General → Privacy switch, exact payload, and the one-time question | `modules/install-check.js` |
 | Flat settings routes, landing list, sidebar, help panels, and clean path routing (`/settings/media-servers`, `/settings/sync`, etc.) | `modules/settings-shell.js` |
 | Shared `state` and `elements` objects | `modules/state.js` |
 | Global app event wiring | `modules/app-events.js` |

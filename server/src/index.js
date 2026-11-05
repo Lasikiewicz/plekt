@@ -11,6 +11,8 @@ import { handleActiveSessions, handleCronSync, handleCronSyncStatus, handleForce
   handleUpNextRestore, handleWebhook } from "./routes/sync.js";
 import { handleSeasonPosterOptions, handleSeasonPosters } from "./routes/seasonArtwork.js";
 import { handleShowSeasonSource, handleShowSeasonSourcePreview, handleShowSeasonSourceTraktPreview, handleShowSeasonSourceTraktReplace } from "./routes/showSeasonSource.js";
+import { handleEpisodeOrder, handleEpisodeOrderPreflight } from "./routes/episodeOrder.js";
+import { handleLegacyImage } from "./routes/legacyImage.js";
 import { handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch, handleOmdbRating, handlePoster, handlePosterBatch, handleRemoteArtwork, handleTmdbCollection, handleTmdbDetails, handleTmdbDetailsBatch, handleTmdbImages, handleTmdbPerson, handleTmdbPoster, handleTmdbProfile, handleTmdbSearch, handleTmdbSeason, handleTvdbImages, handleTvdbSearch, handleUpcoming, handleUpNext, handleUpNextShow, handleYoutubeMeta } from "./routes/metadata.js";
 import { handleCalendarFeed, handleCalendarFeedSettings } from "./routes/calendarFeed.js";
 import { handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats, handleChangelog, handleClearCache, handleDebugPlexMatch, handleDiagnosticLogs, handleMaintenanceStub, handlePing, handleRefreshTmdbMetadata, handleRefreshTvdbMetadata, handleRematchTvShows, handleSyncHealth, handleSyncMatchReport, handleEpisodeTitleAudit, handleEpisodeTitleBackfill, handlePhantomWatchAudit, handlePhantomWatchRepair, handleStaleTraktImportAudit, handleStaleTraktImportRepair, handleStalePendingWatchAudit, handleStalePendingWatchRepair, handleSplitIdentityUnwatchAudit, handleSplitIdentityUnwatchRepair, handleLikelyFalseUnwatchAudit, handleLikelyFalseUnwatchRepair } from "./routes/maintenance.js";
@@ -20,6 +22,7 @@ import { handleTrackerAuth, handleTrackerConnections } from "./routes/trackerAut
 import { handleLiveUpdates } from "./routes/liveUpdates.js";
 import { handleSyncAttention } from "./routes/syncAttention.js";
 import { handleSetupStatus, handleSetupStep, handleSetupImport, handleSetupComplete, handleSetupRestart, handleSetupChecklistDismiss, handleSetupCtaDismiss } from "./routes/onboarding.js";
+import { handleInstallCheck } from "./routes/installCheck.js";
 import { handleInitialSyncStatus } from './routes/initialSync.js';
 import { handlePersonalMedia } from "./routes/personal.js";
 import { handleRatingSync } from "./routes/ratingSync.js";
@@ -68,7 +71,7 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^(?:tmdb-search|tvdb-search|fix-match-search|media-search|refresh-tmdb-metadata|refresh-tvdb-metadata)(?:\/|$)/i,
   /^(?:remote-artwork|tmdb-poster|tmdb-profile|fanart-images|tvdb-images|tmdb-images|season-poster-options|youtube-meta|omdb-rating)(?:\/|$)/i,
   /^(?:admin-|phantom-watch-|episode-title-|stale-|split-identity-|split-episode-|likely-false-)/i,
-  /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases|show-season-source)/i,
+  /^(?:rematch-show|merge-shows|duplicate-watch-|playstate-aliases|show-season-source|episode-order)/i,
   /^(?:diagnostic-logs|debug-plex-match|webhook)$/i,
   /^webhook-port(?:\/|$)/i,
   /^webhook-test(?:\/|$)/i,
@@ -156,6 +159,7 @@ async function dispatch(req, res) {
     if (path === "setup/restart") return handleSetupRestart(req, res);
     if (path === "setup/checklist/dismiss") return handleSetupChecklistDismiss(req, res);
     if (path === "setup/cta-dismiss") return handleSetupCtaDismiss(req, res);
+    if (path === "install-check") return handleInstallCheck(req, res);
     if (path === "auth/apikey") return handleAuthApiKey(req, res);
     if (path === "auth/webhook-secret") return handleAuthWebhookSecret(req, res);
     if (path === "auth/sessions/revoke-all") return handleRevokeAllSessions(req, res);
@@ -243,6 +247,9 @@ async function dispatch(req, res) {
     if (path === "rematch-show") return handleRematchShow(req, res);
     if (path === "merge-shows") return handleMergeShows(req, res);
     if (path === "show-season-source/preview") return handleShowSeasonSourcePreview(req, res);
+    if (path === "legacy-image") return handleLegacyImage(req, res);
+    if (path === "episode-order") return handleEpisodeOrder(req, res);
+    if (path === "episode-order/preflight") return handleEpisodeOrderPreflight(req, res);
     if (path === "show-season-source") return handleShowSeasonSource(req, res);
     if (path === "show-season-source/trakt-preview") return handleShowSeasonSourceTraktPreview(req, res);
     if (path === "show-season-source/trakt-replace") return handleShowSeasonSourceTraktReplace(req, res);

@@ -31,6 +31,7 @@ import {
 } from "./watchSyncPolicy.js";
 import { compoundEpisodeForMedia } from "./compoundEpisode.js";
 import { brandEnv } from "./brandEnv.js";
+import { resolveOrderWatch } from "./episodeOrderWatch.js";
 import { isTrackerProvider, trackerProviderForSource } from "./trackers/registry.js";
 
 const LOOP_CACHE_TTL_SECONDS = 60;
@@ -128,9 +129,7 @@ function openDispatchBurstIfIdle() {
   return started;
 }
 
-// Progress is a user-facing media count, not a count of provider HTTP calls.
-// Keep one unit for an episode even when Plex, Emby, Jellyfin, or a retry feeds
-// the same episode back through the dispatcher during one burst.
+// Progress counts media, with one unit per episode per dispatch burst.
 export function dispatchProgressKey(media = {}) {
   const type = String(media?.type || media?.media_type || media?.mediaType || "media").trim().toLowerCase();
   const ids = media?.ids && typeof media.ids === "object" ? media.ids : {};
@@ -1196,7 +1195,7 @@ export async function syncMediaPlaystate(media, config, kv, {
     return { skipped: true, status: "skipped", details: "Source is not allowed to send watched state", targetStates: [], results: [] };
   }
 
-  media = compoundEpisodeMediaForDispatch(providerItemsForMedia(media));
+  media = await resolveOrderWatch(compoundEpisodeMediaForDispatch(providerItemsForMedia(media)), config, {stateType:"watched"});
 
   if (await shouldDefer?.()) return deferredDispatchSummary("A newer unwatched state took precedence before watched dispatch");
 
@@ -1373,7 +1372,7 @@ export async function syncMediaUnplayedPlaystate(media, config, kv, {
   if (!trackerProviderForSource(media.source) && !["manual", "force_sync", "restore", "restore_replay", "trakt", "trakt_import", "tautulli_import", "trakt_current"].includes(String(media.source || "").toLowerCase()) && !canSendState(config, String(media.source || "").toLowerCase(), "unwatched")) {
     return { skipped: true, status: "skipped", details: "Source is not allowed to send unwatched state", targetStates: [], results: [] };
   }
-  media = compoundEpisodeMediaForDispatch(providerItemsForMedia(media));
+  media = await resolveOrderWatch(compoundEpisodeMediaForDispatch(providerItemsForMedia(media)), config, {stateType:"unwatched"});
   if (await shouldDefer?.()) return deferredDispatchSummary("A newer watched state took precedence before unplayed dispatch");
   const targets = targetsForMedia(media, config, "unwatched");
   if (checkAndClaimLoop(media, media.source, targets, kv, "unplayed_loop")) {

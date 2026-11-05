@@ -10,6 +10,7 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024;
 // Ring-buffer ceiling for the diagnostic_log table. Pruned on flush so reads
 // stay flat as the process runs.
 const MAX_ROWS = 20000;
+const EXPORT_SLACK = 1000;
 // Writes are batched: entries collect here and flush in one transaction, so a
 // burst of console output costs one disk sync instead of one per line.
 const FLUSH_INTERVAL_MS = 1000;
@@ -231,8 +232,11 @@ export function isSpamLog(message = "") {
   return false;
 }
 
-export function getLogs({ level, category = "all", limit = 500 } = {}) {
-  const clearedAt = clearTimestamp();
+// `since` (epoch ms) limits the result to lines newer than that moment, which is
+// how the Logs screen download offers "last 6 hours" and similar choices. The
+// ceiling is the whole ring buffer so a download can cover its full retention.
+export function getLogs({ level, category = "all", limit = 500, since = 0 } = {}) {
+  const clearedAt = Math.max(clearTimestamp(), Number(since) || 0);
   const categoryMap = {
     "plex-notifications": "PLEX",
     "sync": "SYNC",
@@ -240,7 +244,9 @@ export function getLogs({ level, category = "all", limit = 500 } = {}) {
     "system": "SYSTEM"
   };
 
-  const bounded = Math.min(Math.max(Number(limit) || 500, 1), MAX_LOGS);
+  // The table is only trimmed every ~500 writes, so it can briefly hold more
+  // than MAX_ROWS; allow for that slack so a full export never drops the oldest lines.
+  const bounded = Math.min(Math.max(Number(limit) || 500, 1), MAX_ROWS + EXPORT_SLACK);
   // Make this process's buffered lines visible immediately - the panel polls
   // faster than the flush interval.
   flushPending();

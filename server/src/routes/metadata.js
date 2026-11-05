@@ -763,7 +763,7 @@ export async function handleTmdbDetails(req, res) {
 
   try {
     const details = await withDisplaySeasons(await getTmdbDetails({ mediaType, tmdbId, title, ids, lane: "interactive" }));
-    return sendJson(res, details, 200, { "Cache-Control": "private, max-age=300, stale-while-revalidate=86400", Vary: "Authorization" });
+    return sendJson(res, details, 200, { "Cache-Control": "private, no-store", Vary: "Authorization" });
   } catch (error) {
     console.error("Failed handling TMDB details API", error);
     return sendJson(res, { error: error.message || "Failed to fetch TMDB details" }, error.status || 500);
@@ -1337,10 +1337,10 @@ export async function handleTmdbSeason(req, res) {
     const details = await getTmdbSeason({
       tmdbId: req.query.tmdbId || req.query.id,
       tvdbId: req.query.tvdbId || req.query.tvdb_id,
-      seasonNumber: req.query.seasonNumber || req.query.season,
+      seasonNumber: req.query.seasonNumber || req.query.season, displayOrder:true,
       lane: "interactive",
     });
-    return sendJson(res, details, 200, { "Cache-Control": "private, max-age=3600, stale-while-revalidate=86400", Vary: "Authorization" });
+    return sendJson(res, details, 200, { "Cache-Control": "private, no-store", Vary: "Authorization" });
   } catch (error) {
     return sendJson(res, { error: error.message }, error.status || 500);
   }

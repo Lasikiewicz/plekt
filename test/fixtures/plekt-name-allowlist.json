@@ -255,6 +255,10 @@
         [
           "# preserves the owner's account casing (Lasikiewicz/plembfin), which",
           1
+        ],
+        [
+          "# The retiring Plembfin names get the same image plus PLEKT_LEGACY_IMAGE=1",
+          1
         ]
       ]
     },
@@ -1436,6 +1440,10 @@
         [
           "- **[r/plembfin](https://www.reddit.com/r/plembfin/)** - discussions, feature requests, and release announcements on Reddit.",
           1
+        ],
+        [
+          "[plekt.net/docs/upgrading-from-plembfin](https://plekt.net/docs/upgrading-from-plembfin/).",
+          1
         ]
       ]
     },
@@ -2228,6 +2236,10 @@
         [
           "| `src/db.js` | Opens `data/plekt.db` (or existing `data/plembfin.db`) via better-sqlite3 (WAL), applies concurrency-safe migrations, and exposes helpers plus the SQLite-backed cache version observed by every process. |",
           1
+        ],
+        [
+          "| `legacyImage.js` (route) | Admin-only `GET /api/legacy-image`: reports whether this install runs the retiring Plembfin Docker image (`PLEKT_LEGACY_IMAGE=1`). |",
+          1
         ]
       ]
     },
@@ -2249,6 +2261,10 @@
         ],
         [
           "| `icons/plex.svg`, `icons/emby.svg`, `icons/jellyfin.svg`, `icons/trakt.svg`, `icons/plembfin.png`, `icons/tmdb.svg`, `icons/tvdb.svg`, `icons/imdb.svg` | Media-server, Plekt, and metadata-source badge icons used on cards and pills (the media detail page's Ratings/Watch Now rows, and per-watch source badges). A watch recorded with `source: \"manual\"` (marked watched from within Plekt itself, not reported by a media server) normalizes to `plembfin` and renders with `icons/plembfin.png` and the \"Plekt\" label, rather than defaulting to Plex (`normalizePlatformSource` in `modules/utils.js`). `icons/trakt.svg` is used by the Sync Activity page, which resolves tracker names itself. |",
+          1
+        ],
+        [
+          "| `legacy-image-banner.js` | Self-starting notice card for the Plembfin Docker image: fetches `/api/legacy-image` once signed in, shows a top-centre card, and hides per installed version when dismissed. |",
           1
         ]
       ]
@@ -3716,6 +3732,15 @@
         ],
         [
           "const backupConfig = backupSetupData?.plembfin?.config || {};",
+          1
+        ]
+      ]
+    },
+    "public/modules/install-check.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "document.addEventListener(\"plembfin:page-entry\", () => {",
           1
         ]
       ]
@@ -11425,11 +11450,11 @@
         ],
         [
           "| Docker Hub | `plembfin/plembfin` | `plembfin/plekt` |",
-          1
+          2
         ],
         [
           "| GitHub Container Registry | `ghcr.io/lasikiewicz/plembfin` | `ghcr.io/lasikiewicz/plekt` |",
-          1
+          2
         ],
         [
           "For the stable v2.2.0 update, use `plembfin/plekt:2.2.0` or",
@@ -11469,6 +11494,18 @@
         ],
         [
           "`X-Plembfin-Webhook-Secret` header remain accepted.",
+          1
+        ],
+        [
+          "## Switching from the Plembfin Docker image",
+          1
+        ],
+        [
+          "The Plembfin Docker image is being retired. If Plekt showed you a notice about it, this is how",
+          1
+        ],
+        [
+          "Keep the tag you use today. Use `plembfin/plekt:latest` or `ghcr.io/lasikiewicz/plekt:latest`",
           1
         ]
       ]
@@ -11592,6 +11629,92 @@
         ],
         [
           "// The unwatched marker is already the canonical Plembfin decision. Do",
+          1
+        ]
+      ]
+    },
+    "packaging/legacy-image/Dockerfile": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "# Thin layer for the retiring Plembfin image names.",
+          1
+        ],
+        [
+          "# The Plembfin and Plekt images are the same build. The workflows publish the Plekt",
+          1
+        ],
+        [
+          "# (ghcr.io/lasikiewicz/plembfin, plembfin/plembfin). The only difference is the",
+          1
+        ],
+        [
+          "# It never changes how the app runs. See plan/retire-plembfin-image.md.",
+          1
+        ]
+      ]
+    },
+    "public/modules/legacy-image-banner.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "// Notice for installs still running the retiring Plembfin Docker image.",
+          1
+        ],
+        [
+          "// PLEKT_LEGACY_IMAGE=1 (the Plembfin tags). On the Plekt image, bare metal and",
+          1
+        ],
+        [
+          "element(\"p\", { textContent: \"Plekt was formerly Plembfin, and the Plembfin image will stop receiving updates. Switch to the Plekt image:\" }),",
+          1
+        ]
+      ]
+    },
+    "server/src/routes/legacyImage.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "// Tells the signed-in admin whether this install runs the retiring Plembfin image.",
+          1
+        ]
+      ]
+    },
+    "server/src/utils/legacyImage.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "// The Plekt and Plembfin Docker images are the same build. The legacy tags are",
+          1
+        ],
+        [
+          "newImages: [\"ghcr.io/lasikiewicz/plekt\", \"plembfin/plekt\"],",
+          1
+        ],
+        [
+          "// address does not resolve (the README \"Formerly Plembfin\" section covers the same swap).",
+          1
+        ],
+        [
+          "switchUrl: \"https://plekt.net/docs/upgrading-from-plembfin/#switching-from-the-plembfin-docker-image\",",
+          1
+        ]
+      ]
+    },
+    "test/installCheck.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "assert.equal(installCheckUrl({ PLEMBFIN_INSTALL_CHECK_URL: \"off\" }), \"\");",
+          1
+        ]
+      ]
+    },
+    "workers/install-check/wrangler.toml": {
+      "reason": "website",
+      "lines": [
+        [
+          "# plembfin-website Pages project or its Functions. Deploy steps and the read",
           1
         ]
       ]

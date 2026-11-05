@@ -69,7 +69,7 @@ import { mediaIsUpNextRailSeed } from "../utils/upNextSeedLedger.js";
 import { DISMISSED_TRAKT_NOT_FOUND_DETAIL } from "../utils/traktDismissals.js";
 import { traceLog } from "../utils/logVerbose.js";
 import { buildSyncMatchReport, unresolvedSyncMatchReport } from "../utils/syncMatchReport.js";
-import { inRowNumbering } from "../utils/showSeasonTranslation.js";
+import { inRowNumbering } from "../utils/showSeasonTranslation.js"; import { preflightOrderRecords, resolveOrderWatch } from "../utils/episodeOrderWatch.js";
 import { listUpNextDismissals, recordUpNextDismissal, restoreAllUpNextDismissals, restoreUpNextDismissalsForMedia, restoreUpNextDismissalsSupersededByUnwatch, restoreUpNextDismissal } from "../utils/upNextDismissals.js";
 import { undropTitleForLivePlay } from "../utils/droppedTitles.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
@@ -1972,7 +1972,8 @@ export async function handleManualUnwatch(req, res) {
   if (!ids.length) return sendJson(res, { error: "id or ids is required" }, 400);
   if (ids.length > 100) return sendJson(res, { error: "Batch size must be 100 records or fewer" }, 413);
 
-  const config = await loadMediaConfig();
+  const config = await loadMediaConfig(); const preparedOrderRows = new Map();
+  try { for (const id of ids) { const row = await getWatchRecordById(id); if (row) preparedOrderRows.set(id, await resolveOrderWatch(row, config, {stateType:"unwatched"})); } } catch (error) { return sendJson(res, {error:error.message,code:"EPISODE_MAPPING_REQUIRED"},409); }
   const loopStore = createLoopStore();
   const results = new Array(ids.length);
   let succeeded = 0;
@@ -1985,7 +1986,7 @@ export async function handleManualUnwatch(req, res) {
       try {
         const record = await getWatchRecordById(id);
         if (!record) throw new Error("Watch record not found");
-        const media = mediaFromWatchRecord(record);
+        const media = mediaFromWatchRecord(preparedOrderRows.get(id) || record);
         markReservedDispatchStarted(trackingReservation, media);
         const { id: unwatchedId, summary } = await applyManualUnwatch(media, config, loopStore, id, {
           includeSourcePlatform: true,
@@ -2034,11 +2035,12 @@ export async function handleManualWatch(req, res) {
   if (!(await requireAdmin(req, res))) return;
 
   const body = await readJson(req);
-  const records = Array.isArray(body) ? body : body.records;
+  let records = Array.isArray(body) ? body : body.records;
   if (!Array.isArray(records)) return sendJson(res, { error: "Expected an array of records" }, 400);
   if (records.length > 100) return sendJson(res, { error: "Batch size must be 100 records or fewer" }, 413);
 
   const config = await loadMediaConfig();
+  try { records = await preflightOrderRecords(records, config); } catch (error) { return sendJson(res, {error:error.message,code:"EPISODE_MAPPING_REQUIRED"},409); }
   const loopStore = createLoopStore();
   const results = [];
   const syncTasks = [];
@@ -2057,13 +2059,7 @@ export async function handleManualWatch(req, res) {
       };
       let normalized = normalizeWatchRecordForInsert(pending, "manual");
 
-      // The detail page can know a show's TMDB id while older history rows
-      // carry only its TVDB id. A manual episode inserted with just the TMDB
-      // id then forms a second same-title identity cluster; once that cluster
-      // contains several episodes, the conservative show grouper keeps it
-      // separate and the larger legacy cluster hides the user's new watch.
-      // Bridge the two known series identities on the authoritative manual
-      // row. Existing ids from the request are never replaced.
+      // Bridge known series identities without replacing request IDs.
       if (normalized.record.media_type === "episode") {
         const showTitle = showTitleFrom(normalized.record.title);
         if (showTitle) {
@@ -3182,13 +3178,9 @@ export async function handleWebhook(req, res) {
 
   const config = await loadMediaConfig();
 
-  // An episode payload can carry the episode's own provider ids rather than the
-  // series', which would key this record to something the rest of the app never
-  // joins to - no artwork, no metadata, and no match against the other watches
-  // of the same show. This has to run before the first mediaKeyFor() below, so
-  // the audit trail and the stored record agree on one identity.
-  // See utils/seriesIdentity.js.
+  // Resolve series identity before deriving keys or interpreting episode order.
   media = await withSeriesIdentity(media, config);
+  if (["completed", "unplayed"].includes(media.phase)) { try { media = await resolveOrderWatch(media, config); } catch (error) { await recordSyncHistory(media, {status:"error",details:error.message,targetStates:[]}, "mapping").catch(()=>null); return sendJson(res,{error:error.message,code:"EPISODE_MAPPING_REQUIRED",inserted:false},409); } }
 
   recordWatchAuditEvent({
     eventType: "source_event",

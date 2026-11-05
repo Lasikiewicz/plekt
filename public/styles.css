@@ -7,7 +7,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.2.3.0.0") format("woff2");
+  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.2.3.0.1") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -16,7 +16,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.2.3.0.0") format("woff2");
+  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.2.3.0.1") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -25,7 +25,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.2.3.0.0") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.2.3.0.1") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -34,7 +34,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.2.3.0.0") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.2.3.0.1") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -8629,7 +8629,7 @@ details.sync-tool-details[open] > summary {
   }
 
   .media-info-overlay--detail-page {
-    inset: 0;
+    inset: var(--media-info-bars-bottom, 0px) 0 0 0;
     align-items: stretch;
     justify-content: stretch;
   }
@@ -8653,8 +8653,15 @@ details.sync-tool-details[open] > summary {
     border-radius: 0;
   }
 
+  /* The actions row is full width, so without wrapping it squeezes the title
+     block to one letter per line. Title first, then the actions beneath it. */
   .media-info-head {
+    flex-wrap: wrap;
     gap: var(--space-3);
+  }
+
+  .media-info-title-block {
+    flex: 1 1 100%;
   }
 
   .media-info-head-actions {
@@ -10506,13 +10513,73 @@ html.light-mode .poster-overflow-btn {
 }
 
 .logs-viewer-controls label {
-  display: grid;
-  gap: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   flex: 1 1 14rem;
   min-width: 0;
+  white-space: nowrap;
 }
 
-.logs-viewer-controls input { width: 100%; min-width: 0; }
+.logs-viewer-controls input { flex: 1 1 auto; width: auto; min-width: 0; }
+
+/* Narrow screens stack the controls in a column, where the 14rem flex-basis
+   above would become a 14rem height. */
+@media (max-width: 760px) {
+  .logs-viewer-controls label { flex: 0 0 auto; }
+}
+
+/* The Logs filter box and Download range select were unstyled browser controls:
+   a white inner border plus the app-wide focus outline gave a double ring. One
+   themed look, the same height as the neighbouring buttons. */
+.logs-viewer-controls label,
+.logs-download-range {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.logs-viewer-controls input,
+.logs-download-range select {
+  box-sizing: border-box;
+  height: 2.05rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--panel-3);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 400;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.logs-viewer-controls input::placeholder { color: var(--muted); opacity: 0.8; }
+
+.logs-viewer-controls input:focus,
+.logs-viewer-controls input:focus-visible,
+.logs-download-range select:focus,
+.logs-download-range select:focus-visible {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue), transparent 80%);
+}
+
+.logs-download-range {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.logs-download-range select { width: 100%; min-width: 0; }
+
+@media (min-width: 761px) {
+  .logs-download-range {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    white-space: nowrap;
+  }
+  .logs-download-range select { width: auto; }
+}
 .logs-viewer-controls button[aria-pressed="true"] {
   border-color: var(--blue);
   color: var(--blue);
@@ -10569,7 +10636,24 @@ html.light-mode .logs-cat-btn.active {
 [data-settings-panel="logs"] .logs-panel {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 220px);
+  /* 85px = the header plus its gap above the panel, and the same gap (~12px on
+     screen) below it, so the bottom margin matches the other edges. */
+  min-height: calc(var(--viewport-fill, 100vh) - 85px);
+  /* Size to the content (never clipping the Clear / Download / Copy row under
+     the terminal), but at least the screen height so the terminal below can
+     grow into the free space. */
+  height: auto;
+  max-height: none;
+}
+
+[data-settings-panel="logs"] .logs-terminal {
+  /* Basis 0 keeps a long log from stretching the panel; it fills what is free. */
+  flex: 1 1 0;
+  min-height: 14rem;
+}
+
+@media (max-width: 760px) {
+  [data-settings-panel="logs"] .logs-terminal { min-height: 60vh; }
 }
 
 .logs-terminal {
@@ -10714,8 +10798,22 @@ html.light-mode .badge-error {
 }
 
 .log-msg {
+  flex: 1 1 0;
+  min-width: 0;
   color: var(--text);
   word-break: break-word;
+}
+
+/* On a phone the time, badge and instance leave the message about one word of
+   room, so let the message take its own full-width line under them. */
+@media (max-width: 760px) {
+  .log-row {
+    flex-wrap: wrap;
+    row-gap: 0.15rem;
+  }
+  .log-msg {
+    flex: 1 1 100%;
+  }
 }
 
 html.light-mode .log-msg {
@@ -12850,7 +12948,12 @@ body {
   gap: 0;
 }
 
+/* The screen height in the zoomed app's own units: 100vh is not scaled by the
+   zoom below, so anything meant to fill the screen uses this instead. */
+:root { --viewport-fill: 100vh; }
+
 @media (min-width: 1024px) and (max-height: 1200px) {
+  :root { --viewport-fill: 114.286vh; }
   .app-chassis {
     width: 114.286vw;
     height: 114.286vh;
@@ -12859,6 +12962,7 @@ body {
 }
 
 @media (min-width: 1024px) and (max-height: 1080px) {
+  :root { --viewport-fill: 133.333vh; }
   .app-chassis {
     width: 133.333vw;
     height: 133.333vh;
@@ -38111,4 +38215,264 @@ html.elevated-admin .account-user-only {
   box-sizing: border-box;
   max-width: 100%;
   min-width: 0;
+}
+
+/* Install check: the one-time question and the exact-data preview in Settings. */
+.install-check-prompt {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 60;
+  width: min(380px, calc(100vw - 32px));
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  background: var(--panel-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg);
+}
+.install-check-prompt p { margin: 0; color: var(--soft); }
+.install-check-prompt .install-check-prompt-note { color: var(--muted); font-size: 0.875em; }
+.install-check-prompt-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.install-check-payload {
+  margin: 8px 0 0;
+  padding: 12px;
+  overflow-x: auto;
+  background: var(--field);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--soft);
+}
+
+/* Per-show Episode order dialog: native <dialog> on the shared edit-dialog card. */
+dialog.episode-order-dialog {
+  margin: auto;
+  width: min(1500px, 96vw);
+  height: min(1000px, 94vh);
+  max-height: 94vh;
+  padding: var(--space-4);
+  color: var(--text);
+  overflow: hidden;
+}
+
+dialog.episode-order-dialog::backdrop {
+  background: rgba(7, 10, 13, 0.72);
+  backdrop-filter: blur(4px);
+}
+
+dialog.episode-order-dialog:not([open]) {
+  display: none;
+}
+
+.episode-order-dialog .muted-copy {
+  margin: 0;
+  font-size: 0.82rem;
+}
+
+.episode-order-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.episode-order-head p {
+  margin-top: 0.25rem;
+  max-width: 90ch;
+}
+
+.episode-order-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.episode-order-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-width: 11rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.episode-order-card span {
+  font-size: 0.74rem;
+  color: var(--muted, rgba(255, 255, 255, 0.62));
+}
+
+.episode-order-card:hover:not(:disabled) {
+  border-color: var(--accent, var(--text));
+}
+
+.episode-order-card.is-selected {
+  border-color: var(--accent, var(--text));
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.episode-order-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.episode-order-summarybar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.episode-order-summary {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.episode-order-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.episode-order-season {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0.4rem 0.8rem;
+  background: var(--bg, #0d1117);
+  border-bottom: 1px solid var(--line-strong);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.episode-order-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 1.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+
+.episode-order-arrow {
+  opacity: 0.6;
+  text-align: center;
+}
+
+.episode-order-result {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.episode-order-target.is-changed {
+  font-weight: 700;
+}
+
+.episode-order-badge {
+  padding: 0.1rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+}
+
+.episode-order-badge.is-warning {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.episode-order-pick {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.episode-order-small {
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+}
+
+.episode-order-empty {
+  padding: 1rem 0;
+}
+
+.episode-order-simkl {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.5rem;
+}
+
+.episode-order-simkl p {
+  margin: 0;
+}
+
+.episode-order-simkl-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.episode-order-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--line-strong);
+}
+
+.episode-order-footer .edit-dialog-status {
+  flex: 1 1 auto;
+}
+
+@media (max-width: 760px) {
+  dialog.episode-order-dialog {
+    width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .episode-order-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.25rem;
+  }
+
+  .episode-order-arrow {
+    display: none;
+  }
+
+  .episode-order-result::before {
+    content: "→";
+    opacity: 0.6;
+  }
+
+  .episode-order-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .episode-order-card {
+    flex: 1 1 100%;
+  }
 }

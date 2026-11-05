@@ -30,6 +30,7 @@ Part of the file map (with [file-map-server.md](file-map-server.md) and [file-ma
 | `settings-services.js` | Media-server and metadata-provider card grids, edit dialogs, config saves, connection tests, and the inline Sync Tuning form, including the app-marked watched-flag policy. |
 | `netflix-import.js` | Settings Netflix CSV preview, grouped title review, and one-time watch-history commit. |
 | `manual-watch-review.js` | Manual Watch review page and policy actions. The compact sidebar count and summary polling live in `status-indicators.js`. |
+| `install-check.js` | Opt-in anonymous daily check: the Settings → General → Privacy switch and payload preview, and the one-time question card. Loaded after first paint; wired by `app-events.js`. |
 | `rating-sync-settings.js` | Personal Rating Sync on/off control, provider summary, Sync now, status polling, and queue feedback. |
 | `watchlist-sync-settings.js` | Plex Watchlist Sync on/off control, Plex summary, Sync now, and status polling. |
 | `settings-shell.js` | Owns hierarchical settings routes (parent groups + child sections), multi-view panel aggregation, legacy aliases, the landing list, sidebar/mobile navigation, section-scoped scrolling, and tools disclosures. |
@@ -67,6 +68,8 @@ Part of the file map (with [file-map-server.md](file-map-server.md) and [file-ma
 | `media-detail-context.js` | Detail-modal shell/context: init callbacks, `authHeaders`, modal DOM root, render token, debug modal, shared action markup (including Force Sync), and actions-menu state. |
 | `media-detail-shared.js` | Route-scoped shared TMDB/Seerr rendering fragments: rating pills, availability labels, Seerr request pills/controls, external ratings, app links, and primary-ready milestone. |
 | `media-detail-show.js` | TV show detail rendering: seasons/episodes accordion, show modal, per-episode actions. |
+| `episode-order.js` | Admin-only Episode order dialog in the show detail: choose Aired/DVD order, review and save or remove DVD-to-aired links using a revision-checked preview. |
+| `legacy-image-banner.js` | Self-starting notice card for the Plembfin Docker image: fetches `/api/legacy-image` once signed in, shows a top-centre card, and hides per installed version when dismissed. |
 | `media-detail-movie.js` | Movie detail rendering + watched-state patching. |
 | `media-detail-events.js` | Click delegation inside the detail modal (cast, trailers, poster edit, watch actions, shared title-scoped Force Sync dialog and Settings library Force Sync panel with live activity polling, card navigation). |
 | `media-person.js` | Person profile pages: bio, filmography with watch badges. |

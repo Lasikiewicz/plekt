@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "./outbound.js";
+import { fetchWithTimeout } from "./outbound.js"; import { prepareEpisodeOrderTarget } from "./episodeOrderWatch.js";
 import { compoundEpisodeItemsForMedia } from "./compoundEpisode.js";
 import { restoreLookupKey } from "./restoreLookupCache.js";
 import { nativeProviderItemIds } from "./providerItemIds.js";
@@ -454,7 +454,7 @@ export async function findEmbyItems(config, media) {
 
 export async function markEmbyPlayed(config, media) {
   try {
-    requireEmbyConfig(config);
+    requireEmbyConfig(config); media = await prepareEpisodeOrderTarget(media,"emby",config,"watched");
 
     const items = await findEmbyItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -514,7 +514,7 @@ export async function markEmbyPlayed(config, media) {
 
 export async function markEmbyUnplayed(config, media) {
   try {
-    requireEmbyConfig(config);
+    requireEmbyConfig(config); media = await prepareEpisodeOrderTarget(media,"emby",config,"unwatched");
 
     const items = await findEmbyItemsForMutation(config, media);
     if (!items || items.length === 0) {

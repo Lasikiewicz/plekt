@@ -45,6 +45,8 @@ Each branch of `dispatch()` in `server/src/index.js`, sorted by path. Paths are 
 | `dropped-titles` | `handleDroppedTitles` | `routes/droppedTitles.js` |
 | `duplicate-watch-cleanup` | `handleDuplicateWatchCleanup` | `routes/media.js` |
 | `duplicate-watch-scan` | `handleDuplicateWatchScan` | `routes/media.js` |
+| `episode-order/preflight` | `handleEpisodeOrderPreflight` | `routes/episodeOrder.js` |
+| `episode-order` | `handleEpisodeOrder` | `routes/episodeOrder.js` |
 | `episode-title-audit` | `handleEpisodeTitleAudit` | `routes/maintenance.js` |
 | `episode-title-backfill` | `handleEpisodeTitleBackfill` | `routes/maintenance.js` |
 | `fanart-images` | `handleFanartImages` | `routes/metadata.js` |
@@ -61,6 +63,8 @@ Each branch of `dispatch()` in `server/src/index.js`, sorted by path. Paths are 
 | `history-audit` | `handleHistoryAudit` | `routes/media.js` |
 | `history` | `handleHistory` | `routes/media.js` |
 | `import` | `handleImport` | `routes/backups.js` |
+| `install-check` | `handleInstallCheck` | `routes/installCheck.js` |
+| `legacy-image` | `handleLegacyImage` | `routes/legacyImage.js` |
 | `likely-false-unwatch-audit` | `handleLikelyFalseUnwatchAudit` | `routes/maintenance.js` |
 | `likely-false-unwatch-repair` | `handleLikelyFalseUnwatchRepair` | `routes/maintenance.js` |
 | `live-updates` | `handleLiveUpdates` | `routes/liveUpdates.js` |
@@ -210,6 +214,7 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `dropped-title-views.js`: fetchDroppedTitles, filterDroppedTitles, renderDroppedShowCard, renderDroppedStats, renderDroppedView
 - `dropped-titles.js`: droppedTitleActionHtml, handleDroppedTitleAction, isDroppedUnDropBusy, loadDroppedTitleState, loadDroppedTitleStates
 - `edit-dialogs.js`: apiUpdateWatch, applyArtworkToLocalWatchRecords, applyWatchedAtToLocalWatchRecord, editDateOptionsFromButton, episodeTimingFromButton, fixMatchSearchTitle, hasProviderSplitConflict and 9 more
+- `episode-order.js`: episodeOrderButtonHtml, initEpisodeOrder, preflightEpisodeOrderAction
 - `explorer-page-cache.js`: cachedExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows, isStaleExplorerPage, rememberExplorerPage
 - `explorer.js`: FILMOGRAPHY_PAGE_SIZE, applyListHeaderSort, cachedShowDetail, cachedShowDetailMiss, currentExplorerSort, currentExplorerView, emptyExplorer and 49 more
 - `help-content.js`: adminTokenGuide, buildWebhookUrl, cronSyncGuide, embyCredentialGuide, embyWebhookSetup, jellyfinCredentialGuide, jellyfinWebhookSetup and 6 more
@@ -217,6 +222,8 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `history-poster-overlay.js`: historyPosterOverlay
 - `images.js`: batchedFallbackPosterUrl, bestTmdbLogo, bindPosterImageErrorHandler, cachedPosterLookup, clearPersistentPosterLookupCache, compactPosterUrl, configuredImageUrl and 19 more
 - `initial-sync.js`: initialSyncDialogMarkup, loadInitialSyncSummary, openInitialSyncDialog, renderInitialSync, startInitialSyncUi, stopInitialSyncUi
+- `install-check.js`: initInstallCheck
+- `legacy-image-banner.js`: renderLegacyImageBanner
 - `live-updates.js`: startLiveUpdates, stopLiveUpdates
 - `logs-viewer.js`: createLogsViewer, filterLogLines
 - `logs.js`: DEBUG_LOGS_KEY, MAX_DEBUG_LOGS, appendDebugLog, clearDebugLogs, clearDiagnosticLogs, escapeHtml, fetchDiagnosticLogs and 5 more
@@ -306,7 +313,10 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `backups.js`: handleBackupExport, handleBackupImport, handleImport, handlePlektBackups, handleWatchBackups, shouldSkipPostRestoreCompletedWebhook
 - `calendarFeed.js`: handleCalendarFeed, handleCalendarFeedSettings
 - `droppedTitles.js`: handleDroppedTitles
+- `episodeOrder.js`: handleEpisodeOrder, handleEpisodeOrderPreflight
 - `initialSync.js`: handleInitialSyncStatus
+- `installCheck.js`: handleInstallCheck
+- `legacyImage.js`: handleLegacyImage
 - `liveUpdates.js`: handleLiveUpdates
 - `maintenance.js`: describePendingAlphaBuild, describePendingDevelopBuild, handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats, handleChangelog and 26 more
 - `manualWatchReview.js`: handleManualWatchReview
@@ -366,6 +376,9 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `embyLikePlaylists.js`: embyPlaylists, jellyfinPlaylists, normalizeEmbyLikePlaylist, normalizeEmbyLikePlaylistEntry
 - `episodeImportGuard.js`: isPlaceholderEpisodeTitle, isRemoteEpisodeImportValid, remoteEpisodeImportError
 - `episodeNumberMap.js`: buildEpisodeNumberMap, detectRowNumbering, episodeKey, planShowTranslation, translateEpisode
+- `episodeOrder.js`: annotateEpisodeOrder, assertNoDvdContainer, assertOrderInsert, changeEpisodeOrder, dvdToAired, episodeOrderDetails, episodeOrderError and 8 more
+- `episodeOrderTargets.js`: matchEpisodeOrderTarget, resolveEpisodeOrderTargets, resolveSourceOrderEpisode
+- `episodeOrderWatch.js`: assertOrderInsert, keepOrderProvenance, preflightOrderRecords, prepareEpisodeOrderTarget, resolveOrderMediaForPolling, resolveOrderWatch
 - `episodeTitleRepair.js`: episodeNameFromSeason, isPlaceholderEpisodeTitleValue, resolveStoredEpisodeName, resolvedEpisodeTitleForRecord
 - `eventLoop.js`: yieldToEventLoop
 - `fanartGateway.js`: fanartBuiltInAvailable, getAllFanartMovieImages, getAllFanartTvImages, getFanartMovieArt, getFanartTvArt, getFanartTvSeasonPosters
@@ -378,8 +391,10 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `initialOutwardSync.js`: armInitialSync, initialSyncDestinations, runInitialDestination, runInitialSync
 - `initialSyncBackup.js`: initialSyncBackupCollection, quarantineInitialSyncSetting
 - `initialSyncStore.js`: assertInitialImportsOpen, finalizeInitialSync, initialImportsCompleted, initialImportsPending, initialSyncSummary, patchInitialSync, readInitialSync and 6 more
+- `installCheck.js`: DEFAULT_INSTALL_CHECK_URL, answerInstallCheck, installArch, installChannel, installCheckAllowed, installCheckBody, installCheckNeedsAnswer and 8 more
 - `jellyfinAuth.js`: jellyfinAuthHeaders, jellyfinAuthorization, jellyfinCredential, setJellyfinApiKey
 - `jellyfinClient.js`: __resetJellyfinSeriesCache, __setJellyfinSeriesCacheNow, clearJellyfinPersonalRating, countJellyfinWatchedItems, fetchJellyfinEpisodes, fetchJellyfinEpisodesForSeries, fetchJellyfinItemRuntimeMs and 16 more
+- `legacyImage.js`: LEGACY_IMAGE_MIN_SUPPORT_DATE, isLegacyImage, legacyImageNotice
 - `libraryAvailabilitySync.js`: mediaFromLibraryItem, reconcileAvailableWatchedItems
 - `libraryForceSync.js`: forceSyncLibraryState, normalizeLibraryForceSyncRequest, plannerMediaToSyncMedia, withLibrarySeriesIds
 - `liveSessionCompletion.js`: UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS, __setCompletionAfterInsertHook, __setCompletionBeforeRecheckHook, __setStoppedProgressBeforeWriteHook, refreshLiveSessions, upNextProvidersToProbeForOutage
@@ -500,7 +515,9 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `traktProviderReconciliation.js`: groupTraktProviderOverrideRows, reconcileTraktProviderOverrides, seasonContainsEpisodes
 - `translatedSeasonWarmup.js`: needsTranslatedSeasonWarmup, translatedRowSeasons, warmTranslatedRowSeasons
 - `tuning.js`: DEFAULT_PLEX_HISTORICAL_WATCHED_SYNC, DEFAULT_WATCH_IMPORT_MODE, WATCH_IMPORT_MODES, activeSessionTtlMs, applyTuningConfig, minResumePositionMs, normalizePlexHistoricalWatchedSync and 12 more
-- `tvdbGateway.js`: RELATED_TV_SEARCH_MISS_TTL_MS, getCachedTvdbEpisodeKind, getCachedTvdbSeasonEpisodes, getTvdbEnglishSeriesOverview, getTvdbSeasonEpisodes, getTvdbSeriesArtwork, getTvdbSeriesExtended and 10 more
+- `tvdbGateway.js`: RELATED_TV_SEARCH_MISS_TTL_MS, getCachedTvdbEpisodeKind, getCachedTvdbSeasonEpisodes, getTvdbEnglishSeriesOverview, getTvdbSeasonEpisodes, getTvdbSeriesArtwork, getTvdbSeriesExtended and 11 more
+- `tvdbOrderGateway.js`: getCachedTvdbOrderCatalogue, getTvdbOrderCatalogue, normalizeTvdbOrderEpisodes
+- `tvdbOrderTypes.js`: AIRED_ORDER, ALTERNATE_ORDERS, ORDER_NAMES, ORDER_TYPES, isAlternateOrder
 - `unwatchedStatusPoll.js`: EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED, EMBY_UNWATCHED_POLL_INTERVAL_MS, JELLYFIN_UNWATCHED_POLL_ENABLED, JELLYFIN_UNWATCHED_POLL_INTERVAL_MS, PLEX_UNWATCHED_POLL_INTERVAL_MS, checkEmbyUnwatchedStatus, checkJellyfinUnwatchedStatus and 8 more
 - `upNextAutoSync.js`: UP_NEXT_AUTO_SYNC_JOB, UP_NEXT_PRIORITY_SYNC_JOB, configuredUpNextProviders, rememberUpNextSync, requestUpNextAutoSync, runAutomaticUpNextSync, upNextQueueFingerprint and 1 more
 - `upNextCache.js`: getUpNextCacheSnapshot, refreshUpNextAfterMutation

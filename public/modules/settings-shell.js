@@ -8,9 +8,9 @@ const SECTIONS = {
   // Parent groups show all their child sections on one page
   general: {
     label: "General",
-    description: "Account configuration, system integrity diagnostics, and image cache",
+    description: "Account configuration, system integrity diagnostics, privacy, and image cache",
     panel: "general",
-    subPanels: ["general-login", "tools-diagnostics", "cache"],
+    subPanels: ["general-login", "tools-diagnostics", "install-check", "cache"],
   },
   "media-servers": {
     label: "Media servers",
@@ -270,6 +270,13 @@ const SECTIONS = {
     description: "Version history and release notes",
     panel: "changelog",
   },
+  privacy: {
+    label: "Privacy",
+    description: "Optional anonymous daily check that counts Plekt installs",
+    panel: "general",
+    subPanels: ["install-check"],
+    isDisplayOnly: true,
+  },
   storage: {
     label: "Storage & cache",
     description: "Artwork and metadata cache usage",
@@ -331,8 +338,8 @@ const SECTION_GROUPS = [
   {
     id: "general",
     label: "General",
-    sections: ["account", "system-integrity", "storage"],
-    displayOnly: ["account", "system-integrity", "storage"],
+    sections: ["account", "system-integrity", "privacy", "storage"],
+    displayOnly: ["account", "system-integrity", "privacy", "storage"],
   },
   {
     id: "media-servers",

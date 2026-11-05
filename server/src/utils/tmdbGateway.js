@@ -1,4 +1,4 @@
-import crypto from "node:crypto";
+import crypto from "node:crypto"; import { episodeOrderSeason } from "./episodeOrder.js";
 import { bumpDiscoverVersion, db, parseJson, toJson } from "../db.js";
 import { fetchWithTimeout } from "./outbound.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
@@ -1557,7 +1557,7 @@ export async function getTmdbShowSeasonLists({ tmdbId, cachedOnly = false, lane 
   return lists;
 }
 
-export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seasonNumber, lane = "enrichment" }) {
+export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seasonNumber, lane = "enrichment", displayOrder = false }) {
   const id = String(tmdbId || "");
   const directTvdbId = String(requestedTvdbId || "");
   const number = Number(seasonNumber);
@@ -1566,8 +1566,6 @@ export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seas
     error.status = 400;
     throw error;
   }
-  // Shows that only exist on TVDB are cached under `tv_tvdb_<id>` because they
-  // have no TMDB id to key on, so accept the TVDB id directly as well.
   // TV metadata can be cached under the TVDB alias when the provider resolved
   // the show through TVDB first. Still accept a TMDB-id season request by
   // looking up that alias through the mirrored tmdb_id column; otherwise the
@@ -1576,6 +1574,8 @@ export async function getTmdbSeason({ tmdbId, tvdbId: requestedTvdbId = "", seas
     ? (metaGet(`tv_${id}`) || metaGet(`tv_tvdb_${id}`) || metaGetByTmdbId(id))
     : metaGetByTvdbId(directTvdbId);
   const tvdbId = directTvdbId || String(cached?.details?.external_ids?.tvdb_id || "");
+  const orderedSeason = displayOrder && tvdbId ? await episodeOrderSeason({tvdbId, seasonNumber:number}) : null;
+  if (orderedSeason) return orderedSeason;
   if (!tvdbId) {
     const error = new Error("TVDB ID not resolved for this show yet");
     error.status = 404;

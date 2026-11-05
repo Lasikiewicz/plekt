@@ -1,7 +1,47 @@
 {
-  "version": "2.2.3.0.0",
-  "build": 0,
+  "version": "2.2.3.0.1",
+  "build": 1,
   "resetCommit": "04090acd7ea8a5f3e68d8a41af6023f847fe53df",
-  "updatedAt": "2026-10-31T10:17:08.072Z",
-  "entries": []
+  "updatedAt": "2026-11-05T09:12:39.047Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-11-05T09:12:39.047Z",
+      "commit": "5cfa272e3a2cb145c7725b061e384457714bb71d",
+      "message": "This update includes stop one watch splitting into two Trakt writes (v2.2.3), add safe per-show DVD episode order, show a retirement notice on the Plembfin Docker image, add a log download range, an opt-in install check and TVDB alternate episode orders, complete log downloads, tidy the Logs screen and fix the mobile Info panel, and skip Simkl for alternate episode orders and translate the order on every watch path.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.",
+        "Choose Aired or DVD order per show while preserving the existing metadata source choice.",
+        "Review, save, replace and remove DVD-to-aired episode links from the show menu.",
+        "Block watch-state changes when episode identities cannot be verified for every required destination.",
+        "Prevent stale background retries from restoring a deleted or superseded watch.",
+        "Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.",
+        "The notice returns after each update until the install switches, and never appears on the Plekt image.",
+        "Added four short switch steps for Docker Compose, Docker run, Unraid and Watchtower to the README and the upgrade guide, and stated that the old image names keep receiving updates until at least 11 April 2027.",
+        "Download Logs on the Logs screen now has a Download range choice (last hour, 6 hours, 24 hours, 3 days or all kept logs) and exports up to the 20,000 lines Plekt keeps instead of the newest 500.",
+        "Fix the Clear, Download and Copy buttons being cut off under the log terminal on shorter windows.",
+        "Add an optional anonymous daily check under Settings, General, Privacy. It is off until you turn it on, shows the exact payload it would send, and sends no identifier, server address or library data.",
+        "A show's Episode order menu now offers every order TVDB lists for it, not only Aired and DVD, and alternate orders use TVDB's own name for the show.",
+        "Alternate episode links record which order they belong to; links saved before this count as DVD.",
+        "Download Logs on the Logs screen now includes every kept line for the chosen range, instead of silently dropping the oldest few hundred.",
+        "The Logs screen fills the window with the same gap at the bottom as the other edges, and the filter box and Download range dropdown now match the rest of the app, with their labels beside them.",
+        "Log entries on a phone show the message on its own full-width line instead of one word per line.",
+        "The show and movie Info panel on a phone starts below the top bars, so its poster and title are no longer hidden, and a long title wraps by words instead of one letter per line.",
+        "Choosing a non-Aired episode order for a show now warns that Simkl cannot confirm the episode and requires a checkbox before it can be used; without Simkl connected, a shorter note explains the same.",
+        "Watches for a show in a non-Aired order are no longer sent to Simkl, while Plex, Emby, Jellyfin and Trakt still receive them. Other shows are not affected.",
+        "Plex library-change notifications, the scheduled recently-watched import for Plex, Emby and Jellyfin, and live-session completion now translate the chosen episode order before saving, so nothing is stored under the media server's own numbers.",
+        "A watch whose episode cannot be translated is skipped and logged with the reason, and the rest of the poll carries on.",
+        "The episode order dialog says plainly when a show has no alternative orders."
+      ],
+      "messageFragments": [
+        "Fix - Stop one watch splitting into two Trakt writes (v2.2.3)",
+        "Feature - Add safe per-show DVD episode order",
+        "Feature - Show a retirement notice on the Plembfin Docker image",
+        "Feature - Add a log download range, an opt-in install check and TVDB alternate episode orders",
+        "Fix - Complete log downloads, tidy the Logs screen and fix the mobile Info panel",
+        "Feature - Skip Simkl for alternate episode orders and translate the order on every watch path"
+      ]
+    }
+  ]
 }

@@ -10,12 +10,48 @@ sourcePaths:
   - packaging/windows/README.md
   - packaging/windows/Plekt.iss
   - server/src/utils/brandEnv.js
+  - server/src/utils/legacyImage.js
+  - public/modules/legacy-image-banner.js
 screenshots: []
 ---
 
 Plekt is the new name for Plembfin. Upgrade your existing instance with its existing data;
 you do not need to create a new account, reconnect your media servers, or import your history.
-The steps below cover the v2.2.0 update.
+
+## Switching from the Plembfin Docker image
+
+The Plembfin Docker image is being retired. If Plekt showed you a notice about it, this is how
+to fix it. It takes a few minutes and keeps all your data. The old image keeps receiving
+updates until at least **11 April 2027**, so there is no rush, but it will stop after that.
+
+**You only change the image name.** Keep your tag, data folder, port and settings as they are.
+
+| Registry | Old image (retiring) | New image |
+| --- | --- | --- |
+| Docker Hub | `plembfin/plembfin` | `plembfin/plekt` |
+| GitHub Container Registry | `ghcr.io/lasikiewicz/plembfin` | `ghcr.io/lasikiewicz/plekt` |
+
+1. In [Settings → Backup](/docs/settings/backup/), create a full encrypted backup.
+2. Change the image name where you set it:
+   - **Docker Compose:** change the `image:` line in your existing file.
+   - **Docker run:** change the image at the end of your command.
+   - **Unraid:** change the **Repository** field.
+   - **Watchtower:** Watchtower cannot switch a container to a different image name. Change the
+     image in your Compose file or run command, then recreate the container.
+3. Recreate the container:
+   - **Compose:** `docker compose pull`, then `docker compose up -d`.
+   - **Docker run:** remove the container (never its data folder or volume) and run the same
+     command again.
+   - **Unraid:** select **Apply**.
+4. Open Plekt and sign in. Check your history is there and
+   [Settings → About](/docs/settings/about/) shows the version you expect.
+
+If you see **Claim this Plekt instance** or an empty history, stop and check that the data
+folder is mounted at `/data` before doing anything else.
+
+Not using Docker, or want the full upgrade with backups and rollback? Use the guide below.
+
+## Full upgrade guide
 
 ## Before you update
 
@@ -45,17 +81,18 @@ settings. Keeping those names also avoids accidentally creating a new Compose-ma
 | Docker Hub | `plembfin/plembfin` | `plembfin/plekt` |
 | GitHub Container Registry | `ghcr.io/lasikiewicz/plembfin` | `ghcr.io/lasikiewicz/plekt` |
 
-For the stable v2.2.0 update, use `plembfin/plekt:2.2.0` or
-`ghcr.io/lasikiewicz/plekt:2.2.0`. Keep your existing channel if you deliberately use an
-alpha or develop tag. Both old image names continue receiving releases for at least six
-months after the rebrand, so changing the image name can wait until you are ready.
+Keep the tag you use today. Use `plembfin/plekt:latest` or `ghcr.io/lasikiewicz/plekt:latest`
+for the stable release, or a specific version such as `:2.2.3`; do not pick an older version
+than the one you run now. Keep your existing channel if you deliberately use an alpha or
+develop tag. Both old image names keep receiving releases until at least 11 April 2027, so
+changing the image name can wait until you are ready.
 
 For example, an existing service named `plembfin` can keep that name:
 
 ```yaml
 services:
   plembfin:
-    image: ghcr.io/lasikiewicz/plekt:2.2.0
+    image: ghcr.io/lasikiewicz/plekt:latest
     # Keep the existing volumes, ports, environment, and other settings here.
 ```
 
@@ -100,7 +137,7 @@ move its data, follow the reported error and retry with the preserved data.
 
 ## Node.js or a custom service
 
-Stop the existing process or service and deploy the v2.2.0 release using your usual update
+Stop the existing process or service and deploy the release you are upgrading to using your usual update
 method. Keep the same data directory, `.env` file, credentials, and service environment.
 If you launch from a new application directory, explicitly point `DATA_DIR` at the existing
 data directory so the app does not start an empty instance. Install the release's
@@ -124,7 +161,7 @@ bookmarks, reverse-proxy upstreams, firewall rules, and each media-server
 ## Verify before resuming normal use
 
 1. Open your chosen dashboard address and sign in with the existing account. Check
-   [Settings → About](/docs/settings/about/) reports v2.2.0.
+   [Settings → About](/docs/settings/about/) reports the version you expect.
 2. Check familiar watch history and resume progress, plus your
    [Watchlist](/docs/watchlist/), [Ratings](/docs/ratings/), and [Playlists](/docs/playlists/).
 3. Check the configured [media servers](/docs/settings/media-servers/) and other

@@ -3,6 +3,7 @@ import { db, parseJson, toJson } from "../db.js";
 import { fetchWithTimeout } from "./outbound.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
 import { readSharedTvdbToken, writeSharedTvdbToken } from "./sharedMetadataStore.js";
+import { ORDER_TYPES } from "./tvdbOrderTypes.js";
 
 // Shared TVDB v4 project key - intentionally public: TVDB issues these for
 // open-source apps to embed, and rate-limits them upstream. Operators can swap
@@ -305,7 +306,9 @@ function normalizeTvdbId(value) {
 
 function tvdbEndpointUrl(endpoint, params = {}) {
   const url = new URL(`${API_ROOT}/`);
-  if (endpoint === "search") {
+  if (endpoint?.type === "order-endpoint" && (/^\/seasons\/types$/.test(endpoint.path) || new RegExp(`^/series/\\d+/episodes/(${ORDER_TYPES.join("|")})(/eng)?$`).test(endpoint.path))) {
+    url.pathname = `/v4${endpoint.path}`;
+  } else if (endpoint === "search") {
     url.pathname = "/v4/search";
   } else if (endpoint === "artwork-types") {
     url.pathname = "/v4/artwork/types";
@@ -375,7 +378,12 @@ async function upstream(endpoint, params = {}, attempt = 0, { lane = "enrichment
     throw error;
   }
   const body = await response.json();
-  return body?.data;
+  return endpoint?.type === "order-endpoint" ? body : body?.data;
+}
+
+// Alternate-order readers need the pagination envelope as well as the data.
+export async function requestTvdbOrderEndpoint(path, params = {}) {
+  return upstream({ type: "order-endpoint", path }, params, 0, { lane: "interactive" });
 }
 
 // A stored "series" id can actually be one of its own episode's ids - TVDB

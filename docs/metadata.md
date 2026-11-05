@@ -45,6 +45,7 @@ metadata. Automatic lookup results are derived data, not saved confirmations or 
 | --- | --- |
 | `server/src/utils/tmdbGateway.js` | TMDB gateway + merged TV details assembly, discovery feeds, collection search/details; caches in `tmdb_metadata_cache`, `tmdb_search_cache`, `tmdb_person_cache` |
 | `server/src/utils/tvdbGateway.js` | TheTVDB v4 gateway; caches in `tvdb_metadata_cache`, `tvdb_season_cache` |
+| `server/src/utils/tvdbOrderGateway.js` | Fetches complete, separately identified official and DVD episode catalogues through the TVDB gateway; versioned successful catalogues and season types share `tvdb_metadata_cache` |
 | `server/src/utils/fanartGateway.js` | Fanart.tv artwork (posters, season posters, backdrops, HD logos); caches in `fanart_cache` |
 | `server/src/utils/omdbGateway.js` | OMDb - IMDb rating/votes by IMDb id (`omdb_cache`, 7-day TTL) |
 | `server/src/utils/nextAiringCache.js` | File-backed next-airing cache used to narrow Upcoming page episode lookups |
@@ -90,6 +91,26 @@ The split is invisible to callers: `getTmdbDetails()` / `getTmdbSeason()`
 (`tmdbGateway.js`) return one merged shape for TV, keyed by TMDB id, so every caller
 (routes, frontend, `deriveNextAiring`) is unaware of the split. TheTVDB's numbering is
 deliberately preferred because it is more accurate than TMDB's own for many shows.
+
+### Per-show Aired and DVD order
+
+The Episode order menu on a show's detail page can select TheTVDB's Aired or DVD order
+for displaying its seasons and episodes. The order catalogue retains each provider episode
+ID and coordinate separately; choosing DVD does not rewrite existing watch rows or replay
+history. A DVD-to-aired link can be reviewed, saved, replaced, or removed in the menu. Saves
+are revision-checked against the current catalogue and mapping preview.
+Switching back to Aired restores the show's existing TVDB/TMDB structure choice from
+Fix Match; DVD selection never overwrites that preference.
+
+New DVD-order watch actions are resolved to canonical aired coordinates before local history
+is saved or outbound intent is queued. A missing or ambiguous mapping blocks the whole watch.
+For Plex, Emby, and Jellyfin, the resolver requires one exact episode TVDB ID in that
+destination's series episode list and retains the destination's native episode ID and
+coordinates. Trakt resolution requires the exact episode TVDB ID and a verified parent
+series TVDB ID. If connected Simkl is a watched destination, the current resolver blocks
+the mapping because it cannot verify the leaf episode identity from its available read path.
+Existing unproven history or shows whose local rows use TMDB numbering can require review
+before a mapping is accepted.
 
 The Netflix CSV importer is a separate matching path: it keeps TMDB episode coordinates.
 `netflixImport.js` orchestrates previews, review and commit; `netflixCsv.js` owns CSV and

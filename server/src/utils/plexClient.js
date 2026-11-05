@@ -1,4 +1,4 @@
-import { traceLog } from "./logVerbose.js";
+import { traceLog } from "./logVerbose.js"; import { prepareEpisodeOrderTarget } from "./episodeOrderWatch.js";
 import { plexRatingSnapshotPage, ratingSnapshotArray } from "./ratingSnapshotSafety.js";
 import { fetchPlexWithRefresh, plexRequestHeaders } from "./plexFetch.js";
 import { compoundEpisodeForMedia, compoundEpisodeItemsForMedia } from "./compoundEpisode.js";
@@ -761,7 +761,7 @@ async function plexItemsAlreadyWatched(config, items, media) {
 
 export async function markPlexPlayed(config, media) {
   try {
-    requirePlexConfig(config);
+    requirePlexConfig(config); media = await prepareEpisodeOrderTarget(media,"plex",config,"watched");
 
     // Adapter-level enforcement of the provider matrix, deliberately redundant
     // with syncOrchestrator's target filtering: `/:/scrobble` is the only
@@ -829,7 +829,7 @@ export async function markPlexPlayed(config, media) {
 
 export async function markPlexUnplayed(config, media) {
   try {
-    requirePlexConfig(config);
+    requirePlexConfig(config); media = await prepareEpisodeOrderTarget(media,"plex",config,"unwatched");
 
     const item = await findPlexItemForMutation(config, media);
     if (!item?.ratingKey) {

@@ -475,7 +475,7 @@ wraps into a one-item `views` array automatically):
 
 | Group | Views |
 | --- | --- |
-| General | `general` panel's Account, System Integrity (`tools-diagnostics`), and Image Cache (`cache`) rows |
+| General | `general` panel's Account, System Integrity (`tools-diagnostics`), Privacy (`install-check`), and Image Cache (`cache`) rows |
 | Media servers | `apps` panel's Plex, Emby, and Jellyfin rows |
 | Webhooks | `general` panel's Setup Guides (`general-endpoints-guides`) and Webhook Secret (`general-endpoints`) rows |
 | Connections | `tools` panel's Trakt (`tools-migration`), One Time Imports (`tools-one-time-imports`, containing Tautulli and Netflix), and Seerr rows |
@@ -600,6 +600,40 @@ Old bookmarks are normalized with `history.replaceState`:
 | `/settings/about`, `/settings/system/about` | `/about` |
 
 The forced-password-change state always resolves to the Account section (`/settings/account`; the normal sidebar path is `/settings/general#account`).
+
+## Anonymous daily check (opt-in)
+
+Settings → General → Privacy (its own entry in the General menu, section `privacy`) holds one switch, "Send an anonymous daily check". It is off
+until the user chooses. An install that has not answered gets a one-time card (Turn it on /
+Keep it off) the first time an admin opens the app; closing the page without choosing asks
+again, and either answer is final until changed here.
+
+When on, the scheduler sends at most one `POST <collector>/v1/active` per UTC day:
+
+```json
+{"first":false,"week":true,"month":false,"v":"2.2.3","channel":"main","arch":"amd64"}
+```
+
+- `first`, `week` and `month` come from the UTC date of the last accepted check, kept in the
+  `settings` row `install_check`. The collector can count new, weekly-active and
+  monthly-active installs without telling installs apart.
+- `v` is the app version, `channel` is `main`, `alpha` or `develop`, and `arch` is `amd64`,
+  `arm64` or `other`.
+- There is no install ID, token, account, server address, hostname, library, provider name
+  or watch data. The collector still sees the connection's source IP, as any server does.
+- A development build (`BUILD_CHANNEL=develop`, which local `npm start` defaults to), the
+  public demo, an unanswered install, and an install with the switch off send nothing.
+- The collector defaults to `https://active.plekt.net` (a Cloudflare Worker, source in
+  `workers/install-check/`). `PLEKT_INSTALL_CHECK_URL` points it at another base address
+  (`v1/active` is appended), or set to `off` it sends nothing from that server and Settings
+  says so.
+- A failed send is silent, waits an hour and keeps the flags as they were. It never affects
+  sync.
+- Settings shows the exact payload that would be sent now.
+
+Code: `server/src/utils/installCheck.js`, `server/src/routes/installCheck.js`
+(`GET`/`POST /api/install-check`, admin only), the "Install check" scheduler step, and
+`public/modules/install-check.js`.
 
 ## Configuration and secrets
 
@@ -742,7 +776,9 @@ paused. **Follow latest** scrolls to new entries; scrolling up turns it off, and
 turns it back on. Refresh preserves a visible entry when the bounded log window rolls forward.
 The case-insensitive **Filter text** searches fetched entries within the selected category,
 including the paused snapshot. Copy Logs copies matching entries; Download Logs still exports
-all categories. The view shows at most 250 backend and 50 browser entries and refreshes every
+all categories, for the **Download range** chosen beside it (last hour, 6 hours, 24 hours
+default, 3 days, or all kept logs; `GET /api/diagnostic-logs?hours=N&limit=21000`, bounded by
+the log ring buffer of about 20,000 rows, which is trimmed in batches and can run slightly over). The view shows at most 250 backend and 50 browser entries and refreshes every
 three seconds while open and unpaused. Opening or switching category starts at the latest entries.
 
 The **Server Logs** panel (`/settings/logs`) displays real-time and historical diagnostic logs captured by the server alongside browser output. Logs are automatically categorized and can be filtered using interactive tabs:

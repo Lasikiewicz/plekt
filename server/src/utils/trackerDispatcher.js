@@ -10,7 +10,7 @@ import { traktNotFoundCount, traktDispatchErrorDetail } from "./trackers/trakt.j
 import { runTraktWrite, withTraktRateLimitRetry } from "./trackers/traktWrites.js";
 import { dispatchSimklWatchState } from "./trackers/simklDispatch.js";
 import { trackerBacklogSkipReason } from "./trackers/backlogGate.js";
-import { TARGET_DECISIONS } from "./watchSyncPolicy.js";
+import { TARGET_DECISIONS } from "./watchSyncPolicy.js"; import { resolveOrderWatch } from "./episodeOrderWatch.js"; import { loadMediaConfig } from "./configStore.js";
 
 export { withTraktRateLimitRetry } from "./trackers/traktWrites.js";
 const traktAdapter = getTrackerAdapter("trakt");
@@ -809,7 +809,7 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
   const resolved = [];
   for (const { index, sourceMedia } of eligible) {
     try {
-      const canonicalMedia = mediaWithTraktOverride(await withSeasonSourceTraktOverride(canonicalCompoundEpisodeMedia(sourceMedia)));
+      const canonicalMedia = mediaWithTraktOverride(await withSeasonSourceTraktOverride(canonicalCompoundEpisodeMedia(sourceMedia),{stateType:state}));
       const [candidate] = await trackerDispatchMediaCandidates(canonicalMedia, {
         includeTitleFallback: true,
         primaryHydrationCache,
@@ -1336,7 +1336,7 @@ async function dispatchTrakt(media, state, lane = "sync", isCancelled = () => fa
   const retryWatchedAt = media?.watched_at || media?.watchedAt || "";
   // Trakt has one canonical coordinate for some two-part episodes (a split part is normalized
   // here; the local row is untouched). A Fix Match replaced show maps new watches too.
-  media = mediaWithTraktOverride(await withSeasonSourceTraktOverride(canonicalCompoundEpisodeMedia(media)));
+  media = mediaWithTraktOverride(await withSeasonSourceTraktOverride(canonicalCompoundEpisodeMedia(media),{stateType:state}));
   let connection = await withFreshTraktConnection();
   if (!connection) return { target: "trakt", status: "skipped", detail: "Trakt is not connected" };
   // Anything sourced from Trakt itself - the live poller ("trakt") or a bulk
@@ -1485,6 +1485,7 @@ export async function primeTrackerWatchStateIntents(entries = [], {
 }
 
 export async function dispatchTrackerWatchState(media, state, { lane = "sync", isCancelled = () => false } = {}) {
+  media = await resolveOrderWatch(media, await loadMediaConfig(), {stateType:state});
   const requested = Array.isArray(media.syncTargets) ? new Set(media.syncTargets.map((target) => String(target).trim().toLowerCase())) : null;
   const connections = listTrackerConnections().filter(({ provider, status }) => status !== "disabled"
     && (!requested || requested.has(provider)));
@@ -1494,9 +1495,10 @@ export async function dispatchTrackerWatchState(media, state, { lane = "sync", i
     try {
       const adapter = assertTrackerEnabled(provider);
       if (isCancelled()) return { target: provider, status: "cancelled", detail: `${adapter.label} dispatch was cancelled before it started` };
-      // A change that came from this tracker (its poll or import) is already
-      // there; writing it back would add a duplicate play.
+      // Suppress source tracker echoes to avoid duplicate plays.
       if (trackerProviderForSource(media.source) === provider) return { target: provider, status: "skipped", detail: "Source tracker echo suppressed" };
+      // A watch resolved from a non-Aired order is never sent to Simkl, which cannot prove the episode.
+      if (provider === "simkl" && (media.watch_provenance || media.watchProvenance)?.episode_order) return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: "Simkl does not support alternate episode orders; this show's watches are not sent to Simkl" };
       const backlog = trackerBacklogSkipReason(connection, media, adapter.label, { sourceTracker: trackerProviderForSource(media.source) });
       // Recorded as a deliberate, non-retryable skip so the row's telemetry is complete.
       if (backlog) return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: backlog };

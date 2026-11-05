@@ -1,15 +1,15 @@
-import { state, elements } from "./state.js?v=2.2.3.0.0";
-import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.3.0.0";
-import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.0";
-import { isWatchedHistoryAction } from "./sync.js?v=2.2.3.0.0";
-import { mergeShowDetail } from "./explorer.js?v=2.2.3.0.0";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.3.0.0";
-import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.3.0.0";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.3.0.0";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.3.0.0";
-import { tmdbPoster } from "./images.js?v=2.2.3.0.0";
-import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.3.0.0";
-import { ifLoaded } from "./route-modules.js?v=2.2.3.0.0";
+import { state, elements } from "./state.js?v=2.2.3.0.1";
+import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.3.0.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.1";
+import { isWatchedHistoryAction } from "./sync.js?v=2.2.3.0.1";
+import { mergeShowDetail } from "./explorer.js?v=2.2.3.0.1";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.3.0.1"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.3.0.1";
+import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.3.0.1";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.3.0.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.3.0.1";
+import { tmdbPoster } from "./images.js?v=2.2.3.0.1";
+import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.3.0.1";
+import { ifLoaded } from "./route-modules.js?v=2.2.3.0.1";
 
 const resetPartWatchedView = ifLoaded("dashboard", "resetPartWatchedView");
 const renderPartWatched = ifLoaded("dashboard", "renderPartWatched");
@@ -1190,6 +1190,7 @@ export async function markDiscoverWatched(item = {}) {
 }
 
 export async function postManualWatchRecords(records, onProgress) {
+  if (records.some(row=>(row.media_type || row.type) === "episode")) records = (await preflightEpisodeOrderAction({records})).records;
   let inserted = 0;
   let skipped = 0;
   let rejected = 0;
@@ -1735,11 +1736,8 @@ export async function confirmAndMarkUnwatched(button) {
   }
 
   try {
-    // /api/manual-unwatch caps a single request at 100 ids, so a show/season
-    // whole-scope unwatch (every watched episode's id, which can easily
-    // exceed that for a long-running show) has to go out in chunks instead
-    // of one request - otherwise it 413s, the animation reverts, and every
-    // episode is left showing watched with no indication why.
+    // Preflight the entire selection before sending its 100-item chunks.
+    await preflightEpisodeOrderAction({ids});
     let succeeded = 0;
     let failed = 0;
     let queued = 0;

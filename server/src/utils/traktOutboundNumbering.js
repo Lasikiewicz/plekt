@@ -2,6 +2,8 @@ import { db } from "../db.js";
 import { readShowNumbering } from "./seasonSource.js";
 import { showNumberMap } from "./showSeasonTranslation.js";
 import { translateEpisode } from "./episodeNumberMap.js";
+import { resolveOrderWatch } from "./episodeOrderWatch.js";
+import { loadMediaConfig } from "./configStore.js";
 
 // Saved per-row Trakt coordinates win. Later watches and restored rows use
 // the explicit per-show choice and cached seasons to map stored TVDB numbers
@@ -13,9 +15,10 @@ const replacedShowStmt = db.prepare(`
   LIMIT 1
 `);
 
-export async function withSeasonSourceTraktOverride(media = {}) {
+export async function withSeasonSourceTraktOverride(media = {}, {stateType = "watched"} = {}) {
+  media = await resolveOrderWatch(media, await loadMediaConfig(), {stateType});
   if ((media.type || media.mediaType) !== "episode") return media;
-  let provenance = media.watch_provenance || {};
+  let provenance = media.watch_provenance || media.watchProvenance || {};
   if (typeof provenance === "string") {
     try { provenance = JSON.parse(provenance); } catch { provenance = {}; }
   }

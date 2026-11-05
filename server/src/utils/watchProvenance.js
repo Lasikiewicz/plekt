@@ -1,3 +1,5 @@
+import { ALTERNATE_ORDERS } from "./tvdbOrderTypes.js";
+
 const MAX_TEXT_LENGTH = 240;
 
 const LEGACY_NOTE = "Record predates detailed provenance capture; only the originating platform was retained.";
@@ -103,6 +105,7 @@ export function normalizeWatchProvenance(value, defaults = {}) {
     ...(sourceTitle ? { source_title: sourceTitle } : {}),
     ...(Number.isFinite(percentComplete) ? { percent_complete: Math.max(0, Math.min(100, percentComplete)) } : {}),
     ...(providerOverrides ? { provider_overrides: providerOverrides } : {}),
+    ...(input.episode_order && typeof input.episode_order === "object" ? { episode_order: { tvdbId:text(input.episode_order.tvdbId,100), dvdId:integer(input.episode_order.dvdId), airedId:integer(input.episode_order.airedId), ...(ALTERNATE_ORDERS.includes(input.episode_order.order) ? { order:input.episode_order.order } : {}) } } : {}),
     note: text(input.note || defaults.note || (confidence === "source_only" ? LEGACY_NOTE : ""), 400),
   };
 }

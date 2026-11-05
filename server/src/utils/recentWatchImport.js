@@ -18,6 +18,7 @@ import { librarySeriesItemId, withSeriesIdentity } from "./seriesIdentity.js";
 import { enqueueManualWatchReview } from "./manualWatchReview.js";
 import { addTimingHistoryRow, recordSyncHistory } from "./syncHistoryTelemetry.js";
 import { checkIncomingEpisodeSourceMismatch } from "./sourceMismatch.js";
+import { keepOrderProvenance, resolveOrderMediaForPolling } from "./episodeOrderWatch.js";
 
 // A library-history endpoint exposes the server's current played snapshot; it
 // does not prove another viewing occurred. A canonical Plembfin playstate can
@@ -325,6 +326,9 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         media.seriesItemId = librarySeriesItemId(item, "plex");
         media = await withSeriesIdentity(media, config);
         await checkIncomingEpisodeSourceMismatch(media, { runKey: sourceMismatchRunKey }).catch(() => null);
+        // Non-Aired order: translate before any dedupe or playstate lookup.
+        media = await resolveOrderMediaForPolling(media, config, (message) => logger(`Plex: ${message}`));
+        if (!media) continue;
       }
 
       media.runtimeMinutes = runtimeMinutesForSourceItem(item, "plex");
@@ -339,10 +343,10 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         historyRows: timingHistory,
       });
       media.watched_at = dateChoice.previewWatchedAt;
-      media.watchProvenance = buildWatchProvenance(
+      media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
         { source: "plex", event: "library_history", phase: "completed", itemId: item.ratingKey, user: username },
         { ingestPath: "plex_scheduled_library_history", sourceTimestamp: watchDate.sourceTimestamp, note: [watchDate.note, `Import policy: ${dateChoice.reason}.`].filter(Boolean).join(" ") },
-      );
+      ));
       if (skipMalformedLibraryHistoryItem(media, "Plex", logger, skippedMalformed)) continue;
       if (!scheduledMediaInScope(config, media)) continue;
 
@@ -479,7 +483,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         ? { ...(item.ProviderIds || {}), ...(item.SeriesProviderIds || {}) }
         : (item.ProviderIds || {});
       const ids = normalizeProviderIds(rawIds);
-      const media = await withSeriesIdentity({
+      let media = await withSeriesIdentity({
         title: item.Type === "Episode" ? `${item.SeriesName} - S${String(item.ParentIndexNumber ?? "?").padStart(2, "0")}E${String(item.IndexNumber ?? "?").padStart(2, "0")}` : item.Name,
         showTitle: item.Type === "Episode" ? (item.SeriesName || "") : null,
         type: item.Type === "Episode" ? "episode" : "movie",
@@ -502,6 +506,11 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         logger(`Emby: skipped watched item without a reliable played date: ${media.title}`);
         continue;
       }
+      // Non-Aired order: translate before any dedupe or playstate lookup.
+      if (media.type === "episode") {
+        media = await resolveOrderMediaForPolling(media, config, (message) => logger(`Emby: ${message}`));
+        if (!media) continue;
+      }
       const releaseDate = releaseDateForSourceItem(item, "emby");
       media.runtimeMinutes = runtimeMinutesForSourceItem(item, "emby");
       const dateChoice = resolveWatchImportDate({
@@ -515,10 +524,10 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
       });
       media.watched_at = dateChoice.previewWatchedAt;
 
-      media.watchProvenance = buildWatchProvenance(
+      media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
         { source: "emby", event: "library_history", phase: "completed", itemId: item.Id, user: config.emby.userId },
         { ingestPath: "emby_scheduled_library_history", sourceTimestamp: watchedAt, note: `Import policy: ${dateChoice.reason}.` },
-      );
+      ));
       if (skipMalformedLibraryHistoryItem(media, "Emby", logger, skippedMalformed)) continue;
       if (!scheduledMediaInScope(config, media)) continue;
 
@@ -637,7 +646,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         ? { ...(item.ProviderIds || {}), ...(item.SeriesProviderIds || {}) }
         : (item.ProviderIds || {});
       const ids = normalizeProviderIds(rawIds);
-      const media = await withSeriesIdentity({
+      let media = await withSeriesIdentity({
         title: item.Type === "Episode" ? `${item.SeriesName} - S${String(item.ParentIndexNumber ?? "?").padStart(2, "0")}E${String(item.IndexNumber ?? "?").padStart(2, "0")}` : item.Name,
         showTitle: item.Type === "Episode" ? (item.SeriesName || "") : null,
         type: item.Type === "Episode" ? "episode" : "movie",
@@ -664,6 +673,11 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         logger(`Jellyfin: skipped watched item without a reliable played date: ${media.title}`);
         continue;
       }
+      // Non-Aired order: translate before any dedupe or playstate lookup.
+      if (media.type === "episode") {
+        media = await resolveOrderMediaForPolling(media, config, (message) => logger(`Jellyfin: ${message}`));
+        if (!media) continue;
+      }
       const releaseDate = releaseDateForSourceItem(item, "jellyfin");
       media.runtimeMinutes = runtimeMinutesForSourceItem(item, "jellyfin");
       const dateChoice = resolveWatchImportDate({
@@ -677,10 +691,10 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
       });
       media.watched_at = dateChoice.previewWatchedAt;
 
-      media.watchProvenance = buildWatchProvenance(
+      media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
         { source: "jellyfin", event: "library_history", phase: "completed", itemId: item.Id, user: config.jellyfin.userId },
         { ingestPath: "jellyfin_scheduled_library_history", sourceTimestamp: watchedAt, note: `Import policy: ${dateChoice.reason}.` },
-      );
+      ));
       if (skipMalformedLibraryHistoryItem(media, "Jellyfin", logger, skippedMalformed)) continue;
       if (!scheduledMediaInScope(config, media)) continue;
 

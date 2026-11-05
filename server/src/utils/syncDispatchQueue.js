@@ -4,7 +4,8 @@ import { isAuthoritativeRestoreActive } from "./configStore.js";
 import { getTrackerConnection } from "./trackerConnectionRepo.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { provenanceTelemetryLines } from "./watchProvenance.js";
-import { dispatchGroupsForRows, getCachedHistory, invalidateHistoryDerivedCaches, updateWatchSyncRetry, updateWatchTelemetry, upsertPlaystateForMedia } from "./dataRepo.js";
+import { dispatchGroupsForRows, getCachedHistory, invalidateHistoryDerivedCaches, updateWatchSyncRetry, updateWatchTelemetry, upsertPlaystateForMediaSync } from "./dataRepo.js";
+import { db } from "../db.js";
 import { recordSyncHistory, isTargetSynced, targetTelemetryLine, traktTelemetryLine } from "./syncHistoryTelemetry.js";
 import { runWithConcurrency } from "./scheduledConcurrency.js";
 import { syncPendingTrackerWriteIntents } from "./trackerIntentWorker.js";
@@ -65,6 +66,14 @@ function dispatchSourceForPendingRow(row = {}, action = row.sync_action) {
   }
   return row.source;
 }
+
+function samePendingDispatchSnapshot(snapshot, current) {
+  return Boolean(current)
+    && String(current.sync_action || "watched").toLowerCase() === String(snapshot.sync_action || "watched").toLowerCase()
+    && (current.watched_at || null) === (snapshot.watched_at || null)
+    && Number(current.updated_at || 0) === Number(snapshot.updated_at || 0);
+}
+const pendingRowNow = db.prepare("SELECT sync_action,watched_at,updated_at FROM watch_history WHERE id=?");
 
 export async function syncPendingManualDispatches(config, loopStore, logger = console.log) {
   if (isAuthoritativeRestoreActive()) return 0;
@@ -136,6 +145,8 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
         if (isAuthoritativeRestoreActive()) return;
         try {
       const id = row.id;
+      const stillCurrent = () => samePendingDispatchSnapshot(row, pendingRowNow.get(id));
+      if (!stillCurrent()) continue;
       const action = String(row.sync_action || "watched").toLowerCase();
       const isUnwatched = action === "unwatched" || action === "unplayed";
       const dispatchSource = dispatchSourceForPendingRow(row, action);
@@ -179,19 +190,23 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       logger(`Background Queue: retrying/dispatching sync for ${media.title} (${id})...`);
       if (isAuthoritativeRestoreActive()) return;
       const stateMedia = { ...media, source: row.source || media.source };
-      if (isUnwatched) {
-        await upsertPlaystateForMedia(stateMedia, "unwatched", row.watched_at, { skipInvalidate: true });
-      } else {
-        await upsertPlaystateForMedia(stateMedia, "watched", row.watched_at, { skipInvalidate: true });
-      }
+      // A snapshot and its playstate promotion must stay together even when
+      // another process handles a newer manual action at the same time.
+      const promoted = db.transaction(() => {
+        if (!stillCurrent()) return false;
+        upsertPlaystateForMediaSync(stateMedia, isUnwatched ? "unwatched" : "watched", row.watched_at);
+        return true;
+      }).immediate();
+      if (!promoted || !stillCurrent()) continue;
       const summary = await (isUnwatched
-        ? syncMediaUnplayedPlaystate(media, config, loopStore)
-        : syncMediaPlaystate(media, config, loopStore)).catch((error) => ({
+        ? syncMediaUnplayedPlaystate(media, config, loopStore, { shouldDefer: () => !stillCurrent() })
+        : syncMediaPlaystate(media, config, loopStore, { shouldDefer: () => !stillCurrent() })).catch((error) => ({
         skipped: false,
         status: "error",
         details: `Outbound sync failed: ${error.message || String(error)}`,
         targetStates: [],
       }));
+      if (!stillCurrent()) continue; // never overwrite a newer row's telemetry
 
       // Targets skipped this round (already confirmed synced) had no dispatch
       // this time, so summary.targetStates has no line for them - carry their

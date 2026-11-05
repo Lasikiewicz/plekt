@@ -612,7 +612,6 @@ function importWatchlistCollectionBatch(name, documents, { reset = false } = {})
     }
   });
   run();
-
   let restore = null;
   if (["personalWatchlist", "personalWatchlistMutations"].includes(name)) restore = createWatchlistRestoreRevision();
   else if (WATCHLIST_BACKUP_COLLECTIONS.has(name)) restore = markWatchlistRestorePending();
@@ -641,7 +640,8 @@ export function importCollectionBatch(name, documents, { reset = false, portable
   });
   run();
 
-  if (["watchHistory", "playstate", "playbackProgress", "mediaArtwork", "seasonArtwork", "showSeasonSource"].includes(name)) bumpDataVersion();
+  if (["settings", "tvdbMetadataCache"].includes(name)) db.prepare("DELETE FROM tvdb_metadata_cache WHERE id LIKE 'order_catalogue_v%'").run();
+  if (["watchHistory", "playstate", "playbackProgress", "mediaArtwork", "seasonArtwork", "showSeasonSource", "settings"].includes(name)) bumpDataVersion();
   if (name === "droppedTitles") bumpUpNextVersion();
   return { collection: name, imported: documents.length, reset: Boolean(reset) };
 }

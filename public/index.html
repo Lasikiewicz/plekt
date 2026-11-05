@@ -8,29 +8,30 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.2.3.0.0" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.2.3.0.1" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.2.3.0.0"></script>
+    <script src="/theme-boot.js?v=2.2.3.0.1"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.3.0.0" />
-    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.3.0.0" />
-    <link rel="stylesheet" href="/styles.css?v=2.2.3.0.0" />
+    <link rel="modulepreload" href="/app.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/episode-order.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.3.0.1" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.3.0.1" />
+    <link rel="stylesheet" href="/styles.css?v=2.2.3.0.1" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
@@ -1022,6 +1023,53 @@
                                 <li><b>Plex Realtime Notifications</b> - checks the live Plex connection works (falls back to periodic polling if not).</li>
                                 <li><b>Cross-Platform Library Matching</b> - lists current "no matching item found" failures per platform.</li>
                               </ul>
+                            </li>
+                          </ul>
+                        </div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+
+                <!-- Privacy: anonymous daily install check (opt-in) -->
+                <div class="settings-row" data-sub-panel="install-check">
+                  <div class="settings-row-main">
+                    <article class="glass-panel p-section settings-card tool-section-card">
+                      <div class="section-heading sync-heading sync-static-heading">
+                        <div class="sync-heading-title">
+                          <p style="margin: 0;">Privacy</p>
+                        </div>
+                        <span>Optional anonymous daily check that counts active installs</span>
+                      </div>
+                      <div class="tool-item-row">
+                        <label class="checkbox-label"><input id="installCheckEnabled" type="checkbox"> Send an anonymous daily check</label>
+                        <p id="installCheckStatus" class="settings-help-text" aria-live="polite">Off until you choose. Nothing is sent.</p>
+                        <p class="settings-help-text"><b>What it does:</b> once a day, Plekt sends a tiny anonymous message saying it is running.</p>
+                        <p class="settings-help-text"><b>What is sent:</b> your Plekt version, release type and CPU type.</p>
+                        <p class="settings-help-text"><b>What is never sent:</b> your name, server address, library, watch history, connected services or any ID.</p>
+                        <p class="settings-help-text"><b>Your control:</b> it is off until you turn it on, and turning it off stops it straight away.</p>
+                        <p class="settings-help-text"><b>Exactly what is sent:</b></p>
+                        <pre id="installCheckPayload" class="install-check-payload"></pre>
+                      </div>
+                    </article>
+                  </div>
+                  <div class="settings-row-help">
+                    <article class="glass-panel p-section settings-card">
+                      <div class="section-heading">
+                        <p>Privacy - Help</p>
+                      </div>
+                      <div class="settings-help-content">
+                        <div>
+                          <ul>
+                            <li>
+                              <b>Anonymous daily check</b>
+                              <span>Lets the maintainer count how many people use Plekt and which versions are out there, so releases can be planned. It is off until you turn it on.</span>
+                              <span>It is sent once a day at most. Nothing is sent while the switch is off.</span>
+                            </li>
+                            <li>
+                              <b>What the values mean</b>
+                              <span><code>first</code>, <code>week</code> and <code>month</code> only say whether this is a new install, or its first check this week or month. <code>v</code> is your Plekt version, <code>channel</code> is the release type, and <code>arch</code> is your CPU type.</span>
+                              <span>There is no name, server address, library, watch history or install ID. The receiving server still sees the connection's IP address, as any website does.</span>
                             </li>
                           </ul>
                         </div>
@@ -3099,11 +3147,20 @@
                         <button id="logsFollowButton" class="button-ghost" type="button" aria-pressed="true">Follow latest</button>
                         <label>Filter text <input id="logsTextFilter" type="search" placeholder="Search this category" /></label>
                       </div>
-                      <p class="muted-copy">Pause freezes this snapshot. Resume to change category. Scrolling up turns off Follow latest. Text filtering ignores case; Download Logs exports all logs.</p>
+                      <p class="muted-copy">Pause freezes this snapshot. Resume to change category. Scrolling up turns off Follow latest. Text filtering ignores case; Download Logs exports every category for the range you pick (about the last 20,000 lines kept).</p>
                       <pre id="logsTerminal" class="logs-terminal" aria-live="polite"></pre>
 
                       <div class="settings-actions" style="margin-top: var(--space-3);">
                         <button id="clearLogsButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Clear Logs</button>
+                        <label class="logs-download-range">Download range
+                          <select id="downloadLogsRange">
+                            <option value="1">Last hour</option>
+                            <option value="6">Last 6 hours</option>
+                            <option value="24" selected>Last 24 hours</option>
+                            <option value="72">Last 3 days</option>
+                            <option value="0">All kept logs</option>
+                          </select>
+                        </label>
                         <button id="downloadLogsButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Download Logs</button>
                         <button id="copyLogsButton" class="button-primary sync-action-btn sync-tool-button" type="button">Copy Logs</button>
                       </div>
@@ -3452,7 +3509,8 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.2.3.0.0"></script>
-    <script type="module" src="/app.js?v=2.2.3.0.0"></script>
+    <script type="module" src="/modules/analytics.js?v=2.2.3.0.1"></script>
+    <script type="module" src="/modules/legacy-image-banner.js?v=2.2.3.0.1"></script>
+    <script type="module" src="/app.js?v=2.2.3.0.1"></script>
   </body>
 </html>

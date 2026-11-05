@@ -699,13 +699,19 @@ export async function handleDiagnosticLogs(req, res) {
   if (req.method !== "GET") return methodNotAllowed(res);
   if (!(await requireInstallAdmin(req, res))) return;
 
-  const limit = Math.min(Number(req.query?.limit || 500), 1000);
+  // Up to the ring-buffer size (about 20,000 rows, trimmed in batches so it can
+  // run a little over) so the Logs download covers its whole retention; the live
+  // viewer still asks for 500. getLogs() applies the final bound.
+  const limit = Math.min(Number(req.query?.limit || 500), 21000);
   const category = req.query?.category || "all";
+  // Optional "last N hours" window for the Logs download; absent or 0 means all.
+  const hours = Number(req.query?.hours);
+  const since = Number.isFinite(hours) && hours > 0 ? Date.now() - hours * 3600 * 1000 : 0;
   // getLogs() has always accepted a level filter, but the query parameter was
   // never read, so ?level=error silently returned everything.
   const requestedLevel = String(req.query?.level || "").toLowerCase();
   const level = ["info", "warn", "error"].includes(requestedLevel) ? requestedLevel : "";
-  const data = getDiagnosticLogs({ limit, category, level });
+  const data = getDiagnosticLogs({ limit, category, level, since });
   return sendJson(res, data, 200, { "Cache-Control": "no-store" });
 }
 

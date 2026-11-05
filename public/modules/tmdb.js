@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.0";
-import { state } from "./state.js?v=2.2.3.0.0";
-import { showTitleFrom, slug } from "./utils.js?v=2.2.3.0.0";
-import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.2.3.0.0";
-export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.2.3.0.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.1";
+import { state } from "./state.js?v=2.2.3.0.1";
+import { showTitleFrom, slug } from "./utils.js?v=2.2.3.0.1";
+import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.2.3.0.1";
+export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.2.3.0.1";
 
 let _tmdbBatchQueue = [];
 let _tmdbBatchTimer = null;
@@ -159,7 +159,7 @@ export async function fetchTmdbSeasonDetails(showId, seasonNumber) {
     : `tmdbId=${encodeURIComponent(showId)}`;
   // Version the response URL so browsers do not reuse a season body cached
   // before the English-first episode text policy was added.
-  const promise = fetch(`/api/tmdb-season?${idParam}&seasonNumber=${encodeURIComponent(seasonNumber)}&episodeTextVersion=1`, { headers: authHeaders() })
+  const promise = fetch(`/api/tmdb-season?${idParam}&seasonNumber=${encodeURIComponent(seasonNumber)}&episodeTextVersion=1`, { headers: authHeaders(), cache:"no-store" })
     .then(async (res) => {
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);

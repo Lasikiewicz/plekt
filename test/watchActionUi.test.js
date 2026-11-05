@@ -4,6 +4,21 @@ import "./domStubs.js";
 
 const { applyWatchDateChoice, closeWatchDatePrompt, confirmAndMarkUnwatched, hasSavingWatchActionForShow, initWatchAction, markSavingEpisodeComplete, renderWatchDatePrompt, savingEpisodeKeysForShow, toggleWatchDateIncludeUnreleased, watchActionFromButton, watchedAtForChoice, watchedAtForEpisodeBatch, watchedReferenceFor } = await import("../public/modules/watch-action.js");
 const { state } = await import("../public/modules/state.js");
+const {postManualWatchRecords} = await import("../public/modules/watch-action.js");
+
+test("a failed whole-selection preflight sends no watch chunks", async () => {
+  const previousFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url,options) => {
+    calls.push(String(url));
+    assert.equal(JSON.parse(options.body).records.length,101);
+    return {ok:false,json:async()=>({error:"Episode mapping needs review"})};
+  };
+  try {
+    await assert.rejects(postManualWatchRecords(Array.from({length:101},()=>({media_type:"episode",numbering_source:"dvd"}))),/mapping needs review/);
+    assert.deepEqual(calls,["/api/episode-order/preflight"]);
+  } finally { globalThis.fetch = previousFetch; }
+});
 
 test("closeWatchDatePrompt removes every mounted date dialog", () => {
   const previousQuerySelectorAll = document.querySelectorAll;
@@ -343,9 +358,11 @@ test("watch-date selection renders the active show as Saving before sync resolve
 
   document.querySelectorAll = (selector) => selector === ".watch-date-overlay" ? overlays : [];
   document.querySelector = () => null;
-  globalThis.fetch = async (url) => String(url).includes("/api/manual-watch")
-    ? { ok: true, json: async () => ({ inserted: 1, skipped: 0, rejected: 0, propagated: 1, syncQueued: 1, results: [] }) }
-    : { ok: true, json: async () => ({ show: { title: "The Office", episodes: [] } }) };
+  globalThis.fetch = async (url, options) => String(url).includes("/api/episode-order/preflight")
+    ? { ok: true, json: async () => ({ok:true,records:JSON.parse(options.body).records}) }
+    : String(url).includes("/api/manual-watch")
+      ? { ok: true, json: async () => ({ inserted: 1, skipped: 0, rejected: 0, propagated: 1, syncQueued: 1, results: [] }) }
+      : { ok: true, json: async () => ({ show: { title: "The Office", episodes: [] } }) };
   initWatchAction({
     setMessage() {},
     clearDerivedUiCaches() {},
@@ -456,9 +473,11 @@ test("single episode unwatch patches the active show card without rebuilding the
   document.querySelectorAll = () => [];
   document.querySelector = () => null;
   globalThis.CSS = { escape: (value) => String(value) };
-  globalThis.fetch = async (url) => String(url).includes("/api/manual-unwatch")
-    ? { ok: true, json: async () => ({ id: "unwatch-5", queued: false }) }
-    : { ok: true, json: async () => ({ history: [] }) };
+  globalThis.fetch = async (url) => String(url).includes("/api/episode-order/preflight")
+    ? { ok:true,json:async()=>({ok:true}) }
+    : String(url).includes("/api/manual-unwatch")
+      ? { ok: true, json: async () => ({ id: "unwatch-5", queued: false }) }
+      : { ok: true, json: async () => ({ history: [] }) };
   initWatchAction({
     setMessage() {},
     openConfirmDialog: async () => true,

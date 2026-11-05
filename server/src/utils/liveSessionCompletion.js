@@ -12,6 +12,7 @@ import { refreshUpNextProviderFeeds } from "./upNextProviderSync.js";
 import { playstateBlocksStoredResumeProgress, resumeProgressBlockedByPlaystate } from "./resumeAuthority.js";
 import { deleteLiveTrackingCacheRows, deletePlaybackProgress, findWatchedByAnyMediaKey, getPlaybackProgressForMedia, getPlaystateForMedia, insertWatchRecord, invalidateHistoryDerivedCaches, loadLiveTrackingCache, markLiveTrackingComplete, mediaKeyFor, mediaToPlaybackProgressRecord, mediaToWatchRecord, purgeCompletedLiveTrackingCache, updatePlaybackProgressTelemetry, updateWatchTelemetry, upsertLiveTrackingCache, upsertPlaybackProgress, upsertPlaystateForMedia } from "./dataRepo.js";
 import { withSeriesIdentity } from "./seriesIdentity.js";
+import { keepOrderProvenance, resolveOrderMediaForPolling } from "./episodeOrderWatch.js";
 import { undropTitleForLivePlay } from "./droppedTitles.js";
 import { buildTelemetry, buildProgressTelemetry, recordSyncHistory } from "./syncHistoryTelemetry.js";
 
@@ -141,6 +142,12 @@ async function processCompletedSession(row, config, loopStore) {
   // Same series resolution as webhooks and Continue Watching; without it an id-less
   // live session folds onto whichever show profile history already holds for the title.
   media = await withSeriesIdentity(media, config);
+  // Non-Aired order: translate before any dedupe or playstate lookup. A refusal
+  // is logged with its reason, writes nothing, and drops the cached session.
+  if (media.type === "episode") {
+    media = await resolveOrderMediaForPolling(media, config, (message) => console.warn(`Live tracking: ${message}`));
+    if (!media) return null;
+  }
 
   // After an authoritative restore, drop stale cached sessions whose last update predates the
   // restore â€” they would otherwise post a watch record dated today. Sessions still genuinely
@@ -189,7 +196,7 @@ async function processCompletedSession(row, config, loopStore) {
     const dispatchPending = !existingByAnyKey.sync_dispatch_telemetry || /Dispatch status: pending/i.test(existingByAnyKey.sync_dispatch_telemetry);
     if (dispatchPending && lastSeenMs > 0 && Number(existingByAnyKey.created_at || 0) >= lastSeenMs) {
       media.watched_at = existingByAnyKey.watched_at || undefined;
-      media.watchProvenance = sessionWatchProvenance(media, row, new Date(lastSeenMs).toISOString());
+      media.watchProvenance = keepOrderProvenance(media.watchProvenance, sessionWatchProvenance(media, row, new Date(lastSeenMs).toISOString()));
       await dispatchSessionWatch(media, config, loopStore, row.session_id, existingByAnyKey.id);
       await invalidateHistoryDerivedCaches("processCompletedSession").catch(() => null);
     }
@@ -206,7 +213,7 @@ async function processCompletedSession(row, config, loopStore) {
   const lastSeenAt = Number(row.updated_at || 0);
   const watchedAt = lastSeenAt > 0 ? new Date(lastSeenAt).toISOString() : "";
   media.watched_at = watchedAt || undefined;
-  media.watchProvenance = sessionWatchProvenance(media, row, watchedAt);
+  media.watchProvenance = keepOrderProvenance(media.watchProvenance, sessionWatchProvenance(media, row, watchedAt));
   const watchRecord = mediaToWatchRecord(media, media.source);
 
   if (isAuthoritativeRestoreActive()) return null;

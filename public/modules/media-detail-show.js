@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.2.3.0.0";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.3.0.0";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.2.3.0.0";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.3.0.0";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.3.0.0";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.3.0.0";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.2.3.0.0";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.3.0.0";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.3.0.0"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.3.0.0";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.3.0.0";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.3.0.0";
+import { state, elements } from "./state.js?v=2.2.3.0.1";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.3.0.1";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.2.3.0.1";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.3.0.1";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.3.0.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.3.0.1";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.2.3.0.1";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.3.0.1";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.3.0.1"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.3.0.1";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.3.0.1";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.3.0.1"; import { episodeOrderButtonHtml } from "./episode-order.js?v=2.2.3.0.1";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -16,7 +16,7 @@ import {
   refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.2.3.0.0";
+} from "./media-detail-shared.js?v=2.2.3.0.1";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
@@ -658,7 +658,7 @@ async function renderShowDetailFromMetadata(tmdbData, renderToken, localShowProm
     tmdb_id: tmdbData.id ? String(tmdbData.id) : "",
     tvdb_id: String(tmdbData.external_ids?.tvdb_id || ""),
     episodes: [],
-    episode_count: 0,
+    episode_count: 0, ...(tmdbData.episode_order && tmdbData.episode_order !== "official" ? {episode_order:tmdbData.episode_order,episode_order_label:tmdbData.episode_order_label || "",season_numbering:{source:tmdbData.episode_order,translate:true,ready:true,pairs:{}}} : {}),
     season_count: seasons.length,
   });
   // The detail request is deliberately still no-store: it contains mutable
@@ -1935,7 +1935,7 @@ export function renderShowModalContent(show, {
         ${searchIcon}
         <span>Fix Match</span>
       </button>
-      <button class="action-pill media-merge-show-btn" type="button" ${isShowBusy ? "disabled" : ""} data-show-title="${escapeAttribute(showTitle)}">
+      ${episodeOrderButtonHtml({...show,tvdb_id:show.tvdb_id || tmdbData?.external_ids?.tvdb_id})}<button class="action-pill media-merge-show-btn" type="button" ${isShowBusy ? "disabled" : ""} data-show-title="${escapeAttribute(showTitle)}">
         ${mergeIcon}
         <span>Merge</span>
       </button>

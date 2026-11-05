@@ -13,6 +13,7 @@ import { recoverStaleSyncOperation, runScheduledSync } from "./scheduled.js";
 import { watchedPlayedSyncEnabled } from "./utils/syncFlags.js";
 import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
+import { keepOrderProvenance, resolveOrderMediaForPolling } from "./utils/episodeOrderWatch.js";
 import { applyUnwatchedTransition } from "./utils/watchStateTransitions.js";
 import { plexUnplayedHasWatchEvidence, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
 import { pollConnectedTrackers } from "./utils/trackerSync.js";
@@ -30,6 +31,7 @@ import { runWatchlistSyncScheduler } from "./utils/personalWatchlistSync.js";
 import { runPlaylistSyncScheduler } from "./utils/playlistSyncTriggers.js";
 import { pruneSyncPlans } from "./utils/syncPlans.js";
 import { runDbOptimizeIfDue } from "./utils/dbMaintenance.js";
+import { sendInstallCheckIfDue } from "./utils/installCheck.js";
 import { pruneWatchAuditPayloads } from "./utils/watchAudit.js";
 import { runScheduledPlaystateAliasRepair } from "./utils/playstateAliasRepair.js";
 import {
@@ -444,6 +446,7 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
     return { removed };
   }, 5_000);
   await runWithTimeBudget("Database optimize", () => runDbOptimizeIfDue(), 10_000);
+  await runWithTimeBudget("Install check", () => sendInstallCheckIfDue(), 15_000);
   await runWithTimeBudget("Audit payload prune", () => ({ changed: pruneWatchAuditPayloads() }), 10_000);
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   // A Trakt/TMDB-only split is deliberately an escape hatch for provider
@@ -646,8 +649,8 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
   }
 
   // Only movies and episodes carry a watch state we sync.
-  const media = buildPlexMediaFromMetadata(metadata, { phase: Number(metadata.viewCount || 0) > 0 ? "completed" : "unplayed" });
-  if (!media?.isValid || !["movie", "episode"].includes(media.type)) return;
+  let media = buildPlexMediaFromMetadata(metadata, { phase: Number(metadata.viewCount || 0) > 0 ? "completed" : "unplayed" });
+  if (!media?.isValid || !["movie", "episode"].includes(media.type) || (media.type === "episode" && !(media = await resolveOrderMediaForPolling(media, config, (m) => console.warn(`Plex notifications: ${m}`))))) return;
 
   // Still watched or only partially watched → this isn't an unwatch event.
   const viewCount = Number(metadata.viewCount || 0);
@@ -681,14 +684,14 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
 
     media.watched_at = watchedAt;
 
-    media.watchProvenance = buildWatchProvenance(
+    media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
       { source: "plex", event: "notification.viewstate", phase: "completed", itemId: ratingKey },
       {
         ingestPath: "plex_notification",
         sourceTimestamp: watchDate.sourceTimestamp,
         note: [watchDate.note, `Import policy: ${dateChoice.reason}.`].filter(Boolean).join(" "),
       },
-    );
+    ));
 
     // Plembfin is authoritative when an administrator explicitly removes a
     // provider watch date. Plex library notifications bypass the HTTP webhook

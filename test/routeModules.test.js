@@ -90,8 +90,8 @@ test("poster-card menus stay route-scoped instead of loading with global status"
 
 test("every registered module that app.js binds has an initializer", () => {
   const initializerBlock = appSource.slice(appSource.indexOf("const ROUTE_MODULE_INITIALIZERS = {"), appSource.indexOf("for (const [key, initializer] of Object.entries(ROUTE_MODULE_INITIALIZERS))"));
-  // poster-menu and settings-events are wired by app-events; media-detail-movie only serves lazyExport.
-  const withoutInitializer = new Set(["poster-menu", "settings-events", "media-detail-movie", "onboarding-sections", "onboarding-backups", "onboarding-trackers"]);
+  // poster-menu, settings-events and install-check are wired by app-events; media-detail-movie only serves lazyExport.
+  const withoutInitializer = new Set(["poster-menu", "settings-events", "install-check", "media-detail-movie", "onboarding-sections", "onboarding-backups", "onboarding-trackers"]);
   for (const key of keys) {
     if (withoutInitializer.has(key)) continue;
     const pattern = /^[a-z]+$/.test(key) ? new RegExp(`^  ${key}\\(module\\)`, "m") : new RegExp(`^  "${key}"\\(module\\)`, "m");

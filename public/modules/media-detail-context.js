@@ -1,9 +1,9 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.0";
-import { state, elements } from "./state.js?v=2.2.3.0.0";
-import { escapeHtml, escapeAttribute, platformName, formatDate } from "./utils.js?v=2.2.3.0.0";
-import { historyAction, syncStatus, telemetryLineValue } from "./sync.js?v=2.2.3.0.0";
-import { syncInlineMediaDetailHeading } from "./explorer.js?v=2.2.3.0.0";
-import { auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync } from "./media-info-summary.js?v=2.2.3.0.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.3.0.1";
+import { state, elements } from "./state.js?v=2.2.3.0.1";
+import { escapeHtml, escapeAttribute, platformName, formatDate } from "./utils.js?v=2.2.3.0.1";
+import { historyAction, syncStatus, telemetryLineValue } from "./sync.js?v=2.2.3.0.1";
+import { syncInlineMediaDetailHeading } from "./explorer.js?v=2.2.3.0.1";
+import { auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync } from "./media-info-summary.js?v=2.2.3.0.1";
 
 let _cb = {};
 let _mediaRenderToken = 0;
@@ -812,6 +812,15 @@ function syncMediaInfoOverlayBounds() {
   _mediaInfoOverlay.style.setProperty("--media-info-page-top", `${Math.max(rect.top, 0)}px`);
   _mediaInfoOverlay.style.setProperty("--media-info-page-width", `${rect.width}px`);
   _mediaInfoOverlay.style.setProperty("--media-info-page-right", `${Math.max(window.innerWidth - rect.right, 0)}px`);
+  // On phones the panel is full screen; it must start below the app's top bars
+  // or its poster and title sit hidden behind them.
+  // #pageTopbar is display: contents on phones (no box of its own), so also
+  // measure its visible title row, which is the bar that actually shows.
+  const barsBottom = ["#pageTopbar", "#pageTopbar .page-topbar-title"].reduce((bottom, selector) => {
+    const element = document.querySelector(selector);
+    return element ? Math.max(bottom, element.getBoundingClientRect().bottom) : bottom;
+  }, 0);
+  _mediaInfoOverlay.style.setProperty("--media-info-bars-bottom", `${barsBottom}px`);
 }
 
 export async function openMediaInfoModal() {

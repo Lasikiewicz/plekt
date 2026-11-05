@@ -1,4 +1,4 @@
-import { normalizeSeasonSource, readSeasonSource, readShowNumbering } from "./seasonSource.js";
+import { normalizeSeasonSource, readSeasonSource, readShowNumbering } from "./seasonSource.js"; import { episodeOrderDetails } from "./episodeOrder.js";
 import { db, parseJson } from "../db.js";
 import { buildEpisodeNumberMap, detectRowNumbering, planShowTranslation, translateEpisode } from "./episodeNumberMap.js";
 import { getTvdbSeriesExtended, tvdbSeasonListsFromExtended } from "./tvdbGateway.js";
@@ -127,6 +127,7 @@ const DISPLAY_SEASONS_TTL_MS = 10 * 60 * 1000;
 const displaySeasonsFetchedAt = new Map();
 
 export async function withDisplaySeasons(details, { cachedOnly = false } = {}) {
+  if (details?.external_ids?.tvdb_id) { const ordered = await episodeOrderDetails(details, {cachedOnly}); if (ordered !== details) return ordered; }
   const tvdbId = String(details?.external_ids?.tvdb_id || "");
   const tmdbId = String(details?.id || details?.external_ids?.tmdb_id || "");
   if (!tvdbId || !tmdbId || !Array.isArray(details?.seasons)) return details;

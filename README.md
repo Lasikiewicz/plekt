@@ -42,8 +42,23 @@ Plekt is the same app with a new name. Existing Docker installs only need to cha
 `ghcr.io/lasikiewicz/plembfin` to `ghcr.io/lasikiewicz/plekt`, or
 `plembfin/plembfin` to `plembfin/plekt`. Keep the same tag, volume, data folder,
 container settings and secrets. Do not replace an existing named volume with the
-fresh-install example below. Both old image names receive updates for at least six
-months after the rebrand release.
+fresh-install example below. Both old image names receive updates until at least
+11 April 2027, and will stop being updated after that.
+
+To switch the image:
+
+1. Take a full encrypted backup in Settings → Backup.
+2. Change the image name where you set it: the `image:` line in Docker Compose, the image at
+   the end of a `docker run` command, or the **Repository** field in Unraid. Watchtower cannot
+   move a container to a different image name, so change it in your Compose file or run
+   command.
+3. Recreate the container: `docker compose pull` then `docker compose up -d`, or remove the
+   container (never its data folder or volume) and run the same command again, or select
+   **Apply** in Unraid.
+4. Sign in and check your history is present and Settings → About shows the version you expect.
+
+The full upgrade guide, with the Windows installer, Node.js and rollback, is at
+[plekt.net/docs/upgrading-from-plembfin](https://plekt.net/docs/upgrading-from-plembfin/).
 
 Existing `plembfin.db` databases are kept and used; fresh installs use `plekt.db`.
 All `PLEMBFIN_*` environment variables remain accepted; a nonblank `PLEKT_*` value
@@ -88,7 +103,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Now Playing dashboard** - Real-time playback monitoring with a panel that features part watched and Up Next items around live sessions (configurable from its cog), optional Plekt-authoritative Up Next sync that queues a coalesced provider push whenever the queue changes (to Plex/Emby Continue Watching and Jellyfin Next Up), show-level Up Next dismissals, media-type-aware Watch History, weekly watch activity trends, and recent history; desktop gives the four sections equal height and reserves matching space for their titles and card-rail sliders, while phones show taller, wider featured Up Next cards with larger posters
 - **Sync Activity hub** - Live grouped activity by movie/show, with all resume checkpoints and destination results preserved behind each row, clear reasons for skipped destinations, unresolved cross-platform matches with per-item Fix match actions, targeted retry for actual failed destinations (only the newest unresolved result per movie/episode is retried, individually or all at once as a background job that survives closing the tab; expected missing-library skips are excluded), show-wide Fix Match and retry-all controls for Trakt mismatches, dismiss controls for shows Trakt does not contain, compact tracker warnings with direct Simkl and Trakt history links, blocked-restore repair grouped by show with Fix Match and skip controls, and downloadable group logs
 - **Rich analytics & stats** - In-depth all-time and period reports, top shows, and platform playback distribution; same-title shows with conflicting provider identities retain separate rankings and artwork. On desktop, the top-ten leaderboard and monthly activity chart use the available page height
-- **Server Logs controls** - Pause live updates, follow the newest entries, or filter text within a category. Scrolling up stops following; Download Logs exports the complete fetched diagnostic trail.
+- **Server Logs controls** - Pause live updates, follow the newest entries, or filter text within a category. Scrolling up stops following; Download Logs exports every category for a range you pick (last hour, 6 hours, 24 hours, 3 days, or all kept logs).
 - **Playback detection cadence** - Set up plugins/playback webhooks for prompt updates. Plekt checks for missed activity every 5 minutes while idle to reduce background requests, then every 10 seconds once playback is detected. The dashboard refreshes separately every 10 seconds.
 - **Webhook delivery test** - A Test button beside the Emby and Jellyfin webhook options in Settings > Webhooks opens a pop-up that checks marking an item played in Emby or Jellyfin reaches Plekt, for the Plekt plugin or the built-in or Jellyfin Webhooks plugin. The test records and syncs nothing, then offers to unmark the item and explains the likely cause if nothing arrives.
 - **Personal media organization** - Save movies, shows, and episodes to a watch list or playlists (optionally synced two ways to Plex, Emby, and Jellyfin, or filled automatically from genre, original language, year, and watched rules, with TV playlists holding the next episode of each show, and watched items removed if you choose), and rate them from their media pages; episode ratings use one canonical show/season/episode identity everywhere
@@ -111,7 +126,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
 - **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, and HMAC session signing
 - **High-performance artwork cache** - Fast local caching for high-resolution posters, backdrops, and logos from TMDB, TheTVDB, and Fanart.tv; metadata is warmed in the background as media is discovered or a TV show is rematched so the dashboard stays cache-first
-- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings, and per show in Fix Match, where your stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB; optional AniDB titles and descriptions for anime you confirm, movies uniquely linked by Wikidata, or shows TheTVDB clearly links, with episode numbering unchanged
+- **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings and per show in Fix Match, where stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose Aired or DVD order for a show and review DVD-to-aired episode links before new watches are saved; choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB; optional AniDB titles and descriptions for anime you confirm, movies uniquely linked by Wikidata, or shows TheTVDB clearly links, with episode numbering unchanged
 - **Unified multi-source search** - Blazingly fast search across your local libraries, TMDB movies/shows/collections, and TheTVDB with local media prioritized
 - **Progressive Web App (PWA)** - Installable directly on iOS, Android, macOS, and Windows with a native app experience
 
@@ -656,6 +671,7 @@ is in [`.env.example`](.env.example).
 | `DATA_DIR` | `./data` | Directory for the database, configs, and cached posters. |
 | `ROLE` | `all` | Process role: `all`, `web`, or `worker`. |
 | `BUILD_CHANNEL` | `release` in Docker; `develop` via local npm commands | Channel marker. Published images bake their channel at build time; local `npm start` and `npm run dev` default to `develop`. |
+| `PLEKT_INSTALL_CHECK_URL` | `https://active.plekt.net` | Collector for the optional anonymous daily check (Settings → General → Privacy, off until you turn it on). It sends only the app version, release channel, CPU architecture and three new/weekly/monthly flags, with no identifier or library data. Set to `off` to send nothing from this server. |
 | `ADMIN_USERNAME` | `admin` | Default administrator username. |
 | `ADMIN_PASSWORD` | _unset_ | Optional bootstrap password. Leave unset on a fresh install to use the one-time claim screen. Settings credentials take precedence after the account is claimed. |
 | `API_KEY` | _generated_ | Token authorizing incoming webhooks and API calls. |

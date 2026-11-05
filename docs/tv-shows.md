@@ -31,6 +31,43 @@ numbering source only when the episode title and stored coordinates conflict. A 
 source mismatch appears in Manual Watch review; dismissals remain in effect until the show's
 TMDB or TVDB id changes. This review does not alter watch history or provider state.
 
+### Per-show episode order
+
+The admin-only **Episode order** menu on a show's detail page selects Aired order or any
+other order TVDB lists for that show (DVD, Absolute, Alternate, Regional, Alternate DVD,
+Alternate 2) for its season and episode display. Alternate orders use TVDB's own name for the
+show, for example "Parts Order (Netflix)". This is how a Plex show set to a TheTVDB order other
+than Aired reaches Trakt correctly. The catalogue keeps every available order's episode IDs and
+coordinates. Links from an order to aired episodes show a preview and require a current revision
+before they can be saved; a saved link can be replaced or removed. Most alternate episodes share
+their TVDB ID with an aired episode, so they link automatically. Changing order or links does not
+rewrite old watch history or replay it to providers, so records stored under the wrong numbers
+before the order was set stay in Manual Watch Review. Links must be one-to-one; a conflict
+leaves the affected episode unmatched instead of combining watch history. Saved links and
+stored watch provenance record their order; ones saved before alternate orders existed count as DVD.
+
+When a new watch in a non-Aired order is requested, Plekt resolves it to the linked aired episode before
+saving local history or queuing outbound writes. Ambiguous or missing links block the entire
+watch. Each configured Plex, Emby, or Jellyfin destination must yield exactly one episode with
+the same TVDB episode ID in the verified series; Trakt must return the exact episode and its
+verified parent TVDB series. Simkl has no read path that proves an exact episode ID, so a
+watch resolved from a non-Aired order is never sent to Simkl: the dispatcher records it as
+skipped by policy and every other destination still receives it. While Simkl is connected,
+choosing a non-Aired order in the dialog shows this warning with a checkbox that must be
+ticked before **Use** is enabled, and the server refuses the save without `acknowledgeSimkl: true`
+(returning to Aired never needs it). Without a Simkl connection the dialog shows a shorter
+note instead, with no checkbox, saying that connecting Simkl later will not send this show's
+watches to it. Only the show whose order was changed is affected; all other shows still sync
+to Simkl. Existing
+history without order provenance and shows whose stored rows use TMDB numbering can require
+review. The same exact-ID source check is wired before Plex, Emby, and Jellyfin webhook writes
+and before the other ways a watch is detected: the Plex library-change notifications, the
+scheduled recently-watched import for Plex, Emby, and Jellyfin, and live-session completion
+(`resolveOrderMediaForPolling` in `episodeOrderWatch.js`). Each translates the episode before any
+dedupe or playstate lookup, so nothing is stored under the media server's own numbers. If the
+episode cannot be translated, that item is skipped with the reason in the log and nothing is
+written or sent; the rest of the poll carries on.
+
 ## Data model
 
 A "show" is derived from `watch_history` rows with `media_type = "episode"`, grouped by

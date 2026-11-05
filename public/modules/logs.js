@@ -38,10 +38,13 @@ export function logsToText(logs) {
   return logs.join("\n");
 }
 
-export async function fetchDiagnosticLogs(headers = {}, category = "all") {
+// `hours` limits the fetch to the last N hours (0 or omitted = everything kept);
+// `limit` raises the line cap for downloads. The live viewer uses the defaults.
+export async function fetchDiagnosticLogs(headers = {}, category = "all", { hours = 0, limit = 500 } = {}) {
   try {
     const url = new URL("/api/diagnostic-logs", window.location.origin);
-    url.searchParams.set("limit", "500");
+    url.searchParams.set("limit", String(limit));
+    if (hours > 0) url.searchParams.set("hours", String(hours));
     if (category && category !== "all") {
       url.searchParams.set("category", category);
     }

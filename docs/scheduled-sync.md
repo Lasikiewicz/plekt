@@ -289,6 +289,11 @@ Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback 
      `remainingWatchRowFor()` in `dataRepo.js` promoted from a stale unwatched marker
      back to watched) would reach Trakt stamped as watched right now instead of on
      its real date.
+   - Each queued snapshot is rechecked against its current history row. Deleted
+     or changed rows cannot promote playstate or reach a provider; the row check
+     and playstate promotion share one SQLite transaction, and dispatch leases
+     recheck the snapshot before sending. A stale task also leaves a newer row's
+     telemetry alone.
    - The queue selects at most 15 rows per tick, groups them with the complete
      history as identity context, and runs up to six different media identities
      concurrently. Alias rows for the same movie or episode remain serialized so

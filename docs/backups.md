@@ -36,6 +36,13 @@ Restore replay applies those overrides or the restored show mapping before clear
 history; an unmatched translated episode fails the preflight rather than being replayed under
 its stored number. Older exports cannot recover a per-show choice they did not contain.
 
+Per-show episode-order choices and reviewed DVD-to-aired links are stored in the existing
+`settings` collection as `episode-order:v1:<tvdbId>` rows, so they travel with full and
+portable settings backups. A settings or TVDB metadata restore clears the cached order
+catalogues; the restored choice and links are checked against freshly loaded TVDB order data
+before they are used. A stale or changed link therefore needs review rather than being trusted
+from the cache.
+
 The focused watch-history subsystem reference is
 [watch-history-backups.md](watch-history-backups.md); this doc covers all backup
 subsystems and their shared destination adapters.

@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "./outbound.js";
+import { fetchWithTimeout } from "./outbound.js"; import { prepareEpisodeOrderTarget } from "./episodeOrderWatch.js";
 import { compoundEpisodeItemsForMedia } from "./compoundEpisode.js";
 import { restoreLookupKey } from "./restoreLookupCache.js";
 import { nativeProviderItemIds } from "./providerItemIds.js";
@@ -476,7 +476,7 @@ export async function findJellyfinItems(config, media) {
 
 export async function markJellyfinPlayed(config, media) {
   try {
-    requireJellyfinConfig(config);
+    requireJellyfinConfig(config); media = await prepareEpisodeOrderTarget(media,"jellyfin",config,"watched");
 
     const items = await findJellyfinItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -538,7 +538,7 @@ export async function markJellyfinPlayed(config, media) {
 
 export async function markJellyfinUnplayed(config, media) {
   try {
-    requireJellyfinConfig(config);
+    requireJellyfinConfig(config); media = await prepareEpisodeOrderTarget(media,"jellyfin",config,"unwatched");
 
     const items = await findJellyfinItemsForMutation(config, media);
     if (!items || items.length === 0) {

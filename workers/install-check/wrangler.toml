@@ -1,0 +1,25 @@
+# Plekt install-check collector. A separate Worker: it never touches the
+# plembfin-website Pages project or its Functions. Deploy steps and the read
+# token: plan/active/self-hosted-usage-report/step3-worker.md.
+name = "plekt-install-check"
+main = "src/index.js"
+compatibility_date = "2026-10-01"
+
+# Served only on its own domain, not on workers.dev or preview URLs.
+workers_dev = false
+preview_urls = false
+
+routes = [{ pattern = "active.plekt.net", custom_domain = true }]
+
+# Drops counters older than 90 days. Promo Desk keeps the long history.
+[triggers]
+crons = ["17 3 * * *"]
+
+# No request logs: the Worker keeps no log of requests, IPs or bodies.
+[observability]
+enabled = false
+
+[[d1_databases]]
+binding = "DB"
+database_name = "plekt-install-check"
+database_id = "93f0adf0-e6e4-43aa-8e74-95aa2207ee93"

@@ -7,7 +7,7 @@ import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js"
 import { fetchPosterFromTmdb } from "./tmdbClient.js";
 import { getCachedTmdbDetails, getCachedTmdbExternalIdKind, getTmdbDetails, getTmdbSeason, queueTmdbMetadataWarmup } from "./tmdbGateway.js";
 import { getCachedTvdbEpisodeKind } from "./tvdbGateway.js";
-import { annotateShowNumbering } from "./showSeasonTranslation.js";
+import { annotateShowNumbering } from "./showSeasonTranslation.js"; import { annotateEpisodeOrder, assertOrderInsert } from "./episodeOrder.js";
 import { cachedNextAiringFor, readNextAiringCache } from "./nextAiringCache.js";
 import { buildWatchProvenance, normalizeProviderOverrides, normalizeWatchProvenance } from "./watchProvenance.js";
 import { recordWatchAuditEvent, recordWatchAuditEvents } from "./watchAudit.js";
@@ -687,7 +687,7 @@ function watchRowParams(record) {
 }
 
 export function normalizeWatchRecordForInsert(record, fallbackSource = record?.source || "import") {
-  const normalized = normalizeWatchRecord(record, fallbackSource);
+  const normalized = normalizeWatchRecord(record, fallbackSource); assertOrderInsert(normalized);
   const errors = validateWatchRecord(normalized);
   if (errors.length) throw new Error(errors.join(", "));
   const data = watchRowParams(normalized);
@@ -1208,7 +1208,7 @@ function playstateRecordOnProvenProfile(normalized = {}) {
 }
 
 export function upsertPlaystateSync(record, stateOverride = undefined, { allowDuringRestore = false, mediaKey: pinnedKey = "" } = {}) {
-  let normalized = normalizeWatchRecord(record, record.source || "webhook");
+  let normalized = normalizeWatchRecord(record, record.source || "webhook"); assertOrderInsert(normalized);
   const errors = validateWatchRecord(normalized);
   if (errors.length) throw new Error(errors.join(", "));
   assertRestoreWriteAllowed(normalized.source, { allowDuringRestore });
@@ -1542,7 +1542,7 @@ async function invalidateAfterRowMetaWrite(id, oldRow, changed) {
 // applyManualUnwatch, where a superseding unwatched record stands in for the
 // watched one it replaced. It must name a row that no longer exists.
 export function insertWatchRecordSync(record, { id: presetId = "", watchlistConfig = null, allowDuringRestore = false } = {}) {
-  const normalized = normalizeWatchRecord(record, record.source);
+  const normalized = normalizeWatchRecord(record, record.source); assertOrderInsert(normalized);
   const errors = validateWatchRecord(normalized);
   if (errors.length) throw new Error(errors.join(", "));
   assertRestoreWriteAllowed(normalized.source, { allowDuringRestore });
@@ -6644,10 +6644,7 @@ export async function queryShowDetail({ id = "", title = "", tmdbId = "", tvdbId
       show.show_poster_url = show.show_poster_url || null;
       show.canonical_poster_url = show.canonical_poster_url || null;
     }
-    // Show page only: a Fix Match TVDB/TMDB choice places rows on the episode
-    // they belong to in the chosen structure. Up Next stays cache-only and
-    // keeps the stored numbers.
-    if (displayNumbering) await annotateShowNumbering(show);
+    if (displayNumbering) { await annotateShowNumbering(show); await annotateEpisodeOrder(show); }
   }
   return show || null;
 }
@@ -6724,7 +6721,7 @@ export function watchRowToMedia(row = {}, source = "plex") {
     },
     season: row.season == null ? undefined : Number(row.season),
     episode: row.episode == null ? undefined : Number(row.episode),
-    traktOverride: provenance?.provider_overrides?.trakt || undefined,
+    traktOverride: provenance?.provider_overrides?.trakt || undefined, watchProvenance:provenance, watchRecordId:row.id || undefined,
     posterUrl: row.poster_url || undefined,
     watched_at: row.watched_at || undefined,
     isValid: Boolean(row.title && ["movie", "episode", "tv"].includes(row.media_type)),
