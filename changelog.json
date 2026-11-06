@@ -22,7 +22,7 @@
         "Feature: The notice returns after each update until the install switches, and never appears on the Plekt image.",
         "Feature: Added four short switch steps for Docker Compose, Docker run, Unraid and Watchtower to the README and the upgrade guide, and stated that the old image names keep receiving updates until at least 11 April 2027.",
         "Feature: Add an optional anonymous daily install check in the Privacy section of General. It is off until you turn it on, shows the exact payload it would send, and sends no identifier, server address or library data.",
-        "Fix: Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.",
+        "Fix: Stop a saved watch from being split into two Trakt writes that left it held for review, and keep a manual watch on Trakt when Retry Sync replays it.",
         "Tweak: Block watch-state changes when episode identities cannot be verified for every required destination, including before clearing progress or removing episodes.",
         "Tweak: Prevent stale background retries from restoring a deleted or superseded watch.",
         "Tweak: The Logs screen fills the window with the same gap at the bottom as the other edges, and the filter box and Download range dropdown now match the rest of the app, with their labels beside them.",
@@ -79,7 +79,7 @@
           "Add an optional anonymous daily install check in the Privacy section of General. It is off until you turn it on, shows the exact payload it would send, and sends no identifier, server address or library data."
         ],
         "majorBugFixes": [
-          "Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it."
+          "Stop a saved watch from being split into two Trakt writes that left it held for review, and keep a manual watch on Trakt when Retry Sync replays it."
         ],
         "tweaks": [
           "Block watch-state changes when episode identities cannot be verified for every required destination, including before clearing progress or removing episodes.",
@@ -147,7 +147,7 @@
           {
             "title": "Sync & provider recovery",
             "details": [
-              "Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it."
+              "Stop a saved watch from being split into two Trakt writes that left it held for review, and keep a manual watch on Trakt when Retry Sync replays it."
             ]
           }
         ],

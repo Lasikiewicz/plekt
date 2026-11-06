@@ -30,7 +30,7 @@ This update adds per-show alternate episode orders, a Download range for logs, a
 
 #### Sync & provider recovery
 
-- Stop a saved watch from being split into two Trakt writes and held for review, and keep a manual watch on Trakt when Retry Sync replays it.
+- Stop a saved watch from being split into two Trakt writes that left it held for review, and keep a manual watch on Trakt when Retry Sync replays it.
 
 ### Tweaks
 
