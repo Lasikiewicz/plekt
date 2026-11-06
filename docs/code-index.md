@@ -214,13 +214,13 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `dropped-title-views.js`: fetchDroppedTitles, filterDroppedTitles, renderDroppedShowCard, renderDroppedStats, renderDroppedView
 - `dropped-titles.js`: droppedTitleActionHtml, handleDroppedTitleAction, isDroppedUnDropBusy, loadDroppedTitleState, loadDroppedTitleStates
 - `edit-dialogs.js`: apiUpdateWatch, applyArtworkToLocalWatchRecords, applyWatchedAtToLocalWatchRecord, editDateOptionsFromButton, episodeTimingFromButton, fixMatchSearchTitle, hasProviderSplitConflict and 9 more
-- `episode-order.js`: episodeOrderButtonHtml, initEpisodeOrder, preflightEpisodeOrderAction
+- `episode-order.js`: episodeOrderButtonHtml, episodeReviewNoticeHtml, initEpisodeOrder, preflightEpisodeOrderAction
 - `explorer-page-cache.js`: cachedExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows, isStaleExplorerPage, rememberExplorerPage
 - `explorer.js`: FILMOGRAPHY_PAGE_SIZE, applyListHeaderSort, cachedShowDetail, cachedShowDetailMiss, currentExplorerSort, currentExplorerView, emptyExplorer and 49 more
 - `help-content.js`: adminTokenGuide, buildWebhookUrl, cronSyncGuide, embyCredentialGuide, embyWebhookSetup, jellyfinCredentialGuide, jellyfinWebhookSetup and 6 more
 - `history-day-view.js`: renderHistoryDayGroups
 - `history-poster-overlay.js`: historyPosterOverlay
-- `images.js`: batchedFallbackPosterUrl, bestTmdbLogo, bindPosterImageErrorHandler, cachedPosterLookup, clearPersistentPosterLookupCache, compactPosterUrl, configuredImageUrl and 19 more
+- `images.js`: batchedFallbackPosterUrl, bestTmdbLogo, bindPosterImageErrorHandler, cachedPosterLookup, clearPersistentPosterLookupCache, compactPosterUrl, configuredImageUrl and 20 more
 - `initial-sync.js`: initialSyncDialogMarkup, loadInitialSyncSummary, openInitialSyncDialog, renderInitialSync, startInitialSyncUi, stopInitialSyncUi
 - `install-check.js`: initInstallCheck
 - `legacy-image-banner.js`: renderLegacyImageBanner

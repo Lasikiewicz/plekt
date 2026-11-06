@@ -1,6 +1,6 @@
 import { state, elements } from "./state.js?v=2.2.4.0.0";
 import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.4.0.0";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isCachedStorageImageUrl } from "./images.js?v=2.2.4.0.0";
+import { posterUrlFor, tmdbImage, tmdbPoster, episodeStillUrl, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isLocalArtworkUrl } from "./images.js?v=2.2.4.0.0";
 import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.4.0.0";
 import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.4.0.0";
 import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.0.0";
@@ -8,7 +8,7 @@ import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, 
 import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.0.0";
 import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.0.0"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.0.0";
 import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.4.0.0";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.4.0.0"; import { episodeOrderButtonHtml } from "./episode-order.js?v=2.2.4.0.0";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.4.0.0"; import { episodeOrderButtonHtml, episodeReviewNoticeHtml } from "./episode-order.js?v=2.2.4.0.0";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -1143,7 +1143,7 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
           airDate: episode.air_date || "",
           airTime: episode.air_time || episode.airTime || episode.airtime || "",
           runtime: episode.runtime ?? null,
-          stillUrl: tmdbImage(episode.still_path, "w300"),
+          stillUrl: episodeStillUrl(episode.still_path),
           posterUrl: fallbackPosterUrl,
           watched,
           progress: progressMap.get(showEpisodeKey(seasonNumber, episodeNumber)) || null,
@@ -1171,7 +1171,7 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
           airDate: hint?.air_date || "",
           airTime: hint?.air_time || hint?.airTime || hint?.airtime || "",
           runtime: hint?.runtime ?? null,
-          stillUrl: hint ? tmdbImage(hint.still_path, "w300") : "",
+          stillUrl: hint ? episodeStillUrl(hint.still_path) : "",
           posterUrl: fallbackPosterUrl,
           watched,
           progress: progressMap.get(key) || null,
@@ -1181,10 +1181,10 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
 
     for (const watched of localSeasons.get(seasonNumber) || []) {
       const episodeNumber = Number(watched.display_episode ?? watched.episode);
-      if (knownEpNums.has(episodeNumber) && !watched.numbering_review) continue;
-      knownEpNums.add(episodeNumber);
+      if (watched.numbering_review) { (rows.needsReview ||= new Map()).set(seasonNumber, (rows.needsReview.get(seasonNumber) || 0) + 1); continue; } // no order provenance: counted in a notice, never a card
+      if (knownEpNums.has(episodeNumber)) continue; knownEpNums.add(episodeNumber);
       rows.push({
-        key: `${showEpisodeKey(seasonNumber, episodeNumber)}${watched.numbering_review ? "-review" : ""}`,
+        key: showEpisodeKey(seasonNumber, episodeNumber),
         showTitle: show.title,
         showTmdbId: resolvedTmdbId || show.tmdb_id || "",
         showTvdbId,
@@ -1192,8 +1192,8 @@ function buildShowEpisodeRows(show, seasonsList, seasonDetailsByNumber, resolved
         tmdbId: watched.tmdb_id || "",
         seasonNumber,
         episodeNumber,
-        title: `${watched.numbering_review ? "Unmatched: " : ""}${episodeTitle(watched.title, episodeNumber)}`,
-        overview: watched.numbering_review ? "This watch has no matching episode in the chosen season structure." : tmdbEpisodes.length ? "Episode synopsis unavailable." : "TMDB metadata is still loading.",
+        title: episodeTitle(watched.title, episodeNumber),
+        overview: tmdbEpisodes.length ? "Episode synopsis unavailable." : "TMDB metadata is still loading.",
         airDate: "",
         airTime: "",
         runtime: watched.runtime ?? null,
@@ -1212,8 +1212,8 @@ function episodeThumbMarkup(episode, hideSpoilers = false) {
   if (hideSpoilers && !episode.watched) {
     return `<img class="episode-thumb episode-spoiler-placeholder" src="/spoiler-placeholder.svg" alt="Episode artwork hidden" />`;
   }
-  const stillUrl = isCachedStorageImageUrl(episode.stillUrl) ? episode.stillUrl : (isDemoMode() ? "" : safeImageUrl(episode.stillUrl));
-  const posterUrl = isCachedStorageImageUrl(episode.posterUrl)
+  const stillUrl = isLocalArtworkUrl(episode.stillUrl) ? episode.stillUrl : (isDemoMode() ? "" : safeImageUrl(episode.stillUrl));
+  const posterUrl = isLocalArtworkUrl(episode.posterUrl)
     ? episode.posterUrl
     : (isDemoMode() ? "" : safeImageUrl(episode.posterUrl) || episode.posterUrl || "");
   const url = stillUrl || posterUrl;
@@ -1620,7 +1620,7 @@ function renderSeasonPanelHtml(seasonNumber, seasonRecord, episodeRows, showTitl
         })).join("") : (loading || seasonDataPending)
     ? `<div class="empty-log empty-log--loading"><span class="empty-log-spinner" aria-hidden="true"></span><div><b>Loading episodes…</b><span>Fetching this season's episode details.</span></div></div>`
     : `<div class="empty-log"><b>No episode rows yet</b><span>No episodes are available for this season yet.</span></div>`}
-      </div>
+      </div>${episodeReviewNoticeHtml(episodeRows.needsReview?.get(Number(seasonNumber)))}
     </section>
   `;
 }

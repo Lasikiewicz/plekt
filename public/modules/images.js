@@ -711,6 +711,24 @@ export function tmdbImage(path, size = "w300") {
   return `https://image.tmdb.org/t/p/${size}${path}`;
 }
 
+// Episode stills may come from either TMDB or TVDB. TVDB order endpoints can
+// return a relative /banners/... path, which must stay on TVDB's artwork host
+// instead of being treated as a TMDB image path.
+export function episodeStillUrl(path, { size = "w300", tmdbId = "", mediaType = "tv", cacheTmdb = false } = {}) {
+  const raw = String(path || "").trim();
+  if (!raw) return "";
+  const tvdbUrl = /^https?:\/\/artworks\.thetvdb\.com\/?/i.test(raw)
+    ? raw
+    : /^\/banners(?:\/|$)/i.test(raw)
+      ? `https://artworks.thetvdb.com${raw}`
+      : "";
+  if (tvdbUrl) return proxiedArtworkUrl(tvdbUrl, "poster");
+  if (cacheTmdb && !/^https?:\/\//i.test(raw) && !/^\/(?:demo-assets|media)\//i.test(raw)) {
+    return tmdbPoster(raw, tmdbId, mediaType);
+  }
+  return tmdbImage(raw, size);
+}
+
 export function tmdbPoster(path, tmdbId = "", mediaType = "") {
   if (!path) return "";
   if (/^\/(?:demo-assets|media)\//i.test(path)) return path;

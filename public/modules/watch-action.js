@@ -7,7 +7,7 @@ import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.0.0"; import { pr
 import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.0.0";
 import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.0.0";
 import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.0.0";
-import { tmdbPoster } from "./images.js?v=2.2.4.0.0";
+import { episodeStillUrl } from "./images.js?v=2.2.4.0.0";
 import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.0.0";
 import { ifLoaded } from "./route-modules.js?v=2.2.4.0.0";
 
@@ -1161,7 +1161,7 @@ export async function markDiscoverWatched(item = {}) {
         showTmdbId: String(showTmdbId),
         tvdbId: showTvdbId,
         posterUrl: item.poster_url || item.posterUrl || "",
-        stillUrl: episode.still_path ? tmdbPoster(episode.still_path, showTmdbId, "tv") : "",
+        stillUrl: episodeStillUrl(episode.still_path, { tmdbId: showTmdbId, cacheTmdb: true }),
         key: `discover:${showTmdbId}:${episode.season_number}:${episode.episode_number}`,
         airDate: episode.air_date || null,
       }))

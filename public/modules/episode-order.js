@@ -25,6 +25,12 @@ export function episodeOrderButtonHtml(show = {}) {
   return `<button class="action-pill" type="button" data-episode-order-tvdb="${escapeAttribute(tvdbId)}" aria-label="Episode order for ${escapeAttribute(show.title || show.name || "this show")}">${ORDER_ICON}<span>Episode order${show.episode_order && show.episode_order !== "official" ? `: ${escapeHtml(show.episode_order_label || orderLabel(show.episode_order))}` : ""}</span></button>`;
 }
 
+// Watches saved before the order was chosen carry no order provenance, so they are not shown as episodes.
+export function episodeReviewNoticeHtml(count) {
+  const n = Number(count) || 0;
+  return n > 0 ? `<div class="empty-log"><b>${n} earlier ${n === 1 ? "watch is" : "watches are"} hidden</b><span>${n === 1 ? "It was" : "They were"} saved before this episode order was chosen, so Plekt cannot place ${n === 1 ? "it" : "them"} on an episode. Nothing was changed or removed. Use Fix Match to re-match ${n === 1 ? "it" : "them"}.</span></div>` : "";
+}
+
 export async function preflightEpisodeOrderAction(body) {
   const response = await fetch(`${API}/preflight`,{method:"POST",headers:{...buildAuthHeaders(state.token),"Content-Type":"application/json"},body:JSON.stringify(body),cache:"no-store"});
   const result = await response.json().catch(()=>({}));

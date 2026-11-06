@@ -152,6 +152,9 @@ recovered upstream host is still picked up promptly.
   for the session (`markArtworkUnavailable`, recorded by the image error handler), and
   `proxiedArtworkUrl` then returns an empty string for it - a detail page that renders
   several times as its parts arrive requests a dead image once, not once per render.
+- `episodeStillUrl()` handles episode stills from both providers. It recognizes TVDB
+  `/banners/...` paths and sends them through the TVDB artwork proxy instead of joining
+  them to TMDB's image host; TMDB still paths keep their existing URL and cache behavior.
 - `bestTmdbLogo(tmdbData)` accepts English and language-neutral logos only. A title
   whose only TMDB logo art is in another language renders its text heading instead.
 - `hydratePosterFallbacks(container)` finds fallback spans and calls

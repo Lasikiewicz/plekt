@@ -42,7 +42,9 @@ coordinates. Links from an order to aired episodes show a preview and require a 
 before they can be saved; a saved link can be replaced or removed. Most alternate episodes share
 their TVDB ID with an aired episode, so they link automatically. Changing order or links does not
 rewrite old watch history or replay it to providers, so records stored under the wrong numbers
-before the order was set stay in Manual Watch Review. Links must be one-to-one; a conflict
+before the order was set are not placed on any episode. The show page hides them from the
+episode grid and the watched counts and shows one notice per season ("N earlier watches are
+hidden"); nothing is changed or removed, and Fix Match can re-match them. Links must be one-to-one; a conflict
 leaves the affected episode unmatched instead of combining watch history. Saved links and
 stored watch provenance record their order; ones saved before alternate orders existed count as DVD.
 
