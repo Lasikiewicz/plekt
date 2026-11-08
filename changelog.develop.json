@@ -1,16 +1,18 @@
 {
-  "version": "2.2.4.0.2",
-  "build": 2,
+  "version": "2.2.4.0.3",
+  "build": 3,
   "resetCommit": "9f41cac14842f6792d1f8156ad758c79e551faef",
-  "updatedAt": "2026-11-08T20:35:53.885Z",
+  "updatedAt": "2026-11-08T20:38:55.979Z",
   "entries": [
     {
-      "build": 2,
-      "date": "2026-11-08T20:35:53.885Z",
-      "commit": "51f19a8741df362ba387abee14e977787b3ec444",
-      "message": "Fix - Preserve episode identity and clear cross-server resume state",
+      "build": 3,
+      "date": "2026-11-08T20:38:55.979Z",
+      "commit": "23862055a7f2a17b4bcb9aae21088fe000fb67ce",
+      "message": "This update includes show episode thumbnails and hide unplaced watches after changing a show's episode order and preserve episode identity and clear cross-server resume state.",
       "author": "Lasikiewicz",
       "details": [
+        "Episode thumbnails now load after switching a show to DVD or another TVDB order, instead of showing a broken or blank image.",
+        "Watches saved before an episode order was chosen no longer appear as extra \"Unmatched\" episode cards or inflate the watched count. Each season shows one notice with how many are hidden, and nothing is changed or removed.",
         "Episode thumbnails now load after switching a show to DVD or another TVDB order.",
         "Watches saved before an order was selected stay out of episode cards and watched counts, with one notice per season and no changes to existing records.",
         "Clearing a resume position on Plex, Emby or Jellyfin clears the other servers too, even when Plekt already considers the item unwatched.",
@@ -18,6 +20,10 @@
         "Manual Watch Review keeps verified episode identity through approval when mappings change.",
         "Up Next shows the selected TVDB order while storage and tracker writes remain in aired order.",
         "Playback and watch actions resolve through exact episode identities."
+      ],
+      "messageFragments": [
+        "Fix - Show episode thumbnails and hide unplaced watches after changing a show's episode order",
+        "Fix - Preserve episode identity and clear cross-server resume state"
       ]
     }
   ]
