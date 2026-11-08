@@ -377,8 +377,9 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `embyLikePlaylists.js`: embyPlaylists, jellyfinPlaylists, normalizeEmbyLikePlaylist, normalizeEmbyLikePlaylistEntry
 - `episodeImportGuard.js`: isPlaceholderEpisodeTitle, isRemoteEpisodeImportValid, remoteEpisodeImportError
 - `episodeNumberMap.js`: buildEpisodeNumberMap, detectRowNumbering, episodeKey, planShowTranslation, translateEpisode
-- `episodeOrder.js`: annotateEpisodeOrder, assertNoDvdContainer, assertOrderInsert, changeEpisodeOrder, dvdToAired, episodeOrderDetails, episodeOrderError and 8 more
+- `episodeOrder.js`: annotateEpisodeOrder, assertNoDvdContainer, assertOrderInsert, changeEpisodeOrder, dvdToAired, episodeOrderDetails, episodeOrderDisplay and 9 more
 - `episodeOrderTargets.js`: matchEpisodeOrderTarget, resolveEpisodeOrderTargets, resolveSourceOrderEpisode
+- `episodeOrderUpNext.js`: orderCoordinate, orderDetails, orderRevision, orderSeason, resolveOrderUpNextItem
 - `episodeOrderWatch.js`: assertOrderInsert, keepOrderProvenance, preflightOrderRecords, prepareEpisodeOrderTarget, resolveOrderMediaForPolling, resolveOrderUpNextAction, resolveOrderWatch
 - `episodeTitleRepair.js`: episodeNameFromSeason, isPlaceholderEpisodeTitleValue, resolveStoredEpisodeName, resolvedEpisodeTitleForRecord
 - `eventLoop.js`: yieldToEventLoop
@@ -405,7 +406,7 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `liveSessions.js`: LIVE_SESSION_COMPLETION_MAX_AGE_MS, LIVE_SESSION_PLAYBACK_STATES, NOW_PLAYING_TERMINAL_GRACE_MS, buildCacheRow, canInferLiveSessionCompletion, fetchLiveSessions, fetchPlexSessions and 9 more
 - `logVerbose.js`: isVerboseLogging, setVerboseLogging, traceLog
 - `loopStore.js`: createLoopStore, pruneExpiredLoopKeys
-- `manualWatchReview.js`: RESOLVED_BY_LOCAL_STATE, countPendingManualWatchReviewItems, countPendingManualWatchReviews, dismissPendingManualWatchReviewsForMedia, enqueueManualWatchReview, enqueueSourceMismatchReview, getManualWatchReview and 6 more
+- `manualWatchReview.js`: RESOLVED_BY_LOCAL_STATE, countPendingManualWatchReviewItems, countPendingManualWatchReviews, dismissPendingManualWatchReviewsForMedia, enqueueManualWatchReview, enqueueSourceMismatchReview, getManualWatchReview and 7 more
 - `mediaArtwork.js`: canonicalMediaArtworkCacheKey, getCanonicalPosterUrl, getCanonicalSeasonPosterUrls, mediaArtworkIdentityKeys, saveCanonicalPoster, saveCanonicalSeasonPoster, showArtworkIdentity
 - `mediaConnectionRepo.js`: authoriseAuthFlow, completeAuthFlow, consumeAuthFlow, createAuthFlow, deleteExpiredAuthFlows, disableMediaConnection, getActiveAuthDevice and 9 more
 - `mediaForceSync.js`: canonicalStateForShowHistoryRow, collectMediaForceSyncItems, earliestTrackerWatchedAt, earliestTraktWatchedAt, forceSyncMediaState, loadTrackerWatchedDateIndex, loadTraktWatchedDateIndex and 3 more
@@ -457,7 +458,7 @@ Exported names per source file, sorted. Rows with more than 7 exports list the f
 - `plexPlaylists.js`: addPlexPlaylistItems, clearPlexServerIdentifierCache, createPlexPlaylist, deletePlexPlaylist, fetchPlexPlaylist, fetchPlexPlaylistItems, fetchPlexPlaylists and 6 more
 - `plexTokenManager.js`: ensurePlexServerOwnership, getValidPlexServerToken, getValidPlexToken
 - `plexWatchlistClient.js`: add, addPlexWatchlistItem, capabilities, fetchPlexWatchlistRss, fetchPlexWatchlistSnapshot, listManagedItems, listPlexWatchlistItems and 5 more
-- `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, plexUnplayedHasWatchEvidence, shouldRepairRecentPlexUnwatch
+- `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, embyLikeUnplayedIsPartWatchedClear, plexHeldStoredResume, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, providerHeldStoredResume, shouldRepairRecentPlexUnwatch
 - `posterCache.js`: cacheArtworkFromUrl, cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache, markPosterMissing and 4 more
 - `processErrorHandlers.js`: installProcessErrorHandlers
 - `processRole.js`: createInstanceId, resolveProcessRole, roleHasWeb, roleHasWorker

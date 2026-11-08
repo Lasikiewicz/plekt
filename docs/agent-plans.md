@@ -11,7 +11,10 @@ including `plan/bugs.md` when it has no open bugs, are not listed. Completed pla
   user opens it in the Claude desktop app, which resolves links from the project root.
 - **Plan checkboxes show progress**: use `- [ ]` for work not started and `- [-]` for work
   in progress. The latter renders as the orange single-line checkbox in the user's Markdown
-  viewer. Apply this to TODO entries and plan/step checklist items; completed items use `- [x]`.
+  viewer. Apply this to TODO entries and plan/step checklist items; completed items use `- [x]`
+  in plans only. `todo.md` never shows checked items (user-agreed 6 November 2026): it lists
+  only what is still to do, so remove an item from its entry when it is done (the plan keeps
+  the record).
 - **`todo.md` layout** (user-agreed 26 October 2026, Hotfix section added 30 October 2026):
   title `# Plekt TODO`, then the sections in order of importance. **Hotfix: vX.Y.Z (Expected)**
   is always first: a hotfix is small, holds bug fixes only, and ships as the next patch release
