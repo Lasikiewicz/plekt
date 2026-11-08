@@ -33,6 +33,102 @@ function seed(order = "alternate", orders = catalogue) {
 
 test.after(() => db.close());
 
+test("review approval preserves identity, serializes concurrent decisions, and blocks lost proof", async () => {
+  seed();
+  const { AUTH } = await import("../server/src/appConfig.js");
+  const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
+  const { enqueueManualWatchReview, getManualWatchReview } = await import("../server/src/utils/manualWatchReview.js");
+  const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
+  await saveMediaConfig({});
+  const identity = { tvdbId: TVDB_ID, dvdId: 7187957, airedId: 7187957, order: "alternate" };
+  const media = { type: "episode", source: "plex", title: "Disenchantment - S01E11", showTitle: "Disenchantment", season: 1, episode: 11,
+    ids: { tvdb: TVDB_ID }, watchProvenance: { episode_order: identity } };
+  const approve = async id => {
+    let status = 200, body;
+    await handleManualWatchReview({ method: "POST", body: { mode: "now" }, headers: { "x-api-key": AUTH.apiKey }, cookies: {},
+      get(name) { return this.headers[name.toLowerCase()] || ""; } },
+    { status(code) { status = code; return this; }, set() { return this; }, send(value) { body = JSON.parse(value); return this; } },
+    `manual-watch-review/${id}/approve`);
+    return { status, body };
+  };
+  const queue = enqueueManualWatchReview(media, { sourceFingerprint: "order-review" });
+  // Selecting a different order must not reinterpret the queued coordinates.
+  seed("official");
+  const results = await Promise.all([approve(queue.review.id), approve(queue.review.id)]);
+  assert.deepEqual(results.map(r => r.status), [200, 200]);
+  const rows = db.prepare("SELECT * FROM watch_history WHERE tvdb_id=?").all(TVDB_ID);
+  assert.equal(rows.length, 1);
+  assert.deepEqual([rows[0].season, rows[0].episode], [1, 11]);
+  assert.deepEqual(JSON.parse(rows[0].watch_provenance).episode_order, identity);
+  await approve(queue.review.id);
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM watch_history WHERE tvdb_id=?").get(TVDB_ID).n, 1);
+  db.prepare("DELETE FROM watch_history WHERE tvdb_id=?").run(TVDB_ID);
+  db.prepare("DELETE FROM playstate").run();
+  seed();
+  const legacy = enqueueManualWatchReview({ ...media, episode: 12, watchProvenance: null }, { sourceFingerprint: "legacy-order-review" });
+  assert.equal((await approve(legacy.review.id)).status, 409);
+  assert.equal(getManualWatchReview(legacy.review.id).status, "pending");
+  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM watch_history WHERE tvdb_id=?").get(TVDB_ID).n, 0);
+});
+
+test("changed identity proof and an unavailable destination refuse order revalidation", async () => {
+  seed();
+  const { resolveOrderWatch } = await import("../server/src/utils/episodeOrderWatch.js");
+  const media = { type: "episode", source: "plex", title: "Disenchantment - S01E11", season: 1, episode: 11,
+    ids: { tvdb: TVDB_ID }, watchProvenance: { episode_order: { tvdbId: TVDB_ID, dvdId: 7187957, airedId: 999, order: "alternate" } } };
+  await assert.rejects(resolveOrderWatch(media, {}), { code: "EPISODE_MAPPING_REQUIRED" });
+  const originalFetch = globalThis.fetch;
+  let writes = 0;
+  globalThis.fetch = async (_url, options = {}) => {
+    if (options.method && options.method !== "GET") writes++;
+    return Response.json({ error: "unavailable" }, { status: 503 });
+  };
+  try {
+    await assert.rejects(resolveOrderWatch({ ...media, watchProvenance: { episode_order: { ...media.watchProvenance.episode_order, airedId: 7187957 } } },
+      { emby: { baseUrl: "https://unavailable-order.test", apiKey: "key", userId: "user" } }), /cannot safely match/);
+    assert.equal(writes, 0);
+  } finally { globalThis.fetch = originalFetch; }
+});
+
+test("selected-order display keeps canonical coordinates and provider actions intact", async () => {
+  seed();
+  const { episodeOrderDisplay } = await import("../server/src/utils/episodeOrder.js");
+  const item = { media_type: "episode", show_tvdb_id: TVDB_ID, season: 1, episode: 11, provider_items: { plex: ["native"] } };
+  const shown = episodeOrderDisplay(item);
+  assert.deepEqual([shown.display_season, shown.display_episode], [2, 1]);
+  assert.equal(shown.episode_order_label, "Parts Order (Netflix)");
+  assert.deepEqual([shown.season, shown.episode], [1, 11]);
+  assert.equal(shown.provider_items, item.provider_items);
+  assert.equal(item.display_season, undefined);
+  assert.equal(shown.watch_provenance.episode_order.airedId, 7187957);
+});
+
+test("Up Next library inventory and lookups use exact aired IDs instead of native order coordinates", async (t) => {
+  seed();
+  const { orderCoordinate: canonicalOrderCoordinate, orderSeason: getCachedTmdbSeason, orderDetails: getCachedTmdbDetails } = await import("../server/src/utils/episodeOrderUpNext.js");
+  const { resolveUpNextProviderItemId, createUpNextLibraryEpisodeLookup } = await import("../server/src/utils/upNextLibraryLookup.js");
+  const show = { title: "Disenchantment", tvdb_id: TVDB_ID };
+  assert.deepEqual(getCachedTmdbSeason({ tvdbId: TVDB_ID, seasonNumber: 1 }).episodes.map(e => e.episode_number), [11]);
+  assert.deepEqual(getCachedTmdbDetails({ mediaType: "tv", ids: { tvdbId: TVDB_ID } }).seasons, [{ season_number: 1 }]);
+  const native = { Id: "native", ParentIndexNumber: 2, IndexNumber: 1, ProviderIds: { Tvdb: "7187957" }, PremiereDate: "2018-08-17" };
+  assert.deepEqual(canonicalOrderCoordinate("emby", native, show, { season: 2, episode: 1 }), { season: 1, episode: 11 });
+  assert.equal(canonicalOrderCoordinate("emby", { ...native, ProviderIds: {} }, show, { season: 2, episode: 1 }), null);
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  globalThis.fetch = async input => {
+    const url = new URL(String(input));
+    if (url.searchParams.has("AnyProviderIdEquals")) return Response.json({ Items: [{ Id: "series", ProviderIds: { Tvdb: TVDB_ID } }] });
+    if (url.searchParams.get("ParentId") === "series") return Response.json({ Items: [native] });
+    throw new Error(`Unexpected request ${url.pathname}`);
+  };
+  const section = { baseUrl: "https://inventory-order.test", apiKey: "key", userId: "user" };
+  const item = { media_type: "episode", show_tvdb_id: TVDB_ID, show_title: "Disenchantment", season: 1, episode: 11 };
+  assert.equal((await resolveUpNextProviderItemId("emby", section, item)).providerItemId, "native");
+  assert.equal((await resolveUpNextProviderItemId("emby", section, { ...item, season: 2, episode: 1, provider_items: { emby: ["native"] } })).providerItemId, "");
+  const inventory = await createUpNextLibraryEpisodeLookup({ emby: section })(show);
+  assert.deepEqual(inventory.map(e => [e.season, e.episode]), [[1, 11]]);
+});
+
 test("a manual Up Next removal verifies its native episode before inserting an unwatch", async (t) => {
   seed();
   const originalFetch = globalThis.fetch;

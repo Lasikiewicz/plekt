@@ -1,7 +1,24 @@
 {
-  "version": "2.2.4.0.0",
-  "build": 0,
+  "version": "2.2.4.0.2",
+  "build": 2,
   "resetCommit": "9f41cac14842f6792d1f8156ad758c79e551faef",
-  "updatedAt": "2026-11-05T22:24:37.070Z",
-  "entries": []
+  "updatedAt": "2026-11-08T20:35:53.885Z",
+  "entries": [
+    {
+      "build": 2,
+      "date": "2026-11-08T20:35:53.885Z",
+      "commit": "51f19a8741df362ba387abee14e977787b3ec444",
+      "message": "Fix - Preserve episode identity and clear cross-server resume state",
+      "author": "Lasikiewicz",
+      "details": [
+        "Episode thumbnails now load after switching a show to DVD or another TVDB order.",
+        "Watches saved before an order was selected stay out of episode cards and watched counts, with one notice per season and no changes to existing records.",
+        "Clearing a resume position on Plex, Emby or Jellyfin clears the other servers too, even when Plekt already considers the item unwatched.",
+        "Plex recovers a watched-then-unwatched item when its notification is missed and dismisses the superseded review.",
+        "Manual Watch Review keeps verified episode identity through approval when mappings change.",
+        "Up Next shows the selected TVDB order while storage and tracker writes remain in aired order.",
+        "Playback and watch actions resolve through exact episode identities."
+      ]
+    }
+  ]
 }

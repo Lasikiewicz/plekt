@@ -1,7 +1,8 @@
 import { db } from "../db.js";
+import { episodeOrderDisplay } from "./episodeOrder.js";
 import { yieldToEventLoop } from "./eventLoop.js";
 import { getCachedShows, loadTrackedEpisodeRows, queryShowDetail, showTitleFrom } from "./dataRepo.js";
-import { getCachedTmdbDetails, getCachedTmdbSeason } from "./tmdbGateway.js";
+import { orderDetails as getCachedTmdbDetails, orderSeason as getCachedTmdbSeason } from "./episodeOrderUpNext.js";
 import { getCanonicalPosterUrl, getCanonicalSeasonPosterUrls } from "./mediaArtwork.js";
 import { minResumePositionMs, watchedThresholdPercent } from "./tuning.js";
 import {
@@ -843,9 +844,8 @@ function publicItem(item) {
 }
 
 export function publicUpNextItems(items = []) {
-  return mergeUpNextCandidates(items).map(publicItem);
+  return mergeUpNextCandidates(items).map(publicItem).map(episodeOrderDisplay);
 }
-
 async function localNextUpForShow(show, {
   showDetails,
   playstateIndex,

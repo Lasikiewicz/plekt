@@ -8,7 +8,7 @@ import {
 } from "../utils/configStore.js";
 import {
   deletePlaybackProgress,
-  findWatchedByAnyMediaKey,
+  findWatchedByAnyMediaKeySync,
   getCachedHistory,
   insertWatchRecord,
   invalidateHistoryDerivedCaches,
@@ -36,6 +36,22 @@ import {
 } from "../utils/manualWatchReview.js";
 import { recordWatchAuditEvent } from "../utils/watchAudit.js";
 import { resolveEpisodeSeriesItemId, withSeriesIdentity } from "../utils/seriesIdentity.js";
+import { keepOrderProvenance, resolveOrderWatch } from "../utils/episodeOrderWatch.js";
+import { readEpisodeOrder, episodeOrderError } from "../utils/episodeOrder.js";
+
+const approvalQueues = new Map();
+async function serializedApproval(review, mode, watchedAt) {
+  const key = review.media_key || review.id;
+  const previous = approvalQueues.get(key) || Promise.resolve();
+  const pending = previous.catch(() => {}).then(() => {
+    const current = getManualWatchReview(review.id);
+    return current?.status === "pending" ? approveReview(current, mode, watchedAt)
+      : { id: review.id, status: current?.status || review.status, review: current };
+  });
+  approvalQueues.set(key, pending);
+  try { return await pending; }
+  finally { if (approvalQueues.get(key) === pending) approvalQueues.delete(key); }
+}
 
 const REVIEW_MODES = new Set(["detected", "now", "release_day", "episode_timing", "custom"]);
 const REVIEW_SOURCES = new Set(["plex", "emby", "jellyfin"]);
@@ -321,7 +337,13 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
   const mode = REVIEW_MODES.has(requested)
     ? requested
     : "detected";
-  const media = withProfileSeriesIds(await reviewMediaWithIdentity(review, config));
+  let media = withProfileSeriesIds(await reviewMediaWithIdentity(review, config));
+  const identity = (media.watchProvenance || media.watch_provenance)?.episode_order;
+  const tvdbId = media.ids?.tvdb || media.tvdb_id;
+  if (media.type === "episode" && tvdbId && readEpisodeOrder(tvdbId).order !== "official" && !identity) {
+    throw episodeOrderError("This review has no verified episode-order identity. It remains pending. Use Episode order on the show to check its links; this legacy review cannot be approved without identity proof.");
+  }
+  media = await resolveOrderWatch(media, config);
   let dateChoice;
   if (mode === "detected") {
     const detectedAt = isoDateTime(review.updated_at || review.created_at);
@@ -360,7 +382,7 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
     });
   }
   media.watched_at = dateChoice.watchedAt;
-  media.watchProvenance = buildWatchProvenance(
+  media.watchProvenance = keepOrderProvenance(media.watchProvenance || media.watch_provenance, buildWatchProvenance(
     {
       source: media.source,
       event: "manual_watch_review",
@@ -372,10 +394,13 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
       sourceTimestamp: review.observed_watched_at || "",
       note: `Manual watch review approved with the ${mode.replaceAll("_", " ")} policy.`,
     },
-  );
+  ));
 
-  const existing = await findWatchedByAnyMediaKey(media).catch(() => null);
+  const existing = findWatchedByAnyMediaKeySync(media);
   if (existing) {
+    // Reuse the existing tracker event when a poll/live completion won the race.
+    // Media-server state may still need propagation, but this is not a new play.
+    if (identity) media.syncTargets = ["plex", "emby", "jellyfin"];
     // A review is an explicit user decision. An existing watched row is only
     // an identity match, not a reason to discard the date the user selected.
     // This is especially important when the provider flag matches an older
@@ -595,7 +620,7 @@ export async function handleManualWatchReview(req, res, path) {
   const body = await readJson(req);
   try {
     const result = review.status === "pending"
-      ? await approveReview(review, body.mode || body.watchImportMode, body.watched_at || body.watchedAt)
+      ? await serializedApproval(review, body.mode || body.watchImportMode, body.watched_at || body.watchedAt)
       : { id, status: review.status, mode: review.decision_mode, watchedAt: review.media?.watched_at || "", review };
     const pendingReviews = listPendingManualWatchReviews();
     return sendJson(res, {

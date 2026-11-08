@@ -15,7 +15,7 @@ import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
 import { keepOrderProvenance, resolveOrderMediaForPolling } from "./utils/episodeOrderWatch.js";
 import { applyUnwatchedTransition } from "./utils/watchStateTransitions.js";
-import { plexUnplayedHasWatchEvidence, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
+import { plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
 import { pollConnectedTrackers } from "./utils/trackerSync.js";
 import { kickSimklFullSyncRuns } from "./utils/trackers/simklFullSyncRunner.js";
 import { getTrackerConnection } from "./utils/trackerConnectionRepo.js";
@@ -36,6 +36,7 @@ import { pruneWatchAuditPayloads } from "./utils/watchAudit.js";
 import { runScheduledPlaystateAliasRepair } from "./utils/playstateAliasRepair.js";
 import {
   deletePlaybackProgress,
+  getPlaybackProgressForMedia,
   findWatchedByAnyMediaKey,
   getCachedHistory,
   getCachedShows,
@@ -53,7 +54,7 @@ import {
   clearTraktProviderOverrides,
 } from "./utils/dataRepo.js";
 import { resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem } from "./utils/watchDates.js";
-import { enqueueManualWatchReview } from "./utils/manualWatchReview.js";
+import { dismissPendingManualWatchReviewsForMedia, enqueueManualWatchReview, hasPendingManualWatchReviewForMedia } from "./utils/manualWatchReview.js";
 import { brandEnv } from "./utils/brandEnv.js";
 import { createPerUserState } from "./utils/perUserState.js";
 
@@ -908,7 +909,21 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
   const unplayedWatchedRecord = unplayedPlaystate?.state === "watched"
     ? null
     : await findWatchedByAnyMediaKey(media).catch(() => null);
-  if (!plexUnplayedHasWatchEvidence({ playstate: unplayedPlaystate, watchedRecord: unplayedWatchedRecord })) return;
+  // A part watched item was never fully watched, so Plekt may hold only a resume
+  // position (or a provider watched flag still waiting for review). Clearing it
+  // in Plex is still an unwatch: without it the other servers keep their resume
+  // position and the next resume scan pushes it straight back to Plex.
+  const unplayedProgress = unplayedPlaystate?.state === "watched"
+    ? null
+    : await getPlaybackProgressForMedia(media).catch(() => null);
+  const unplayedEvidence = {
+    playstate: unplayedPlaystate,
+    watchedRecord: unplayedWatchedRecord,
+    progress: viewCount === 0 && viewOffset === 0 ? unplayedProgress : null,
+    pendingReview: viewCount === 0 && viewOffset === 0 && hasPendingManualWatchReviewForMedia(media),
+  };
+  if (!plexUnplayedHasWatchEvidence(unplayedEvidence)) return;
+  const partWatchedClear = plexUnplayedIsPartWatchedClear(unplayedEvidence);
 
   const loopStore = createLoopStore();
   if (viewCount === 0) {
@@ -926,8 +941,11 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
   });
 
   try {
-    const result = await applyUnwatchedTransition({ ...media, itemId: ratingKey }, config, loopStore);
-    if (result.alreadyUnwatched) return;
+    // Forced: the local state may already read unwatched, which would otherwise
+    // clear only Plekt's own row and leave the other servers' resume position.
+    const result = await applyUnwatchedTransition({ ...media, itemId: ratingKey }, config, loopStore, { force: partWatchedClear });
+    if (partWatchedClear) dismissPendingManualWatchReviewsForMedia(media);
+    if (result.alreadyUnwatched && !partWatchedClear) return;
     const summary = result.summary;
     await appendSyncHistory({
       mediaType: media.type,

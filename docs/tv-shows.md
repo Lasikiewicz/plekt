@@ -33,6 +33,14 @@ TMDB or TVDB id changes. This review does not alter watch history or provider st
 
 ### Per-show episode order
 
+Manual Watch review approval revalidates a queued episode's original verified identity
+against current links and destinations, even if the selected order has since changed.
+Missing or invalid proof leaves the review pending; check the show's Episode order links.
+Legacy reviews without proof cannot be approved by guessing their episode numbers.
+Up Next displays the selected order's numbers and label when a cached verified link is
+available. Its playback and watched-state actions retain the original aired identity.
+Approval reuses an existing watch and does not send another tracker play for it.
+
 The admin-only **Episode order** menu on a show's detail page selects Aired order or any
 other order TVDB lists for that show (DVD, Absolute, Alternate, Regional, Alternate DVD,
 Alternate 2) for its season and episode display. Alternate orders use TVDB's own name for the

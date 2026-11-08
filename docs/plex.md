@@ -247,10 +247,31 @@ own catch-up sync separately pulls:
 
 Every minute, **unwatched reconciliation** (`checkPlexUnwatchedStatus`) verifies items
 Plekt thinks are watched are still watched on Plex, as a backstop for unwatches
-missed while the WebSocket listener was disconnected. Suspected unwatches are checked
-against live Plex metadata before they are sent to manual watch review. A confirmed
+missed while the WebSocket listener was disconnected. It also checks up to 30 pending
+Plex manual watch reviews per poll by their exact source ratingKey, rotating through
+the queue so older reviews are also checked: Mark as Watched followed by
+Mark as Unwatched can leave only a review, with no watch row to reconcile. A review is
+cleared only when live metadata for that same item is unplayed with no resume position;
+watched, resumed, missing, and other providers' items are left alone. A recent outbound
+played mark and a review decision made during the lookup still take precedence.
+Suspected unwatches are checked against live Plex metadata. A confirmed
 mismatch records the unwatched transition in Plekt and propagates it to the other
 eligible destinations.
+
+**Clearing a part watched item.** An item that was never fully watched has no watch
+record, only a resume position, so an unplayed notification used to look like "nothing
+to undo" and was dropped. The other servers then kept their resume position and the next
+resume scan pushed it back to Plex. An unplayed Plex notification (viewCount 0, no
+viewOffset) is now an unwatch when Plekt also holds a resume position that Plex reported or
+was given (`plexHeldStoredResume`: the stored source is Plex, or the dispatch telemetry
+records a successful progress push to Plex), or a provider watched flag still waiting in
+manual watch review. A position only another server holds says nothing about Plex and is
+not cleared by Plex's empty state. Because the local state may already read unwatched,
+this unwatch is forced (`plexUnplayedIsPartWatchedClear`) so it reaches the other servers,
+and the pending review is dismissed. Emby and Jellyfin unplayed callbacks follow the same
+rule through `embyLikeUnplayedIsPartWatchedClear`. An old imported watch row under an item
+whose canonical state is already unwatched does not block the forced unwatch. See
+decision 66 in [decisions.md](decisions.md).
 
 ## Outbound operations (`plexClient.js`)
 

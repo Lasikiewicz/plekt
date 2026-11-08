@@ -6,6 +6,52 @@ import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { isEmbyLikePlayed } from "./watchDates.js";
 import { invalidateHistoryDerivedCaches, listRecentTrackedWatchRows, listRecentlyUpdatedTrackedWatchRows, mediaKeyFor } from "./dataRepo.js";
 import { recordSyncHistory } from "./syncHistoryTelemetry.js";
+import { getManualWatchReview, listPendingManualWatchReviews, manualWatchReviewMedia, setManualWatchReviewStatus } from "./manualWatchReview.js";
+import { createPerUserState } from "./perUserState.js";
+
+const pendingPlexReviewPollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
+
+// A held Plex watched flag has no watch-history row. If the following unwatch
+// emits no timeline frame, the ordinary watched-row poll cannot see it. Only
+// inspect the exact Plex item that supplied the flag, never another provider's
+// review or a title-search match, and require its resume position to be gone.
+async function checkPendingPlexReviewUnwatches(config, loopStore) {
+  const reviews = listPendingManualWatchReviews({ includeWatchContext: false })
+    .filter((review) => review.source === "plex" && review.review_kind === "manual_watch" && review.source_item_id);
+  const cursor = pendingPlexReviewPollState();
+  if (!reviews.length) { cursor.next = 0; return; }
+  const start = cursor.next % reviews.length;
+  const batch = Array.from({ length: Math.min(30, reviews.length) }, (_, index) => reviews[(start + index) % reviews.length]);
+  cursor.next = (start + batch.length) % reviews.length;
+  for (const review of batch) {
+    try {
+      const item = await fetchPlexMetadataItem(config.plex, review.source_item_id);
+      if (!item || String(item.ratingKey) !== String(review.source_item_id)
+        || item.type !== review.media_type
+        || Number(item.viewCount || 0) !== 0 || Number(item.viewOffset || 0) !== 0) continue;
+      const media = { ...manualWatchReviewMedia(review), source: "plex", itemId: String(item.ratingKey) };
+      const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(media, "plex", loopStore).catch(() => 0);
+      if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) continue;
+      // A decision or a fresh flag may have arrived during the metadata request.
+      const reviewChanged = () => {
+        const current = getManualWatchReview(review.id);
+        return current?.status !== "pending" || current.updated_at !== review.updated_at;
+      };
+      if (reviewChanged()) continue;
+      console.log("Cron detected Plex pending review item cleared; storing and propagating", { title: media.title });
+      const result = await applyUnwatchedTransition(media, config, loopStore, { force: true, shouldDefer: reviewChanged });
+      if (result.deferred || result.heldBackSuspiciousBurst) continue;
+      const latest = getManualWatchReview(review.id);
+      if (latest?.status === "pending" && latest.updated_at === review.updated_at) {
+        setManualWatchReviewStatus(review.id, "dismissed", "unwatched");
+      }
+      await recordSyncHistory(media, result.summary, "unwatched");
+      await invalidateHistoryDerivedCaches("checkPlexUnwatchedStatus").catch(() => null);
+    } catch (error) {
+      console.error(`Error checking Plex pending review for '${review.title}':`, error);
+    }
+  }
+}
 
 // Fallback cadence for the legacy Plex unwatch poll. Primary detection is the realtime
 // notification listener; this poll only backstops events missed while the socket was down.
@@ -66,7 +112,9 @@ async function clearJellyfinUnwatchedObservation(media, loopStore) {
 
 export async function checkPlexUnwatchedStatus(config, loopStore) {
   if (!watchedPlayedSyncEnabled()) return;
-  if (!config.plex?.baseUrl || !config.plex?.token) return;
+  if (!config.plex?.baseUrl || !config.plex?.token || config.plex.disabled) return;
+
+  await checkPendingPlexReviewUnwatches(config, loopStore);
 
   const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
   const plexWasConfirmedWatched = (record) => {

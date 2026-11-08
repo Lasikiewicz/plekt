@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import nodePath from "node:path";
+import { embyLikeUnplayedIsPartWatchedClear } from "../utils/plexWatchstate.js";
 import { requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
 import { readFormData, readJson, readRawText } from "../utils/requestBody.js";
 import { sendJson, sendApiError, sendOptions, methodNotAllowed } from "../utils/http.js";
@@ -52,6 +53,7 @@ import { watchImportMode } from "../utils/tuning.js";
 import { formatProviderOutcomeSummary, normalizeWatchSyncIntent, summarizeProviderOutcomes } from "../utils/watchSyncPolicy.js";
 import {
   dismissPendingManualWatchReviewsForMedia,
+  hasPendingManualWatchReviewForMedia,
   enqueueManualWatchReview,
 } from "../utils/manualWatchReview.js";
 import { applyUnwatchedTransition } from "../utils/watchStateTransitions.js";
@@ -669,6 +671,8 @@ function currentWatchRecordForSyncActivity(entry = {}, debug = {}, identity = {}
 // Core of "mark unwatched": delete the watched record, write a superseding
 // unwatched record, flip the playstate cache, and propagate unplayed to the other
 // platforms. Shared by the webhook `unplayed` phase and the manual-unwatch handler.
+const EMBY_LIKE_SOURCES = new Set(["emby", "jellyfin"]);
+
 export async function applyManualUnwatch(media, config, loopStore, recordId = "", { includeSourcePlatform = false, trackDispatch = true, force = false, lane = "sync" } = {}) {
   const manualActionStartedAt = includeSourcePlatform ? Date.now() : 0;
   const result = await applyUnwatchedTransition(media, config, loopStore, {
@@ -2477,7 +2481,7 @@ export function mediaFromProgressRequest(progressRow, body = {}, mediaKey = "") 
     },
     season: seasonValue == null || seasonValue === "" ? undefined : Number(seasonValue),
     episode: episodeValue == null || episodeValue === "" ? undefined : Number(episodeValue),
-    providerItems: requestProviderItems(body.provider_items || body.providerItems),
+    providerItems: requestProviderItems(body.provider_items || body.providerItems), watchProvenance: body.watchProvenance || body.watch_provenance,
     providerItemId: body.provider_item_id || body.providerItemId || undefined,
     positionMs: 0,
     offsetMs: 0,
@@ -3830,7 +3834,32 @@ export async function handleWebhook(req, res) {
       });
       await deleteActiveSession(media);
       await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
-      const { wasDeleted, id, alreadyUnwatched } = await applyManualUnwatch(media, config, loopStore);
+      // A part watched item was never fully watched, so Plekt may hold only a
+      // resume position (or a provider watched flag still waiting for review).
+      // Clearing it on this server is still an unwatch: forced, so the other
+      // servers drop their resume position instead of pushing it back here.
+      let partWatchedClear = false;
+      if (EMBY_LIKE_SOURCES.has(String(media.source || "").toLowerCase())) {
+        const [priorPlaystate, priorWatched, priorProgress] = await Promise.all([
+          getPlaystateForMedia(media).catch(() => null),
+          findWatchedByAnyMediaKey(media).catch(() => null),
+          getPlaybackProgressForMedia(media).catch(() => null),
+        ]);
+        partWatchedClear = embyLikeUnplayedIsPartWatchedClear(String(media.source).toLowerCase(), {
+          playstate: priorPlaystate,
+          watchedRecord: priorWatched,
+          progress: priorProgress,
+          pendingReview: hasPendingManualWatchReviewForMedia(media),
+        });
+        if (partWatchedClear) {
+          console.log("Webhook: part watched item cleared, unwatching so the resume position is not pushed back", {
+            source: media.source,
+            title: media.title,
+          });
+        }
+      }
+      const { wasDeleted, id, alreadyUnwatched } = await applyManualUnwatch(media, config, loopStore, "", { force: partWatchedClear });
+      if (partWatchedClear) dismissPendingManualWatchReviewsForMedia(media);
       console.log("Webhook: unwatched sync completed", {
         source: media.source,
         title: media.title,
@@ -3838,7 +3867,7 @@ export async function handleWebhook(req, res) {
         alreadyUnwatched: Boolean(alreadyUnwatched),
         id,
       });
-      if (alreadyUnwatched) {
+      if (alreadyUnwatched && !partWatchedClear) {
         return sendJson(res, { ok: true, deleted: false, unplayed: true, inserted: false, id, reason: "Already unwatched; no change to propagate" });
       }
       return sendJson(res, { ok: true, deleted: wasDeleted, unplayed: true, inserted: true, id, ...(wasDeleted ? {} : { reason: "No previous watched record found to delete" }) });

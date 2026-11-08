@@ -26,6 +26,11 @@ keeping the poster and row height stable.
 
 ## Files
 
+For shows with an alternate TVDB order, Up Next progresses through the verified aired
+catalogue and resolves media-server items by exact episode ID. Cards display the selected
+order and its label; watch and unwatch requests retain verified aired identity. A missing
+next episode is not replaced with a different episode that happens to use the same numbers.
+
 | File | Role |
 | --- | --- |
 | `public/modules/dashboard.js` | Dashboard rendering (`renderDashboard`, completed-history rows, mixed Up Next cards, compatibility progress-card renderer, dedupe helpers, poster observer) |

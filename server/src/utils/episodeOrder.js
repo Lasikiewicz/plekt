@@ -117,6 +117,22 @@ export async function episodeOrderDetails(details, {cachedOnly = false} = {}) {
   for (const e of list) seasons.set(e.season, (seasons.get(e.season) || 0) + 1);
   return { ...details, episode_order: order, episode_order_label: orderLabel(catalogue, order), seasons: [...seasons].sort((a,b) => a[0]-b[0]).map(([n,count]) => ({ season_number:n, episode_count:count, name:n ? `Season ${n}` : "Specials", poster_path:null })), number_of_episodes: list.filter(e=>e.season>0).length, number_of_seasons:[...seasons.keys()].filter(n=>n>0).length };
 }
+// Presentation only: never replace the canonical action/progression coordinates.
+export function episodeOrderDisplay(item) {
+  if (item.media_type !== "episode") return item;
+  const tvdbId = item.show_tvdb_id || item.tvdb_id;
+  if (!tvdbId) return item;
+  const saved = readEpisodeOrder(tvdbId);
+  if (!isAlternateOrder(saved.order)) return item;
+  const catalogue = getCachedTvdbOrderCatalogue(tvdbId);
+  if (!catalogue) return item;
+  const aired = catalogue.orders[AIRED_ORDER].find(e => e.season === Number(item.season) && e.episode === Number(item.episode));
+  const links = aired && orderLinks(catalogue, saved, saved.order).filter(m => m.airedId === aired.id);
+  const source = links?.length === 1 && catalogue.orders[saved.order]?.find(e => e.id === links[0].dvdId);
+  return source ? { ...item, display_season: source.season, display_episode: source.episode,
+    episode_order_label: orderLabel(catalogue, saved.order), watch_provenance: { episode_order: { tvdbId: String(tvdbId), dvdId: source.id, airedId: aired.id, order: saved.order } } } : item;
+}
+
 export async function annotateEpisodeOrder(show) {
   const id = String(show?.tvdb_id || "");
   const order = id ? readEpisodeOrder(id).order : AIRED_ORDER;

@@ -1,15 +1,15 @@
-import { state, elements } from "./state.js?v=2.2.4.0.0";
-import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.4.0.0";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.0";
-import { isWatchedHistoryAction } from "./sync.js?v=2.2.4.0.0";
-import { mergeShowDetail } from "./explorer.js?v=2.2.4.0.0";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.0.0"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.4.0.0";
-import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.0.0";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.0.0";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.0.0";
-import { episodeStillUrl } from "./images.js?v=2.2.4.0.0";
-import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.0.0";
-import { ifLoaded } from "./route-modules.js?v=2.2.4.0.0";
+import { state, elements } from "./state.js?v=2.2.4.0.2";
+import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.4.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.2";
+import { isWatchedHistoryAction } from "./sync.js?v=2.2.4.0.2";
+import { mergeShowDetail } from "./explorer.js?v=2.2.4.0.2";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.0.2"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.4.0.2";
+import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.0.2";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.0.2";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.0.2";
+import { episodeStillUrl } from "./images.js?v=2.2.4.0.2";
+import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.0.2";
+import { ifLoaded } from "./route-modules.js?v=2.2.4.0.2";
 
 const resetPartWatchedView = ifLoaded("dashboard", "resetPartWatchedView");
 const renderPartWatched = ifLoaded("dashboard", "renderPartWatched");
@@ -903,7 +903,7 @@ function watchRecordFromEpisode(episode, watchedAt, syncIntent = "manual") {
     season: episode.seasonNumber,
     episode: episode.episodeNumber,
     poster_url: episode.posterUrl || episode.stillUrl || null,
-    provider_items: episode.providerItems || episode.provider_items || {},
+    provider_items: episode.providerItems || episode.provider_items || {}, watchProvenance: episode.watchProvenance,
     provider_item_id: episode.providerItemId || episode.provider_item_id || undefined, numbering_source: episode.numberingSource || undefined,
   };
 }

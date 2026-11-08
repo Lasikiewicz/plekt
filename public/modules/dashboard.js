@@ -1,12 +1,12 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.0";
-import { state, elements } from "./state.js?v=2.2.4.0.0";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.2.4.0.0";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.2.4.0.0";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.2.4.0.0";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.0.0";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.2.4.0.0";
-import { cardArtAttribute } from "./card-art.js?v=2.2.4.0.0";
-import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.0.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.2";
+import { state, elements } from "./state.js?v=2.2.4.0.2";
+import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.2.4.0.2";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.2.4.0.2";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.2.4.0.2";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.0.2";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.2.4.0.2";
+import { cardArtAttribute } from "./card-art.js?v=2.2.4.0.2";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.0.2";
 
 const PART_WATCHED_DASHBOARD_LIMIT = 30;
 const EXPLORER_PAGE_SIZE = 240;
@@ -520,7 +520,7 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
   const seasonEpisodeRow = `
           <div class="history-card-meta-row">
             <span class="meta-label">Season/Ep:</span>
-            <span class="meta-value">${escapeHtml(episodeCode(entry.season, entry.episode))}</span>
+            <span class="meta-value">${escapeHtml(isUpNext ? [episodeCode(entry.display_season ?? entry.season, entry.display_episode ?? entry.episode), entry.episode_order_label].filter(Boolean).join(" · ") : episodeCode(entry.season, entry.episode))}</span>
           </div>`;
   const metaRows = [
     !isUpNext ? `

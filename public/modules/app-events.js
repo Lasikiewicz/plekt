@@ -1,12 +1,12 @@
-import { buildAuthHeaders, buildNowPlayingUrl, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./auth.js?v=2.2.4.0.0";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.2.4.0.0";
-import { state, elements, explorerCardModeKey } from "./state.js?v=2.2.4.0.0";
-import { escapeHtml, sanitizeTitle, safeImageUrl, movieSlug, showTitleFrom, slug, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel } from "./utils.js?v=2.2.4.0.0";
-import { compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, markArtworkUnavailable, tmdbProfile } from "./images.js?v=2.2.4.0.0";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerCronSync, triggerStopSync } from "./sync.js?v=2.2.4.0.0";
-import { attachSidebarMiddleClickNavigation } from "./sidebar-navigation.js?v=2.2.4.0.0";
-import { applyTextScale } from "./appearance.js?v=2.2.4.0.0";
-import { WATCH_ROUTE_MODULES, ifLoaded, lazyExport, loadRouteModules, onRouteModuleLoaded } from "./route-modules.js?v=2.2.4.0.0";
+import { buildAuthHeaders, buildNowPlayingUrl, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./auth.js?v=2.2.4.0.2";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.2.4.0.2";
+import { state, elements, explorerCardModeKey } from "./state.js?v=2.2.4.0.2";
+import { escapeHtml, sanitizeTitle, safeImageUrl, movieSlug, showTitleFrom, slug, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel } from "./utils.js?v=2.2.4.0.2";
+import { compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, markArtworkUnavailable, tmdbProfile } from "./images.js?v=2.2.4.0.2";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerCronSync, triggerStopSync } from "./sync.js?v=2.2.4.0.2";
+import { attachSidebarMiddleClickNavigation } from "./sidebar-navigation.js?v=2.2.4.0.2";
+import { applyTextScale } from "./appearance.js?v=2.2.4.0.2";
+import { WATCH_ROUTE_MODULES, ifLoaded, lazyExport, loadRouteModules, onRouteModuleLoaded } from "./route-modules.js?v=2.2.4.0.2";
 
 // Route modules are not imported statically: that pulled the whole route graph
 // (about 1 MB) into the event wiring every page loads. Actions load their module
@@ -44,7 +44,7 @@ const dontRecommendDiscoverItem = lazyExport("discover", "dontRecommendDiscoverI
 const syncMediaActionsMenuState = ifLoaded("media-detail", "syncMediaActionsMenuState"), closeDebugModal = ifLoaded("media-detail", "closeDebugModal"), closeMediaDetail = ifLoaded("media-detail", "closeMediaDetail"), closeMediaInfoModal = ifLoaded("media-detail", "closeMediaInfoModal");
 const openHistoryDebugModal = lazyExport("media-detail", "openHistoryDebugModal");
 const closePersonProfile = ifLoaded("media-person", "closePersonProfile");
-import { hydrateDeferredCastDisclosure } from "./cast-disclosure.js?v=2.2.4.0.0";
+import { hydrateDeferredCastDisclosure } from "./cast-disclosure.js?v=2.2.4.0.2";
 
 let _cb = {};
 
@@ -578,7 +578,7 @@ function attachEvents() {
       imdbId: d.imdbId || d.upNextImdbId || "",
       posterUrl: d.posterUrl || d.upNextPosterUrl || "",
       airDate: d.airDate || d.upNextAirDate || "",
-      providerItems: parseDatasetObject(d.providerItems || d.upNextProviderItems, {}),
+      providerItems: parseDatasetObject(d.providerItems || d.upNextProviderItems, {}), watchProvenance: (state.upNextItems || []).find(row => row.id === (d.upNextWatch || d.upNextMenuWatch || d.upNextClear || d.upNextRemove))?.watch_provenance,
     };
   };
 
@@ -706,7 +706,7 @@ function attachEvents() {
         tvdbId: referenceShow?.tvdb_id || item.tvdbId,
         imdbId: referenceShow?.imdb_id || item.imdbId,
         posterUrl: item.posterUrl || null,
-        providerItems: item.providerItems,
+        providerItems: item.providerItems, watchProvenance: item.watchProvenance,
         key: item.id || `up-next:${showTitle}:${season}:${episode}`,
         airDate: item.airDate || null,
       }],
@@ -775,7 +775,7 @@ function attachEvents() {
           show_tvdb_id: payload.show_tvdb_id || payload.showTvdbId || "",
           season: mediaType === "episode" ? (payload.season ?? "") : "",
           episode: mediaType === "episode" ? (payload.episode ?? "") : "",
-          provider_items: payload.provider_items || payload.providerItems || {},
+          provider_items: payload.provider_items || payload.providerItems || {}, watchProvenance: payload.watchProvenance || payload.watch_provenance,
         }),
       });
       const body = await response.json().catch(() => ({}));
@@ -860,7 +860,7 @@ function attachEvents() {
           show_tvdb_id: payload.show_tvdb_id || payload.showTvdbId || "",
           season: isEpisode ? (payload.season ?? "") : "",
           episode: isEpisode ? (payload.episode ?? "") : "",
-          provider_items: payload.provider_items || payload.providerItems || {},
+          provider_items: payload.provider_items || payload.providerItems || {}, watchProvenance: payload.watchProvenance || payload.watch_provenance,
           dismissal_scope: payload.dismissal_scope || "",
         }),
       });

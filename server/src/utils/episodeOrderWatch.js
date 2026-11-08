@@ -80,8 +80,9 @@ export async function resolveOrderMediaForPolling(media, config, log = console.w
 // from a media server. Verify that episode before the local unwatch lookup or
 // insertion, just as we do for a provider event. Keep manual dispatch semantics.
 export async function resolveOrderUpNextAction(media, config) {
+  if (isEpisode(media) && provenanceOf(media).episode_order) return resolveOrderWatch(media, config, { stateType: "unwatched" });
   if (!isEpisode(media) || readEpisodeOrder(idOf(media)).order === AIRED_ORDER
-    || provenanceOf(media).episode_order) return media;
+    ) return media;
   const items = media.providerItems || media.provider_items || {};
   const provider = ["plex", "emby", "jellyfin"].find(p => {
     const ids = items[p];

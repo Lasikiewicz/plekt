@@ -8,11 +8,11 @@ import {
   tvShowHrefFromEpisode,
   tvShowTmdbHref,
   tvShowTvdbHref,
-} from "./utils.js?v=2.2.4.0.0";
-import { posterMarkup, posterOverflowMenu, proxiedArtworkUrl, tmdbPoster } from "./images.js?v=2.2.4.0.0";
-import { cardArtAttribute } from "./card-art.js?v=2.2.4.0.0";
+} from "./utils.js?v=2.2.4.0.2";
+import { posterMarkup, posterOverflowMenu, proxiedArtworkUrl, tmdbPoster } from "./images.js?v=2.2.4.0.2";
+import { cardArtAttribute } from "./card-art.js?v=2.2.4.0.2";
 // With Posters only on, a clicked poster opens its card (Discover, Watchlist, Ratings, Playlists).
-import "./page-card-open.js?v=2.2.4.0.0";
+import "./page-card-open.js?v=2.2.4.0.2";
 
 function normalizedType(item = {}) {
   const raw = String(item.media_type || item.mediaType || item.type || "").toLowerCase();
@@ -84,7 +84,7 @@ export function normalizeMediaCardRecord(item = {}, options = {}) {
     ? options.meta
     : item.meta
       || (type === "episode" && item.season != null && item.episode != null
-        ? episodeCode(item.season, item.episode)
+        ? [episodeCode(item.display_season ?? item.season, item.display_episode ?? item.episode), item.episode_order_label].filter(Boolean).join(" · ")
         : [mediaYear(item), item.media_label || item.mediaLabel].filter(Boolean).join(" · "));
   return {
     ...item,

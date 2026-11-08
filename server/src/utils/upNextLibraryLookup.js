@@ -15,6 +15,7 @@ import {
 } from "./jellyfinClient.js";
 import { runWithConcurrency } from "./concurrency.js";
 import { db } from "../db.js";
+import { orderCoordinate as canonicalOrderCoordinate, resolveOrderUpNextItem, orderRevision as upNextOrderRevision } from "./episodeOrderUpNext.js";
 
 const PROVIDERS = ["plex", "emby", "jellyfin"];
 // A resolved library item is stable: the same episode keeps its ratingKey/Id
@@ -164,6 +165,8 @@ function runtimeMsOf(provider, result) {
 }
 
 export async function resolveUpNextProviderItemId(provider, config, item) {
+  const ordered = await resolveOrderUpNextItem(provider, config, item);
+  if (ordered) return ordered;
   const direct = requestedProviderIds(item, provider);
   if (direct.length) return { providerItemId: direct[0], direct: true, runtimeMs: 0 };
 
@@ -288,7 +291,7 @@ function cacheKey(provider, config, media) {
   const title = text(media.show_title || media.title).toLowerCase();
   const season = media.season == null ? "" : media.season;
   const episode = media.episode == null ? "" : media.episode;
-  return `${provider}:${base}:${ids}:${title}:s${season}e${episode}`;
+  return `${provider}:${base}:${ids}:${title}:s${season}e${episode}${upNextOrderRevision(media) ? `:order:${upNextOrderRevision(media)}` : ""}`;
 }
 
 function entryExpired(entry) {
@@ -397,7 +400,7 @@ export function providerSeriesEpisodes(provider, config, media) {
 
 function providerInventoryKey(provider, config, show = {}) {
   const ids = [show.imdb_id, show.tmdb_id, show.tvdb_id].map((value) => text(value).toLowerCase()).join("|");
-  return `${provider}:${text(config?.[provider]?.baseUrl).toLowerCase()}:${ids}:${text(show.title).toLowerCase()}`;
+  return `${provider}:${text(config?.[provider]?.baseUrl).toLowerCase()}:${ids}:${text(show.title).toLowerCase()}${upNextOrderRevision(show) ? `:order:${upNextOrderRevision(show)}` : ""}`;
 }
 
 // A new episode can exist in a configured media-server library before the
@@ -438,7 +441,7 @@ export function createUpNextLibraryEpisodeLookup(config = {}, { stats = null } =
         clearProviderOutage(provider, config);
         const episodes = (Array.isArray(rawEpisodes) ? rawEpisodes : [])
           .map((episode) => {
-            const coordinate = providerEpisodeCoordinate(provider, episode);
+            const coordinate = canonicalOrderCoordinate(provider, episode, show, providerEpisodeCoordinate(provider, episode));
             const providerItemId = providerEpisodeId(provider, episode);
             if (!coordinate || !providerItemId) return null;
             return {

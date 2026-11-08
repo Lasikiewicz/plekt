@@ -1661,3 +1661,17 @@ a large historical batch before ordinary sync status can be clear.
 **Rejected:** Keeping loading tiles on every reload (the user preferred content). Bringing back the old cache as it was: it could skip the server read for a recent copy and showed its cards as final.
 
 **Enforced by:** `applyUpNextSnapshot` and `rememberUpNextSnapshot` in `public/modules/up-next.js`; `test/upNextResetReissue.test.js` (saved cards paint as checking, the server reply wins, another dashboard's or an expired save never paints).
+
+### 66. Clearing a part watched item is an unwatch, but only when that server held the position
+
+**Date:** 2026-11-08 | **Status:** Active
+
+**Context:** Clearing a resume position in Plex (Mark as Watched, then Mark as Unwatched) produced an unplayed notification that was dropped because Plekt held no watch record, only a resume position. Emby and Jellyfin kept their position and the next resume scan pushed it back to Plex, so the clear never stuck (reported on All Quiet on the Western Front).
+
+**Decision:** An unplayed callback from Plex, Emby or Jellyfin counts as an unwatch when Plekt holds a resume position that server reported or was given (stored source, or a successful progress push in the dispatch telemetry), or a provider watched flag still waiting in manual watch review. The unwatch is forced so it reaches the other servers even when the local state already reads unwatched, and the pending review is dismissed.
+
+**Rejected:** Treating every unplayed callback as an unwatch (a newly added library item also arrives unplayed and would push an unwatch to every target for something nobody watched). Treating any stored position as evidence (a position only another server holds, or one Plex never received, says nothing about Plex). Letting an old imported watch row block the forced unwatch (Trakt and Simkl imports leave such rows under items whose canonical state is already unwatched).
+
+The per-minute Plex fallback also checks pending Plex watched-flag reviews by exact source ratingKey. A live unplayed item with no resume position supersedes its pending flag even if no usable notification arrives. Reviews from another provider, source-mismatch reviews, missing items, and items still watched or resumed are not evidence of a Plex clear. Existing outbound-echo, restore and automatic-unwatch burst guards still apply.
+
+**Enforced by:** `plexUnplayedHasWatchEvidence`, `plexUnplayedIsPartWatchedClear`, `embyLikeUnplayedIsPartWatchedClear` and `providerHeldStoredResume` in `server/src/utils/plexWatchstate.js`; their callers in `server/src/scheduler.js` and the unplayed phase of `handleWebhook` in `server/src/routes/sync.js`; `checkPlexUnwatchedStatus` in `server/src/utils/unwatchedStatusPoll.js`; `test/plexWatchstate.test.js` and `test/plexPendingReviewUnwatch.test.js`.

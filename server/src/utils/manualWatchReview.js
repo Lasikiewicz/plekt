@@ -694,14 +694,9 @@ function hasManualUnwatchForMedia(media = {}) {
   return selectManualUnwatchRowsStmt.all().some((row) => mediaMatchesReview(media, watchRowMedia(row)));
 }
 
-// Explicit manual unwatches should retire any review rows that refer to the
-// same item. `before` keeps a provider callback that races after the click from
-// being mistaken for an older pending decision; the queue guard above handles
-// that callback separately.
-export function dismissPendingManualWatchReviewsForMedia(media = {}, { before = Number.POSITIVE_INFINITY } = {}) {
+function pendingReviewsMatchingMedia(media = {}, { before = Number.POSITIVE_INFINITY } = {}) {
   const normalizedMedia = serializableMedia(media);
-  const now = Date.now();
-  let dismissed = 0;
+  const matches = [];
   for (const row of selectPendingReviewsStmt.all()) {
     const review = rowToReview(row);
     if (Number(review.updated_at || 0) > Number(before)) continue;
@@ -712,6 +707,26 @@ export function dismissPendingManualWatchReviewsForMedia(media = {}, { before = 
     if (text(review.media?.type || review.media?.media_type).toLowerCase() === "episode"
       && !mediaMatchesReviewByIdentity(normalizedMedia, review.media)
       && showTitleNamesSeveralShows(showTitleFromMedia(review.media) || showTitleFromMedia(normalizedMedia))) continue;
+    matches.push(review);
+  }
+  return matches;
+}
+
+// True when a provider watched flag for this item is still waiting for a
+// decision. A provider unwatch that follows it supersedes that flag, so it is
+// evidence the item was touched even though no watch was ever recorded.
+export function hasPendingManualWatchReviewForMedia(media = {}) {
+  return pendingReviewsMatchingMedia(media).length > 0;
+}
+
+// Explicit manual unwatches should retire any review rows that refer to the
+// same item. `before` keeps a provider callback that races after the click from
+// being mistaken for an older pending decision; the queue guard above handles
+// that callback separately.
+export function dismissPendingManualWatchReviewsForMedia(media = {}, { before = Number.POSITIVE_INFINITY } = {}) {
+  const now = Date.now();
+  let dismissed = 0;
+  for (const review of pendingReviewsMatchingMedia(media, { before })) {
     updateStatusStmt.run({
       id: review.id,
       status: "dismissed",
