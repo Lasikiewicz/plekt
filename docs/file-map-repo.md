@@ -103,6 +103,7 @@ server modules.
 | `mediaForceSync.test.js` | Title-scoped Force Sync mode/target normalization, watched Plex/Emby item shaping, and duplicate-quality Jellyfin episode matching. |
 | `mediaForceSyncTrackerPhases.test.js` | Local-first detail Force Sync ordering, independently bounded Trakt work, combined partial outcomes, and cancellation of queued tracker items. |
 | `scheduledResumeAuthority.test.js` | Timestamp and canonical-state precedence for webhook and scheduled resume candidates, including stale acknowledgements and explicit unwatches. |
+| `plexResumeUnwatch.test.js` | Plex fallback recovery for cleared resume-only items, provider-held progress evidence, and preservation of newer or uncleared progress. |
 | `staleRestoreScheduler.test.js` | Scheduler admission recovers orphaned restores while preserving fresh heartbeats and replacement operation owners. |
 | `defaultShowSeason.test.js` | Latest regular season selection, preserving collapsed seasons, explicit season links, and load-ready deep-link scrolling. |
 | `syncRetry.test.js` | Scheduled-dispatch retry backoff schedule/eligibility, retry columns, permanent `sync_history` pagination. |

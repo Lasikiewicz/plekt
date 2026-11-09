@@ -8,8 +8,50 @@ import { invalidateHistoryDerivedCaches, listRecentTrackedWatchRows, listRecentl
 import { recordSyncHistory } from "./syncHistoryTelemetry.js";
 import { getManualWatchReview, listPendingManualWatchReviews, manualWatchReviewMedia, setManualWatchReviewStatus } from "./manualWatchReview.js";
 import { createPerUserState } from "./perUserState.js";
+import { countPlaybackProgressRows, listPlaybackProgressRowsForReplay, getPlaybackProgressForMedia } from "./dataRepo.js";
+import { plexHeldStoredResume } from "./plexWatchstate.js";
 
 const pendingPlexReviewPollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
+const plexResumePollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
+
+// A missed notification must also be recoverable when there was never a watch
+// row or a pending review. Only positions Plex actually held authorize a clear.
+async function checkPlexResumeUnwatches(config, loopStore) {
+  const count = await countPlaybackProgressRows();
+  const cursor = plexResumePollState();
+  if (!count) { cursor.next = 0; return; }
+  const start = cursor.next % count;
+  const rows = await listPlaybackProgressRowsForReplay({ limit: 30, offset: start });
+  cursor.next = (start + rows.length) % count;
+  for (const progress of rows.filter(plexHeldStoredResume)) {
+    try {
+      const media = {
+        title: progress.title, type: progress.media_type, source: "plex", isValid: true,
+        ids: { imdb: progress.imdb_id, tmdb: progress.tmdb_id, tvdb: progress.tvdb_id },
+        season: progress.season, episode: progress.episode,
+      };
+      const match = await findPlexItem(config.plex, media);
+      const key = match?.ratingKey || match?.key;
+      if (!key) continue;
+      const item = await fetchPlexMetadataItem(config.plex, key);
+      if (!item || item.type !== media.type || Number(item.viewCount || 0) !== 0
+        || Number(item.viewOffset || 0) !== 0) continue;
+      const plexMedia = { ...media, itemId: String(item.ratingKey || key) };
+      const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(plexMedia, "plex", loopStore).catch(() => 0);
+      if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) continue;
+      // A playback event can arrive while the live metadata lookup is pending.
+      const current = await getPlaybackProgressForMedia(media);
+      if (!current || current.updated_at !== progress.updated_at
+        || current.position_ms !== progress.position_ms || !plexHeldStoredResume(current)) continue;
+      const result = await applyUnwatchedTransition(plexMedia, config, loopStore, { force: true });
+      if (result.deferred || result.heldBackSuspiciousBurst) continue;
+      await recordSyncHistory(plexMedia, result.summary, "unwatched");
+      await invalidateHistoryDerivedCaches("checkPlexUnwatchedStatus").catch(() => null);
+    } catch (error) {
+      console.error(`Error checking Plex resume clear for '${progress.title}':`, error);
+    }
+  }
+}
 
 // A held Plex watched flag has no watch-history row. If the following unwatch
 // emits no timeline frame, the ordinary watched-row poll cannot see it. Only
@@ -115,6 +157,7 @@ export async function checkPlexUnwatchedStatus(config, loopStore) {
   if (!config.plex?.baseUrl || !config.plex?.token || config.plex.disabled) return;
 
   await checkPendingPlexReviewUnwatches(config, loopStore);
+  await checkPlexResumeUnwatches(config, loopStore);
 
   const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
   const plexWasConfirmedWatched = (record) => {

@@ -272,6 +272,11 @@ episode fan-out from a container, so a library burst cannot overwhelm provider l
 the web process. Polling remains conservative when a server scan is unavailable or
 incomplete: absence from a failed/partial scan is never interpreted as an unwatch.
 
+Plex's per-minute fallback also rotates through up to 30 stored resume rows. A
+position Plex reported or successfully received can be cleared without a watched
+row or pending review when live item metadata confirms zero views and zero offset.
+Positions Plex never held and newer local progress are preserved.
+
 Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback polls, run by
 `runDueUnwatchedPolls` from `scheduled.js`) and `server/src/scheduled.js`.
 

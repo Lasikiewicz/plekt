@@ -258,6 +258,12 @@ Suspected unwatches are checked against live Plex metadata. A confirmed
 mismatch records the unwatched transition in Plekt and propagates it to the other
 eligible destinations.
 
+The same fallback rotates through up to 30 stored resume rows per poll, including
+items with no watch history or pending review. Only positions Plex reported or
+successfully received are eligible. A live metadata lookup must confirm both zero
+views and zero resume position before a forced unwatch clears the other servers;
+a newer local progress update during the lookup cancels that observation.
+
 **Clearing a part watched item.** An item that was never fully watched has no watch
 record, only a resume position, so an unplayed notification used to look like "nothing
 to undo" and was dropped. The other servers then kept their resume position and the next

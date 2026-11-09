@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.3";
-import { state, elements } from "./state.js?v=2.2.4.0.3";
-import { startInitialSyncUi, stopInitialSyncUi, loadInitialSyncSummary } from "./initial-sync.js?v=2.2.4.0.3";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.4";
+import { state, elements } from "./state.js?v=2.2.4.0.4";
+import { startInitialSyncUi, stopInitialSyncUi, loadInitialSyncSummary } from "./initial-sync.js?v=2.2.4.0.4";
 
 const REVIEW_POLL_MS = 30000;
 

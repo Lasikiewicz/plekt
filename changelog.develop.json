@@ -1,14 +1,14 @@
 {
-  "version": "2.2.4.0.3",
-  "build": 3,
+  "version": "2.2.4.0.4",
+  "build": 4,
   "resetCommit": "9f41cac14842f6792d1f8156ad758c79e551faef",
-  "updatedAt": "2026-11-08T20:38:55.979Z",
+  "updatedAt": "2026-11-09T08:07:32.197Z",
   "entries": [
     {
-      "build": 3,
-      "date": "2026-11-08T20:38:55.979Z",
-      "commit": "23862055a7f2a17b4bcb9aae21088fe000fb67ce",
-      "message": "This update includes show episode thumbnails and hide unplaced watches after changing a show's episode order and preserve episode identity and clear cross-server resume state.",
+      "build": 4,
+      "date": "2026-11-09T08:07:32.197Z",
+      "commit": "bb98c1043bf1aac9c6e0f60e08a8c30335ad8faa",
+      "message": "This update includes show episode thumbnails and hide unplaced watches after changing a show's episode order, preserve episode identity and clear cross-server resume state, and reconcile Plex resume-only clears after missed notifications.",
       "author": "Lasikiewicz",
       "details": [
         "Episode thumbnails now load after switching a show to DVD or another TVDB order, instead of showing a broken or blank image.",
@@ -19,11 +19,13 @@
         "Plex recovers a watched-then-unwatched item when its notification is missed and dismisses the superseded review.",
         "Manual Watch Review keeps verified episode identity through approval when mappings change.",
         "Up Next shows the selected TVDB order while storage and tracker writes remain in aired order.",
-        "Playback and watch actions resolve through exact episode identities."
+        "Playback and watch actions resolve through exact episode identities.",
+        "Clearing a part watched item on Plex also removes the other servers' resume positions when no watch history or pending review exists, even if its notification is missed."
       ],
       "messageFragments": [
         "Fix - Show episode thumbnails and hide unplaced watches after changing a show's episode order",
-        "Fix - Preserve episode identity and clear cross-server resume state"
+        "Fix - Preserve episode identity and clear cross-server resume state",
+        "Fix - Reconcile Plex resume-only clears after missed notifications"
       ]
     }
   ]
