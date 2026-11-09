@@ -19,6 +19,7 @@ import { isEmbyLikePlayed, releaseDateForItem, releaseDateForPlexItem, watchedAt
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { appendSyncHistory, isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
 import { createLoopStore } from "./loopStore.js";
+import { resolveOrderWatch } from "./episodeOrderWatch.js";
 import { runWithConcurrency } from "./concurrency.js";
 import { appendCanonicalTrackerDispatch, primeCanonicalTrackerDispatchIntents, syncCanonicalPlaystate } from "./syncOrchestrator.js";
 import {
@@ -381,7 +382,9 @@ export async function collectMediaForceSyncItems(config = {}, requested, { now =
   }));
 
   sourceResults.sort((a, b) => MEDIA_SERVERS.indexOf(a.source) - MEDIA_SERVERS.indexOf(b.source));
-  return { items: dedupeMedia(collected), sourceResults };
+  // Different servers can use different orders: equal native coordinates
+  // are not duplicate episodes until they have been translated.
+  return { items: collected, sourceResults };
 }
 
 function pendingTelemetry(media, requested) {
@@ -500,6 +503,14 @@ export async function forceSyncMediaState(input, { config = null, now = Date.now
   const collection = requested.mode === "push"
     ? await collectLocalCanonicalItems(requested, { logger })
     : await collectMediaForceSyncItems(resolvedConfig, requested, { now, logger });
+
+  // Source coordinates belong to the media server's order. Resolve the whole
+  // import before date matching, deduplication or any local mutation.
+  if (requested.mode === "pull") {
+    const translated = [];
+    for (const media of collection.items) translated.push(await resolveOrderWatch(media, resolvedConfig));
+    collection.items = dedupeMedia(translated);
+  }
 
   const loopStore = createLoopStore();
   const results = [];

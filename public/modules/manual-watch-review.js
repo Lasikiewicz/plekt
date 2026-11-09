@@ -1,9 +1,9 @@
-import { state } from "./state.js?v=2.2.4.0.5";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.5";
-import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.2.4.0.5";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.0.5";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.0.5";
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.2.4.0.5";
+import { state } from "./state.js?v=2.2.4.1.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.1.1";
+import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.2.4.1.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.1.1";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.1.1";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.2.4.1.1";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;
@@ -1055,7 +1055,7 @@ async function fetchManualWatchReviewSeasonCatalog(group, season) {
   const metadata = await fetchManualWatchReviewShowMetadata(group);
   const seasonNumber = manualReviewInteger(season.key);
   const details = seasonNumber !== null && metadata.seasonLookupId
-    ? await fetchTmdbSeasonDetails(metadata.seasonLookupId, seasonNumber).catch(() => null)
+    ? await fetchTmdbSeasonDetails(metadata.seasonLookupId, seasonNumber, { displayOrder: false }).catch(() => null)
     : null;
   return {
     catalog: buildManualWatchReviewEpisodeCatalog({
@@ -1139,7 +1139,7 @@ function renderReviewShowGroup(group, query = "", { isTopmost = false } = {}) {
           <div class="manual-watch-review-show-copy">
             <h3><a class="manual-watch-review-title-link" href="${escapeAttribute(href)}" data-manual-watch-review-link="${escapeAttribute(href)}">${escapeHtml(group.title)}</a></h3>
             <div class="manual-watch-review-meta">
-              <span>${count} episode${count === 1 ? "" : "s"} waiting</span>
+              <span>${count} episode${count === 1 ? "" : "s"} waiting${group.reviews.some(r => (r.media?.watchProvenance || r.media?.watch_provenance)?.episode_order) ? " · Aired episode numbers" : ""}</span>
               <span>Marked watched on ${escapeHtml(source)}</span>
             </div>
           </div>

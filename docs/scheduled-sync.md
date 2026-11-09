@@ -111,8 +111,11 @@ as echoes; scheduled-sync callbacks remain eligible for normal echo-ledger check
 unplayed callbacks are additionally matched against a 14-day outbound unmark ledger.
 
 The detail-page endpoint is deliberately separate from that library-wide policy. It is a
-user-requested repair for one title, with two independent, explicit operations: Import
-Watched Status (pull) queries configured servers for that title and imports any watched
+user-requested repair for one title, with two independent, explicit operations. Import
+Watched Status (pull) checks every alternate-order episode's identity before changing local
+watch state, translates source coordinates to aired coordinates, and deduplicates the verified
+episodes. An unresolved episode stops the import before any history or playstate write.
+It queries configured servers for that title and imports any watched
 movie or episode found there into Plekt - the import only, nothing is sent back out and
 nothing is removed. Set Plekt as Source of Truth (push) replays Plekt's existing
 canonical state to the selected destination(s) without checking their current state first.

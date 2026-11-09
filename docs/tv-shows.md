@@ -37,6 +37,11 @@ Manual Watch review approval revalidates a queued episode's original verified id
 against current links and destinations, even if the selected order has since changed.
 Missing or invalid proof leaves the review pending; check the show's Episode order links.
 Legacy reviews without proof cannot be approved by guessing their episode numbers.
+Manual Watch Review uses stored episode numbering for both its catalogue and queued
+watches; verified alternate-order reviews are labelled **Aired episode numbers**.
+Detail-page Force Sync imports translate the media server's episode identities before
+matching watch dates or saving history. Every imported episode is checked first; an
+unresolved episode stops the import before any watch state changes.
 Up Next displays the selected order's numbers and label when a cached verified link is
 available. Its playback and watched-state actions retain the original aired identity.
 Approval reuses an existing watch and does not send another tracker play for it.

@@ -5,6 +5,26 @@ import "./domStubs.js";
 const { state } = await import("../public/modules/state.js");
 const { resolveEpisodeTitleFromTmdb } = await import("../public/modules/tmdb.js");
 
+test("stored-order review metadata cannot reuse a DVD display season from the cache", async (t) => {
+  const { fetchTmdbSeasonDetails } = await import("../public/modules/tmdb.js");
+  const original = globalThis.fetch;
+  t.after(() => { globalThis.fetch = original; });
+  state.tmdbSeasonCache.clear();
+  const requests = [];
+  globalThis.fetch = async input => {
+    const url = new URL(String(input), "http://localhost");
+    requests.push(url.searchParams.get("displayOrder"));
+    return Response.json({ episodes: [{ episode_number: 2,
+      name: url.searchParams.get("displayOrder") === "false" ? "Mars University" : "Brannigan, Begin Again" }] });
+  };
+  const display = await fetchTmdbSeasonDetails("615", 2);
+  const stored = await fetchTmdbSeasonDetails("615", 2, { displayOrder: false });
+  assert.equal(display.episodes[0].name, "Brannigan, Begin Again");
+  assert.equal(stored.episodes[0].name, "Mars University");
+  assert.equal((await fetchTmdbSeasonDetails("615", 2)).episodes[0].name, "Brannigan, Begin Again");
+  assert.deepEqual(requests, ["true", "false"]);
+});
+
 test("history episode titles resolve by show title without requiring Fix Match ids", async () => {
   const originalFetch = globalThis.fetch;
   state.savedConfig = { tmdb: { configured: true } };

@@ -1,15 +1,15 @@
-import { state, elements } from "./state.js?v=2.2.4.0.5";
-import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.4.0.5";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.5";
-import { isWatchedHistoryAction } from "./sync.js?v=2.2.4.0.5";
-import { mergeShowDetail } from "./explorer.js?v=2.2.4.0.5";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.0.5"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.4.0.5";
-import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.0.5";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.0.5";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.0.5";
-import { episodeStillUrl } from "./images.js?v=2.2.4.0.5";
-import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.0.5";
-import { ifLoaded } from "./route-modules.js?v=2.2.4.0.5";
+import { state, elements } from "./state.js?v=2.2.4.1.1";
+import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.4.1.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.1.1";
+import { isWatchedHistoryAction } from "./sync.js?v=2.2.4.1.1";
+import { mergeShowDetail } from "./explorer.js?v=2.2.4.1.1";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.1.1"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.4.1.1";
+import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.1.1";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.1.1";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.1.1";
+import { episodeStillUrl } from "./images.js?v=2.2.4.1.1";
+import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.1.1";
+import { ifLoaded } from "./route-modules.js?v=2.2.4.1.1";
 
 const resetPartWatchedView = ifLoaded("dashboard", "resetPartWatchedView");
 const renderPartWatched = ifLoaded("dashboard", "renderPartWatched");

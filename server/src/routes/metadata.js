@@ -1338,7 +1338,7 @@ export async function handleTmdbSeason(req, res) {
     const details = await getTmdbSeason({
       tmdbId: req.query.tmdbId || req.query.id,
       tvdbId: req.query.tvdbId || req.query.tvdb_id,
-      seasonNumber: req.query.seasonNumber || req.query.season, displayOrder:true,
+      seasonNumber: req.query.seasonNumber || req.query.season, displayOrder: req.query.displayOrder !== "false",
       lane: "interactive",
     });
     return sendJson(res, details, 200, { "Cache-Control": "private, no-store", Vary: "Authorization" });

@@ -1,8 +1,82 @@
 {
   "baseVersion": "2.2.4",
-  "build": 0,
-  "version": "2.2.4.0.0",
-  "updatedAt": "2026-11-05T22:24:37.070Z",
+  "build": 1,
+  "version": "2.2.4.1.0",
+  "updatedAt": "2026-11-09T09:26:53.101Z",
   "releaseMessage": "",
-  "entries": []
+  "entries": [
+    {
+      "build": 1,
+      "version": "2.2.4.1.0",
+      "shortVersion": "2.2.4.1.0",
+      "date": "2026-11-09T09:26:53.101Z",
+      "commit": "2e0644e0f9d07ca77921b07f6dcbae3253ce7f55",
+      "message": "This update improves episode ordering, resume synchronization, and dashboard Up Next settings.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Episode thumbnails load correctly after changing a show to DVD or another TVDB order.",
+        "Watches saved before choosing an episode order stay out of episode cards and watched counts, with one notice per season; existing watch records remain unchanged.",
+        "Watch actions and manual review preserve verified episode identity when mappings change, while Up Next displays the selected TVDB order.",
+        "Clearing a resume position on Plex, Emby or Jellyfin clears it on the other servers, including when Plex misses the notification for a resume-only clear.",
+        "Plex missed-notification checks reconcile a watched-then-unwatched item and dismiss any superseded review.",
+        "The dashboard Up Next cog controls media-app queue syncing with the same saved setting as Settings.",
+        "The dashboard options popup stays within the screen, scrolls when needed, and explains each option briefly."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [],
+        "tweaks": [
+          "Episode thumbnails load correctly after changing a show to DVD or another TVDB order.",
+          "Watches saved before choosing an episode order stay out of episode cards and watched counts, with one notice per season; existing watch records remain unchanged.",
+          "Watch actions and manual review preserve verified episode identity when mappings change, while Up Next displays the selected TVDB order.",
+          "Clearing a resume position on Plex, Emby or Jellyfin clears it on the other servers, including when Plex misses the notification for a resume-only clear.",
+          "Plex missed-notification checks reconcile a watched-then-unwatched item and dismiss any superseded review.",
+          "The dashboard Up Next cog controls media-app queue syncing with the same saved setting as Settings.",
+          "The dashboard options popup stays within the screen, scrolls when needed, and explains each option briefly."
+        ]
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [],
+        "tweaks": [
+          {
+            "title": "Up Next & watch-state",
+            "details": [
+              "This update includes show episode thumbnails and hide unplaced watches after changing a show's episode order, preserve episode identity and clear cross-server resume state, reconcile Plex resume-only clears after missed notifications, and improve dashboard Up Next quick settings.",
+              "Up Next shows the selected TVDB order while storage and tracker writes remain in aired order."
+            ]
+          },
+          {
+            "title": "Manual Watch review",
+            "details": [
+              "Manual Watch Review keeps verified episode identity through approval when mappings change."
+            ]
+          },
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Episode thumbnails now load after switching a show to DVD or another TVDB order, instead of showing a broken or blank image.",
+              "Watches saved before an episode order was chosen no longer appear as extra \"Unmatched\" episode cards or inflate the watched count. Each season shows one notice with how many are hidden, and nothing is changed or removed.",
+              "Episode thumbnails now load after switching a show to DVD or another TVDB order.",
+              "Watches saved before an order was selected stay out of episode cards and watched counts, with one notice per season and no changes to existing records.",
+              "Clearing a resume position on Plex, Emby or Jellyfin clears the other servers too, even when Plekt already considers the item unwatched.",
+              "Plex recovers a watched-then-unwatched item when its notification is missed and dismisses the superseded review.",
+              "Playback and watch actions resolve through exact episode identities.",
+              "Clearing a part watched item on Plex also removes the other servers' resume positions when no watch history or pending review exists, even if its notification is missed.",
+              "Control media-app queue syncing from the dashboard cog with the same saved setting as Settings.",
+              "Keep the options popup clear of dashboard clipping and within the screen, with scrolling when space is limited.",
+              "Explain each option with a short summary instead of a long block of playback guidance."
+            ]
+          }
+        ]
+      },
+      "messageFragments": [
+        "Fix - Show episode thumbnails and hide unplaced watches after changing a show's episode order",
+        "Fix - Preserve episode identity and clear cross-server resume state",
+        "Fix - Reconcile Plex resume-only clears after missed notifications",
+        "Feature - Improve dashboard Up Next quick settings"
+      ]
+    }
+  ],
+  "shortVersion": "2.2.4.1.0"
 }

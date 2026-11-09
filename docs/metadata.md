@@ -279,6 +279,10 @@ available for a later retry. `POST /api/rematch-show` reports this server-side w
 
 ## API endpoints (all admin-authenticated, all in `server/src/index.js`)
 
+`GET /api/tmdb-season` uses the show's selected display order by default. Pass
+`displayOrder=false` for its stored numbering, as Manual Watch Review does when
+matching pending watches to episode metadata. The browser caches these two views separately.
+
 Trakt replacement reads a complete show history snapshot and keeps Trakt-only plays at their
 current canonical episode numbers, including numbers that overlap Plekt's old structure.
 Missing target plays are added and verified before only uniquely identified old history IDs

@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.5";
-import { state } from "./state.js?v=2.2.4.0.5";
-import { showTitleFrom, slug } from "./utils.js?v=2.2.4.0.5";
-import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.2.4.0.5";
-export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.2.4.0.5";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.1.1";
+import { state } from "./state.js?v=2.2.4.1.1";
+import { showTitleFrom, slug } from "./utils.js?v=2.2.4.1.1";
+import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.2.4.1.1";
+export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.2.4.1.1";
 
 let _tmdbBatchQueue = [];
 let _tmdbBatchTimer = null;
@@ -146,12 +146,12 @@ export async function fetchTmdbDetails(mediaType, tmdbId, title, ids = {}, { lig
   return promise;
 }
 
-export async function fetchTmdbSeasonDetails(showId, seasonNumber) {
+export async function fetchTmdbSeasonDetails(showId, seasonNumber, { displayOrder = true } = {}) {
   // Per-season episode data is TVDB-backed server-side (built-in project key), so
   // this doesn't depend on the user having a personal TMDB key configured.
   // `showId` is a TMDB id, or `tvdb:<id>` for a series that only exists on TVDB.
   if (!showId || seasonNumber == null) return null;
-  const cacheKey = `${showId}|${seasonNumber}`;
+  const cacheKey = `${showId}|${seasonNumber}|${displayOrder ? "display" : "stored"}`;
   if (state.tmdbSeasonCache.has(cacheKey)) return state.tmdbSeasonCache.get(cacheKey);
   const tvdbOnly = String(showId).startsWith("tvdb:");
   const idParam = tvdbOnly
@@ -159,7 +159,7 @@ export async function fetchTmdbSeasonDetails(showId, seasonNumber) {
     : `tmdbId=${encodeURIComponent(showId)}`;
   // Version the response URL so browsers do not reuse a season body cached
   // before the English-first episode text policy was added.
-  const promise = fetch(`/api/tmdb-season?${idParam}&seasonNumber=${encodeURIComponent(seasonNumber)}&episodeTextVersion=1`, { headers: authHeaders(), cache:"no-store" })
+  const promise = fetch(`/api/tmdb-season?${idParam}&seasonNumber=${encodeURIComponent(seasonNumber)}&episodeTextVersion=1&displayOrder=${displayOrder}`, { headers: authHeaders(), cache:"no-store" })
     .then(async (res) => {
       const body = await res.json().catch(() => null);
       if (!res.ok) throw new Error(body?.error || `HTTP ${res.status}`);
