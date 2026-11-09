@@ -8,30 +8,30 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.2.4.0.4" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.2.4.0.5" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.2.4.0.4"></script>
+    <script src="/theme-boot.js?v=2.2.4.0.5"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/episode-order.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.4.0.4" />
-    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.4.0.4" />
-    <link rel="stylesheet" href="/styles.css?v=2.2.4.0.4" />
+    <link rel="modulepreload" href="/app.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/episode-order.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.2.4.0.5" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.2.4.0.5" />
+    <link rel="stylesheet" href="/styles.css?v=2.2.4.0.5" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
@@ -352,19 +352,22 @@
             </div>
             <div id="nowPlayingOptionsMenu" class="now-playing-options-menu hidden" role="dialog" aria-label="Now Playing and Up Next options">
               <label class="now-playing-option">
-                <input type="checkbox" role="switch" data-now-playing-option="allowPartWatched" />
-                <span>Allow part watched items here</span>
+                <input type="checkbox" role="switch" data-now-playing-option="allowPartWatched" aria-labelledby="partWatchedOptionLabel" aria-describedby="partWatchedOptionHelp" />
+                <span class="now-playing-option-copy"><span id="partWatchedOptionLabel">Show part watched items</span><small id="partWatchedOptionHelp">Include unfinished movies and episodes in this panel.</small></span>
               </label>
               <label class="now-playing-option">
-                <input type="checkbox" role="switch" data-now-playing-option="allowUpNext" />
-                <span>Allow Up Next items here</span>
+                <input type="checkbox" role="switch" data-now-playing-option="allowUpNext" aria-labelledby="upNextOptionLabel" aria-describedby="upNextOptionHelp" />
+                <span class="now-playing-option-copy"><span id="upNextOptionLabel">Show Up Next items</span><small id="upNextOptionHelp">Fill free slots with your next episodes.</small></span>
               </label>
               <label class="now-playing-option now-playing-option-count">
-                <span>Number of items to show (1 to 3)</span>
-                <input type="number" min="1" max="3" step="1" inputmode="numeric" data-now-playing-option="itemCount" />
+                <span class="now-playing-option-copy"><span id="itemCountOptionLabel">Number of items</span><small id="itemCountOptionHelp">Show 1 to 3 items, with live playback first.</small></span>
+                <input type="number" min="1" max="3" step="1" inputmode="numeric" data-now-playing-option="itemCount" aria-labelledby="itemCountOptionLabel" aria-describedby="itemCountOptionHelp" />
+              </label>
+              <label class="now-playing-option">
+                <input type="checkbox" role="switch" data-up-next-sync-option="enabled" aria-labelledby="upNextSyncOptionLabel" aria-describedby="upNextSyncOptionHelp" />
+                <span class="now-playing-option-copy"><span id="upNextSyncOptionLabel">Sync Up Next to media apps</span><small id="upNextSyncOptionHelp">Keep Plex, Emby and Jellyfin's queues aligned with Plekt.</small></span>
               </label>
               <p class="now-playing-option-error hidden" role="alert"></p>
-              <p class="muted-copy">Set up your server's plugin or playback webhooks so Plekt hears about playback promptly. While idle, Plekt checks for missed activity every 5 minutes to reduce background requests. Once polling detects playback, checks run every 10 seconds. This panel refreshes every 10 seconds.</p>
             </div>
             <div id="nowPlayingGrid" class="now-playing-grid" aria-live="polite"></div>
           </section>
@@ -3509,8 +3512,8 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.2.4.0.4"></script>
-    <script type="module" src="/modules/legacy-image-banner.js?v=2.2.4.0.4"></script>
-    <script type="module" src="/app.js?v=2.2.4.0.4"></script>
+    <script type="module" src="/modules/analytics.js?v=2.2.4.0.5"></script>
+    <script type="module" src="/modules/legacy-image-banner.js?v=2.2.4.0.5"></script>
+    <script type="module" src="/app.js?v=2.2.4.0.5"></script>
   </body>
 </html>

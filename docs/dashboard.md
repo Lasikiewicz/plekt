@@ -64,9 +64,13 @@ opening/returning to the dashboard can trigger an earlier session check.
 The Now Playing panel holds three items by default. Live sessions come
 first; the remaining slots (all of them when nothing is playing) feature the Up Next rail's
 part watched items, then its other Up Next items, and a featured item is hidden from the rail
-so nothing shows twice. A cog beside the heading opens the panel options: **Allow part watched
-items here**, **Allow Up Next items here** (both on by default), and the number of items (1 to
-3). Every change saves at once, for the whole server.
+so nothing shows twice. A cog beside the heading opens the panel options: **Show part watched
+items**, **Show Up Next items** (both on by default), and the number of items (1 to
+3). **Sync Up Next to media apps** controls the same queue-sync setting as
+Settings, keeping Plex and Emby's Continue Watching and Jellyfin's Next Up aligned
+with Plekt. Each option has a short explanation. The popup stays within the viewport
+and scrolls when space is limited, without being clipped by dashboard panels.
+Every change saves at once, for the whole server.
 
 ### Up Next
 

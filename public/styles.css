@@ -7,7 +7,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.2.4.0.4") format("woff2");
+  src: url("/fonts/outfit-latin-ext-wght-normal.woff2?v=2.2.4.0.5") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -16,7 +16,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 900;
-  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.2.4.0.4") format("woff2");
+  src: url("/fonts/outfit-latin-wght-normal.woff2?v=2.2.4.0.5") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -25,7 +25,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.2.4.0.4") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-ext-wght-normal.woff2?v=2.2.4.0.5") format("woff2");
   unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
 }
 
@@ -34,7 +34,7 @@
   font-style: normal;
   font-display: swap;
   font-weight: 100 800;
-  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.2.4.0.4") format("woff2");
+  src: url("/fonts/jetbrains-mono-latin-wght-normal.woff2?v=2.2.4.0.5") format("woff2");
   unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
 }
 
@@ -34328,13 +34328,16 @@ html #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] .h
 }
 
 .now-playing-options-menu {
-  position: absolute;
+  position: fixed;
   top: 2.4rem;
   left: 0;
-  z-index: 20;
+  z-index: 1000;
   display: grid;
   gap: 0.75rem;
-  width: min(22rem, 100%);
+  width: min(22rem, calc(100vw - 2rem));
+  box-sizing: border-box;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.9rem 1rem;
   border: 1px solid var(--line-strong);
   border-radius: 0.75rem;
@@ -34348,18 +34351,38 @@ html #timeline-view :is(#upNextPanel, #nowPlayingGrid) [data-up-next-card-id] .h
 
 .now-playing-option {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.6rem;
   font-size: var(--fs-option);
   cursor: pointer;
 }
 
+.now-playing-option > input[type="checkbox"] {
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+}
+
+.now-playing-option-copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.now-playing-option-copy small {
+  color: var(--muted);
+  font-size: 0.85em;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
 .now-playing-option-count {
   justify-content: space-between;
+  align-items: center;
 }
 
 .now-playing-option-count input {
   width: 4.5rem;
+  flex: 0 0 auto;
 }
 
 .now-playing-option-error {

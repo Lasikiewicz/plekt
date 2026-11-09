@@ -166,7 +166,8 @@ Rules that keep this correct:
   is hidden the same way and never featured, so a playing title shows once. A cog beside the heading
   opens the options popup (`modules/now-playing-options.js`): allow part watched, allow Up
   Next (both on by default), and the item count (1 to 3), saved server-wide in the
-  `nowPlaying` config section. One
+  `nowPlaying` config section. The popup also exposes **Sync Up Next to media apps**,
+  saved in `upNextSync.enabled`, sharing the Settings control's state. One
   MutationObserver on `#timeline-view` drives all of this, so `sync.js` and `up-next.js`
   have no hooks for it.
 - The Posters only switch on Library, Discover, History, Watchlist, Ratings, and Playlists

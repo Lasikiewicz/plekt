@@ -2,10 +2,10 @@
 // and runs the admin actions on each user (open, restart/stop/start, reset
 // password, sign out, disable/enable, rename, remove).
 
-import { escapeAttribute, escapeHtml, isDemoMode } from "./utils.js?v=2.2.4.0.4";
-import { refreshSwitchUsers } from "./supervisor-switch.js?v=2.2.4.0.4";
-import { updateAdminCredentials } from "./auth.js?v=2.2.4.0.4";
-import { prepareHelpReadMore } from "./settings-shell.js?v=2.2.4.0.4";
+import { escapeAttribute, escapeHtml, isDemoMode } from "./utils.js?v=2.2.4.0.5";
+import { refreshSwitchUsers } from "./supervisor-switch.js?v=2.2.4.0.5";
+import { updateAdminCredentials } from "./auth.js?v=2.2.4.0.5";
+import { prepareHelpReadMore } from "./settings-shell.js?v=2.2.4.0.5";
 
 let _authHeaders = () => ({ "Content-Type": "application/json" });
 let _supervised = false;
