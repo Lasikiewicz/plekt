@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.0.5";
-import { state } from "./state.js?v=2.2.4.0.5";
-import { showTitleFrom, slug } from "./utils.js?v=2.2.4.0.5";
-import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.2.4.0.5";
-export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.2.4.0.5";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.1.0";
+import { state } from "./state.js?v=2.2.4.1.0";
+import { showTitleFrom, slug } from "./utils.js?v=2.2.4.1.0";
+import { enrichAnidbDetails } from "./anidb-metadata.js?v=2.2.4.1.0";
+export { anidbDisplayTitle, anidbAttributionHtml } from "./anidb-metadata.js?v=2.2.4.1.0";
 
 let _tmdbBatchQueue = [];
 let _tmdbBatchTimer = null;
