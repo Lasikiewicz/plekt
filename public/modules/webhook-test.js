@@ -3,9 +3,9 @@
 // app, counts down live, lists the events Plekt receives as they arrive, and shows the
 // result without a page refresh. The server (server/src/utils/webhookTest.js) captures
 // the first played-flag event without recording or syncing it.
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.1.1";
-import { state } from "./state.js?v=2.2.4.1.1";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.2.4.1.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.0";
+import { state } from "./state.js?v=2.2.4.2.0";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.2.4.2.0";
 
 const POLL_MS = 1000;
 const TICK_MS = 250;

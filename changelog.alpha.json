@@ -1,10 +1,47 @@
 {
   "baseVersion": "2.2.4",
-  "build": 1,
-  "version": "2.2.4.1.0",
-  "updatedAt": "2026-11-09T09:26:53.101Z",
+  "build": 2,
+  "version": "2.2.4.2.0",
+  "updatedAt": "2026-11-09T17:13:42.855Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 2,
+      "version": "2.2.4.2.0",
+      "shortVersion": "2.2.4.2.0",
+      "date": "2026-11-09T17:13:42.855Z",
+      "commit": "505aee1335665c3efafabd5dbbd836a29dea591a",
+      "message": "Fix - Translate alternate-order imports before saving watch history",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.",
+        "Fix: Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers.",
+        "Fix: Review season metadata stays separate from DVD display metadata in the browser cache."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.",
+          "Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers.",
+          "Review season metadata stays separate from DVD display metadata in the browser cache."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.",
+              "Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers.",
+              "Review season metadata stays separate from DVD display metadata in the browser cache."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 1,
       "version": "2.2.4.1.0",
@@ -78,5 +115,5 @@
       ]
     }
   ],
-  "shortVersion": "2.2.4.1.0"
+  "shortVersion": "2.2.4.2.0"
 }
