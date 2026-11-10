@@ -166,6 +166,49 @@ test("fetchWithTimeout honors an explicit timeoutMs override regardless of tunin
   );
 });
 
+test("fetchWithTimeout aborts a response body that stalls after headers", async (t) => {
+  const server = http.createServer((_req, res) => {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.write("partial");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const response = await fetchWithTimeout(`http://127.0.0.1:${server.address().port}/`, {}, 80);
+  let watchdog;
+  try {
+    await assert.rejects(Promise.race([
+      response.text(),
+      new Promise((_, reject) => { watchdog = setTimeout(() => reject(new Error("body did not time out")), 800); }),
+    ]), (error) => error.code === "UPSTREAM_TIMEOUT");
+  } finally { clearTimeout(watchdog); }
+});
+
+test("fetchWithTimeout keeps streaming, cloning, and caller cancellation working after headers", async (t) => {
+  const server = http.createServer((req, res) => {
+    if (req.url === "/complete") { res.end("streamed value"); return; }
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.write("partial");
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => { server.closeAllConnections(); server.close(); });
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const complete = await fetchWithTimeout(`${base}/complete`, {}, 2000);
+  const clone = complete.clone();
+  assert.equal(complete.url, `${base}/complete`);
+  assert.deepEqual(await Promise.all([complete.text(), clone.text()]), ["streamed value", "streamed value"]);
+
+  const controller = new AbortController();
+  const stalled = await fetchWithTimeout(`${base}/stalled`, { signal: controller.signal }, 2000);
+  const read = stalled.text();
+  controller.abort();
+  await assert.rejects(read, { name: "AbortError" });
+
+  const cancelled = await fetchWithTimeout(`${base}/stalled`, {}, 2000);
+  await cancelled.body.cancel();
+  const afterCancel = await fetchWithTimeout(`${base}/complete`, {}, 2000);
+  assert.equal(await afterCancel.text(), "streamed value");
+});
+
 // A local upload target: `respond(req, res, body)` runs once the body is in.
 async function uploadServer(t, respond) {
   const server = http.createServer((req, res) => {

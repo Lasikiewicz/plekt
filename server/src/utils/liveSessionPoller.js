@@ -18,6 +18,7 @@ export function createLiveSessionPoller({ logger = console.log, refresh = refres
   let stopped = true;
   let timer = null;
   let running = false;
+  let pokePending = false;
   let hasActiveSession = false;
   let lastStartedAt = 0;
 
@@ -39,7 +40,9 @@ export function createLiveSessionPoller({ logger = console.log, refresh = refres
       nextDelay = DEFAULT_ERROR_INTERVAL_MS;
     } finally {
       running = false;
-      scheduleNext(nextDelay);
+      const delay = pokePending ? Math.max(50, 1000 - (Date.now() - lastStartedAt)) : nextDelay;
+      pokePending = false;
+      scheduleNext(delay);
     }
   }
 
@@ -58,6 +61,7 @@ export function createLiveSessionPoller({ logger = console.log, refresh = refres
     },
     stop() {
       stopped = true;
+      pokePending = false;
       if (timer) {
         clearTimeout(timer);
         timer = null;
@@ -72,7 +76,8 @@ export function createLiveSessionPoller({ logger = console.log, refresh = refres
     // opening/returning to the Now Playing view) means the current cached state
     // is likely stale right now, without changing the steady-state interval.
     poke() {
-      if (stopped || running) return;
+      if (stopped) return;
+      if (running) { pokePending = true; return; }
       scheduleNext(Math.max(50, 1000 - (Date.now() - lastStartedAt)));
     },
   };

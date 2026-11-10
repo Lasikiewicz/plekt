@@ -67,6 +67,7 @@ Part of the file map (with [file-map-public.md](file-map-public.md) and [file-ma
 | `unwatchedStatusPoll.js` | Fallback unwatched-status polls for Plex, Emby and Jellyfin (`checkPlexUnwatchedStatus`, `checkEmbyUnwatchedStatus`, `checkJellyfinUnwatchedStatus`), the Jellyfin confirmation window, and `runDueUnwatchedPolls`, which runs the due polls on their own intervals. |
 | `syncDispatchQueue.js` | Plekt-canonical dispatch backlog: `syncPendingManualDispatches` retries pending target dispatches, with the retry delay and attempt cap (`syncRetryDelayMs`, `SYNC_RETRY_MAX_ATTEMPTS`) and Trakt retry checks (`traktNeedsRetry`). |
 | `pendingDispatchGuard.js` | Shared in-process ownership of a history row's first webhook send and scheduler retry, preventing concurrent dispatch of the same row. |
+| `keyedLock.js` | In-process keyed mutex (`acquireKeyedLock`) that serializes a check-then-write for one item, used by the webhook watch insert so two concurrent completions cannot both record a row. |
 | `traktNotFoundPartition.js` | Pure shared matching of grouped Trakt `not_found` entries to a sent batch; ambiguous responses cannot establish which remaining writes succeeded. |
 | `retryAfter.js` | Bounded Retry-After parsing for numeric delays and HTTP dates, shared by the governor and metadata clients. |
 | `diskMaintenance.js` | Sweeps settled orphan artwork only after reading all tenants' file references; any unreadable tenant fails the sweep closed. |

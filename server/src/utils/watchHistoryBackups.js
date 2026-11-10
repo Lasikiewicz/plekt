@@ -7,6 +7,7 @@ import { FULL_BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR } from "../paths.js";
 import { createAdapter, DESTINATION_TYPES } from "./backupDestinations/index.js";
 import { protectedSnapshotFiles } from "./syncPlans.js";
 import { persistedWatchDerivedFields } from "./watchDerivedFields.js";
+import { scheduleShowProgressRebuild } from "./showProgressCache.js";
 import {
   FULL_BACKUP_FILE_PATTERN,
   WATCH_HISTORY_BACKUP_FORMAT,
@@ -694,6 +695,7 @@ export function restoreWatchHistoryBackup(filename, { mode = "merge", dryRun = f
     for (const row of document.data.playbackProgress) insertProgress.run(row);
   })();
   bumpDataVersion();
+  scheduleShowProgressRebuild("watch history restore");
   // NOTE: lastRestoreAt is intentionally NOT set here. The authoritative restore job
   // (handleWatchBackups in index.js) stamps it via setLastRestoreAt() only *after* it has
   // finished pushing the restored state to the connected apps. See setLastRestoreAt above.

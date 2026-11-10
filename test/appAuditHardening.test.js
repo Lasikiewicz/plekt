@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import { makeTempDataDir } from "./helpers.js";
 
 makeTempDataDir("plekt-audit-hardening-");
@@ -8,6 +9,7 @@ const { handleLogin, handleLogout, signSession, verifySession, isSameOrigin, set
 const { dispatch } = await import("../server/src/index.js");
 const { parsePlexGuids } = await import("../server/src/utils/parsers.js");
 const { localCalendarDay } = await import("../server/src/utils/watchDates.js");
+const { addUserAccount, removeUserAccount, renameUserAccount, setUserPasswordAccount } = await import("../server/src/utils/tenancy.js");
 const repo = await import("../server/src/utils/dataRepo.js");
 let cookieName;
 setSessionCookie({ cookie(name) { cookieName = name; } }, AUTH.username);
@@ -30,6 +32,24 @@ test("logout revokes only that cookie", async () => {
   assert.ok(verifySession(second));
 });
 
+test("account recreation, rename and password reset invalidate earlier cookies", () => {
+  assert.equal(addUserAccount({ name: "audituser", password: "password-one" }).status, 201);
+  const old = signSession("audituser", { role: "user" });
+  assert.equal(removeUserAccount({ name: "audituser" }).status, 200);
+  assert.equal(addUserAccount({ name: "audituser", password: "password-two" }).status, 201);
+  assert.equal(verifySession(old), null);
+
+  const beforeReset = signSession("audituser", { role: "user" });
+  assert.equal(setUserPasswordAccount({ name: "audituser", password: "password-three" }).status, 200);
+  assert.equal(verifySession(beforeReset), null);
+
+  const beforeRename = signSession("audituser", { role: "user" });
+  assert.equal(renameUserAccount({ name: "audituser", newName: "auditrenamed" }).status, 200);
+  assert.equal(verifySession(beforeRename), null);
+  assert.equal(addUserAccount({ name: "audituser", password: "password-four" }).status, 201);
+  assert.equal(verifySession(beforeRename), null);
+});
+
 test("successful logins do not exhaust the failed-login allowance", async () => {
   updateAdminCredentials({ username: AUTH.username, password: "audit-test-password" });
   for (let i = 0; i < 12; i++) {
@@ -43,6 +63,18 @@ test("successful logins do not exhaust the failed-login allowance", async () => 
   assert.equal(blocked.statusCode, 429);
 });
 
+test("unknown usernames still perform a password hash", async t => {
+  const scrypt = crypto.scryptSync;
+  let calls = 0;
+  t.mock.method(crypto, "scryptSync", (...args) => { calls++; return scrypt(...args); });
+  const req = request({ body: { username: "no-such-account", password: "incorrect" } });
+  req.ip = "unknown-user-hash-test";
+  const res = response();
+  await handleLogin(req, res);
+  assert.equal(res.statusCode, 401);
+  assert.ok(calls > 0);
+});
+
 test("dispatch rejects cross-site mutations while headerless API clients remain allowed", async () => {
   assert.equal(isSameOrigin(request()), true);
   assert.equal(isSameOrigin(request({ headers: { host: "localhost", origin: "http://localhost" } })), true);
@@ -52,6 +84,11 @@ test("dispatch rejects cross-site mutations while headerless API clients remain 
     assert.equal(res.statusCode, 403);
     assert.equal(res.payload.code, "ORIGIN_REJECTED");
   }
+});
+
+test("a proxy rewriting Host must preserve the public host for origin checks", () => {
+  assert.equal(isSameOrigin(request({ headers: { host: "internal:5056", origin: "https://plekt.example", "x-forwarded-host": "plekt.example" } })), false);
+  assert.equal(isSameOrigin(request({ headers: { host: "plekt.example", origin: "https://plekt.example" } })), true);
 });
 
 test("state-changing cron and stop endpoints reject GET", async () => {

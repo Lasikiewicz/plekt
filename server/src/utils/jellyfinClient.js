@@ -42,12 +42,13 @@ async function fetchJson(url, config, media = null) {
   return response.json();
 }
 
-async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferredPageSize = 100, isCancelled = async () => false } = {}) {
+async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferredPageSize = 100, isCancelled = async () => false, completeScan = false } = {}) {
   const requestedLimit = Number(limit) > 0 ? Math.max(1, Math.round(Number(limit))) : 0;
   const maximumPageSize = Math.min(Math.max(1, Math.round(Number(preferredPageSize) || 100)), 500);
   const pageSize = requestedLimit ? Math.min(requestedLimit, maximumPageSize) : maximumPageSize;
   const items = [];
   const seen = new Set();
+  let duplicatePages = 0;
   for (let start = 0; start <= 10_000_000;) {
     if (await isCancelled()) throw new Error("Jellyfin scan cancelled.");
     const data = await fetchJson(buildUrl(start, pageSize), config);
@@ -62,7 +63,16 @@ async function fetchPagedFeed(config, buildUrl, limit = 0, { pageSize: preferred
       if (requestedLimit && items.length >= requestedLimit) return items.slice(0, requestedLimit);
     }
     const total = Number(data?.TotalRecordCount || 0);
-    if (!page.length || !newItems || (total > 0 && start + page.length >= total) || (total <= 0 && page.length < pageSize)) break;
+    // A full scan keeps paging through a page of only repeats, and fails if paging
+    // stops advancing. Ending there would store a partial history as complete.
+    if (page.length && !newItems) {
+      if (!completeScan) break;
+      if (++duplicatePages >= 10) throw new Error("Jellyfin scan paging did not advance.");
+    } else {
+      duplicatePages = 0;
+    }
+    if (!page.length || (total > 0 && start + page.length >= total)) break;
+    if (!completeScan && total <= 0 && page.length < pageSize) break;
     // Some Jellyfin-compatible servers cap Limit below the requested size.
     // Advance by the response length so a server-side cap cannot skip items.
     start += page.length;
@@ -731,6 +741,7 @@ export async function hideJellyfinFromResume(config, itemId, { lane = "interacti
 }
 
 function buildJellyfinWatchedItemsUrl(config, { limit = 0, parentId = "" } = {}) {
+  // `limit` only picks the sort order here; the caller still applies the cap.
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const url = new URL(`${baseUrl}/Users/${config.userId}/Items`);
   url.searchParams.set("Recursive", "true");
@@ -738,10 +749,10 @@ function buildJellyfinWatchedItemsUrl(config, { limit = 0, parentId = "" } = {})
   url.searchParams.set("IncludeItemTypes", "Movie,Episode");
   url.searchParams.set("Fields", "ProviderIds");
   url.searchParams.set("EnableUserData", "true");
-  // SortName breaks DatePlayed ties so items marked played without a date keep
-  // a stable order across pages.
-  url.searchParams.set("SortBy", "DatePlayed,SortName");
-  url.searchParams.set("SortOrder", "Descending");
+  // A limited read is newest first, with SortName and Id breaking ties. A full scan
+  // sorts by Id, as Emby's does, so its order is stable across pages.
+  url.searchParams.set("SortBy", Number(limit) > 0 ? "DatePlayed,SortName,Id" : "Id");
+  url.searchParams.set("SortOrder", Number(limit) > 0 ? "Descending" : "Ascending");
   url.searchParams.set("EnableTotalRecordCount", "true");
   // No caller reads artwork from this feed, so skip image tag work on the server.
   url.searchParams.set("EnableImages", "false");
@@ -760,13 +771,13 @@ export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds,
     items.push(...await fetchPagedFeed(
       config,
       (start, pageSize) => {
-        const url = buildJellyfinWatchedItemsUrl(config, { parentId });
+        const url = buildJellyfinWatchedItemsUrl(config, { parentId, limit });
         url.searchParams.set("StartIndex", String(start));
         url.searchParams.set("Limit", String(pageSize));
         return url;
       },
       limit,
-      { pageSize: 500, isCancelled },
+      { pageSize: 500, isCancelled, completeScan: true },
     ));
   }
   return items;

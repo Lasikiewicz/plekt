@@ -17,7 +17,10 @@ async function request(url, { method = "GET", body, clientId, accessToken, timeo
     },
     body: body == null ? undefined : JSON.stringify(body),
   }, timeoutMs);
-  const data = await response.json().catch(() => null);
+  const data = await response.json().catch((error) => {
+    if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") throw error;
+    return null;
+  });
   if (!response.ok) {
     const error = new Error(data?.error_description || data?.error || `Trakt request failed with ${response.status}`);
     error.status = response.status;
@@ -681,22 +684,22 @@ function syncHistoryPayload(items = [], state = "watched") {
   return payload;
 }
 
-async function managedHistoryRequest(connection, items, action, send) {
+async function managedHistoryRequest(connection, items, action, send, { replay = false } = {}) {
   if (!connection.id) return send(items);
   const { trackerIntentRequest } = await import("../trackerIntentRequest.js");
-  return trackerIntentRequest(connection, items, action, send, fetchTraktHistoryWindow);
+  return trackerIntentRequest(connection, items, action, send, fetchTraktHistoryWindow, { replay });
 }
 
-export async function setTraktWatchState(connection, media, state, { lane = "sync" } = {}) {
+export async function setTraktWatchState(connection, media, state, { lane = "sync", replay = false } = {}) {
   const { clientId, accessToken } = connection;
   const path = state === "unwatched" ? "/sync/history/remove" : "/sync/history";
-  return managedHistoryRequest(connection, [media], state, ([item]) => request(`${API_BASE}${path}`, { method: "POST", clientId, accessToken, body: syncPayload(item, state), lane }));
+  return managedHistoryRequest(connection, [media], state, ([item]) => request(`${API_BASE}${path}`, { method: "POST", clientId, accessToken, body: syncPayload(item, state), lane }), { replay });
 }
 
 // Trakt accepts multiple dated plays in one request. Restore uses this instead
 // of one request per play so a large history cannot time out halfway through,
 // and every event retains its source timestamp in the payload.
-export function setTraktWatchHistoryBatch(connection, items, state, { lane = "sync" } = {}) {
+export function setTraktWatchHistoryBatch(connection, items, state, { lane = "sync", replay = false } = {}) {
   const { clientId, accessToken } = connection;
   const values = Array.isArray(items) ? items.filter(Boolean) : [];
   if (!values.length) return Promise.resolve({});
@@ -709,7 +712,7 @@ export function setTraktWatchHistoryBatch(connection, items, state, { lane = "sy
     accessToken,
     body: syncHistoryPayload(pending, state),
     lane,
-  }));
+  }), { replay });
 }
 
 export function trackerMediaKey(media) {

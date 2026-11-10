@@ -3,6 +3,7 @@ import { bumpDataVersion, bumpUpNextVersion, db, parseJson, toJson } from "../db
 import { clearWatchlistRemoteProjection, getWatchlistRestoreState, markWatchlistRestorePending } from "./personalWatchlistRepository.js";
 import { activityGroupKeyFor, activityItemKeyFor } from "./syncActivityIdentity.js";
 import { BACKUP_FORMAT, LEGACY_REDACTED_SECRETS_FIELD, REDACTED_SECRETS_FIELD, TYPE_FIELD, backupValueType } from "./backupNames.js";
+import { scheduleShowProgressRebuild } from "./showProgressCache.js";
 import { anidbBackupCollections } from "./anidbBackup.js";
 import { initialSyncBackupCollection, quarantineInitialSyncSetting } from './initialSyncBackup.js';
 
@@ -419,7 +420,7 @@ export function backupManifest(origin = "") {
     source: { app: "plekt", storage: "sqlite", origin },
     collections: BROWSER_BACKUP_COLLECTIONS,
     notes: [
-      "Browser portable exports omit credential-bearing collections and redact secret-bearing settings. Encrypted full backups retain encrypted media credentials; restoring encrypted connections requires the original credential.key or PLEKT_CREDENTIAL_KEY (PLEMBFIN_CREDENTIAL_KEY on older installs).",
+      "Browser portable exports omit credential-bearing collections and redact secret-bearing settings. Encrypted full backups retain the encrypted media and tracker connections, but a restore never brings them back: media and tracker connections stay as they are set up on the machine you restore to, so reconnect any that are missing there.",
       "Saved show and season poster choices are included as database records. Artwork binaries, poster cache rows, and TMDB metadata cache rows are not included; copy data/media separately to preserve cached images.",
     ],
   };
@@ -643,5 +644,9 @@ export function importCollectionBatch(name, documents, { reset = false, portable
   if (["settings", "tvdbMetadataCache"].includes(name)) db.prepare("DELETE FROM tvdb_metadata_cache WHERE id LIKE 'order_catalogue_v%'").run();
   if (["watchHistory", "playstate", "playbackProgress", "mediaArtwork", "seasonArtwork", "showSeasonSource", "settings"].includes(name)) bumpDataVersion();
   if (name === "droppedTitles") bumpUpNextVersion();
+  // The show progress cache is derived from watch history and is otherwise only
+  // reconciled at process start; without this, restored shows report no total
+  // episodes and deleted shows stay cached.
+  if (name === "watchHistory") scheduleShowProgressRebuild("backup restore");
   return { collection: name, imported: documents.length, reset: Boolean(reset) };
 }

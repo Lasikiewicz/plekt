@@ -22,6 +22,11 @@ draining promise, and the complete JSON file is atomically replaced only after a
 titles are current. Logs report calculation, serialization, and write timings separately.
 Persistence remains synchronous so an awaited flush is durable when it resolves.
 
+History restores and data wipes schedule a full progress-cache rebuild after the last
+batch, adding restored shows and removing deleted ones without a restart. Air-date
+comparisons use the server's local calendar day; full provider timestamps on that day
+count as released.
+
 The library merges pages by show provider identity, with title fallback when ids are absent,
 so shared poster artwork never collapses distinct shows. Initial and later-page loads show an
 animated loading indicator.

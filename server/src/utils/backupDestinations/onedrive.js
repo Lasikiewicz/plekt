@@ -41,7 +41,10 @@ async function ensureAccessToken(destination, persistSecrets) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
   });
-  const data = await response.json().catch(() => ({}));
+  const data = await response.json().catch((error) => {
+    if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") throw error;
+    return {};
+  });
   if (!response.ok) {
     throw new Error(`OneDrive token refresh failed: ${data.error_description || data.error || response.status}`);
   }
@@ -100,7 +103,10 @@ export function createOneDriveAdapter(destination, { persistSecrets }) {
         { headers },
       );
       if (!response.ok) throw new Error(`OneDrive list failed (${response.status})`);
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch((error) => {
+        if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") throw error;
+        return {};
+      });
       return (data.value || [])
         .filter((item) => FILE_PATTERN.test(item.name || ""))
         .map((item) => ({

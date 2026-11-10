@@ -5045,10 +5045,6 @@
           1
         ],
         [
-          "\"Browser portable exports omit credential-bearing collections and redact secret-bearing settings. Encrypted full backups retain encrypted media credentials; restoring encrypted connections requires the original credential.key or PLEKT_CREDENTIAL_KEY (PLEMBFIN_CREDENTIAL_KEY on older installs).\",",
-          1
-        ],
-        [
           "const placeholder = \"__plembfinCollectionsPlaceholder__\";",
           1
         ]
@@ -5600,7 +5596,7 @@
           1
         ],
         [
-          "for (const row of previousRows.filter((candidate) => candidate.remote_state === \"present\" && candidate.managed_by_plembfin && candidate.provider_item_id)) {",
+          "const presentManaged = previousRows.filter((candidate) => candidate.remote_state === \"present\" && candidate.managed_by_plembfin && candidate.provider_item_id);",
           1
         ],
         [

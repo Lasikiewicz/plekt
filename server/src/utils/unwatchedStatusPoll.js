@@ -4,7 +4,7 @@ import { applyUnwatchedTransition } from "./watchStateTransitions.js";
 import { fetchPlexMetadataItem, findPlexItem, syncPlexCachedEpisodeState } from "./plexClient.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { isEmbyLikePlayed } from "./watchDates.js";
-import { invalidateHistoryDerivedCaches, listRecentTrackedWatchRows, listRecentlyUpdatedTrackedWatchRows, mediaKeyFor } from "./dataRepo.js";
+import { getCanonicalWatchState, invalidateHistoryDerivedCaches, listRecentTrackedWatchRows, listRecentlyUpdatedTrackedWatchRows, mediaKeyFor } from "./dataRepo.js";
 import { recordSyncHistory } from "./syncHistoryTelemetry.js";
 import { getManualWatchReview, listPendingManualWatchReviews, manualWatchReviewMedia, setManualWatchReviewStatus } from "./manualWatchReview.js";
 import { createPerUserState } from "./perUserState.js";
@@ -13,6 +13,15 @@ import { plexHeldStoredResume } from "./plexWatchstate.js";
 
 const pendingPlexReviewPollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
 const plexResumePollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
+
+// The Plex item must be the episode the progress row describes. Without this a
+// different episode's unplayed state could clear the row's episode.
+function plexItemMatchesProgress(item, progress) {
+  if (progress.media_type !== "episode") return true;
+  return Number(item.parentIndex) === Number(progress.season)
+    && Number(item.index) === Number(progress.episode)
+    && (!progress.show_title || !item.grandparentTitle || item.grandparentTitle === progress.show_title);
+}
 
 // A missed notification must also be recoverable when there was never a watch
 // row or a pending review. Only positions Plex actually held authorize a clear.
@@ -35,7 +44,7 @@ async function checkPlexResumeUnwatches(config, loopStore) {
       if (!key) continue;
       const item = await fetchPlexMetadataItem(config.plex, key);
       if (!item || item.type !== media.type || Number(item.viewCount || 0) !== 0
-        || Number(item.viewOffset || 0) !== 0) continue;
+        || Number(item.viewOffset || 0) !== 0 || !plexItemMatchesProgress(item, progress)) continue;
       const plexMedia = { ...media, itemId: String(item.ratingKey || key) };
       const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(plexMedia, "plex", loopStore).catch(() => 0);
       if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) continue;
@@ -43,6 +52,9 @@ async function checkPlexResumeUnwatches(config, loopStore) {
       const current = await getPlaybackProgressForMedia(media);
       if (!current || current.updated_at !== progress.updated_at
         || current.position_ms !== progress.position_ms || !plexHeldStoredResume(current)) continue;
+      // Plekt's own watch is authoritative: a watch recorded through another source
+      // (Emby, a tracker import) is not cleared by a stale Plex resume position.
+      if (await getCanonicalWatchState(media) === "watched") continue;
       const result = await applyUnwatchedTransition(plexMedia, config, loopStore, { force: true });
       if (result.deferred || result.heldBackSuspiciousBurst) continue;
       await recordSyncHistory(plexMedia, result.summary, "unwatched");

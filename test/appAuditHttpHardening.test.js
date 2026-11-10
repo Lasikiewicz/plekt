@@ -75,7 +75,7 @@ test("actual server applies smaller login, claim and webhook body caps before di
     });
   });
   for (const prefix of ["", "/u/test-tenant"]) {
-    for (const route of ["login", "auth/claim"]) {
+    for (const route of ["login", "/login", "auth/claim"]) {
       const res = await fetch(`http://127.0.0.1:${port}${prefix}/api/${route}`, { method: "POST", headers: { "content-type": "application/json" }, body: "x".repeat(32 * 1024 + 1) });
       assert.equal(res.status, 413, `${prefix}/${route}`);
       await res.text();

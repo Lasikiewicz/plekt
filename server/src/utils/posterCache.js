@@ -77,6 +77,15 @@ function sanitizedRemoteUrl(value = "") {
   }
 }
 
+function storedUrlIsRedacted(value = "") {
+  try {
+    const url = new URL(String(value || ""));
+    return [...url.searchParams.entries()].some(([key, param]) => param === "redacted" && /token|api[_-]?key|key/i.test(key));
+  } catch {
+    return false;
+  }
+}
+
 function freshNegativeCache(data = {}) {
   const updatedAt = Number(data.updatedAtMs || 0);
   if (!updatedAt) return false;
@@ -375,6 +384,10 @@ export async function restoreMissingCachedArtwork(storagePath = "") {
   // Only http(s) sources can be fetched again. Sanitized data-image uploads and
   // local /media paths have nothing to download.
   if (!row || !/^https?:\/\//i.test(row.original_url || "")) return null;
+  // A source whose token or key was redacted when it was stored cannot be fetched
+  // again: trying would fail and record a 24-hour failure for a poster that is
+  // otherwise fine to retry from its real source later.
+  if (storedUrlIsRedacted(row.original_url)) return null;
   if (!restoresInFlight.has(storagePath)) {
     const sizes = ARTWORK_SIZES[row.variant] || ARTWORK_SIZES.poster;
     const restore = cacheArtworkFromUrl(row.media_key, row.original_url, row.source, { variant: row.variant, ...sizes })

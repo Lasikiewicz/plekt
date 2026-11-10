@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getActiveDataDir } from "./userContext.js";
+import { todayLocalDate } from "./watchDates.js";
 
 const CACHE_VERSION = 1;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -78,7 +79,7 @@ export function cachedNextAiringFor(entries = {}, tmdbId = "", title = "") {
   if (!key) return null;
   const entry = entries[key];
   if (!entry) return null;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalDate();
   return {
     ...entry,
     nextAiringDate: entry.nextAiringDate && entry.nextAiringDate >= today ? entry.nextAiringDate : "",

@@ -24,6 +24,17 @@ test("PRAGMA optimize runs at most once per interval", () => {
   assert.equal(calls, 2);
 });
 
+test("a failed maintenance attempt is not retried every minute", () => {
+  let calls = 0;
+  const start = Date.now() + 20 * DB_OPTIMIZE_INTERVAL_MS;
+  const optimize = () => { calls += 1; throw new Error("maintenance failed"); };
+  assert.throws(() => runDbOptimizeIfDue(start, optimize), /maintenance failed/);
+  assert.equal(runDbOptimizeIfDue(start + 60_000, optimize).ran, false);
+  assert.equal(calls, 1);
+  assert.throws(() => runDbOptimizeIfDue(start + DB_OPTIMIZE_INTERVAL_MS, optimize), /maintenance failed/);
+  assert.equal(calls, 2);
+});
+
 test("daily maintenance truncates both database WALs", () => {
   const shared = getSharedMetadataDb();
   for (const database of [db, shared]) {

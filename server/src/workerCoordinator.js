@@ -212,24 +212,27 @@ export function createWorkerCoordinator({ holderId, role }) {
 
   async function maintainLease() {
     if (stopped) return;
-    if (lease) {
-      const renewed = renewSchedulerLease({ holderId, generation: lease.generation, ttlMs: LEASE_TTL_MS });
-      if (!renewed) loseLeadership("renewal rejected");
-      else lease.expiresAt = Date.now() + LEASE_TTL_MS;
-    }
-    if (!lease) {
-      const claimed = claimSchedulerLease({ holderId, role, ttlMs: LEASE_TTL_MS });
-      if (claimed) await becomeLeader(claimed);
-    }
-    if (lease) {
-      const settingsUpdatedAt = Number(db.prepare("SELECT updated_at FROM settings WHERE id='mediaConfig'").get()?.updated_at || 0);
-      if (lastSettingsUpdatedAt !== null && settingsUpdatedAt !== lastSettingsUpdatedAt) {
-        restartPlexNotificationListener();
-        restartPlexAdaptivePoller();
+    try {
+      if (lease) {
+        const renewed = renewSchedulerLease({ holderId, generation: lease.generation, ttlMs: LEASE_TTL_MS });
+        if (!renewed) loseLeadership("renewal rejected");
+        else lease.expiresAt = Date.now() + LEASE_TTL_MS;
       }
-      lastSettingsUpdatedAt = settingsUpdatedAt;
+      if (!lease) {
+        const claimed = claimSchedulerLease({ holderId, role, ttlMs: LEASE_TTL_MS });
+        if (claimed) await becomeLeader(claimed);
+      }
+      if (lease) {
+        const settingsUpdatedAt = Number(db.prepare("SELECT updated_at FROM settings WHERE id='mediaConfig'").get()?.updated_at || 0);
+        if (lastSettingsUpdatedAt !== null && settingsUpdatedAt !== lastSettingsUpdatedAt) {
+          restartPlexNotificationListener();
+          restartPlexAdaptivePoller();
+        }
+        lastSettingsUpdatedAt = settingsUpdatedAt;
+      }
+    } finally {
+      if (!stopped) later(maintainLease, lease ? RENEW_MS : ACQUIRE_MS);
     }
-    later(maintainLease, lease ? RENEW_MS : ACQUIRE_MS);
   }
 
   // The next tick is timed from this tick's START, not from when it finishes.
@@ -247,30 +250,33 @@ export function createWorkerCoordinator({ holderId, role }) {
   async function runTick() {
     if (stopped) return;
     const startedAt = Date.now();
-    if (!tickRunning && isLeader()) {
-      tickRunning = true;
-      try {
-        markSchedulerTick({ holderId, generation: lease.generation });
-        activeTickPromise = (async () => {
-          await runScheduledTick({ isLeader });
-          for (const tenant of listActiveTenants()) {
-            if (stopped || !isLeader()) break;
-            try {
-              await runWithUserContext(tenant, () => runScheduledTick({ isLeader }));
-            } catch (error) {
-              console.error(`Scheduled tick failed for user ${tenant.name}`, error);
+    try {
+      if (!tickRunning && isLeader()) {
+        tickRunning = true;
+        try {
+          markSchedulerTick({ holderId, generation: lease.generation });
+          activeTickPromise = (async () => {
+            await runScheduledTick({ isLeader });
+            for (const tenant of listActiveTenants()) {
+              if (stopped || !isLeader()) break;
+              try {
+                await runWithUserContext(tenant, () => runScheduledTick({ isLeader }));
+              } catch (error) {
+                console.error(`Scheduled tick failed for user ${tenant.name}`, error);
+              }
             }
-          }
-        })();
-        await activeTickPromise;
-      } catch (error) {
-        console.error("Scheduled tick failed", error);
-      } finally {
-        tickRunning = false;
-        activeTickPromise = null;
+          })();
+          await activeTickPromise;
+        } catch (error) {
+          console.error("Scheduled tick failed", error);
+        } finally {
+          tickRunning = false;
+          activeTickPromise = null;
+        }
       }
+    } finally {
+      if (!stopped) later(runTick, nextTickDelayMs(Date.now() - startedAt, TICK_MS));
     }
-    later(runTick, nextTickDelayMs(Date.now() - startedAt, TICK_MS));
   }
 
   async function executeJob(job) {
@@ -366,45 +372,48 @@ export function createWorkerCoordinator({ holderId, role }) {
 
   async function pollJobs() {
     if (stopped) return;
-    // Keep the durable job queue separate from the scheduled tick. In
-    // particular, an event-triggered Up Next push must not race the catch-up
-    // feed refresh that is discovering the queue it is about to send.
-    if (!jobRunning && !tickRunning && isLeader()) {
-      let claimedJob = claimNextBackgroundJob({ holderId, generation: lease.generation });
-      let claimedTenant = null;
-      if (!claimedJob) {
-        for (const tenant of listActiveTenants()) {
-          claimedJob = runWithUserContext(tenant, () => claimNextBackgroundJob({ holderId, generation: lease.generation }));
-          if (claimedJob) {
-            claimedTenant = tenant;
-            break;
+    try {
+      // Keep the durable job queue separate from the scheduled tick. In
+      // particular, an event-triggered Up Next push must not race the catch-up
+      // feed refresh that is discovering the queue it is about to send.
+      if (!jobRunning && !tickRunning && isLeader()) {
+        let claimedJob = claimNextBackgroundJob({ holderId, generation: lease.generation });
+        let claimedTenant = null;
+        if (!claimedJob) {
+          for (const tenant of listActiveTenants()) {
+            claimedJob = runWithUserContext(tenant, () => claimNextBackgroundJob({ holderId, generation: lease.generation }));
+            if (claimedJob) {
+              claimedTenant = tenant;
+              break;
+            }
           }
         }
-      }
-      if (claimedJob) {
-        jobRunning = true;
-        try {
-          activeJobPromise = claimedTenant
-            ? runWithUserContext(claimedTenant, () => executeJob(claimedJob))
-            : executeJob(claimedJob);
-          await activeJobPromise;
-        } finally {
-          activeJobPromise = null;
-          jobRunning = false;
+        if (claimedJob) {
+          jobRunning = true;
+          try {
+            activeJobPromise = claimedTenant
+              ? runWithUserContext(claimedTenant, () => executeJob(claimedJob))
+              : executeJob(claimedJob);
+            await activeJobPromise;
+          } finally {
+            activeJobPromise = null;
+            jobRunning = false;
+          }
+        }
+        pruneBackgroundJobs();
+        for (const tenant of listActiveTenants()) {
+          runWithUserContext(tenant, () => pruneBackgroundJobs());
         }
       }
-      pruneBackgroundJobs();
-      for (const tenant of listActiveTenants()) {
-        runWithUserContext(tenant, () => pruneBackgroundJobs());
-      }
+    } finally {
+      if (!stopped) later(pollJobs, JOB_POLL_MS);
     }
-    later(pollJobs, JOB_POLL_MS);
   }
 
   return {
     async start() {
       stopped = false;
-      await maintainLease();
+      try { await maintainLease(); } catch (error) { console.error("Worker coordinator task failed", error); }
       // Durable jobs can contain provider-backed syncs. Keep the queue asleep
       // through the same first-request window as scheduled work so a stale
       // backlog cannot turn startup into a multi-second event-loop stall.

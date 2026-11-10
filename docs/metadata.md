@@ -104,6 +104,8 @@ for displaying its seasons and episodes. The order catalogue retains each provid
 ID and coordinate separately; choosing DVD does not rewrite existing watch rows or replay
 history. A DVD-to-aired link can be reviewed, saved, replaced, or removed in the menu. Saves
 are revision-checked against the current catalogue and mapping preview.
+The show page keeps the detail response's verified display coordinates when merging dashboard
+history; canonical summary watches cannot replace them or mark a different displayed episode.
 Switching back to Aired restores the show's existing TVDB/TMDB structure choice from
 Fix Match; DVD selection never overwrites that preference.
 
@@ -218,6 +220,12 @@ presence or premiere-year evidence for the clear-winner rule. Remakes remain amb
 
 Every gateway throttles requests, de-duplicates in-flight calls (`inflight` maps), and
 caches in SQLite:
+
+During a transient TMDB failure, merged show details keep the same show's cached cast,
+videos, artwork and other TMDB fields. Incomplete records are eligible for another full
+lookup after five minutes; a definitive 404 is treated as a complete response. Failed
+season reads retain the last known next-airing date. Empty or failed TVDB artwork-type
+lookups are retried on the next artwork request rather than cached for 30 days.
 
 | Cache table | Contents | TTL |
 | --- | --- | --- |

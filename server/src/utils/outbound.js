@@ -105,13 +105,85 @@ export function normalizeHttpUrl(value = "", { label = "URL", allowRelativeMedia
 // dangerous even in a self-hosted, admin-only context: a tricked request there can leak
 // instance credentials. We intentionally do NOT block general private/LAN ranges because
 // Plex/Emby/Jellyfin commonly run on localhost or the local network.
-const BLOCKED_HOSTS = new Set([
-  "169.254.169.254",
+const BLOCKED_HOSTNAMES = new Set([
   "metadata.google.internal",
+  "metadata.goog",
   "metadata",
-  "[fd00:ec2::254]",
-  "fd00:ec2::254",
+  "instance-data",
+  "instance-data.ec2.internal",
 ]);
+// AWS and Azure/GCP (169.254.169.254), AWS ECS task metadata, Alibaba, Oracle, and
+// the Azure wire server.
+const BLOCKED_IPV4 = new Set([
+  "169.254.169.254",
+  "169.254.170.2",
+  "100.100.100.200",
+  "192.0.0.192",
+  "168.63.129.16",
+]);
+// AWS IPv6 metadata endpoint, as eight 16-bit groups.
+const BLOCKED_IPV6_GROUPS = new Set(["fd00:ec2:0:0:0:0:0:254"]);
+
+// Expands an IPv6 literal (no brackets) into eight hex groups, or null when it is
+// not one. The URL parser already lowercases and compresses, but accept any valid form.
+function ipv6Groups(host) {
+  if (!host.includes(":")) return null;
+  const halves = host.split("::");
+  if (halves.length > 2) return null;
+  const parse = (part) => (part ? part.split(":") : []);
+  const head = parse(halves[0]);
+  const tail = halves.length === 2 ? parse(halves[1]) : [];
+  const expandIpv4 = (groups) => {
+    const last = groups[groups.length - 1];
+    if (!last || !last.includes(".")) return groups;
+    const octets = last.split(".").map(Number);
+    if (octets.length !== 4 || octets.some((n) => !Number.isInteger(n) || n < 0 || n > 255)) return null;
+    return [...groups.slice(0, -1), ((octets[0] << 8) | octets[1]).toString(16), ((octets[2] << 8) | octets[3]).toString(16)];
+  };
+  const headGroups = expandIpv4(head);
+  const tailGroups = expandIpv4(tail);
+  if (!headGroups || !tailGroups) return null;
+  const missing = 8 - headGroups.length - tailGroups.length;
+  if (halves.length === 2 ? missing < 1 : missing !== 0) return null;
+  const groups = [...headGroups, ...Array(halves.length === 2 ? missing : 0).fill("0"), ...tailGroups];
+  if (groups.length !== 8 || groups.some((g) => !/^[0-9a-f]{1,4}$/.test(g))) return null;
+  return groups.map((g) => parseInt(g, 16).toString(16));
+}
+
+function isBlockedMetadataHost(rawHost) {
+  // Trailing dots are the same host in DNS; bracketed IPv6 and case are cosmetic.
+  const host = String(rawHost || "").toLowerCase().replace(/^\[|\]$/g, "").replace(/\.+$/, "");
+  if (BLOCKED_HOSTNAMES.has(host) || BLOCKED_IPV4.has(host)) return true;
+  const groups = ipv6Groups(host);
+  if (!groups) return false;
+  if (BLOCKED_IPV6_GROUPS.has(groups.join(":"))) return true;
+  // IPv4 carried inside an IPv6 address: IPv4-mapped (::ffff:a.b.c.d), the deprecated
+  // IPv4-compatible form (::a.b.c.d) and the NAT64 prefix (64:ff9b::a.b.c.d).
+  const zeroPrefix = groups.slice(0, 5).every((g) => g === "0");
+  const mapped = zeroPrefix && (groups[5] === "ffff" || groups[5] === "0");
+  const nat64 = groups.slice(0, 6).join(":") === "64:ff9b:0:0:0:0";
+  if (mapped || nat64) {
+    const high = parseInt(groups[6], 16);
+    const low = parseInt(groups[7], 16);
+    return BLOCKED_IPV4.has(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+  }
+  return false;
+}
+
+// Compares two server URLs after URL normalization (case of scheme and host,
+// default ports, trailing slashes), falling back to exact text when unparsable.
+export function sameServerUrl(a, b) {
+  const normalize = (value) => {
+    const textValue = String(value || "").trim().replace(/\/+$/, "");
+    try {
+      return new URL(textValue).href.replace(/\/+$/, "");
+    } catch {
+      return textValue;
+    }
+  };
+  const left = normalize(a);
+  return Boolean(left) && left === normalize(b);
+}
 
 export function assertSafeOutboundUrl(value, { label = "URL" } = {}) {
   let url;
@@ -126,8 +198,7 @@ export function assertSafeOutboundUrl(value, { label = "URL" } = {}) {
   if (url.username || url.password) {
     throw outboundPolicyError(`${label} must not contain embedded credentials`, OUTBOUND_POLICY_CODES.CREDENTIALS);
   }
-  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
-  if (BLOCKED_HOSTS.has(host)) {
+  if (isBlockedMetadataHost(url.hostname)) {
     throw outboundPolicyError(`${label} targets a blocked metadata endpoint`, OUTBOUND_POLICY_CODES.METADATA);
   }
   return url;
@@ -237,16 +308,53 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = undefined)
   const timeoutError = createUpstreamTimeoutError(resolvedTimeoutMs);
   const timeout = setTimeout(() => controller.abort(timeoutError), resolvedTimeoutMs);
   const abortFromUpstream = () => controller.abort(upstreamSignal.reason);
+  const cleanup = () => {
+    clearTimeout(timeout);
+    if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromUpstream);
+    controller.signal.removeEventListener("abort", cleanup);
+  };
+  controller.signal.addEventListener("abort", cleanup, { once: true });
   if (upstreamSignal) {
     if (upstreamSignal.aborted) abortFromUpstream();
     else upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
   }
 
+  let responseBodyOwnsTimeout = false;
   try {
     const { lane: _lane, allowDemoAnalytics: _allowDemoAnalytics, ...fetchOptions } = options;
     const response = await fetchFollowingSafeRedirects(safeUrl, { ...fetchOptions, signal: controller.signal });
     noteOutboundResponse(safeUrl.hostname, response.status, response.headers.get("retry-after") || "");
-    return response;
+    if (!response.body) return response;
+
+    // Preserve streaming: a caller may use text/json, a reader, or clone().
+    // The timer stays attached to the underlying fetch until its body ends or
+    // is cancelled, even when a caller abandons an error response unread.
+    const reader = response.body.getReader();
+    const body = new ReadableStream({
+      async pull(stream) {
+        try {
+          const { value, done } = await reader.read();
+          if (done) { cleanup(); stream.close(); }
+          else stream.enqueue(value);
+        } catch (error) {
+          cleanup();
+          stream.error(controller.signal.reason === timeoutError ? timeoutError : error);
+        }
+      },
+      async cancel(reason) {
+        cleanup();
+        await reader.cancel(reason);
+      },
+    });
+    const wrapped = new Response(body, { status: response.status, statusText: response.statusText, headers: response.headers });
+    Object.defineProperties(wrapped, {
+      url: { value: response.url },
+      redirected: { value: response.redirected },
+      type: { value: response.type },
+    });
+    timeout.unref?.();
+    responseBodyOwnsTimeout = true;
+    return wrapped;
   } catch (error) {
     if (controller.signal.aborted && controller.signal.reason === timeoutError) throw timeoutError;
     const policyError = publicOutboundPolicyError(error?.code);
@@ -267,8 +375,9 @@ export async function fetchWithTimeout(url, options = {}, timeoutMs = undefined)
     }
     throw safeError;
   } finally {
-    clearTimeout(timeout);
-    if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromUpstream);
+    if (!responseBodyOwnsTimeout) cleanup();
+    // The governor limits request starts, not unread responses; callers often
+    // discard error bodies, so holding slots here could block a whole host.
     releaseSlot();
   }
 }

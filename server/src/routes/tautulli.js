@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { requireAdmin } from "../utils/auth.js";
 import { readJson } from "../utils/requestBody.js";
+import { sameServerUrl } from "../utils/outbound.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { loadMediaConfig, mergeIncomingConfig, publicMediaConfig } from "../utils/configStore.js";
 import { createTautulliClient, sanitizeTautulliError } from "../utils/tautulliClient.js";
@@ -12,7 +13,21 @@ const previewJobs = new Map();
 const PREVIEW_JOB_TTL_MS = 15 * 60 * 1000;
 const MAX_RUNNING_PREVIEW_JOBS = 1;
 
+// The saved API key only ever goes to the saved server: a request that names a
+// different URL must bring its own key (app audit, 10 November 2026).
+function assertSavedKeyMatchesUrl(config = {}, incoming = {}) {
+  const url = String(incoming?.baseUrl || "").trim();
+  const hasOwnKey = String(incoming?.apiKey || "").trim() !== "";
+  if (!url || hasOwnKey || !config.tautulli?.apiKey) return;
+  if (sameServerUrl(url, config.tautulli?.baseUrl)) return;
+  const error = new Error("Enter the API key to use a Tautulli URL that differs from the saved one.");
+  error.status = 400;
+  error.code = "TOKEN_REQUIRED_FOR_NEW_URL";
+  throw error;
+}
+
 function configuredClient(config = {}, override = {}) {
+  assertSavedKeyMatchesUrl(config, override);
   const tautulli = { ...(config.tautulli || {}), ...(override || {}) };
   if (tautulli.apiKey === undefined || tautulli.apiKey === "") tautulli.apiKey = config.tautulli?.apiKey || "";
   return createTautulliClient(tautulli);
@@ -175,6 +190,7 @@ export async function handleTautulli(req, res, action = "", inboundTracked=false
     }
     if (action === "test" && req.method === "POST") {
       const body = await readJson(req);
+      assertSavedKeyMatchesUrl(config, body);
       const merged = await mergeIncomingConfig({ tautulli: body });
       const client = configuredClient(merged);
       const [serverInfo, users] = await Promise.all([client.getServerInfo(), client.getUsers()]);
@@ -186,6 +202,7 @@ export async function handleTautulli(req, res, action = "", inboundTracked=false
     }
     if (action === "preview-start" && req.method === "POST") {
       const body = await readJson(req);
+      assertSavedKeyMatchesUrl(config, body);
       if (!String(body.userId || config.tautulli?.userId || "").trim()) {
         return sendJson(res, { ok: false, error: "Select a valid Tautulli user before importing" }, 400);
       }

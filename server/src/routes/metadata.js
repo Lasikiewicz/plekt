@@ -600,7 +600,7 @@ export async function handleTmdbPoster(req, res) {
 
   // Deduplicate concurrent requests for the same path.
   if (_tmdbPosterInflight.has(posterPath)) {
-    await _tmdbPosterInflight.get(posterPath);
+    await _tmdbPosterInflight.get(posterPath).catch(() => null);
     const recheck = usableCachedPoster(await getPosterCache(mediaKey));
     if (recheck?.url) {
       res.setHeader("Cache-Control", "public, max-age=86400, stale-while-revalidate=604800");
@@ -627,11 +627,13 @@ export async function handleTmdbPoster(req, res) {
     } finally {
       _releaseTmdbPosterSlot();
     }
-  })();
+  })().finally(() => _tmdbPosterInflight.delete(posterPath));
 
+  // A rejected download must clear its in-flight entry (the finally above) and
+  // answer with the placeholder, never leave later requests awaiting the same
+  // rejected promise until a restart.
   _tmdbPosterInflight.set(posterPath, downloadPromise);
-  const stored = await downloadPromise;
-  _tmdbPosterInflight.delete(posterPath);
+  const stored = await downloadPromise.catch(() => null);
 
   if (!stored?.url) {
     return res.redirect(302, "/favicon.svg");

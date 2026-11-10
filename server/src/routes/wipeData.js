@@ -5,6 +5,7 @@ import { readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { db, writeAuditLog, bumpDataVersion } from "../db.js";
 import { invalidateHistoryDerivedCaches } from "../utils/dataRepo.js";
+import { scheduleShowProgressRebuild } from "../utils/showProgressCache.js";
 import { clearWatchlistRestorePending } from "../utils/personalWatchlistRepository.js";
 import { resetAdminAccount } from "../appConfig.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR } from "../paths.js";
@@ -245,6 +246,8 @@ export async function handleWipeData(req, res) {
 
     if (def.tables.includes("watch_history")) {
       await invalidateHistoryDerivedCaches("handleWipeData").catch(() => null);
+      // Wiped shows would otherwise stay in the progress cache until a restart.
+      scheduleShowProgressRebuild("data wipe");
     } else {
       bumpDataVersion();
     }

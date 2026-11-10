@@ -37,7 +37,19 @@ function metadataFromBody(body) {
 async function readJson(config, url, label) {
   const response = await fetchPlexWithRefresh(config, url, { lane: "sync" });
   if (!response.ok) throw statusError(`Plex ${label} failed with status ${response.status}`, response.status);
-  try { return await response.json(); } catch { return {}; }
+  // A 2xx body that is not JSON must fail the read. Returning {} made an unreadable
+  // playlist look empty, and pull then removed its items.
+  try { return await response.json(); } catch {
+    const error = new Error(`Plex ${label} returned a body that is not JSON`);
+    error.code = "PLEX_UNRECOGNISED_RESPONSE";
+    throw error;
+  }
+}
+
+function hasPlexContainer(body) {
+  return Array.isArray(body?.MediaContainer?.Metadata)
+    || Array.isArray(body?.Metadata)
+    || Boolean(body?.MediaContainer && typeof body.MediaContainer === "object");
 }
 
 async function mutate(config, url, method, label) {
@@ -128,6 +140,11 @@ export async function fetchPlexPlaylistItems(config, playlistId) {
   if (!text(playlistId)) throw new Error("Plex playlist id is required");
   const url = playlistUrl(config, `/${encodeURIComponent(text(playlistId))}/items`);
   const body = await readJson(config, url, "playlist items lookup");
+  if (!hasPlexContainer(body)) {
+    const error = new Error("Plex playlist items response was unrecognised");
+    error.code = "PLEX_UNRECOGNISED_RESPONSE";
+    throw error;
+  }
   return metadataFromBody(body).map(normalizePlexPlaylistEntry);
 }
 

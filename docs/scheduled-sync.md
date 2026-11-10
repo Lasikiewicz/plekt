@@ -9,6 +9,15 @@ lease ensures only one `all` or `worker` process runs scheduler work and the Ple
 notification listener. The lease is renewed every 10 seconds and expires after 60.
 The existing per-process overlap guard remains in place.
 
+Lease renewal, scheduled ticks and job polling schedule their next attempt even
+after an error. Daily database maintenance records failed attempts too, avoiding
+minute-by-minute retries. Each user's tick prunes old live-change events even
+when no dashboard is open.
+
+Recent-watch catch-up skips individual items that fail and continues the batch.
+Plex checks at most six libraries per pass and saves the next section to check,
+so larger libraries rotate across passes and continue after a restart.
+
 The lease belongs to the admin database and is checked there even while the elected
 worker runs an added user's tick or claims that user's queued job. Jobs and sync data
 remain in that user's database. Catch-up, playlist, maintenance and tick cadence state

@@ -451,7 +451,7 @@ function episodeCoordinates(media = {}) {
 // same server item, so title + episode coordinates (or coarse movie title)
 // must serialize them. Coarse fallbacks are safe: an occasional extra wait is
 // preferable to letting two aliases write contradictory states concurrently.
-function outboundStateLeaseIdentity(media = {}) {
+export function outboundStateLeaseIdentity(media = {}) {
   const type = String(media.type || media.mediaType || media.media_type || "unknown").trim().toLowerCase();
   if (type === "episode") {
     const { season, episode } = episodeCoordinates(media);

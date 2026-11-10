@@ -40,13 +40,7 @@ function dismissRequest(body = {}) {
 }
 
 function tmdbResponse(body) {
-  return {
-    ok: true,
-    status: 200,
-    headers: new Headers(),
-    body: { cancel: async () => {} },
-    json: async () => body,
-  };
+  return Response.json(body);
 }
 
 const daysAgo = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();

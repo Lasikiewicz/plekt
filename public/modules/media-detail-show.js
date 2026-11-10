@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.2.4.2.1";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.4.2.1";
-import { posterUrlFor, tmdbImage, tmdbPoster, episodeStillUrl, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isLocalArtworkUrl } from "./images.js?v=2.2.4.2.1";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.4.2.1";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.4.2.1";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.2.1";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.2.4.2.1";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.2.1";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.2.1"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.1";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.4.2.1";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.4.2.1"; import { episodeOrderButtonHtml, episodeReviewNoticeHtml } from "./episode-order.js?v=2.2.4.2.1";
+import { state, elements } from "./state.js?v=2.2.4.2.3";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.4.2.3";
+import { posterUrlFor, tmdbImage, tmdbPoster, episodeStillUrl, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isLocalArtworkUrl } from "./images.js?v=2.2.4.2.3";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.4.2.3";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.4.2.3";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.2.3";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.2.4.2.3";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.2.3";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.2.3"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.3";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.4.2.3";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.4.2.3"; import { episodeOrderButtonHtml, episodeReviewNoticeHtml } from "./episode-order.js?v=2.2.4.2.3";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -16,7 +16,7 @@ import {
   refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.2.4.2.1";
+} from "./media-detail-shared.js?v=2.2.4.2.3";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
@@ -2552,7 +2552,7 @@ export function mergeShowWithLoadedHistory(show = {}) {
       return true;
     })
     .flatMap((candidate) => candidate.episodes || []);
-  const showEpisodeRows = [...(show.episodes || []), ...matchingSummaryEpisodes];
+  const showEpisodeRows = [...(show.episodes || []), ...matchingSummaryEpisodes.filter(episode => !show.season_numbering?.translate || !isWatchedHistoryAction(episode))];
   for (const episode of showEpisodeRows) {
     if (episode.season == null || episode.episode == null) continue;
     const key = showEpisodeKey(episode.season, episode.episode);

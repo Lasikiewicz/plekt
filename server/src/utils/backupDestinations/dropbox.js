@@ -34,7 +34,10 @@ async function ensureAccessToken(destination) {
     headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
     body: params.toString(),
   });
-  const data = await response.json().catch(() => ({}));
+  const data = await response.json().catch((error) => {
+    if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") throw error;
+    return {};
+  });
   if (!response.ok) {
     throw new Error(`Dropbox token refresh failed: ${data.error_description || data.error || response.status}`);
   }
@@ -91,7 +94,10 @@ export function createDropboxAdapter(destination) {
       });
       if (response.status === 409) return []; // folder not created yet
       if (!response.ok) throw new Error(`Dropbox list failed (${response.status})`);
-      const data = await response.json().catch(() => ({}));
+      const data = await response.json().catch((error) => {
+        if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") throw error;
+        return {};
+      });
       return (data.entries || [])
         .filter((entry) => entry[".tag"] === "file" && FILE_PATTERN.test(entry.name || ""))
         .map((entry) => ({

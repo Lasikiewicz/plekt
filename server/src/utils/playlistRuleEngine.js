@@ -12,6 +12,7 @@ import { PLAYLIST_PROVIDERS } from "./providerPlaylists.js";
 import { discoverTmdbPage, trendingTmdbPage } from "./tmdbGateway.js";
 import { configuredProvider } from "./upNextLibraryLookup.js";
 import { runWithConcurrency } from "./concurrency.js";
+import { airDayOf, todayLocalDate } from "./watchDates.js";
 
 // Automatic playlists (plan/archive/custom-playlist-sync step 8b, decisions 32
 // to 52). A rule is evaluated into the ordered list of items the playlist
@@ -255,7 +256,7 @@ function showIdsOf(title) {
 }
 
 function todayOf(now) {
-  return new Date(now).toISOString().slice(0, 10);
+  return todayLocalDate(now);
 }
 
 // The episode to watch next, as Up Next picks it: the first one after
@@ -267,7 +268,7 @@ export function pickNextEpisode(episodes, after, today) {
     .sort((a, b) => (a.season - b.season) || (a.episode - b.episode))
     .find((entry) => !after || entry.season > after.season || (entry.season === after.season && entry.episode > after.episode));
   if (!next) return null;
-  const airDate = text(next.air_date);
+  const airDate = airDayOf(next.air_date);
   return !airDate || airDate <= today ? next : null;
 }
 

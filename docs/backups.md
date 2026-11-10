@@ -182,7 +182,13 @@ Nightly encrypted snapshots of the entire portable backup document.
   and writes nothing; only then does a second pass import through
   `importCollectionBatch` in batches of 250, with the browser restore's rules (same
   collections, so credential collections are left out; first batch of each collection
-  resets it; watchlist restore rules; `bumpDataVersion`). A wrong passphrase or damaged
+  resets it; watchlist restore rules; `bumpDataVersion`). Media and tracker connections
+  are never restored, even from a full encrypted backup (which still carries them,
+  encrypted): they stay as set up on the machine, and the backup's note says so
+  (decided 10 November 2026). Restoring watch history also rebuilds the show progress
+  cache about 1.5 seconds after the last batch (`scheduleShowProgressRebuild`), so
+  restored shows get their totals and removed shows leave the cache without a restart;
+  a data wipe and a watch-history backup restore do the same. A wrong passphrase or damaged
   file changes nothing. Cron catch-up is paused during the import and resumed after.
   After validation and before importing, `VACUUM INTO` saves the current database to
   `plekt-pre-restore-<job-id>.sqlite` in the configured full-backup

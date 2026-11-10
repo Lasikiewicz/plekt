@@ -23,7 +23,8 @@ Behavior:
   near its right edge.
 - **Dedupe** - raw history collapses duplicates to one entry per movie or show episode
   per calendar day, so same-day webhook echoes don't crowd out genuine later rewatches
-  (`dedupe` option in `queryWatchHistory`).
+  (`dedupe` option in `queryWatchHistory`). Deduplication and filtering cover the complete
+  tracked history before pagination, including watches older than the newest 25,000 rows.
 - **Day view** - the default layout. The List | Days toggle in the page's control bar
   (`data-history-view`) switches to `days` mode (`modules/history-day-view.js`): one box per local calendar day, newest day
   first, its cards newest first inside the box, using the same card and poster-only layout as
@@ -85,6 +86,9 @@ a time. Separate buttons run it for TV episodes and for movies.
 | `public/modules/tools-duplicates.js` | `runDuplicateWatchCleanup(mediaType)` - scans, confirms, then cleans up |
 | `server/src/routes/media.js` | `handleDuplicateWatchScan` (`GET /api/duplicate-watch-scan?mediaType=`), `handleDuplicateWatchCleanup` (`POST /api/duplicate-watch-cleanup`) |
 | `server/src/utils/dataRepo.js` | `dedupeHistory` (with `playHistory`), `deleteWatchDates` |
+
+Watch-date and record deletion commit history removal, suppression, audit and playstate
+changes in one transaction. A failure rolls back those related database changes together.
 
 Unlike the same-event collapse above, this does not use a time window - it groups by
 `media_key` (or show title/season/episode for episodes) via `queryWatchHistory`'s existing

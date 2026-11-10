@@ -87,7 +87,7 @@ test("a partial answer is never stored as an empty result", () => {
   const adminSource = fs.readFileSync(new URL("../server/src/routes/admin.js", import.meta.url), "utf8");
   const handler = adminSource.match(/export async function handleMediaAppLinks[\s\S]*?\n}/)?.[0] || "";
   const partialReturn = handler.indexOf("if (partial)");
-  const emptyStore = handler.indexOf("emptyAppLinksCache.set(");
+  const emptyStore = handler.indexOf("emptyAppLinksCaches().set(");
   assert.ok(partialReturn > 0 && emptyStore > partialReturn, "the partial answer returns before the empty cache is written");
   assert.match(handler.slice(partialReturn, emptyStore), /return sendJson\(res, \{ ok: true, links, partial: true \}/);
 });

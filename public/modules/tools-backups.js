@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.1";
-import { state, elements } from "./state.js?v=2.2.4.2.1";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.2.4.2.1";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.2.4.2.1";
-import { applyAppearanceToBody } from "./appearance.js?v=2.2.4.2.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.3";
+import { state, elements } from "./state.js?v=2.2.4.2.3";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.2.4.2.3";
+import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.2.4.2.3";
+import { applyAppearanceToBody } from "./appearance.js?v=2.2.4.2.3";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -172,7 +172,7 @@ export function selectPlektBackupFile(file) {
 function confirmPlektRestore(label) {
   return _openConfirmDialog({
     title: "Restore Plekt backup?",
-    body: `This replaces every collection included in ${label} with the backup's contents. After checking the file, Plekt saves a local SQLite recovery snapshot before importing; if the import fails, the error shows its location. Your local admin username and password stay unchanged. Nothing is changed until the whole file has been checked and the snapshot saved. Watch-history restores are safer for ordinary history rollback; use this for a full Plekt move or rebuild.`,
+    body: `This replaces the restorable collections included in ${label} with the backup's contents. After checking the file, Plekt saves a local SQLite recovery snapshot before importing; if the import fails, the error shows its location. Your local admin username, password, and media and tracker connections stay unchanged. Reconnect any services missing on this machine. Nothing is changed until the whole file has been checked and the snapshot saved. Watch-history restores are safer for ordinary history rollback; use this for a full Plekt move or rebuild.`,
     confirmLabel: "Restore Plekt Backup",
     danger: true,
   });
@@ -1046,14 +1046,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.2.4.2.1");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.2.4.2.3");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.2.4.2.1");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.2.4.2.3");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {

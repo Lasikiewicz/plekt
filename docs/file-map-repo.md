@@ -102,6 +102,10 @@ server modules.
 | `syncOrchestrator.test.js` | Target routing, resume-progress actionability, loop-store echo detection. |
 | `mediaForceSync.test.js` | Title-scoped Force Sync mode/target normalization, watched Plex/Emby item shaping, and duplicate-quality Jellyfin episode matching. |
 | `episode-order-force-sync.test.js` | Futurama DVD-to-aired import preflight, refusal before partial writes, and review approval targeting the exact Emby episode. |
+| `episode-order-display.test.js` | Selected-order watched coordinates survive dashboard summary merges; canonical summary watches cannot create false displayed watches. |
+| `episode-order-annotation.test.js` | Verified DVD mappings clear earlier display review markers while missing or invalid identities remain in review. |
+| `dataIntegrityFixes.test.js` | Progress-cache rebuilding after restore, history beyond 25,000 rows, and atomic watch-date and record deletion. |
+| `metadataArtworkFixes.test.js` | Transient metadata failures retain known details and artwork, retry incomplete caches, and skip unusable redacted artwork sources. |
 | `mediaForceSyncTrackerPhases.test.js` | Local-first detail Force Sync ordering, independently bounded Trakt work, combined partial outcomes, and cancellation of queued tracker items. |
 | `scheduledResumeAuthority.test.js` | Timestamp and canonical-state precedence for webhook and scheduled resume candidates, including stale acknowledgements and explicit unwatches. |
 | `plexResumeUnwatch.test.js` | Plex fallback recovery for cleared resume-only items, provider-held progress evidence, and preservation of newer or uncleared progress. |

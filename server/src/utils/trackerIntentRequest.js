@@ -7,14 +7,21 @@ const statusOf = (id) => db.prepare("SELECT status FROM tracker_write_intents WH
 
 // Network calls happen outside the short claim/ack transactions. The local ID
 // is never sent as a substitute for a provider-supported idempotency key.
-export async function trackerIntentRequest(connection, items, action, send, fetchHistory) {
+// A canonical replay (replay: true) removes the play and then adds it again.
+// Its remove has just cleared Trakt, so a settled intent from the earlier send
+// no longer describes Trakt: reopen it so both the remove and the add are sent.
+export async function trackerIntentRequest(connection, items, action, send, fetchHistory, { replay = false } = {}) {
   // Standalone client consumers (including protocol tests) have no managed
   // connection. Application dispatch always supplies the persisted connection.
   if (!connection.id) return send(items);
   const pending = [];
   for (const media of items) {
-    const intent = trackerIntentForDispatch("trakt", connection, media, action);
+    let intent = trackerIntentForDispatch("trakt", connection, media, action);
     if (!trackerIntentConnectionCurrent(intent)) throw new Error("Tracker connection changed before write");
+    if (intent.status === "settled" && replay) {
+      finishTrackerWriteIntent(intent.id, "retry", "Canonical replay sends this write again");
+      intent = { ...intent, status: "retry" };
+    }
     if (intent.status === "settled") continue;
     if (intent.status === "uncertain" && action === "watched") {
       // The previous send may have landed before its response was lost.
@@ -38,7 +45,8 @@ export async function trackerIntentRequest(connection, items, action, send, fetc
     }
     pending.push({ intent, media });
   }
-  if (!pending.length) return { added: {}, deleted: {}, not_found: {} };
+  // alreadySent tells the dispatcher nothing was sent: every item is settled.
+  if (!pending.length) return { added: {}, deleted: {}, not_found: {}, alreadySent: true };
   // Claim the complete batch atomically; never strand half of it as sending.
   db.transaction(() => {
     for (const { intent } of pending) if (!claimTrackerWriteIntent(intent.id)) throw new Error("Tracker write already claimed");

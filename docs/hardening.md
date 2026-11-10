@@ -80,6 +80,16 @@ Then point the tunnel to `http://localhost:5056`.
 
 Once HTTPS is in place, set `COOKIE_SECURE=true` in your environment. This adds `Strict-Transport-Security` and the `Secure` attribute to the session cookie, preventing it from being sent over HTTP.
 
+The proxy must pass the public `Host` header, including any non-default port. Plekt
+compares mutation requests' `Origin` to `Host` and does not use `X-Forwarded-Host`
+for this check, even when `TRUST_PROXY=1`; rewriting `Host` to the upstream address
+will cause browser writes to be rejected.
+
+For one trusted reverse proxy, set `TRUST_PROXY=1` and restrict direct access to Plekt
+to that proxy. This lets rate limits use forwarded client addresses. If a request carries
+`X-Forwarded-For` while proxy trust is off, Plekt logs a warning once; sign-in failures
+otherwise share the proxy's rate limit.
+
 ### Transport behavior
 
 Plekt is self-hosted: it can run directly on a host, in Docker, or behind a reverse

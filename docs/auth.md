@@ -50,7 +50,7 @@ All accounts share one login form (`POST /api/login`) and one Node process:
 - **Delegated administrators**: verified against `data/users.json` like other users, but receive `role: "admin"` while keeping their own tenant as `activeUser`. Their account stays in `data/users/<name>/`; promotion and demotion revoke existing sessions.
 - **Standard users**: verified against `data/users.json` (`passwordHash` + not `disabled`). Receives a session cookie with `role: "user"` and `activeUser: "<name>"`.
 - **Unprefixed `/api/*` requests**: `server/server.js` inspects the session cookie's `activeUser` (`resolveSessionTenantContext`) and wraps `dispatch()` in `runWithUserContext(activeUser, ...)` so the browser SPA works at `/` for both the admin and any signed-in or switched-into user without changing frontend route paths.
-- **Prefixed `/u/<name>/api/*` requests**: used by webhooks (`/u/<name>/api/webhook`) and API-key integrations. A non-admin user's session cookie is rejected with `403 FORBIDDEN` on another user's `/u/<other>/api/*` path; the admin session can reach any running tenant. A stopped user returns `503 INSTANCE_STOPPED`.
+- **Prefixed `/u/<name>/api/*` requests**: used by webhooks (`/u/<name>/api/webhook`) and API-key integrations. A non-admin user's session cookie is rejected with `403 FORBIDDEN` on another user's `/u/<other>/api/*` path; an admin session can reach any running tenant. A stopped tenant returns `503 INSTANCE_STOPPED` to an authenticated administrator and the same `404` as an unknown tenant to other callers.
 - **Administrator user switching**: the account picker stays available to admin sessions while viewing another user's workspace. `POST /api/users/manage` with `{ action: "open", name }` changes `activeUser` while preserving the administrator's login identity, writes an audit entry in the target user's database, and returns `{ ok: true, path: "/setup" | "/" }` based on whether that user has completed or dismissed `/setup`.
 - **Settings → General → Account**: when a non-admin user is signed in (`role: "user"`), or when the admin is viewing a non-admin user's workspace (`supervised: true`), the root-admin credential/revoke-all card is replaced by a self-service password form (`POST /api/users/password`) that requires the user's current password.
 - **Settings access**: a non-admin, including the admin while viewing a non-admin user's workspace, can edit that user's account password, appearance, media-server and personal connection settings, and webhook secret. The Users menu, shared provider keys, install settings, and maintenance sections stay unavailable in that workspace. The UI hides those sections and `POST /api/config` rejects non-admin changes outside the user's connection sections.
@@ -63,6 +63,8 @@ All accounts share one login form (`POST /api/login`) and one Node process:
 - Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when `COOKIE_SECURE=true`,
   path `/`.
 - Revocation: rotating `sessionSecret` (`POST /api/auth/sessions/revoke-all`) invalidates every cookie across the install and issues the admin caller a fresh cookie. For an individual non-admin user, the admin can click **Sign out now** or **Disable sign-in** in **Settings → Users**, which updates `sessionsValidAfter` / `disabled` in `data/users.json` and immediately invalidates that user's existing cookies.
+- Creating or renaming an account and resetting its password also invalidate earlier
+  cookies for that account name.
 
 ## Provider credentials
 
@@ -90,6 +92,8 @@ All state-changing routes (`POST`, `PUT`, `DELETE`, `PATCH`) enforce CSRF defens
    `Sec-Fetch-Site: cross-site` and `same-site` are rejected for mutations. Headerless
    server-to-server API and webhook callers remain supported. Interactive authorization
    routes additionally require proof of a same-origin browser request.
+   Reverse proxies must preserve the public `Host`, including a non-default port;
+   `X-Forwarded-Host` is not used for this comparison.
 2. **SameSite=Lax**: session cookies are not sent on cross-site subrequests (images,
    fetch, XHR). Top-level cross-site navigations send cookies but only with `GET`, which
    cannot trigger mutations.
@@ -103,11 +107,15 @@ unauthenticated callers.
 Login and claim bodies are limited to 32 KiB; webhook bodies to 1 MiB, before parsing.
 Other buffered API bodies retain their 15 MiB limit; streamed backup uploads use their own cap.
 
-- `POST /api/login` and `POST /api/auth/claim` are limited to **10 attempts per 15-minute
-  window per IP**. Exceeding the limit returns `429 Too Many Requests`.
+- `POST /api/login` is limited to **10 failed attempts per 15-minute window per IP**;
+  successful logins do not consume the allowance. `POST /api/auth/claim` is limited to
+  **10 attempts per 15-minute window per IP**. Exceeding either limit returns `429 Too Many Requests`.
 - Webhook endpoints are limited to **60 requests per minute per IP**.
 - Failed logins log a `login.failure` event with the client IP to `audit_log`.
-- Successful logins log `login.success` and clear the failed attempt counter for that IP.
+- Successful logins log `login.success`.
+- If `X-Forwarded-For` arrives while proxy trust is off, the server logs a warning once;
+  requests otherwise share the proxy's IP for rate limiting. Set `TRUST_PROXY=1` only
+  behind one trusted proxy and restrict direct access to Plekt.
 - Rate-limit state is kept in memory with periodic cleanup of expired buckets. It does not
   survive server restarts.
 
@@ -184,8 +192,11 @@ The frontend boots through `app.js` → `checkAuth()`:
 - A non-admin user's session only authenticates inside that user's own context. Only the
   install's real API key keeps a request in the root context; any other `X-Api-Key` or
   Bearer value no longer skips session tenant routing (app audit, 5 November 2026).
-- `/api/test-connection` sends a saved server token only to the saved server URL; testing a
-  different URL needs the token typed in (400 `TOKEN_REQUIRED_FOR_NEW_URL`).
+- `/api/test-connection`, `/api/test-plex-notifications` and the Tautulli `test`, `preview`
+  and `preview-start` actions send a saved server token or API key only to the saved server
+  URL; testing a different URL needs the token typed in (400 `TOKEN_REQUIRED_FOR_NEW_URL`).
+  `/api/test-plex-notifications` also runs the outbound URL guard before opening its WebSocket
+  (app audit, 10 November 2026).
 - Path traversal guards on user names: validated against `/^[a-zA-Z0-9_-]{2,32}$/`,
   Windows reserved filenames (`CON`, `PRN`, `AUX`, `NUL`, `COM1-9`, `LPT1-9`) forbidden,
   and case-insensitive duplicate prevention.

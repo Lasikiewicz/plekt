@@ -202,9 +202,9 @@ async function performTraktDispatch(connection, trackerMedia, state, isCanonical
     if (isCancelled()) return { cancelled: true };
     let removeResult = null;
     if (isCanonicalReplay) {
-      removeResult = await runTraktWrite(() => setTraktWatchState(connection, trackerMedia, "unwatched", { lane }));
+      removeResult = await runTraktWrite(() => setTraktWatchState(connection, trackerMedia, "unwatched", { lane, replay: true }));
     }
-    const result = await runTraktWrite(() => setTraktWatchState(connection, trackerMedia, state, { lane }));
+    const result = await runTraktWrite(() => setTraktWatchState(connection, trackerMedia, state, { lane, replay: isCanonicalReplay }));
     return { removeResult, result };
   });
 }
@@ -773,13 +773,13 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
   const callBatch = async (batch, batchState) => {
     const payload = batch.map((entry) => entry.media);
     try {
-      return await withTraktRateLimitRetry(() => setTraktWatchHistoryBatch(connection, payload, batchState, { lane }));
+      return await withTraktRateLimitRetry(() => setTraktWatchHistoryBatch(connection, payload, batchState, { lane, replay: canonicalReplay }));
     } catch (error) {
       if (Number(error?.status) !== 401 || refreshedConnection) throw error;
       refreshedConnection = true;
       connection = await withFreshTraktConnection(true);
       if (!connection) throw error;
-      return withTraktRateLimitRetry(() => setTraktWatchHistoryBatch(connection, payload, batchState, { lane }));
+      return withTraktRateLimitRetry(() => setTraktWatchHistoryBatch(connection, payload, batchState, { lane, replay: canonicalReplay }));
     }
   };
 
@@ -811,7 +811,8 @@ export async function dispatchTraktWatchStateBatch(items = [], state = "watched"
       const result = await callBatch(batch, "watched");
       const notFound = traktNotFoundCount(result);
       if (!notFound) {
-        for (const entry of batch) results[entry.index] = batchDispatchResult(entry.index, entry.media, "success", "Marked watched on Trakt (batched)");
+        const batchDetail = result?.alreadySent ? "Already sent to Trakt; not sent again (batched)" : "Marked watched on Trakt (batched)";
+        for (const entry of batch) results[entry.index] = batchDispatchResult(entry.index, entry.media, "success", batchDetail);
         recordTrackerOutboundBatch("trakt", batch.map(({ media }) => ({
           mediaKey: trackerMediaKey(media),
           media,
@@ -1358,6 +1359,7 @@ async function dispatchTrakt(media, state, lane = "sync", isCancelled = () => fa
     detail += ` (cleared ${deletedCount} existing play${deletedCount === 1 ? "" : "s"} first`;
     detail += removeNotFound ? `, ${removeNotFound} not recognized: ${JSON.stringify(dispatch.removeResult.not_found)})` : ")";
   }
+  if (dispatch.result?.alreadySent) detail = `Already sent to Trakt; not sent again`;
   return { target: "trakt", status: "success", detail };
 }
 

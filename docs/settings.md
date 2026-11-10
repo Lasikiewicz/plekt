@@ -645,7 +645,9 @@ shows a replacement placeholder; saving or testing with it blank keeps and uses 
 stored credential. Seerr and destination secrets are omitted from payloads when blank.
 
 URLs are restricted to HTTP/HTTPS, embedded credentials and cloud-metadata hosts are
-rejected, and saved values take precedence over environment defaults. Connection tests
+rejected (the host is normalised first, so a trailing dot, an IPv4-mapped or NAT64 IPv6
+form, and the AWS ECS, Alibaba, Oracle and Azure metadata addresses are blocked too;
+loopback and LAN addresses stay allowed), and saved values take precedence over environment defaults. Connection tests
 fall back to stored credentials when the modal secret field is blank.
 
 The **Sync Tuning** form (on the Sync page) exposes the **Sync historical watched items

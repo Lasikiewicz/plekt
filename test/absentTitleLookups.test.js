@@ -83,14 +83,14 @@ test("concurrent app-link renders share one in-flight request", () => {
 });
 
 test("the server remembers an empty app-link result, but never a populated one", () => {
-  assert.match(adminSource, /const emptyAppLinksCache = new Map\(\)/);
+  assert.match(adminSource, /const emptyAppLinksCaches = createPerUserState\(\(\) => new Map\(\)/);
   const handler = adminSource.match(/export async function handleMediaAppLinks[\s\S]*?\n}/)?.[0] || "";
   assert.match(handler, /if \(!links\.length\)/, "only an empty result may be cached");
-  assert.doesNotMatch(handler, /emptyAppLinksCache\.set\(lookupKey, Date\.now\(\)\);\s*\n\s*}\s*\n\s*return sendJson\(res, \{ ok: true, links \}[\s\S]*links\.length/);
+  assert.doesNotMatch(handler, /emptyAppLinksCaches\(\)\.set\(lookupKey, Date\.now\(\)\);\s*\n\s*}\s*\n\s*return sendJson\(res, \{ ok: true, links \}[\s\S]*links\.length/);
 });
 
 test("the empty-result cache is bounded and invalidated on a config change", () => {
-  assert.match(adminSource, /emptyAppLinksCache\.size >= \d+/, "cache must be bounded");
+  assert.match(adminSource, /emptyAppLinksCaches\(\)\.size >= \d+/, "cache must be bounded");
   assert.match(adminSource, /export function clearEmptyAppLinksCache/);
   // Connecting a media server changes what can be found.
   const configHandler = adminSource.match(/await saveMediaConfig\(config\);[\s\S]{0,400}/)?.[0] || "";

@@ -103,6 +103,7 @@ export async function startServerImport(provider, { lockWaitStartedAt = Date.now
   }
 
   const runtime = await loadRuntimeState();
+  if (waitToken.cancelled) return { started: false, code: "CANCELLED" };
   if (activeSyncOperation(runtime)) {
     if (Date.now() - lockWaitStartedAt < SCHEDULED_LOCK_MAX_WAIT_MS) {
       patchServerImport(provider, { enabled: true, status: "importing", error: null });
@@ -159,7 +160,7 @@ export async function startServerImport(provider, { lockWaitStartedAt = Date.now
       patchServerImport(provider, { status: "failed", completedAt: Date.now(), error: error.message || String(error) });
     })
     .finally(() => {
-      cancelTokens.delete(`server:${provider}`);
+      if (cancelTokens.get(`server:${provider}`) === token) cancelTokens.delete(`server:${provider}`);
     });
 
   return { started: true };
@@ -168,6 +169,7 @@ export async function startServerImport(provider, { lockWaitStartedAt = Date.now
 export function cancelServerImport(provider) {
   const token = cancelTokens.get(`server:${provider}`);
   if (token) token.cancelled = true;
+  cancelTokens.delete(`server:${provider}`);
   patchServerImport(provider, { enabled: false, status: "cancelled", completedAt: Date.now() });
   return { cancelled: true };
 }

@@ -225,6 +225,8 @@ Full watched-library scans used by Force Sync and restore page each selected sec
 in containers of 200 items. A failed section/page rejects the scan; Force Sync records
 a scope error and excludes that server rather than treating a partial scan as empty.
 Repeated or missing pages advertised by Plex also fail the scan.
+Resume section scans use `totalSize` as the total when supplied; a page's `size` is only
+its returned count. Without a total, full pages continue until a shorter page arrives.
 
 `/status/sessions` (via `fetchLiveSessions`) is polled for Now Playing and
 completed-session detection by the independent live-session poller

@@ -10,12 +10,19 @@ import { isDemoMode } from "./demoMode.js";
 import { readShowNumbering, resolveAndRecordSeasonSource } from "./seasonSource.js";
 import { buildEpisodeNumberMap, translateEpisode } from "./episodeNumberMap.js";
 import { needsTranslatedSeasonWarmup, warmTranslatedRowSeasons } from "./translatedSeasonWarmup.js";
+import { todayLocalDate } from "./watchDates.js";
 const API_ROOT = "https://api.themoviedb.org/3";
 const IMAGE_ROOT = "https://image.tmdb.org/t/p";
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DETAILS_SCHEMA_VERSION = 15; // bumped: refetch structural-only TV rows so full metadata append data is restored
 const TV_SYNOPSIS_LANGUAGE_VERSION = 1;
 const TV_SYNOPSIS_LANGUAGE_RETRY_MS = 15 * 60 * 1000;
+// A show record built while TMDB was failing (timeout, 429, 5xx) is a stopgap:
+// it is reused for this long, then a full caller fetches it again.
+const TMDB_INCOMPLETE_RETRY_MS = 5 * 60 * 1000;
+// The TMDB-supplied parts of a show record, carried over from the previous record
+// when TMDB cannot be reached for a refresh.
+const TMDB_CARRIED_FIELDS = ["credits", "videos", "reviews", "similar", "recommendations", "watch/providers", "content_ratings", "keywords", "vote_average", "episode_run_time", "original_language", "images", "poster_path", "backdrop_path", "networks"];
 const PERSON_SCHEMA_VERSION = 5;
 const SEARCH_TTL_MS = 15 * 60 * 1000;
 const RECOMMENDATION_TTL_MS = 6 * 60 * 60 * 1000;
@@ -230,7 +237,16 @@ function cacheSatisfies(cached, { light = false, requireEnglishTvSynopsis = fals
   if (requireEnglishTvSynopsis && cached.details.tv_synopsis_language_version !== TV_SYNOPSIS_LANGUAGE_VERSION) return false;
   if (requireEnglishTvSynopsis && cached.details.tv_synopsis_language_status === "error"
     && !fresh({ updatedAtMs: cached.details.tv_synopsis_language_checked_at_ms }, TV_SYNOPSIS_LANGUAGE_RETRY_MS)) return false;
+  if (cached.details.tmdb_incomplete_at_ms
+    && !fresh({ updatedAtMs: cached.details.tmdb_incomplete_at_ms }, TMDB_INCOMPLETE_RETRY_MS)) return false;
   return cached.schemaVersion >= DETAILS_SCHEMA_VERSION && fresh(cached, detailsTtl(cached.details));
+}
+
+// TMDB being unreachable is temporary: a network error, timeout, 429 or 5xx. A 404
+// (the id does not exist) and a missing API key (400) are answers, not outages.
+function isTransientTmdbError(error) {
+  const status = Number(error?.status);
+  return !Number.isFinite(status) || status === 429 || status >= 500;
 }
 
 function metadataCacheIds(item = {}) {
@@ -635,16 +651,22 @@ async function resolveTmdbId(mediaType, tmdbId, title, ids = {}, { ignoreTmdbId 
 }
 
 async function deriveNextAiring(details, tvdbId, lane = "enrichment") {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalDate();
   const maxSeason = Math.max(0, ...(details.seasons || []).map((season) => Number(season.season_number) || 0));
   const candidates = new Set([maxSeason, maxSeason + 1].filter((value) => value > 0));
   let earliest = null;
+  // `failed` is true when a season read hit a temporary error, so the caller can
+  // keep the previously known date instead of treating "unknown" as "none".
+  let failed = false;
   for (const seasonNumber of [...candidates].sort((a, b) => a - b)) {
-    const season = await getTmdbSeason({ tmdbId: details.id, tvdbId, seasonNumber, lane }).catch(() => null);
+    const season = await getTmdbSeason({ tmdbId: details.id, tvdbId, seasonNumber, lane }).catch((error) => {
+      if (isTransientTmdbError(error)) failed = true;
+      return null;
+    });
     const dates = (season?.episodes || []).map((episode) => episode.air_date).filter((date) => date && date >= today).sort();
     if (dates[0] && (!earliest || dates[0] < earliest)) earliest = dates[0];
   }
-  return earliest;
+  return { date: earliest, failed };
 }
 
 // `light: true` is the grid-prefetch mode: it serves any fresh cached row, and
@@ -917,14 +939,22 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
           : (tmdbId || tvdbTmdbId || ""),
       );
 
-      let raw = resolvedTmdbId ? await fetchTmdbRaw("tv", resolvedTmdbId, lane).catch(() => null) : null;
-      if (!raw && resolvedTmdbId && shaped.name) {
+      // A 404 or missing key means TMDB has no data for this show; a timeout, 429 or
+      // 5xx means it could not be asked. The second must not be stored as if it were
+      // the first, or a warm-up during an outage caches a bare TVDB-only record.
+      let tmdbUnreachable = false;
+      const readTmdbShow = (id) => fetchTmdbRaw("tv", id, lane).catch((error) => {
+        if (isTransientTmdbError(error)) tmdbUnreachable = true;
+        return null;
+      });
+      let raw = resolvedTmdbId ? await readTmdbShow(resolvedTmdbId) : null;
+      if (!raw && resolvedTmdbId && shaped.name && !tmdbUnreachable) {
         // TVDB's remoteIds mapping is community-submitted and occasionally points at a
         // stale/incorrect TMDB id (the fetch above 404s) - fall back to a title search
         // rather than silently leaving cast/trailers/images empty for this show forever.
         const fallbackId = await resolveTmdbId("tv", "", shaped.name, {}, { ignoreTmdbId: true, lane }).catch(() => "");
         if (fallbackId && fallbackId !== resolvedTmdbId) {
-          const fallbackRaw = await fetchTmdbRaw("tv", fallbackId, lane).catch(() => null);
+          const fallbackRaw = await readTmdbShow(fallbackId);
           if (fallbackRaw) {
             raw = fallbackRaw;
             resolvedTmdbId = fallbackId;
@@ -948,6 +978,16 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
         }
       }
 
+      // The previous record for this same show (same TVDB id), used to keep what
+      // TMDB supplied last time when this refresh could not reach TMDB.
+      const previousRecord = tmdbUnreachable && !raw ? (metaGet(cacheId) || cached) : null;
+      const previousDetails = previousRecord?.details
+        && String(previousRecord.details.external_ids?.tvdb_id || "") === String(seriesTvdbId)
+        ? previousRecord.details : null;
+      const carriedExtras = previousDetails
+        ? Object.fromEntries(TMDB_CARRIED_FIELDS.filter((field) => previousDetails[field] !== undefined).map((field) => [field, previousDetails[field]]))
+        : {};
+
       const extras = raw ? {
         credits: raw.credits,
         videos: raw.videos,
@@ -967,7 +1007,7 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
         // logo_path used by the detail-page network chips. Keep the TVDB
         // fallback when TMDB has no network data for the show.
         networks: Array.isArray(raw.networks) && raw.networks.length ? raw.networks : shaped.networks,
-      } : {};
+      } : carriedExtras;
 
       const details = {
         ...shaped,
@@ -994,11 +1034,28 @@ async function getTvShowDetails({ tmdbId = "", title = "", ids = {}, force = fal
         details.details_light = true;
       } else {
         const nextAiring = await deriveNextAiring(details, seriesTvdbId, lane);
-        if (nextAiring) details.next_airing_date = nextAiring;
+        // When a season read failed temporarily, keep the previously known date
+        // rather than dropping it as if nothing were scheduled.
+        const lastKnown = previousDetails?.next_airing_date || cached?.details?.next_airing_date;
+        const keptNextAiring = nextAiring.date || (nextAiring.failed ? lastKnown : "");
+        if (keptNextAiring) details.next_airing_date = keptNextAiring;
         else delete details.next_airing_date;
+        if (nextAiring.failed) tmdbUnreachable = true;
 
-        Object.assign(details, await cacheCanonicalArtwork("tv", resolvedTmdbId || `tvdb-${seriesTvdbId}`, details));
+        if (raw || !tmdbUnreachable) {
+          Object.assign(details, await cacheCanonicalArtwork("tv", resolvedTmdbId || `tvdb-${seriesTvdbId}`, details));
+        } else {
+          // Without TMDB's image list the logo would be recorded as missing for a
+          // week. Keep the artwork already cached and settle it on the retry.
+          for (const field of ["cached_poster_url", "cached_backdrop_url", "cached_logo_url"]) {
+            const kept = previousDetails?.[field] || cached?.details?.[field];
+            if (kept) details[field] = kept;
+          }
+        }
       }
+      // Stamp a record built during a TMDB outage so it is retried within minutes
+      // instead of living for the continuing/ended lifetime (1 to 30 days).
+      if (tmdbUnreachable) details.tmdb_incomplete_at_ms = Date.now();
       const cacheValue = { tmdbId: resolvedTmdbId, mediaType: "tv", details, schemaVersion: DETAILS_SCHEMA_VERSION, updatedAtMs: Date.now() };
       metaSet(cacheId, cacheValue);
       // Keep a TVDB-keyed alias as well. A library row may only know the

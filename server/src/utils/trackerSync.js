@@ -115,8 +115,11 @@ export function partitionPendingTraktUnwatches(unwatchedCandidates, currentByKey
 export function partitionPendingTrackerUnwatches(provider, unwatchedCandidates, currentByKey, now = Date.now()) {
   if (!pendingTrackerUnwatches.has(provider)) pendingTrackerUnwatches.set(provider, new Map());
   const pendingTraktUnwatches = pendingTrackerUnwatches.get(provider);
+  // A key leaves the pending set when it reappears or stops being a candidate,
+  // so a later miss starts a fresh grace period instead of reusing an old timestamp.
+  const candidateKeys = new Set(unwatchedCandidates.map((item) => item.mediaKey));
   for (const mediaKey of pendingTraktUnwatches.keys()) {
-    if (currentByKey.has(mediaKey)) pendingTraktUnwatches.delete(mediaKey);
+    if (currentByKey.has(mediaKey) || !candidateKeys.has(mediaKey)) pendingTraktUnwatches.delete(mediaKey);
   }
   const unwatched = [];
   const heldBack = [];

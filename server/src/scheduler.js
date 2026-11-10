@@ -34,6 +34,7 @@ import { runDbOptimizeIfDue } from "./utils/dbMaintenance.js";
 import { sendInstallCheckIfDue } from "./utils/installCheck.js";
 import { pruneWatchAuditPayloads } from "./utils/watchAudit.js";
 import { runScheduledPlaystateAliasRepair } from "./utils/playstateAliasRepair.js";
+import { pruneLiveChangesIfDue } from "./db.js";
 import {
   deletePlaybackProgress,
   getPlaybackProgressForMedia,
@@ -192,7 +193,9 @@ async function refreshNextAiringCache({ limit = NEXT_AIRING_REFRESH_LIMIT, force
   return { checked: candidates.length, written: result.written || 0 };
 }
 
-const scheduledTasksInFlight = new Map();
+// Keyed per user data folder: one user's slow step must not make every other
+// user's step with the same label skip (10 November 2026 audit, step 2).
+const scheduledTasksInFlight = createPerUserState(() => new Map());
 
 // ---------------------------------------------------------------------------
 // Per-step scheduler timing.
@@ -338,7 +341,8 @@ export function schedulerTimingTelemetry() {
 // real outcome is logged when it settles.
 export async function runWithTimeBudget(label, task, timeoutMs) {
   const startOffsetMs = schedulerTickStartedAt ? performance.now() - schedulerTickStartedAt : 0;
-  if (scheduledTasksInFlight.has(label)) {
+  const inFlight = scheduledTasksInFlight();
+  if (inFlight.has(label)) {
     console.warn(`${label} is still running from a previous tick; skipping this tick.`);
     recordSchedulerStep({ step: label, startOffsetMs, durationMs: 0, budgetMs: timeoutMs, skipped: true, budgetExhausted: false, failed: false, didWork: false });
     return;
@@ -350,8 +354,8 @@ export async function runWithTimeBudget(label, task, timeoutMs) {
   const startedAt = performance.now();
   const taskPromise = Promise.resolve()
     .then(task)
-    .finally(() => scheduledTasksInFlight.delete(label));
-  scheduledTasksInFlight.set(label, taskPromise);
+    .finally(() => inFlight.delete(label));
+  inFlight.set(label, taskPromise);
   try {
     result = await Promise.race([
       taskPromise,
@@ -441,6 +445,7 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   if (isAuthoritativeRestoreActive()) return { skipped: true, reason: "authoritative-restore-active" };
   pruneSyncPlans();
   const cadence = tickCadence();
+  await runWithTimeBudget("Live changes prune", () => pruneLiveChangesIfDue(), 5_000);
   await runWithTimeBudget("Loop key prune", () => {
     const removed = pruneExpiredLoopKeys();
     if (removed > 0) console.log(`Loop key prune: removed ${removed} expired row${removed === 1 ? "" : "s"}.`);

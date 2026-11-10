@@ -4,6 +4,7 @@ import { fetchWithTimeout } from "./outbound.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
 import { readSharedTvdbToken, writeSharedTvdbToken } from "./sharedMetadataStore.js";
 import { ORDER_TYPES } from "./tvdbOrderTypes.js";
+import { todayLocalDate } from "./watchDates.js";
 
 // Shared TVDB v4 project key - intentionally public: TVDB issues these for
 // open-source apps to embed, and rate-limits them upstream. Operators can swap
@@ -189,14 +190,13 @@ function isoDate(value) {
 }
 
 function daysAgoIso(days) {
-  const date = new Date(Date.now() - days * DAY_MS);
-  return date.toISOString().slice(0, 10);
+  return todayLocalDate(Date.now() - days * DAY_MS);
 }
 
 function seriesCacheTtl(details) {
   const status = String(details?.status?.name || details?.status || "").toLowerCase();
   const nextAired = isoDate(details?.nextAired);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalDate();
   if (nextAired && nextAired >= today) return ACTIVE_SERIES_TTL_MS;
   if (/(ended|cancelled|canceled|finale|completed)/.test(status)) return ARCHIVED_SERIES_TTL_MS;
   return ACTIVE_SERIES_TTL_MS;
@@ -205,7 +205,7 @@ function seriesCacheTtl(details) {
 function seasonCacheTtl(details) {
   const episodes = Array.isArray(details?.episodes) ? details.episodes : [];
   if (!episodes.length) return UPCOMING_SEASON_TTL_MS;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalDate();
   const airedDates = episodes.map((episode) => isoDate(episode.aired)).filter(Boolean).sort();
   if (airedDates.some((date) => date >= today)) return UPCOMING_SEASON_TTL_MS;
   const lastAired = airedDates[airedDates.length - 1] || "";
@@ -532,7 +532,7 @@ let artworkTypesCachedAt = 0;
 async function getSeriesArtworkTypeIds() {
   if (artworkTypesPromise && fresh(artworkTypesCachedAt, ARTWORK_TYPES_TTL_MS)) return artworkTypesPromise;
   artworkTypesCachedAt = Date.now();
-  artworkTypesPromise = upstream("artwork-types", {})
+  const request = upstream("artwork-types", {})
     .then((types) => {
       const byName = {};
       for (const t of Array.isArray(types) ? types : []) {
@@ -542,8 +542,19 @@ async function getSeriesArtworkTypeIds() {
       }
       return byName;
     })
-    .catch(() => ({}));
-  return artworkTypesPromise;
+    .catch(() => ({}))
+    // Keep only a non-empty result for the 30 days. A failed or empty answer is
+    // shared with the callers already waiting on it, then dropped so the next
+    // call asks again instead of leaving TVDB artwork off until the cache expires.
+    .then((byName) => {
+      if (!Object.keys(byName).length && artworkTypesPromise === request) {
+        artworkTypesPromise = null;
+        artworkTypesCachedAt = 0;
+      }
+      return byName;
+    });
+  artworkTypesPromise = request;
+  return request;
 }
 
 export async function getTvdbSeriesArtwork(tvdbId) {

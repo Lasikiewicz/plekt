@@ -17,7 +17,7 @@ import { claimAccount } from "./onboardingStore.js";
 import { adminDb, writeAuditLog } from "../db.js";
 import { readJson } from "./requestBody.js";
 import { sendJson } from "./http.js";
-import { checkRateLimit, resetRateLimit } from "./rateLimit.js";
+import { checkRateLimit, isRateLimited, resetRateLimit } from "./rateLimit.js";
 import { isDemoMode } from "./demoMode.js";
 import {
   ADMIN_KEY,
@@ -38,6 +38,7 @@ const COOKIE_NAME = "plembfin_session";
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
 const AUTH_RATE_LIMIT = { max: 10, windowMs: 15 * 60_000 };
+const DUMMY_PASSWORD_HASH = `scrypt$00000000000000000000000000000000$${"00".repeat(64)}`;
 
 function callerIp(req) {
   return req.ip || req.socket?.remoteAddress || "unknown";
@@ -293,7 +294,7 @@ export async function handleLogin(req, res) {
   if (req.method !== "POST") return sendJson(res, { error: "Method not allowed" }, 405);
   if (!isSameOrigin(req)) return sendJson(res, { error: "Cross-site request rejected", code: "ORIGIN_REJECTED", retryable: false }, 403);
   const ip = isDemoMode() ? "" : callerIp(req);
-  if (!checkRateLimit(`login:${ip}`, AUTH_RATE_LIMIT)) {
+  if (isRateLimited(`login:${ip}`, AUTH_RATE_LIMIT)) {
     return sendJson(res, { error: "Too many attempts. Try again later.", code: "RATE_LIMITED", retryable: true }, 429);
   }
   const body = await readJson(req).catch(() => ({}));
@@ -310,9 +311,10 @@ export async function handleLogin(req, res) {
   }
 
   // 2. When multi-user mode is on, check non-admin accounts in users.json.
-  if (multiUserEnabled(DATA_DIR)) {
-    const user = findUser(username, DATA_DIR);
-    if (user && user.role !== ADMIN_ROLE && !user.disabled && !user.stopped && verifyUserPasswordHash(password, user.passwordHash)) {
+  {
+    const user = multiUserEnabled(DATA_DIR) ? findUser(username, DATA_DIR) : null;
+    const passwordMatches = verifyUserPasswordHash(password, user?.passwordHash || DUMMY_PASSWORD_HASH);
+    if (user && user.role !== ADMIN_ROLE && !user.disabled && !user.stopped && passwordMatches) {
       const role = user.role === ADMINISTRATOR_ROLE ? ADMIN_ROLE : USER_ROLE;
       resetRateLimit(`login:${ip}`);
       if (!isDemoMode()) {
@@ -323,6 +325,7 @@ export async function handleLogin(req, res) {
     }
   }
 
+  checkRateLimit(`login:${ip}`, AUTH_RATE_LIMIT);
   if (!isDemoMode()) runAsAdmin(() => writeAuditLog("login.failure", { ip, detail: { username } }));
   return sendJson(res, { error: "Invalid username or password" }, 401);
 }
@@ -436,8 +439,8 @@ export async function handleRevokeAllSessions(req, res) {
   if (isNonAdminTenantContext(DATA_DIR)) {
     return sendJson(res, { error: "Switch to the administrator account to revoke all install sessions, or use Settings → Users to sign out this user.", code: "SUPERVISED_ACCOUNT" }, 403);
   }
-  const callerUsername = getRootAdminUsername();
-  updateAdminCredentials({ username: callerUsername, password: "" });
+  const callerUsername = principal.loginUsername || getRootAdminUsername();
+  updateAdminCredentials({ username: getRootAdminUsername(), password: "" });
   writeAuditLog("sessions.revoked", { ip: req.ip || req.socket?.remoteAddress, detail: { username: callerUsername } });
   setSessionCookie(res, callerUsername, { role: ADMIN_ROLE, activeUser: principal.activeUser || ADMIN_KEY });
   return sendJson(res, { ok: true, message: "All other sessions have been revoked." });

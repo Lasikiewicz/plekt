@@ -133,7 +133,7 @@ export async function handleUserPassword(req, res) {
       ip: req.ip || req.socket?.remoteAddress,
       detail: { name: adminUsername, by: principal.loginUsername || principal.username },
     }));
-    setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: principal.activeUser || ADMIN_KEY });
+    setSessionCookie(res, principal.loginUsername || adminUsername, { role: ADMIN_ROLE, activeUser: principal.activeUser || ADMIN_KEY });
     return sendJson(res, { ok: true, user: { name: adminUsername } });
   }
 
@@ -260,7 +260,7 @@ export async function handleUserManage(req, res) {
   }));
 
   if (principal.activeUser === name && LEAVES_INSTANCE.has(action)) {
-    setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY });
+    setSessionCookie(res, principal.loginUsername || adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY });
     return sendJson(res, { ...result.body, reload: true });
   }
   return sendJson(res, result.body, result.status);

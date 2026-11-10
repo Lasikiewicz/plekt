@@ -8,6 +8,19 @@ export function localCalendarDay(value) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
+// The server's local calendar date (YYYY-MM-DD) for "today" comparisons against
+// air dates (user decision, 10 November 2026: local date, not UTC).
+export function todayLocalDate(now = Date.now()) {
+  return localCalendarDay(Number.isFinite(Number(now)) ? Number(now) : Date.now());
+}
+
+// A provider air date can be a full ISO timestamp (Emby/Jellyfin PremiereDate);
+// "has it aired" compares only its calendar day against a date-only "today".
+export function airDayOf(value) {
+  const match = String(value ?? "").trim().match(/^\d{4}-\d{2}-\d{2}/);
+  return match ? match[0] : "";
+}
+
 export function dateOnlyIso(value = "") {
   if (!value) return "";
   const date = new Date(value);

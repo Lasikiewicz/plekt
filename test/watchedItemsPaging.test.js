@@ -50,8 +50,9 @@ for (const [name, fetchWatched, config] of clients) {
     for (const url of calls) {
       assert.equal(url.searchParams.get("Limit"), "500");
       assert.equal(url.searchParams.get("Filters"), "IsPlayed");
-      assert.equal(url.searchParams.get("SortBy"), name === "Emby" ? "Id" : "DatePlayed,SortName");
-      assert.equal(url.searchParams.get("SortOrder"), name === "Emby" ? "Ascending" : "Descending");
+      // Full scans sort by Id on both servers, so their order is stable across pages.
+      assert.equal(url.searchParams.get("SortBy"), "Id");
+      assert.equal(url.searchParams.get("SortOrder"), "Ascending");
       assert.equal(url.searchParams.get("EnableImages"), "false");
     }
   });

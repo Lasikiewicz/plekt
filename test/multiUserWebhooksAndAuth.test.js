@@ -84,6 +84,7 @@ async function startTestServer(dataDir, extraEnv = {}) {
     port,
     baseUrl: `http://127.0.0.1:${port}`,
     child,
+    get output() { return output; },
     async stop() {
       if (child.exitCode === null) {
         child.kill("SIGTERM");
@@ -95,6 +96,22 @@ async function startTestServer(dataDir, extraEnv = {}) {
     },
   };
 }
+
+test("HTTP login limits failures, normalizes slashes and warns once for untrusted proxy headers", async () => {
+  const server = await startTestServer(makeTempDataDir("plekt-login-limit-"));
+  try {
+    const login = (password) => fetch(`${server.baseUrl}/api//login`, {
+      method: "POST", headers: { "Content-Type": "application/json", "X-Forwarded-For": "192.0.2.10" },
+      body: JSON.stringify({ username: "admin", password }),
+    });
+    for (let i = 0; i < 12; i++) assert.equal((await login("admin-password-123")).status, 200);
+    for (let i = 0; i < 10; i++) assert.equal((await login("wrong-password")).status, 401);
+    assert.equal((await login("wrong-password")).status, 429);
+    assert.equal((server.output.match(/X-Forwarded-For received while proxy trust is off/g) || []).length, 1);
+  } finally {
+    await server.stop();
+  }
+});
 
 test("Step 4, 6, 7: user management, sign-in isolation, switching, and per-user webhooks/API keys", async () => {
   const dataDir = makeTempDataDir("plekt-multi-user-e2e-");
@@ -118,7 +135,7 @@ test("Step 4, 6, 7: user management, sign-in isolation, switching, and per-user 
     assert.match(setCookieHeader, /Path=\//i);
     assert.match(setCookieHeader, /Max-Age=604800/i);
     assert.doesNotMatch(setCookieHeader, /;\s*Secure/i);
-    const adminCookie = cookiePairFromResponse(adminLoginRes);
+    let adminCookie = cookiePairFromResponse(adminLoginRes);
 
     // 2. Admin lists users (initially only admin, supervised: false)
     const initialUsersRes = await fetch(`${server.baseUrl}/api/users`, {
@@ -417,7 +434,11 @@ test("Step 4, 6, 7: user management, sign-in isolation, switching, and per-user 
       body: JSON.stringify({ action: "stop", name: "bob" }),
     });
     assert.equal(stopBobRes.status, 200);
-    const stoppedPing = await fetch(`${server.baseUrl}/u/bob/api/ping`);
+    const stoppedAnonymous = await fetch(`${server.baseUrl}/u/bob/api/ping`);
+    const unknownAnonymous = await fetch(`${server.baseUrl}/u/no-such-user/api/ping`);
+    assert.equal(stoppedAnonymous.status, unknownAnonymous.status);
+    assert.deepEqual(await stoppedAnonymous.json(), await unknownAnonymous.json());
+    const stoppedPing = await fetch(`${server.baseUrl}/u/bob/api/ping`, { headers: { Cookie: adminCookie } });
     assert.equal(stoppedPing.status, 503);
     assert.equal((await stoppedPing.json()).code, "INSTANCE_STOPPED");
 
@@ -501,6 +522,35 @@ test("Step 4, 6, 7: user management, sign-in isolation, switching, and per-user 
     assert.equal(switchedAdminStatus.activeUser, "robert");
     assert.equal(switchedAdminStatus.supervisedView, true);
     assert.equal((await fetch(`${server.baseUrl}/api/users`, { headers: { Cookie: switchedAdminCookie } })).status, 200);
+
+    const stopSwitched = await fetch(`${server.baseUrl}/api/users/manage`, {
+      method: "POST", headers: { ...originHeaders, Cookie: switchedAdminCookie },
+      body: JSON.stringify({ action: "stop", name: "robert" }),
+    });
+    assert.equal(stopSwitched.status, 200);
+    const returnedCookie = cookiePairFromResponse(stopSwitched);
+    const returnedStatus = await (await fetch(`${server.baseUrl}/api/auth/status`, { headers: { Cookie: returnedCookie } })).json();
+    assert.equal(returnedStatus.loginUsername, "alice");
+    assert.equal(returnedStatus.activeUser, "admin");
+    assert.equal((await fetch(`${server.baseUrl}/api/users/manage`, {
+      method: "POST", headers: { ...originHeaders, Cookie: returnedCookie },
+      body: JSON.stringify({ action: "start", name: "robert" }),
+    })).status, 200);
+
+    const revoke = await fetch(`${server.baseUrl}/api/auth/sessions/revoke-all`, {
+      method: "POST", headers: { ...originHeaders, Cookie: returnedCookie },
+    });
+    assert.equal(revoke.status, 200);
+    const renewedCookie = cookiePairFromResponse(revoke);
+    const renewedStatus = await (await fetch(`${server.baseUrl}/api/auth/status`, { headers: { Cookie: renewedCookie } })).json();
+    assert.equal(renewedStatus.loginUsername, "alice");
+    assert.equal(renewedStatus.role, "admin");
+    const rootLogin = await fetch(`${server.baseUrl}/api/login`, {
+      method: "POST", headers: originHeaders,
+      body: JSON.stringify({ username: "admin", password: "admin-password-123" }),
+    });
+    assert.equal(rootLogin.status, 200);
+    adminCookie = cookiePairFromResponse(rootLogin);
 
     const demoteAliceRes = await fetch(`${server.baseUrl}/api/users/manage`, {
       method: "POST",

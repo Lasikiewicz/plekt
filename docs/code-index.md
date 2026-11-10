@@ -299,7 +299,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 ### server/src/
 
 - `appConfig.js`: AUTH, clearTenantAuthConfigCache, getRootAdminUsername, getRootSessionSecret, isClaimRequired, isDefaultPassword and 9 more
-- `db.js`: adminDb, assertNotRealDataDirUnderTest, bumpDataVersion, bumpDiscoverVersion, bumpUpNextVersion, dataVersionTrigger and 14 more
+- `db.js`: adminDb, assertNotRealDataDirUnderTest, bumpDataVersion, bumpDiscoverVersion, bumpUpNextVersion, dataVersionTrigger and 15 more
 - `env.js`: loadLocalEnv
 - `index.js`: backfillUnknownShowTitles, dispatch, runScheduledTick, startPlexNotificationListener, stopPlexNotificationListener
 - `paths.js`: BACKDROPS_DIR, BACKUPS_DIR, CONFIG_PATH, CREDENTIAL_KEY_PATH, DATA_DIR, DB_PATH and 13 more
@@ -399,6 +399,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `installCheck.js`: DEFAULT_INSTALL_CHECK_URL, answerInstallCheck, installArch, installChannel, installCheckAllowed, installCheckBody and 9 more
 - `jellyfinAuth.js`: jellyfinAuthHeaders, jellyfinAuthorization, jellyfinCredential, setJellyfinApiKey
 - `jellyfinClient.js`: __resetJellyfinSeriesCache, __setJellyfinSeriesCacheNow, clearJellyfinPersonalRating, countJellyfinWatchedItems, fetchJellyfinEpisodes, fetchJellyfinEpisodesForSeries and 17 more
+- `keyedLock.js`: acquireKeyedLock
 - `legacyImage.js`: LEGACY_IMAGE_MIN_SUPPORT_DATE, isLegacyImage, legacyImageNotice
 - `libraryAvailabilitySync.js`: mediaFromLibraryItem, reconcileAvailableWatchedItems
 - `libraryForceSync.js`: forceSyncLibraryState, normalizeLibraryForceSyncRequest, plannerMediaToSyncMedia, withLibrarySeriesIds
@@ -422,7 +423,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `omdbGateway.js`: getOmdbRating
 - `onboardingImportCoordinator.js`: cancelServerImport, cancelTrackerImport, pauseTrackerImportForRestore, reconcileTrackerUntilSettled, startServerImport, startTrackerImport and 1 more
 - `onboardingStore.js`: CURRENT_ONBOARDING_VERSION, DEFAULT_TRACKER_IMPORT, claimAccount, completeOnboarding, detectAndMarkPristineInstall, getOnboardingState and 6 more
-- `outbound.js`: assertSafeOutboundUrl, boundedFetchTimeoutMs, configureOutboundGovernor, createUpstreamTimeoutError, fetchWithTimeout, normalizeHttpUrl and 1 more
+- `outbound.js`: assertSafeOutboundUrl, boundedFetchTimeoutMs, configureOutboundGovernor, createUpstreamTimeoutError, fetchWithTimeout, normalizeHttpUrl and 2 more
 - `outboundGovernor.js`: acquireOutboundSlot, configureOutboundGovernor, noteOutboundResponse, noteOutboundRetry, outboundGovernorProfile, outboundGovernorTelemetry and 1 more
 - `outboundStateLease.js`: runWithOutboundStateLease
 - `parsers.js`: buildPlexMediaFromMetadata, decodeHtmlEntities, normalizeProviderIds, parseCustomWebhook, parseEmbyWebhook, parseJellyfinWebhook and 3 more
@@ -454,7 +455,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `plexAccountClaims.js`: otherPlektUserOnPlexAccount
 - `plexAdaptivePoller.js`: createPlexAdaptivePoller
 - `plexAuth.js`: PLEX_CLIENTS_ORIGIN, PLEX_TOKEN_REFRESH_SCOPE, createPlexPin, decodeJwtClaims, plexAuthUrl, plexClientHeaders and 4 more
-- `plexClient.js`: __resetPlexIdentityCache, __setPlexIdentityCacheNow, clearPlexPersonalRating, countPlexWatchedItems, fetchPlexContainerEpisodes, fetchPlexContinueWatching and 21 more
+- `plexClient.js`: __resetPlexIdentityCache, __setPlexIdentityCacheNow, clearPlexPersonalRating, countPlexWatchedItems, fetchPlexContainerEpisodes, fetchPlexContinueWatching and 22 more
 - `plexFetch.js`: fetchPlexWithRefresh, plexRequestHeaders
 - `plexNotificationListener.js`: createPlexNotificationListener, isPlexPlayingNotification, parsePlexNotificationRatingKeys, probePlexNotificationSocket
 - `plexPlaylists.js`: addPlexPlaylistItems, clearPlexServerIdentifierCache, createPlexPlaylist, deletePlexPlaylist, fetchPlexPlaylist, fetchPlexPlaylistItems and 7 more
@@ -466,7 +467,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `processRole.js`: createInstanceId, resolveProcessRole, roleHasWeb, roleHasWorker
 - `providerItemIds.js`: nativeProviderItemIds
 - `providerPlaylists.js`: PLAYLIST_PROVIDERS, isPlaylistNotFound, providerPlaylistClient, reorderProviderPlaylist
-- `rateLimit.js`: checkRateLimit, rateLimitBucketCount, resetRateLimit
+- `rateLimit.js`: checkRateLimit, isRateLimited, rateLimitBucketCount, resetRateLimit
 - `ratingProviderMigration.js`: addHeldRatingStatus, rebuildRatingTablesWithoutProviderCheck
 - `ratingSnapshotSafety.js`: plexRatingSnapshotPage, ratingSnapshotArray, ratingSnapshotPage
 - `recentWatchImport.js`: libraryHistoryDecision, plexHistoryItemMatchesConfiguredUser, providerWatchFingerprint, recentUnwatchBlocksLibraryImport, shouldSkipLibraryHistoryImport, syncRecentlyWatchedFromEmby and 2 more
@@ -481,7 +482,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `seasonSource.js`: DEFAULT_SEASON_SOURCE, SEASON_SOURCES, normalizeSeasonSource, pinUnrecordedSeasonSources, readGlobalSeasonSource, readSeasonSource and 4 more
 - `seriesIdentity.js`: librarySeriesItemId, resetSeriesIdentityCache, resolveEpisodeSeriesItemId, resolveSeriesIds, withSeriesIdentity
 - `sharedMetadataStore.js`: clearSharedProviderCaches, closeAllSharedMetadataDatabases, getSharedMetadataDb, isSharedProviderCacheTable, migrateProviderCachesFromAdmin, providerCacheTableNames and 6 more
-- `showProgressCache.js`: clearCachedShowProgress, flushShowProgressUpdates, getCachedShowProgress, initShowProgressCache, queueShowProgressUpdate, rebuildShowProgressCache
+- `showProgressCache.js`: clearCachedShowProgress, flushShowProgressUpdates, getCachedShowProgress, initShowProgressCache, queueShowProgressUpdate, rebuildShowProgressCache and 1 more
 - `showSeasonTranslation.js`: annotateShowNumbering, inRowNumbering, previewShowSeasonSource, showNumberMap, translatedWatchedCount, watchedEpisodeRows and 1 more
 - `showTraktHistorySafety.js`: normalizeImportedTraktRow, safeTraktReplaceItems, traktPlayKey
 - `showTraktReplace.js`: planShowTraktReplace, replaceShowOnTrakt
@@ -495,7 +496,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `syncFlags.js`: watchedPlayedSyncEnabled
 - `syncHistoryTelemetry.js`: addTimingHistoryRow, buildProgressTelemetry, buildTelemetry, isTargetSynced, recordSyncHistory, targetTelemetryLine and 1 more
 - `syncMatchReport.js`: buildSyncMatchReport, isUnresolvedMatchSample, parseTelemetryTargetStates, unresolvedSyncMatchReport
-- `syncOrchestrator.js`: appendCanonicalTrackerDispatch, clearOutboundPlayedMarks, completeDispatchTracking, dispatchProgressKey, finishDispatchTracking, getTargetsForSource and 23 more
+- `syncOrchestrator.js`: appendCanonicalTrackerDispatch, clearOutboundPlayedMarks, completeDispatchTracking, dispatchProgressKey, finishDispatchTracking, getTargetsForSource and 24 more
 - `syncPlans.js`: PLAN_RETENTION_MS, confirmSyncPlan, createSyncPlanRecord, finishSyncPlan, getLatestSyncPlan, getSyncPlanActionsPage and 7 more
 - `syncRoles.js`: ROLE_PRESETS, STATE_MODES, SYNC_STATE_TYPES, canReceiveState, canSendState, conflictAuthority and 6 more
 - `tautulliClient.js`: TAUTULLI_MAX_HISTORY_ROWS, TAUTULLI_PAGE_SIZE, createTautulliClient, sanitizeTautulliError
@@ -542,7 +543,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `upcomingCalendarCache.js`: getUpcomingCalendarMonth, refreshUpcomingCalendarCache, sortAndDedupeEpisodes
 - `userContext.js`: getActiveDataDir, getActiveUserName, getUserContext, isNonAdminTenantContext, ownsArtworkFiles, runAsAdmin and 2 more
 - `watchAudit.js`: AUDIT_PAYLOAD_RETENTION_MS, auditSourceEventPayload, countPrunableAuditPayloads, hasWatchAuditEventForRecord, listWatchAuditEvents, pruneWatchAuditPayloads and 3 more
-- `watchDates.js`: dateOnlyIso, embyLikePlayedDate, episodeTimingWatchDate, isEmbyLikeApiMarked, isEmbyLikePlayed, isoDateTime and 9 more
+- `watchDates.js`: airDayOf, dateOnlyIso, embyLikePlayedDate, episodeTimingWatchDate, isEmbyLikeApiMarked, isEmbyLikePlayed and 11 more
 - `watchDerivedFields.js`: decodeStoredWatchTitle, episodeCoordinatesFromStoredTitle, persistedWatchDerivedFields, repairedStoredEpisodeTitle
 - `watchHistoryBackups.js`: clearRestoreStatus, createWatchHistoryBackup, getBackupDestination, importWatchHistoryBackupFile, isCronSyncPaused, listRemoteBackups and 23 more
 - `watchProvenance.js`: buildWatchProvenance, legacyProvenanceNote, normalizeProviderOverrides, normalizeWatchProvenance, provenanceTelemetryLines

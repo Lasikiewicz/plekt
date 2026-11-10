@@ -1,4 +1,5 @@
 import { WebSocket } from "undici";
+import { assertSafeOutboundUrl } from "./outbound.js";
 
 // Plex Media Server pushes real-time notifications over a WebSocket at
 // `/:/websockets/notifications`. Unlike the webhook (which only fires for playback
@@ -54,6 +55,8 @@ export async function probePlexNotificationSocket({ baseUrl, token, clientIdenti
 
   let wsUrl;
   try {
+    // The WebSocket does not go through fetchWithTimeout, so apply the same URL guard here.
+    assertSafeOutboundUrl(baseUrl, { label: "Plex URL" });
     wsUrl = buildNotificationsUrl(baseUrl, token, clientIdentifier);
   } catch (error) {
     return { ok: false, error: `Invalid Plex URL: ${error?.message || error}` };

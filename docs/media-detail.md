@@ -110,6 +110,10 @@ summaries, watched rows, and watch dates remain visible while the no-store detai
 and provider metadata revalidate; the authoritative responses replace that snapshot when
 they complete.
 
+For a selected alternate episode order, watched rows use the detail response's verified
+display coordinates. Dashboard summaries cannot replace those coordinates or add an
+untranslated watched episode; unwatched summary updates can suppress an older watch.
+
 Metadata, local watch detail, playback progress, and the optional IMDb pill enrich the
 existing page afterward. Enrichment patches the header, facts, and independently loaded
 sections instead of replacing the whole detail root, so the mounted poster/backdrop and

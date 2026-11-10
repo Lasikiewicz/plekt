@@ -66,6 +66,9 @@ export async function resolvePlexAccountId(config = {}, { lane = "sync" } = {}) 
   const accountsUrl = new URL(`${baseUrl}/accounts`);
 
   let accountId = null;
+  // Only a definite answer from /accounts is cached. A failed request is not
+  // "not found", so it is retried on the next call instead of being remembered.
+  let definite = false;
   try {
     const response = await fetchPlexWithRefresh(config, accountsUrl, { lane });
     if (!response.ok) {
@@ -77,10 +80,12 @@ export async function resolvePlexAccountId(config = {}, { lane = "sync" } = {}) 
       const parsed = Number(matchedAccount?.id);
       if (Number.isFinite(parsed)) accountId = parsed;
       else console.warn(`Plex account mapping did not find configured username "${config.username}"`);
+      definite = true;
     }
   } catch (error) {
     console.warn(`Plex account mapping failed: ${error.message}`);
   }
+  if (!definite) return null;
 
   accountIdCache.set(cacheKey, {
     value: accountId,
@@ -89,8 +94,21 @@ export async function resolvePlexAccountId(config = {}, { lane = "sync" } = {}) 
   return accountId;
 }
 
-async function addConfiguredPlexAccountId(url, config = {}, { lane = "sync" } = {}) {
+// A configured Home user whose id cannot be resolved must not fall back to the
+// token owner's account, which is what an unscoped Plex request answers for.
+// Abort the account-scoped read or write instead (10 November 2026 audit, step 3).
+export async function resolveRequiredPlexAccountId(config = {}, { lane = "sync" } = {}) {
   const accountId = await resolvePlexAccountId(config, { lane });
+  if (accountId == null && normalizePlexIdentity(config.username)) {
+    const error = new Error(`Plex account "${config.username}" could not be resolved; the request was not sent`);
+    error.code = "PLEX_ACCOUNT_UNRESOLVED";
+    throw error;
+  }
+  return accountId;
+}
+
+async function addConfiguredPlexAccountId(url, config = {}, { lane = "sync" } = {}) {
+  const accountId = await resolveRequiredPlexAccountId(config, { lane });
   if (accountId != null) {
     url.searchParams.set("accountID", String(accountId));
   }
@@ -1172,7 +1190,7 @@ function selectPlexSections(directories, libraryIds) {
 export async function fetchPlexLibraryItems(config, { libraryIds } = {}) {
   requirePlexConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  const accountId = await resolvePlexAccountId(config);
+  const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
   const libraryItems = [];
   const pageSize = 200;
@@ -1223,7 +1241,7 @@ export async function fetchPlexLibraryItems(config, { libraryIds } = {}) {
 export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = async () => false } = {}) {
   requirePlexConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  const accountId = await resolvePlexAccountId(config);
+  const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
 
   const watchedItems = [];
@@ -1291,7 +1309,7 @@ export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = 
 export async function countPlexWatchedItems(config, { libraryIds } = {}) {
   requirePlexConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  const accountId = await resolvePlexAccountId(config);
+  const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
 
   let total = 0;
@@ -1315,7 +1333,7 @@ export async function countPlexWatchedItems(config, { libraryIds } = {}) {
 export async function fetchPlexResumableItems(config, { limit = 0 } = {}) {
   requirePlexConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  const accountId = await resolvePlexAccountId(config);
+  const accountId = await resolveRequiredPlexAccountId(config);
 
   const sectionsUrl = new URL(`${baseUrl}/library/sections`);
   const sectionsRes = await fetchPlexWithRefresh(config, sectionsUrl);
@@ -1333,28 +1351,46 @@ export async function fetchPlexResumableItems(config, { limit = 0 } = {}) {
     const type = dir.type;
     if (type !== "movie" && type !== "show") continue;
 
+    // A section that cannot be read fails the whole feed. A partial feed would be
+    // stored as complete, which reads as "these items are no longer resumable".
+    const sectionItems = await fetchPlexSectionResumeItems(config, { sectionId, type, accountId });
+    for (const item of sectionItems) {
+      if (Number(item.viewOffset || 0) <= 0) continue;
+      resumableItems.push(item);
+      if (maxItems && resumableItems.length >= maxItems) return resumableItems;
+    }
+  }
+
+  return resumableItems;
+}
+
+const PLEX_SECTION_PAGE_SIZE = 200;
+
+// Every item in one section, paged. Throws on a failed page, an unrecognised body,
+// or a page that ends before the reported total.
+async function fetchPlexSectionResumeItems(config, { sectionId, type, accountId }) {
+  const baseUrl = trimTrailingSlash(config.baseUrl);
+  const items = [];
+  let total = null;
+  for (;;) {
     const allUrl = new URL(`${baseUrl}/library/sections/${sectionId}/all`);
     if (accountId != null) allUrl.searchParams.set("accountID", String(accountId));
     allUrl.searchParams.set("sort", "lastViewedAt:desc");
     allUrl.searchParams.set("type", type === "movie" ? "1" : "4");
     allUrl.searchParams.set("includeGuids", "1");
+    allUrl.searchParams.set("X-Plex-Container-Start", String(items.length));
+    allUrl.searchParams.set("X-Plex-Container-Size", String(PLEX_SECTION_PAGE_SIZE));
 
-    try {
-      const allRes = await fetchPlexWithRefresh(config, allUrl);
-      if (!allRes.ok) continue;
-      const allData = await allRes.json();
-      const metadata = allData?.MediaContainer?.Metadata || [];
-      for (const item of metadata) {
-        if (Number(item.viewOffset || 0) <= 0) continue;
-        resumableItems.push(item);
-        if (maxItems && resumableItems.length >= maxItems) return resumableItems;
-      }
-    } catch (err) {
-      console.error(`Plex failed to fetch resumable items for section ${sectionId}`, err);
-    }
+    const allRes = await fetchPlexWithRefresh(config, allUrl);
+    if (!allRes.ok) throw new Error(`Plex resumable scan failed with status ${allRes.status} for section ${sectionId}`);
+    const container = (await allRes.json())?.MediaContainer;
+    if (!container || typeof container !== "object") throw new Error(`Plex resumable scan returned an unrecognised body for section ${sectionId}`);
+    const page = Array.isArray(container.Metadata) ? container.Metadata : [];
+    if (total == null) total = Number(container.totalSize ?? 0);
+    items.push(...page);
+    if ((total > 0 && items.length >= total) || (total === 0 && page.length < PLEX_SECTION_PAGE_SIZE)) return items;
+    if (!page.length) throw new Error(`Plex resumable scan ended at ${items.length} of ${total} items for section ${sectionId}`);
   }
-
-  return resumableItems;
 }
 
 function plexContinueWatchingItems(body) {
@@ -1374,7 +1410,7 @@ function plexContinueWatchingItems(body) {
 export async function fetchPlexContinueWatchingItems(config, { limit = 0 } = {}) {
   requirePlexConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  const accountId = await resolvePlexAccountId(config);
+  const accountId = await resolveRequiredPlexAccountId(config);
   try {
     const requestedLimit = Number(limit) > 0 ? Math.max(1, Math.round(Number(limit))) : 0;
     const pageSize = requestedLimit ? Math.min(requestedLimit, 100) : 100;
@@ -1392,10 +1428,17 @@ export async function fetchPlexContinueWatchingItems(config, { limit = 0 } = {})
       if (accountId != null) url.searchParams.set("accountID", String(accountId));
 
       const response = await fetchPlexWithRefresh(config, url);
-      if (!response.ok) break;
+      // A later page that fails must not return the earlier pages as a complete feed.
+      if (!response.ok) {
+        if (foundHub) throw new Error(`Plex Continue Watching page failed with status ${response.status}`);
+        break;
+      }
       const body = await response.json();
       const hub = body?.MediaContainer?.Hub ?? body?.Hub;
-      if (!(Array.isArray(hub) || (hub && typeof hub === "object"))) break;
+      if (!(Array.isArray(hub) || (hub && typeof hub === "object"))) {
+        if (foundHub) throw new Error("Plex Continue Watching page had no hub after earlier pages");
+        break;
+      }
       foundHub = true;
       const page = plexContinueWatchingItems(body);
       let newItems = 0;
@@ -1520,7 +1563,7 @@ function plexRatingMedia(item, mediaType, parent = null) {
 
 export async function fetchPlexPersonalRatingSnapshot(config) {
   requirePlexConfig(config);
-  const accountId = await resolvePlexAccountId(config);
+  const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config, true);
   const records = [];
   for (const directory of selectPlexSections(directories)) {

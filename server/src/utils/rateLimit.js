@@ -25,6 +25,16 @@ export function rateLimitBucketCount() {
   return buckets.size;
 }
 
+export function isRateLimited(key, { max = 10, windowMs = 15 * 60_000 } = {}) {
+  const bucket = buckets.get(key);
+  if (!bucket) return false;
+  if (Date.now() - bucket.windowStart > windowMs) {
+    buckets.delete(key);
+    return false;
+  }
+  return bucket.count >= max;
+}
+
 // Returns true when the caller is within the allowed rate, false when the
 // caller should be rejected. `key` should combine the endpoint name and a
 // caller identifier (IP) so different endpoints don't share a budget.

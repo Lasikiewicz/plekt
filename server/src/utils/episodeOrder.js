@@ -146,7 +146,7 @@ export async function annotateEpisodeOrder(show) {
     const link = identity && provenanceOrder(identity) === order && String(identity.tvdbId) === id && links.find(m=>m.airedId === Number(identity.airedId) && m.dvdId === Number(identity.dvdId));
     const target = link && catalogue.orders[order].find(e=>e.id === link.dvdId);
     delete row.display_season; delete row.display_episode;
-    if (target) { row.display_season=target.season; row.display_episode=target.episode; pairs[`${row.season}:${row.episode}`] = {season:target.season,episode:target.episode}; }
+    if (target) { delete row.numbering_review; row.display_season=target.season; row.display_episode=target.episode; pairs[`${row.season}:${row.episode}`] = {season:target.season,episode:target.episode}; }
     else row.numbering_review=true;
   }
   show.season_numbering = { source:order, translate:true, ready:true, pairs };

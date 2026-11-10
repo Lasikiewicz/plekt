@@ -98,7 +98,8 @@ the cached file continues to work until artwork is fetched again.
 only) and redirects to the new file. A missing file with no downloadable source returns
 **404**, never the app page. `original_url` stores query values whose names contain `key`
 or `token` as `redacted`, so a provider URL that carried an API key in its query cannot be
-downloaded again; it returns 404 and the row is marked `failed`.
+downloaded again. Restoration skips that unusable source and returns 404 without marking
+the row `failed`, so a later request with a usable source can retry.
 
 Canonical show and movie poster resolution also checks saved `/media/...` references
 against the local file before returning them. If an old artwork override or metadata-cache

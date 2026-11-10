@@ -103,6 +103,41 @@ test("an undated replay of a settled watch record still sends, so a canonical re
   assert.equal(posts, 1);
 });
 
+test("a dated canonical replay of a settled watch record still sends its add after the remove", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  ledger.finishTrackerWriteIntent(captured.id, "settled");
+  let posts = 0;
+  await trackerIntentRequest(connection, [{ ...media(), watchRecordId: "local-play" }], "watched", async () => { posts++; return {}; }, async () => [], { replay: true });
+  assert.equal(posts, 1);
+  assert.equal(get(captured.id).status, "settled");
+});
+
+test("a repeat canonical replay sends its remove and its add again, each after settling", async () => {
+  const connection = connect();
+  const watched = create(connection, media(), "local-play");
+  ledger.finishTrackerWriteIntent(watched.id, "settled");
+  const sent = [];
+  const send = (action) => async (items) => { sent.push([action, items.length]); return {}; };
+  const replay = (action) => trackerIntentRequest(connection, [{ ...media(), source: "manual", watchRecordId: "local-play" }], action, send(action), async () => [], { replay: true });
+  await replay("unwatched");
+  await replay("watched");
+  ledger.finishTrackerWriteIntent(db.prepare("SELECT id FROM tracker_write_intents WHERE action='unwatched'").get().id, "settled");
+  ledger.finishTrackerWriteIntent(watched.id, "settled");
+  await replay("unwatched");
+  await replay("watched");
+  assert.deepEqual(sent, [["unwatched", 1], ["watched", 1], ["unwatched", 1], ["watched", 1]]);
+});
+
+test("a settled watch is not resent when the dispatch is not a canonical replay", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  ledger.finishTrackerWriteIntent(captured.id, "settled");
+  let posts = 0;
+  await trackerIntentRequest(connection, [{ ...media(), watchRecordId: "local-play" }], "watched", async () => { posts++; return {}; }, async () => []);
+  assert.equal(posts, 0);
+});
+
 test("every ingest path that saves a watch dispatches with its record id", async () => {
   const { readFile } = await import("node:fs/promises");
   for (const file of ["../server/src/scheduler.js", "../server/src/utils/recentWatchImport.js", "../server/src/routes/sync.js"]) {
@@ -319,4 +354,14 @@ test("legacy upgrade migrates known pending work only and quarantines missing de
   migrateLegacyTrackerIntents(db);
   const rows = db.prepare("SELECT watch_record_id,status FROM tracker_write_intents ORDER BY watch_record_id").all();
   assert.deepEqual(rows, [{ watch_record_id: "ambiguous", status: "review" }, { watch_record_id: "pending", status: "pending" }, { watch_record_id: "uncertain", status: "uncertain" }]);
+});
+
+test("a dispatch whose every item is already settled reports alreadySent without sending", async () => {
+  const connection = connect();
+  const captured = create(connection, media(), "local-play");
+  ledger.finishTrackerWriteIntent(captured.id, "settled");
+  let posts = 0;
+  const result = await trackerIntentRequest(connection, [{ ...media(), watchRecordId: "local-play" }], "watched", async () => { posts++; return {}; }, async () => []);
+  assert.equal(posts, 0);
+  assert.equal(result.alreadySent, true);
 });

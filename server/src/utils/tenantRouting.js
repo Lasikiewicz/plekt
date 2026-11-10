@@ -1,5 +1,6 @@
 import { runWithUserContext } from "./userContext.js";
 import { findUser, isAdminUserName, resolveActiveTenant } from "./tenancy.js";
+import { resolveAdminPrincipal } from "./auth.js";
 
 // In-process /u/<name>/api/* routing for single-process multi-user mode.
 // Rewrites the request path to /api/... and runs dispatch inside that user's
@@ -23,7 +24,12 @@ export function createTenantApiHandler(dispatch) {
     if (!isAdminUserName(rawTenant)) {
       const user = findUser(rawTenant);
       if (user?.stopped && !user.disabled) {
-        res.status(503).json({ error: "This user's instance is stopped.", code: "INSTANCE_STOPPED" });
+        const principal = resolveAdminPrincipal(req);
+        if (principal?.role === "admin") {
+          res.status(503).json({ error: "This user's instance is stopped.", code: "INSTANCE_STOPPED" });
+        } else {
+          res.status(404).json({ error: "Unknown user", code: "TENANT_NOT_FOUND" });
+        }
         return;
       }
     }

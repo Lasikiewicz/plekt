@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { fetchTraktPersonalRatingSnapshot, fetchTraktWatchedSnapshot, pollTraktDeviceAuth, setTraktPersonalRating, setTraktWatchHistoryBatch, setTraktWatchState, startTraktDeviceAuth, trackerMediaKey, trackerMediaMatches } from "../server/src/utils/traktClient.js";
+import { fetchTraktLastActivities, fetchTraktPersonalRatingSnapshot, fetchTraktWatchedSnapshot, pollTraktDeviceAuth, setTraktPersonalRating, setTraktWatchHistoryBatch, setTraktWatchState, startTraktDeviceAuth, trackerMediaKey, trackerMediaMatches } from "../server/src/utils/traktClient.js";
+
+test("Trakt does not treat a response-body timeout as an empty success", async (t) => {
+  t.mock.method(globalThis, "fetch", async () => new Response(new ReadableStream({
+    start(stream) { stream.error(Object.assign(new Error("body timed out"), { code: "UPSTREAM_TIMEOUT" })); },
+  }), { status: 200 }));
+  await assert.rejects(fetchTraktLastActivities({ clientId: "client", accessToken: "token" }), { code: "UPSTREAM_TIMEOUT" });
+});
 
 test("Trakt device authorization uses the API device endpoints", async () => {
   const originalFetch = globalThis.fetch;

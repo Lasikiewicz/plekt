@@ -371,6 +371,31 @@ export async function flushShowProgressUpdates() {
   }
 }
 
+const REBUILD_DEBOUNCE_MS = 1500;
+const scheduledRebuilds = new Map();
+
+/**
+ * Rebuilds the progress cache shortly after a bulk change to watch history (a
+ * restore or a wipe), which only bumps the data version and otherwise leaves
+ * restored shows without totals and deleted shows cached until the next process
+ * start. Calls close together (a restore sends many batches) share one rebuild
+ * of the active user's cache, and the rebuild never blocks or fails the caller.
+ */
+export function scheduleShowProgressRebuild(reason = "") {
+  const state = cacheState();
+  if (scheduledRebuilds.has(state.directory)) {
+    clearTimeout(scheduledRebuilds.get(state.directory));
+  }
+  const timer = setTimeout(() => {
+    scheduledRebuilds.delete(state.directory);
+    rebuildShowProgressCache(state)
+      .then(() => bumpDataVersion())
+      .catch((error) => console.error(`[ShowProgressCache] Rebuild after ${reason || "a bulk change"} failed:`, error));
+  }, REBUILD_DEBOUNCE_MS);
+  timer.unref?.();
+  scheduledRebuilds.set(state.directory, timer);
+}
+
 /**
  * Full rebuild of the cache file from database.
  */

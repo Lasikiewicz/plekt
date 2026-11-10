@@ -119,6 +119,14 @@ test("Simkl stalled response bodies time out once and release the account queue"
   assert.equal(count, 2);
 });
 
+test("Simkl propagates a timeout raised while reading the response body", async () => {
+  const request = createSimklTransport({ fetcher: async () => ({
+    ok: true, status: 200, headers: new Headers(), body: { cancel: async () => {} },
+    json: async () => { throw Object.assign(new Error("body timed out"), { code: "UPSTREAM_TIMEOUT" }); },
+  }) });
+  await assert.rejects(request(account, "https://api.simkl.com/test", { method: "POST" }, 100), { code: "UPSTREAM_TIMEOUT" });
+});
+
 test("Simkl last successful quota slot is delivered then blocks rotated credentials and auth", async () => {
   const f = fixture(() => Response.json({ ok: true }, { headers: { "x-ratelimit-remaining": "0", "x-ratelimit-limit": "500" } }));
   assert.deepEqual((await f.request()).data, { ok: true });

@@ -152,6 +152,14 @@ app.disable("etag");
 // that hop lets rate-limit middleware use the visitor address from
 // X-Forwarded-For instead of treating every visitor as the same edge IP.
 if (DEMO_MODE || process.env.TRUST_PROXY === "1") app.set("trust proxy", 1);
+let warnedUntrustedProxy = false;
+app.use((req, _res, next) => {
+  if (!app.get("trust proxy") && !warnedUntrustedProxy && req.get("x-forwarded-for")) {
+    warnedUntrustedProxy = true;
+    console.warn("[security] X-Forwarded-For received while proxy trust is off. If this is a trusted reverse proxy, set TRUST_PROXY=1 and restrict direct access to Plekt.");
+  }
+  next();
+});
 const mediaConfigRevisionStmt = db.prepare("SELECT updated_at FROM settings WHERE id = 'mediaConfig'");
 const getCspImageOrigins = createCspImageOriginMemo({
   readRevision: () => Number(mediaConfigRevisionStmt.get()?.updated_at || 0),
@@ -233,9 +241,18 @@ app.use(async (_req, res, next) => {
 // no-transform cache directive remains a second independent safeguard.
 app.use(createResponseCompression());
 
+// Normalize the path before matching rate limits and body caps. Preserve the
+// query string, which may itself legitimately contain repeated slashes.
+app.use((req, _res, next) => {
+  const index = req.url.indexOf("?");
+  const pathname = index < 0 ? req.url : req.url.slice(0, index);
+  req.url = pathname.replace(/\/{2,}/g, "/") + (index < 0 ? "" : req.url.slice(index));
+  next();
+});
+
 // Rate limiting - applied before any route handler.
 const withTenantApiPaths = (paths) => paths.flatMap((p) => [p, `/u/:tenant${p}`]);
-app.use(withTenantApiPaths(["/api/login"]), rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false }));
+app.use(withTenantApiPaths(["/api/login"]), rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, skipSuccessfulRequests: true, validate: { xForwardedForHeader: false } }));
 app.use(withTenantApiPaths(["/api/webhook"]), rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
 app.use(withTenantApiPaths(["/api/tmdb-poster"]), rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));
 app.use(withTenantApiPaths(["/api/tmdb-profile"]), rateLimit({ windowMs: 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false }));

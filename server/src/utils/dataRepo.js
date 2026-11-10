@@ -31,6 +31,7 @@ import {
 import { yieldToEventLoop } from "./eventLoop.js";
 import { brandEnv } from "./brandEnv.js";
 import { historyCaches } from "./historyCacheState.js";
+import { createPerUserState } from "./perUserState.js";
 
 // Initialize TV show progress cache on startup
 initShowProgressCache().catch((err) => {
@@ -2417,6 +2418,10 @@ export async function deleteWatchDate(id) {
     .map((chainId) => (chainId === existing.id ? existing : candidateRows.find((row) => row.id === chainId)))
     .filter(Boolean);
 
+  let remainingRow = null;
+  // One transaction: the suppression, delete, audit and playstate writes commit
+  // together or not at all, as deleteWatchRecordSync does.
+  transaction(() => {
   for (const row of rowsToDelete) {
     recordDeletedWatchSuppression(row);
     queueProgressUpdateForRecord(row);
@@ -2442,11 +2447,11 @@ export async function deleteWatchDate(id) {
     });
   }
   const mediaKey = existing.media_key;
-  let remainingRow = null;
   if (mediaKey) {
     remainingRow = remainingWatchRowFor(existing);
   }
   reconcilePlaystateAfterWatchDateRemovalSync(remainingRow, rowsToDelete);
+  });
 
   await invalidateHistoryDerivedCaches("deleteWatchDate");
   return { ok: true, remainingRow, deletedRow: existing, deletedRows: rowsToDelete };
@@ -2480,6 +2485,8 @@ export async function deleteWatchDates(ids = []) {
   const representativeRowByMediaKey = new Map();
   const deletedRowsByMediaKey = new Map();
 
+  let affectedMedia = [];
+  transaction(() => {
   for (const id of uniqueIds) {
     const existing = selectByIdStmt.get(id);
     if (!existing) {
@@ -2526,10 +2533,11 @@ export async function deleteWatchDates(ids = []) {
       deletedRows: deletedRowsByMediaKey.get(mediaKey) || [],
     });
   }
-  const affectedMedia = coalesceWatchDateRemovals(rawAffectedMedia);
+  affectedMedia = coalesceWatchDateRemovals(rawAffectedMedia);
   for (const media of affectedMedia) {
     reconcilePlaystateAfterWatchDateRemovalSync(media.remainingRow, media.deletedRows);
   }
+  });
 
   if (deleted.length) await invalidateHistoryDerivedCaches("deleteWatchDates");
   return { ok: true, deleted, notFound, affectedMedia };
@@ -3559,7 +3567,9 @@ export async function queryWatchHistory({ search = "", mediaType = "", limit = 5
     return enrichHistoryRowsWithShowArtwork(historyRows);
   }
 
-  const rows = await loadHistoryRows({ limit: MAX_HISTORY_LIMIT, offset: 0 });
+  // The whole cached history, not its newest MAX_HISTORY_LIMIT rows: deduping
+  // after a cut would drop every older watch for API clients on large histories.
+  const rows = await getCachedHistory();
   const filtered = rows.filter((row) => {
     if (!isPlektTrackedWatchRow(row)) return false;
     if (normalizedMediaType === "episode" && !["episode", "tv"].includes(row.media_type)) return false;
@@ -5034,8 +5044,9 @@ export function deleteWatchRecordByIdSync(id, { allowDuringRestore = false } = {
   assertRestoreWriteAllowed("manual", { allowDuringRestore });
   if (!id) return false;
   const row = selectByIdStmt.get(String(id));
+  if (row) queueProgressUpdateForRecord(row);
+  transaction(() => {
   if (row) {
-    queueProgressUpdateForRecord(row);
     recordWatchAuditEvent({
       eventType: "history_deleted",
       timestamp: Date.now(),
@@ -5070,6 +5081,7 @@ export function deleteWatchRecordByIdSync(id, { allowDuringRestore = false } = {
       deletePlaystateByKeyStmt.run(row.media_key);
     }
   }
+  });
   return true;
 }
 
@@ -7034,7 +7046,9 @@ function buildSeriesIdentityProfiles() {
 }
 
 const SERIES_IDS_CACHE_TTL_MS = 60_000;
-let seriesIdentityIndexCache = { expiresAt: 0, values: new Map() };
+// One index per user data folder: a module-level index built for one user was
+// served to every other user for 60 seconds (10 November 2026 audit, step 2).
+const seriesIdentityIndexCache = createPerUserState(() => ({ expiresAt: 0, values: new Map() }), { maxEntries: 8 });
 const IDENTITY_REPAIR_BATCH_SIZE = 100;
 const IDENTITY_REPAIR_YIELD_EVERY = 100;
 
@@ -7050,13 +7064,12 @@ export function showTitleNamesSeveralShows(showTitle = "") {
 export function seriesIdentityProfilesForShowTitle(showTitle = "") {
   const key = normalizeRepairShowTitle(showTitle);
   if (!key) return [];
-  if (seriesIdentityIndexCache.expiresAt <= Date.now()) {
-    seriesIdentityIndexCache = {
-      expiresAt: Date.now() + SERIES_IDS_CACHE_TTL_MS,
-      values: buildSeriesIdentityProfiles(),
-    };
+  const index = seriesIdentityIndexCache();
+  if (index.expiresAt <= Date.now()) {
+    index.values = buildSeriesIdentityProfiles();
+    index.expiresAt = Date.now() + SERIES_IDS_CACHE_TTL_MS;
   }
-  return seriesIdentityIndexCache.values.get(key) || [];
+  return index.values.get(key) || [];
 }
 
 function progressProfileForIds(ids = {}, profiles = []) {
@@ -7169,7 +7182,9 @@ function sameProgressGroupRows(rows = [], profiles = []) {
 }
 
 export function invalidateSeriesIdentityIndex() {
-  seriesIdentityIndexCache = { expiresAt: 0, values: new Map() };
+  const index = seriesIdentityIndexCache();
+  index.expiresAt = 0;
+  index.values = new Map();
 }
 
 export async function repairEpisodeSeriesIdentity() {

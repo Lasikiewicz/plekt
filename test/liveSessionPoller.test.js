@@ -47,3 +47,22 @@ test("idle polls wait five minutes, active tracking stays fast, and explicit ref
     poller.stop();
   }
 });
+
+test("a poke during a refresh schedules a prompt follow-up", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1000 });
+  let calls = 0;
+  let finish;
+  const poller = createLiveSessionPoller({ refresh: () => {
+    calls++;
+    return calls === 1 ? new Promise((resolve) => { finish = resolve; }) : Promise.resolve({ hasActiveSession: false });
+  } });
+  try {
+    poller.start();
+    t.mock.timers.tick(1000);
+    poller.poke();
+    finish({ hasActiveSession: false });
+    await Promise.resolve();
+    t.mock.timers.tick(1000);
+    assert.equal(calls, 2);
+  } finally { poller.stop(); }
+});

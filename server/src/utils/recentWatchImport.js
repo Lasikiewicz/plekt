@@ -5,7 +5,7 @@ import { parsePlexMediaIds } from "./parsers.js";
 import { resolvePlexAccountId } from "./plexClient.js";
 import { fetchPlexWithRefresh } from "./plexFetch.js";
 import { ensurePlexServerOwnership } from "./plexTokenManager.js";
-import { isAuthoritativeRestoreActive } from "./configStore.js";
+import { isAuthoritativeRestoreActive, loadRuntimeState, setRuntimeState } from "./configStore.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { loadWatchBackupRuntime } from "./watchHistoryBackups.js";
 import { isWebhookTestHeldItem } from "./webhookTest.js";
@@ -180,6 +180,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
   const importMode = currentWatchImportMode();
   const timingHistory = importMode === "episode_timing" ? await getCachedHistory().catch(() => []) : [];
   let syncedCount = 0;
+  let historyChanged = false;
   const skippedMalformed = [];
 
   const targetAccountId = await resolvePlexTargetAccountId(config.plex, username, logger);
@@ -212,21 +213,23 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
       const sectionsRes = await fetchPlexWithRefresh(config.plex, sectionsUrl);
       if (sectionsRes.ok) {
         const sectionsData = await sectionsRes.json();
-        const directories = sectionsData?.MediaContainer?.Directory || [];
+        const directories = (sectionsData?.MediaContainer?.Directory || [])
+          .filter((dir) => (dir.type === "movie" || dir.type === "show") && dir.key != null);
         // Bound the per-tick sweep: this runs every minute inside a 50s budget,
         // and each section costs a serial round trip to Plex. Very large installs
         // still converge â€” the history endpoint above covers recent activity.
         const MAX_SECTIONS_PER_TICK = 6;
-        let sectionsChecked = 0;
-        for (const dir of directories) {
+        const cursorScope = `${baseUrl}|${config.plex.connectionId || ""}|${username}`;
+        const cursor = (await loadRuntimeState()).plexCatchupSectionCursor;
+        const savedIndex = cursor?.scope === cursorScope ? directories.findIndex((dir) => String(dir.key) === cursor.nextSectionId) : -1;
+        const start = savedIndex < 0 ? 0 : savedIndex;
+        const sectionsToCheck = Math.min(directories.length, MAX_SECTIONS_PER_TICK);
+        if (directories.length > MAX_SECTIONS_PER_TICK) logger(`Plex sections check capped at ${MAX_SECTIONS_PER_TICK} sections this tick.`);
+        for (let offset = 0; offset < sectionsToCheck; offset++) {
+          const index = (start + offset) % directories.length;
+          const dir = directories[index];
           const sectionId = dir.key;
           const type = dir.type;
-          if (type !== "movie" && type !== "show") continue;
-          if (sectionsChecked >= MAX_SECTIONS_PER_TICK) {
-            logger(`Plex sections check capped at ${MAX_SECTIONS_PER_TICK} sections this tick.`);
-            break;
-          }
-          sectionsChecked += 1;
 
           const sectionAllUrl = new URL(`${baseUrl}/library/sections/${sectionId}/all`);
           sectionAllUrl.searchParams.set("unwatched", "0");
@@ -245,11 +248,15 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
             sectionAllUrl.searchParams.set("type", "4"); // Episode
           }
 
-          const sectionRes = await fetchPlexWithRefresh(config.plex, sectionAllUrl);
-          if (sectionRes.ok) {
-            const sectionData = await sectionRes.json();
-            const metadata = sectionData?.MediaContainer?.Metadata || [];
-            recentlyViewedItems.push(...metadata.map((item) => ({ item, accountScoped: targetAccountId != null, kind: "section" })));
+          try {
+            const sectionRes = await fetchPlexWithRefresh(config.plex, sectionAllUrl);
+            if (sectionRes.ok) {
+              const sectionData = await sectionRes.json();
+              const metadata = sectionData?.MediaContainer?.Metadata || [];
+              recentlyViewedItems.push(...metadata.map((item) => ({ item, accountScoped: targetAccountId != null, kind: "section" })));
+            }
+          } finally {
+            await setRuntimeState({ plexCatchupSectionCursor: { scope: cursorScope, nextSectionId: String(directories[(index + 1) % directories.length].key) } });
           }
         }
       } else {
@@ -269,6 +276,8 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
 
     for (const candidate of allItems) {
       const { item, accountScoped, kind } = candidate;
+      if (!item || typeof item !== "object") continue;
+      try {
       if (!plexHistoryItemMatchesConfiguredUser(item, { username, accountId: targetAccountId, accountScoped, tokenScoped: tokenScoped && kind === "section" })) continue;
       if (item.type !== "movie" && item.type !== "episode") continue;
       if (kind === "section" && Number(item.viewCount || 0) <= 0) continue;
@@ -286,6 +295,9 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
       seenKeys.add(dedupeKey);
 
       uniqueItems.push({ item, watchedAt, watchDate });
+      } catch (error) {
+        logger(`Plex: failed to prepare watched item ${item?.title || "unknown"}: ${error.message || String(error)}`);
+      }
     }
 
     const orderedItems = importMode === "episode_timing"
@@ -304,6 +316,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
 
     for (const { item, watchedAt, watchDate } of orderedItems) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
+      try {
       let media = {
         title: item.title,
         type: item.type,
@@ -421,6 +434,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         ].join("\n");
 
         const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+        historyChanged = true;
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
         const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
@@ -445,15 +459,19 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         addTimingHistoryRow(timingHistory, media, effectiveWatchedAt);
         syncedCount++;
       }
+      } catch (error) {
+        logger(`Plex: failed to process watched item ${item?.title || "unknown"}: ${error.message || String(error)}`);
+      }
     }
   } catch (error) {
     logger(`Plex sync recently watched failed: ${error.message}`);
+  } finally {
+    if (historyChanged) await invalidateHistoryDerivedCaches("syncRecentlyWatchedFromPlex").catch(() => null);
   }
 
   if (skippedMalformed.length) {
     logger(`Plex: skipped ${skippedMalformed.length} malformed watched item(s) (${summariseTitles(skippedMalformed)}).`);
   }
-  if (syncedCount) await invalidateHistoryDerivedCaches("syncRecentlyWatchedFromPlex").catch(() => null);
   return syncedCount;
 }
 
@@ -466,6 +484,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
   }
   if (!config.emby?.baseUrl || !config.emby?.apiKey || !config.emby?.userId) return 0;
   let syncedCount = 0;
+  let historyChanged = false;
   const skippedMalformed = [];
   const importMode = currentWatchImportMode();
   const timingHistory = importMode === "episode_timing" ? await getCachedHistory().catch(() => []) : [];
@@ -475,6 +494,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
     const raw = await fetchEmbyWatchedItems(config.emby, { limit: SCHEDULED_RECENT_WATCH_LIMIT });
     for (const item of raw) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
+      try {
       // The item a webhook delivery test captured stays out of the scan until the person unmarks it or leaves it marked.
       if (isWebhookTestHeldItem("emby", item.Id)) continue;
       // For episodes, prefer series-level provider IDs (SeriesProviderIds) so that Plex and
@@ -585,6 +605,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         ].join("\n");
 
         const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+        historyChanged = true;
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
         const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
@@ -609,14 +630,18 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         addTimingHistoryRow(timingHistory, media, effectiveWatchedAt);
         syncedCount++;
       }
+      } catch (error) {
+        logger(`Emby: failed to process watched item ${item?.Name || "unknown"}: ${error.message || String(error)}`);
+      }
     }
   } catch (error) {
     logger(`Emby sync recently watched failed: ${error.message}`);
+  } finally {
+    if (historyChanged) await invalidateHistoryDerivedCaches("syncRecentlyWatchedFromEmby").catch(() => null);
   }
   if (skippedMalformed.length) {
     logger(`Emby: skipped ${skippedMalformed.length} malformed watched item(s) (${summariseTitles(skippedMalformed)}).`);
   }
-  if (syncedCount) await invalidateHistoryDerivedCaches("syncRecentlyWatchedFromEmby").catch(() => null);
   return syncedCount;
 }
 
@@ -629,6 +654,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
   }
   if (!config.jellyfin?.baseUrl || !config.jellyfin?.apiKey || !config.jellyfin?.userId) return 0;
   let syncedCount = 0;
+  let historyChanged = false;
   const skippedMalformed = [];
   const importMode = currentWatchImportMode();
   const timingHistory = importMode === "episode_timing" ? await getCachedHistory().catch(() => []) : [];
@@ -638,6 +664,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
     const raw = await fetchJellyfinWatchedItems(config.jellyfin, { limit: SCHEDULED_RECENT_WATCH_LIMIT });
     for (const item of raw) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
+      try {
       // The item a webhook delivery test captured stays out of the scan until the person unmarks it or leaves it marked.
       if (isWebhookTestHeldItem("jellyfin", item.Id)) continue;
       // For episodes, prefer series-level provider IDs (SeriesProviderIds) so that Plex and
@@ -752,6 +779,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         ].join("\n");
 
         const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+        historyChanged = true;
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
         const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
@@ -776,13 +804,17 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         addTimingHistoryRow(timingHistory, media, effectiveWatchedAt);
         syncedCount++;
       }
+      } catch (error) {
+        logger(`Jellyfin: failed to process watched item ${item?.Name || "unknown"}: ${error.message || String(error)}`);
+      }
     }
   } catch (error) {
     logger(`Jellyfin sync recently watched failed: ${error.message}`);
+  } finally {
+    if (historyChanged) await invalidateHistoryDerivedCaches("syncRecentlyWatchedFromJellyfin").catch(() => null);
   }
   if (skippedMalformed.length) {
     logger(`Jellyfin: skipped ${skippedMalformed.length} malformed watched item(s) (${summariseTitles(skippedMalformed)}).`);
   }
-  if (syncedCount) await invalidateHistoryDerivedCaches("syncRecentlyWatchedFromJellyfin").catch(() => null);
   return syncedCount;
 }

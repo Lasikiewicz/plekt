@@ -24,6 +24,7 @@ import { createDroppedTitleFilter } from "./droppedTitles.js";
 import { listManualUpNextShows } from "./upNextManual.js";
 import { compareCoordinates, episodeAfter, rewatchPosition, withUpNextLanes } from "./upNextRewatch.js";
 import { isDemoMode } from "./demoMode.js";
+import { airDayOf, todayLocalDate } from "./watchDates.js";
 
 const LOCAL_METADATA_CONCURRENCY = 4;
 // Longest synchronous slice of the local Up Next projection before it yields.
@@ -474,7 +475,9 @@ function providerResumeMembership(candidate) {
 }
 
 function released(airDate, today) {
-  const date = text(airDate);
+  // Emby and Jellyfin send a full ISO timestamp; compare its calendar day so an
+  // episode airing today is not held back until tomorrow.
+  const date = airDayOf(airDate);
   return !date || date <= today;
 }
 
@@ -1409,7 +1412,7 @@ export async function buildUpNextProjection({
       progressCandidates: canonicalResume,
       providerCandidates: [],
       episodeRows: trackedEpisodeRows,
-      today: new Date(now).toISOString().slice(0, 10),
+      today: todayLocalDate(now),
       allowUnplayable: true,
       manualShowKeys,
       ambiguousTitles,
@@ -1454,7 +1457,7 @@ export async function buildUpNextProjection({
     .filter((candidate) => !stateBlocksCandidate(candidate, playstateIndex, { progressUpdatedAt: candidate.updated_at }))
     .filter((candidate) => !stateIsWatched(candidate, playstateIndex));
   const eligibleProviderNextUp = providerCandidates
-    .filter((candidate) => candidate.queue_kind === "next_up" && released(candidate.air_date, new Date(now).toISOString().slice(0, 10)))
+    .filter((candidate) => candidate.queue_kind === "next_up" && released(candidate.air_date, todayLocalDate(now)))
     .filter(isRegularUpNextEpisode)
     // Exempt for the same reason as providerResume: an item of the canonical
     // resume episode only feeds that card's native ids (resumeNativeNextUp).
@@ -1507,7 +1510,7 @@ export async function buildUpNextProjection({
       // episode disappeared from Up Next entirely instead of returning to it.
       providerCandidates: [...providerResume, ...providerNextUp],
       episodeRows: trackedEpisodeRows,
-      today: new Date(now).toISOString().slice(0, 10),
+      today: todayLocalDate(now),
       resolveProviderItems: resolveProviderItems || (mediaConfig ? createUpNextLibraryLookup(mediaConfig, { stats: lookupStats, deferred: deferredLookups }) : null),
       resolveProviderEpisodes: resolveProviderEpisodes || (mediaConfig ? createUpNextLibraryEpisodeLookup(mediaConfig, { stats: lookupStats }) : null),
       manualShowKeys,

@@ -154,8 +154,13 @@ async function recordProviderSnapshot(scope, config, run, snapshot, { destructiv
   let addedCount = 0;
 
   for (const item of snapshot.items || []) {
-    const normalizedRemote = remoteMedia(item);
-    if (!normalizedRemote) continue;
+    const normalizedRemote = item.unnormalized ? null : remoteMedia(item);
+    if (!normalizedRemote) {
+      // A row Plex returned still counts as present, even when it cannot be normalised.
+      const seenId = clean(item.provider_item_id || item.providerItemId || item.rating_key || item.id, 300);
+      if (seenId) seenProviderItems.add(seenId);
+      continue;
+    }
     let canonicalMedia = matchingCanonical(normalizedRemote, aliases);
     let media = canonicalMedia || normalizedRemote;
     const existing = canonicalMedia
@@ -232,12 +237,42 @@ async function recordProviderSnapshot(scope, config, run, snapshot, { destructiv
   // to prevent. Absence is therefore only evidence of removal within the same
   // container; a container change means republish, not delete.
   const scannedContainerId = clean(snapshot.container?.id || "", 300);
-  if (previousRun?.complete_snapshot && previousRun.status === "succeeded") {
-    for (const row of previousRows.filter((candidate) => candidate.remote_state === "present" && candidate.managed_by_plembfin && candidate.provider_item_id)) {
-      if (seenProviderItems.has(row.provider_item_id)) continue;
-      if (clean(row.container_id || "", 300) !== scannedContainerId) continue;
-      const latest = getLatestWatchlistMutation(row.media_key);
-      if (latest?.desired_state === "present" && latest.canonical_revision > Number(previousRun.canonical_revision || 0)) continue;
+  // A held removal is kept on the run as cursor.heldRemovalKeys. The run is then
+  // complete as a snapshot but not succeeded, so absence is judged from it only
+  // when the next read repeats the same removal set.
+  const heldKeys = Array.isArray(previousRun?.cursor?.heldRemovalKeys) ? previousRun.cursor.heldRemovalKeys : null;
+  const absenceBasis = Boolean(previousRun?.complete_snapshot && (previousRun.status === "succeeded" || heldKeys));
+  const presentManaged = previousRows.filter((candidate) => candidate.remote_state === "present" && candidate.managed_by_plembfin && candidate.provider_item_id);
+  const removalCandidates = absenceBasis ? presentManaged.filter((row) => {
+    if (seenProviderItems.has(row.provider_item_id)) return false;
+    if (clean(row.container_id || "", 300) !== scannedContainerId) return false;
+    const latest = getLatestWatchlistMutation(row.media_key);
+    return !(latest?.desired_state === "present" && latest.canonical_revision > Number(previousRun.canonical_revision || 0));
+  }) : [];
+  // An empty read, or one that would remove 3 or more entries and more than 20
+  // percent, is held. It is applied only when the next read removes the same entries.
+  const candidateKeys = removalCandidates.map((row) => row.provider_item_id).sort();
+  const emptyRead = (snapshot.items || []).length === 0;
+  const largeRemoval = removalCandidates.length >= 3 && removalCandidates.length / presentManaged.length > 0.2;
+  const approved = Boolean(heldKeys) && JSON.stringify([...heldKeys].sort()) === JSON.stringify(candidateKeys);
+  if (removalCandidates.length && (emptyRead || largeRemoval) && !approved) {
+    const held = updateWatchlistSyncRun({
+      ...scope,
+      status: "partial",
+      completedAt: Date.now(),
+      scannedCount: presentCount,
+      presentCount,
+      removedCount: 0,
+      unavailableCount: 0,
+      completeSnapshot: true,
+      snapshotHash: snapshotHash(snapshot.items || []),
+      cursor: { heldRemovalKeys: candidateKeys },
+      lastError: `${candidateKeys.length} watchlist removal(s) held until the next read repeats them`,
+    });
+    return { run: held, scannedCount: presentCount, presentCount, addedCount, removedCount: 0, queuedExtras: 0, held: candidateKeys.length, seenCanonicalKeys };
+  }
+  if (absenceBasis) {
+    for (const row of removalCandidates) {
       const removal = recordProviderWatchlistRemoval(row.media, {
         provider: scope.provider,
         config,
@@ -537,7 +572,7 @@ export async function previewWatchlistSync({ config = null, providers = [] } = {
       const snapshot = await fetchSnapshot(scope, effectiveConfig);
       const matched = new Set();
       for (const remote of snapshot.items || []) {
-        const normalizedRemote = remoteMedia(remote);
+        const normalizedRemote = remote.unnormalized ? null : remoteMedia(remote);
         if (!normalizedRemote) continue;
         const local = matchingCanonical(normalizedRemote, aliases);
         if (local) matched.add(local.media_key);

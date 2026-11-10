@@ -325,7 +325,7 @@ export function addUserAccount({ dataDir = DATA_DIR, name: rawName, password }) 
     role: USER_ROLE,
     disabled: false,
     stopped: false,
-    sessionsValidAfter: 0,
+    sessionsValidAfter: Date.now(),
     passwordHash: hashUserPassword(password),
   });
   saveUsersRegistry(registry, dataDir);
@@ -344,6 +344,7 @@ export function setUserPasswordAccount({ dataDir = DATA_DIR, name: rawName, pass
   const user = registry.users.find((entry) => entry.name === normalized && entry.role !== ADMIN_ROLE);
   if (!user) return { status: 404, body: { error: "No such user.", code: "NO_SUCH_USER" } };
   user.passwordHash = hashUserPassword(password);
+  user.sessionsValidAfter = Date.now();
   saveUsersRegistry(registry, dataDir);
   return { status: 200, body: { ok: true, user: { name: user.name } } };
 }

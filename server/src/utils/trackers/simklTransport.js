@@ -92,11 +92,14 @@ export function createSimklTransport({ fetcher = fetchWithTimeout, now = Date.no
       if(budget)budget.used++;
       if(budget&&options.method==='POST')budget.afterPost=true;
       const response = await fetcher(url, options, timeout);
-      // fetchWithTimeout stops timing at headers; a stalled body must not hold
-      // this account's queue forever. A POST timeout stays an uncertain outcome.
+      // Also bound body reads for injected fetchers; a POST timeout stays an
+      // uncertain outcome even when it occurs after the response headers.
       let bodyTimer;
       const data = await Promise.race([
-        response.json().catch(() => null),
+        response.json().catch((error) => {
+          if (error?.code === "UPSTREAM_TIMEOUT" || error?.name === "AbortError") throw error;
+          return null;
+        }),
         new Promise((_, reject) => { bodyTimer = setTimeout(() => reject(createUpstreamTimeoutError(timeout || 20_000)), timeout || 20_000); }),
       ]).catch((error) => { response.body?.cancel().catch(() => {}); throw error; }).finally(() => clearTimeout(bodyTimer));
       const metadata = simklQuotaMetadata(response.headers, now());

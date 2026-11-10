@@ -10,6 +10,7 @@ import { persistedWatchDerivedFields } from "./utils/watchDerivedFields.js";
 import { migrateLegacyTrackerIntents } from "./utils/trackerIntentMigration.js";
 import { addHeldRatingStatus, rebuildRatingTablesWithoutProviderCheck } from "./utils/ratingProviderMigration.js";
 import { getUserContext, isNonAdminTenantContext } from "./utils/userContext.js";
+import { createPerUserState } from "./utils/perUserState.js";
 import { closeAllTenantDatabases, openTenantDatabase, registerTenantDatabaseInitializer } from "./utils/tenantDatabase.js";
 import {
   closeAllSharedMetadataDatabases,
@@ -2071,7 +2072,12 @@ export const db = new Proxy(adminDb, {
     }
     if (prop === "exec") {
       return (sql) => {
-        if (sqlTargetsSharedProviderCache(sql) && !/CREATEs+TABLE/i.test(String(sql || ""))) {
+        // Every exec that names a shared provider-cache table goes to the shared
+        // database, CREATE TABLE included. A "skip CREATE TABLE" clause used to sit
+        // here but its pattern had a typo (`s+` for `\s+`) so it never matched, and
+        // no caller creates these tables through this routed exec, so it was removed
+        // rather than corrected.
+        if (sqlTargetsSharedProviderCache(sql)) {
           return getSharedMetadataDb(DATA_DIR).exec(sql);
         }
         return getActiveUserDb().exec(sql);
@@ -2111,7 +2117,8 @@ const pruneLiveChangesByCount = db.prepare(`
   DELETE FROM live_change_events
   WHERE id < (SELECT MAX(id) - ? FROM live_change_events)
 `);
-let lastLiveChangePruneAt = 0;
+// Per database: the prune interval is tracked for each user's own file.
+const liveChangePruneState = createPerUserState(() => ({ at: 0 }));
 const LIVE_CHANGE_PRUNE_INTERVAL_MS = 60_000;
 const LIVE_CHANGE_RETENTION_MS = 24 * 60 * 60 * 1000;
 const LIVE_CHANGE_MAX_ROWS = 20_000;
@@ -2184,13 +2191,18 @@ export function liveChangesSince(cursor = 0, limit = 5000) {
   const safeCursor = Math.max(Number(cursor) || 0, 0);
   const safeLimit = Math.min(Math.max(Number(limit) || 5000, 1), 10_000);
   const rows = selectLiveChangesAfter.all(safeCursor, safeLimit);
+  pruneLiveChangesIfDue();
+  return rows;
+}
+
+export function pruneLiveChangesIfDue() {
   const now = Date.now();
-  if (now - lastLiveChangePruneAt >= LIVE_CHANGE_PRUNE_INTERVAL_MS) {
-    lastLiveChangePruneAt = now;
+  const prune = liveChangePruneState();
+  if (now - prune.at >= LIVE_CHANGE_PRUNE_INTERVAL_MS) {
+    prune.at = now;
     pruneLiveChangesByAge.run(now - LIVE_CHANGE_RETENTION_MS);
     pruneLiveChangesByCount.run(LIVE_CHANGE_MAX_ROWS);
   }
-  return rows;
 }
 
 export function dataVersionTrigger(version) {

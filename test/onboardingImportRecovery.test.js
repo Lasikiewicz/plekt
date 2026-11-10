@@ -5,10 +5,23 @@ import { makeTempDataDir } from "./helpers.js";
 makeTempDataDir("plembfin-onboarding-import-recovery-");
 
 const { claimAccount, getOnboardingState, recoverInterruptedBackgroundImports, saveOnboardingState } = await import("../server/src/utils/onboardingStore.js");
-const { cancelTrackerImport, pauseTrackerImportForRestore, reconcileTrackerUntilSettled, startServerImport, startTrackerImport, trackerGateDecision } = await import("../server/src/utils/onboardingImportCoordinator.js");
+const { cancelServerImport, cancelTrackerImport, pauseTrackerImportForRestore, reconcileTrackerUntilSettled, startServerImport, startTrackerImport, trackerGateDecision } = await import("../server/src/utils/onboardingImportCoordinator.js");
 const { db } = await import("../server/src/db.js");
 
 const originalState = getOnboardingState();
+
+test("a cancelled waiting server import can be started again", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  saveOnboardingState({ runState: "in_progress", backgroundImports: { trackers: { trakt: { enabled: true, status: "importing" } } } });
+  try {
+    assert.equal((await startServerImport("plex")).code, "TRACKER_IMPORTING_RETRYING");
+    cancelServerImport("plex");
+    assert.equal((await startServerImport("plex")).code, "TRACKER_IMPORTING_RETRYING");
+  } finally {
+    cancelServerImport("plex");
+    saveOnboardingState(originalState);
+  }
+});
 
 test("startup recovery cancels persisted background imports without touching completed imports", () => {
   const startedAt = Date.now() - 1_000;

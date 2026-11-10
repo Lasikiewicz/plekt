@@ -160,6 +160,19 @@ function plexItemsFromBody(body) {
   return listItems(body);
 }
 
+function isRecognisedPlexListBody(body) {
+  if (Array.isArray(body)) return true;
+  if (!body || typeof body !== "object") return false;
+  return Array.isArray(body.MediaContainer?.Metadata)
+    || Array.isArray(body.Metadata)
+    || Boolean(body.MediaContainer && typeof body.MediaContainer === "object");
+}
+
+function unnormalizedPlexMarker(item) {
+  const id = clean(item?.ratingKey || item?.rating_key || item?.key, 300);
+  return id ? { provider_item_id: id, unnormalized: true } : null;
+}
+
 export async function listManagedItems(config, { cursor = null, pageSize = 100 } = {}) {
   const representation = config.watchlistRepresentation || config.representation || "native";
   if (representation === "rss") return fetchPlexWatchlistRss(config);
@@ -184,8 +197,17 @@ export async function listManagedItems(config, { cursor = null, pageSize = 100 }
       ...(config.watchlistListParams || {}),
     },
   });
+  // A 200 body in no shape Plex uses must fail the read. Treating it as an empty
+  // page made the watchlist sync remove every managed entry.
+  if (!isRecognisedPlexListBody(body)) {
+    const error = new Error("Plex watchlist response was unrecognised");
+    error.code = "WATCHLIST_UNRECOGNISED_RESPONSE";
+    throw error;
+  }
   const rawItems = plexItemsFromBody(body);
-  const normalized = rawItems.map((item) => normalizePlexItem(item)).filter(Boolean);
+  // A row that cannot be normalised is still a row Plex returned. It is kept as a
+  // marker so the sync counts it as seen instead of as removed.
+  const normalized = rawItems.map((item) => normalizePlexItem(item) || unnormalizedPlexMarker(item)).filter(Boolean);
   // `pageResult` reads the total from `MediaContainer.totalSize`, so it needs the
   // whole response: handing it the already-unwrapped container hid the total and
   // left pagination on the page-size heuristic.
@@ -304,7 +326,7 @@ export async function resolveTargets(config, media) {
   }
   if (!candidates.length) {
     const snapshot = await fetchPlexWatchlistSnapshot(config);
-    candidates.push(...snapshot.items.map((item) => item.remote_item || item));
+    candidates.push(...snapshot.items.filter((item) => !item.unnormalized).map((item) => item.remote_item || item));
   }
   const ids = requestedIds(normalized);
   let targets = sortRemoteTargets([...new Map(candidates.map((item) => [String(item.ratingKey || item.rating_key || item.key || item.guid || item.title), item])).values()]

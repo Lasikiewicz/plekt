@@ -111,7 +111,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Cache-first media detail pages** - Reuse the latest local history snapshot on reload so known artwork, summaries, watched rows, and watch dates stay visible while provider metadata refreshes; cast profiles switch between Movies and TV Shows with boxed Year and Genre filters, and center the portrait and profile details on phones; pages without actions hide the empty action row while keeping the page title visible; on phones, the Options menu stays beside the detail title; metadata, availability, service links, and ratings share a table on every screen size
 - **Paged media libraries** - Movies and TV Shows load more cards as you scroll without rebuilding the cards already on screen, preserve separate titles when poster artwork is shared, and show a loading indicator while fetching; Posters only expands a selected card in place at the current poster size, with details beside the poster on phones; Next Airing shows the TV library as a dated list; saved TV pages revalidate after 30 minutes when reopened
 - **Season navigation** - Show pages open the latest regular season at the top; season links select the requested season, with Season 1 opening at the page top and other seasons scrolling into view after loading.
-- **Per-show episode order** - Choose Aired, DVD or any other order TheTVDB lists for a show from its Episode order menu, and review, save, replace or remove DVD-to-aired episode links. Manual episode actions use the selected order, and watches retain verified aired identities in storage and tracker writes; Up Next displays the selected order with its label. Detail-page Force Sync checks and translates every imported episode before saving watches. Conflicting earlier history enters Manual Watch review, where an administrator can compare episode identities and confirm a repair after a local backup. Simkl cannot confirm episodes in a non-Aired order, so those shows are not sent to it.
+- **Per-show episode order** - Choose Aired, DVD or any other order TheTVDB lists for a show from its Episode order menu, and review, save, replace or remove DVD-to-aired episode links. Manual episode actions use the selected order, and watches retain verified aired identities in storage and tracker writes; Up Next displays the selected order with its label. The show page preserves the selected-order watched mapping when dashboard history refreshes. Detail-page Force Sync checks and translates every imported episode before saving watches. Conflicting earlier history enters Manual Watch review, where an administrator can compare episode identities and confirm a repair after a local backup. Simkl cannot confirm episodes in a non-Aired order, so those shows are not sent to it.
 - **Personal Rating Sync** - One-toggle, two-way rating sync with connected Plex, Emby, Jellyfin, Trakt, and Simkl accounts through an isolated durable queue, with Plekt as the conflict authority; Simkl uses stored library-check observations and holds unsafe rating writes. Scans missing at least two ratings and over 20% of a provider's rated baseline pause for review with approve/dismiss controls that preserve ratings until approved
 - **Plex Watchlist Sync** - One-toggle, two-way sync between Plekt and the Plex account watchlist, with safe first-run union, durable retries, a Sync now action, and a plain-language explanation of anything Plex refuses
 - **Upcoming episodes calendar** - Air date schedule for upcoming and past releases, pre-cached for instant loading; same-day episodes are grouped by show with a View more control
@@ -131,6 +131,9 @@ None of these talk to each other - they all talk to Plekt.
 - **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings and per show in Fix Match, where stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose Aired or DVD order for a show and review DVD-to-aired episode links before new watches are saved; choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB; optional AniDB titles and descriptions for anime you confirm, movies uniquely linked by Wikidata, or shows TheTVDB clearly links, with episode numbering unchanged
 - **Unified multi-source search** - Blazingly fast search across your local libraries, TMDB movies/shows/collections, and TheTVDB with local media prioritized
 - **Progressive Web App (PWA)** - Installable directly on iOS, Android, macOS, and Windows with a native app experience
+
+Cached cast, videos and artwork stay available during temporary TMDB failures, with
+incomplete metadata retried after five minutes. Air-date checks use the server's local calendar day.
 
 See [`docs/architecture.md`](docs/architecture.md) for how each feature is actually built.
 
@@ -586,6 +589,11 @@ manual Back Up Now button.
 - **Personal watchlist recovery** - full backups include the local canonical watchlist and sync ledger; restore pauses provider delivery until an explicit publish, while watch-history-only backups exclude it
 - **Remote backups** - optional Backblaze B2 copies of either type, with per-type schedules and retention settings (Settings → Backup → Remote)
 
+Media and tracker connections remain as configured on the destination machine; reconnect
+any that are missing. Restoring history or wiping data rebuilds show progress automatically. Deduplicated history
+includes watches beyond the newest 25,000 rows, and watch deletion updates history and
+playstate together or leaves both unchanged if it fails.
+
 ---
 
 ## Importing Watch History
@@ -685,7 +693,7 @@ is in [`.env.example`](.env.example).
 | `PLEKT_PUBLISHED_PORT` | _none_ | Host port Plekt is published on (5056 in the compose files); used by the startup webhook port advisory, which is skipped when unset. |
 | `PLEKT_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS to enable the `Secure` cookie flag and HSTS. |
-| `TRUST_PROXY` | _unset_ | Set to `1` only behind one trusted reverse proxy; uses its forwarded client IP for login and API rate limits. Keep direct access to Plekt restricted to that proxy. |
+| `TRUST_PROXY` | _unset_ | Set to `1` only behind one trusted reverse proxy; uses its forwarded client IP for login and API rate limits. Keep direct access to Plekt restricted to that proxy, and preserve the public `Host` header for browser origin checks. |
 | `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` | _built-in_ | Optional replacement for the bundled Trakt app. Both required together. |
 | `LOG_VERBOSE` | `false` | Set `true` for full per-request tracing in Settings → Logs. |
 | `FANART_API_KEY` | _none_ | Personal Fanart.tv key for higher rate limits. |
@@ -711,7 +719,7 @@ is in [`.env.example`](.env.example).
 | `PLEX_HISTORICAL_WATCHED_SYNC` | `true` | Whether imports, restores, backdated marks, and library-wide pushes project historical watched state onto Plex. Plex-only; Emby, Jellyfin, and Trakt always receive the original date. Settings takes precedence. |
 | `MIN_RESUME_POSITION_SEC` | `60` | Minimum position saved as resume progress (0-3600s). Settings takes precedence. |
 | `ACTIVE_SESSION_TTL_MIN` | `5` | Time before an active session goes stale (1-120 min). Settings takes precedence. |
-| `OUTBOUND_TIMEOUT_SEC` | `10` | Default outbound request timeout (2-120s). |
+| `OUTBOUND_TIMEOUT_SEC` | `10` | Default outbound request timeout, including the response body (2-120s). |
 | `OUTBOUND_PACING_PROFILE` | `standard` | Outbound request pacing: `gentle`, `standard`, or `fast`. Settings → Sync → Sync Tuning's **Fast Local-Network Sync** checkbox toggles between `standard` and `fast` and takes precedence; only enable `fast` when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local network as Plekt. |
 | `PLEKT_DEBUG_OUTBOUND` | _off_ | Set `1` to log per-host outbound request counts once a minute. |
 | `PLEKT_DEBUG_CACHE_REBUILDS` | _off_ | Set `1` to log one line per derived-cache rebuild: which cache, how long it took, and which change caused it. |

@@ -43,7 +43,7 @@ import {
 } from "../utils/resumeAuthority.js";
 import { watchedPlayedSyncEnabled } from "../utils/syncFlags.js";
 import { forceSyncMediaState, normalizeMediaForceSyncRequest } from "../utils/mediaForceSync.js";
-import { acquirePendingDispatch } from "../utils/pendingDispatchGuard.js"; import { forceSyncLibraryState, normalizeLibraryForceSyncRequest } from "../utils/libraryForceSync.js";
+import { acquirePendingDispatch } from "../utils/pendingDispatchGuard.js"; import { acquireKeyedLock } from "../utils/keyedLock.js"; import { outboundStateLeaseIdentity } from "../utils/syncOrchestrator.js"; import { forceSyncLibraryState, normalizeLibraryForceSyncRequest } from "../utils/libraryForceSync.js";
 import { appendMediaForceSyncActivity, createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested, requestMediaForceSyncCancellation } from "../utils/mediaForceSyncActivity.js";
 import { dispatchTrackerWatchBatch } from "../utils/trackerBulkDispatch.js"; import { checkTrackersAfterMediaEvent } from "../utils/trackerSync.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "../utils/watchProvenance.js";
@@ -4100,6 +4100,12 @@ export async function handleWebhook(req, res) {
       if (!(state?.state === "unwatched" && Number(state.updated_at || 0) >= (Date.parse(record.watched_at) || 0))) undropTitleForLivePlay(record);
     }
 
+    // Two completions for one item can arrive together (a duplicate delivery, or
+    // two sources). The check below and the insert must run as one step per item,
+    // or both pass the check before either row lands and both are recorded.
+    const releaseItemLock = await acquireKeyedLock(`webhook-item:${outboundStateLeaseIdentity(media)}`);
+    let result;
+    try {
     // Check if a recent watch record already exists (e.g., from full sync)
     // to avoid creating duplicates. Look for records watched in the last hour.
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -4196,7 +4202,10 @@ export async function handleWebhook(req, res) {
     const watchRecord = mediaToWatchRecord(media, media.source);
     watchRecord.sync_action = "watched";
     watchRecord.sync_dispatch_telemetry = formatDispatchTelemetry({ skipped: false, status: "pending", details: "Propagation queued", targetStates: [] }, media, "watched");
-    const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+    result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+    } finally {
+      releaseItemLock();
+    }
     const releasePendingDispatch = acquirePendingDispatch(result.id);
     if (!releasePendingDispatch) return sendJson(res, { ok: true, inserted: true, id: result.id, record: result.record, reason: "Propagation already queued" });
     try {

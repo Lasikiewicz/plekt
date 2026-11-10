@@ -12,6 +12,7 @@ import { syncPendingTrackerWriteIntents } from "./trackerIntentWorker.js";
 import { trackerRetryRecordIds } from "./trackerWriteIntents.js";
 import { trackerProviderIds } from "./trackers/registry.js";
 import { acquirePendingDispatch } from "./pendingDispatchGuard.js";
+import { createPerUserState } from "./perUserState.js";
 
 // Automatic re-dispatch backoff for records whose sync targets keep failing.
 // Attempt N waits SYNC_RETRY_BACKOFF_MS[N-1] (last entry repeats) before the
@@ -75,7 +76,8 @@ function samePendingDispatchSnapshot(snapshot, current) {
     && Number(current.updated_at || 0) === Number(snapshot.updated_at || 0);
 }
 const pendingRowNow = db.prepare("SELECT sync_action,watched_at,updated_at FROM watch_history WHERE id=?");
-let pendingManualDispatchSweepInFlight = false;
+// Per user data folder: one user's sweep must not make another user's return 0.
+const pendingManualDispatchSweepState = createPerUserState(() => ({ inFlight: false }));
 let retryCandidateCache = { key: "", rows: [] };
 const dispatchGroupCache = new WeakMap();
 
@@ -122,8 +124,9 @@ function cachedDispatchGroups(candidateRows, contextRows) {
 }
 
 export async function syncPendingManualDispatches(config, loopStore, logger = console.log) {
-  if (pendingManualDispatchSweepInFlight) return 0;
-  pendingManualDispatchSweepInFlight = true;
+  const sweep = pendingManualDispatchSweepState();
+  if (sweep.inFlight) return 0;
+  sweep.inFlight = true;
   try {
     if (isAuthoritativeRestoreActive()) return 0;
     if (!watchedPlayedSyncEnabled()) {
@@ -306,6 +309,6 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
   if (syncedCount) await invalidateHistoryDerivedCaches("syncPendingManualDispatches").catch(() => null);
   return syncedCount;
   } finally {
-    pendingManualDispatchSweepInFlight = false;
+    sweep.inFlight = false;
   }
 }

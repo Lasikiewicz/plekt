@@ -23,7 +23,7 @@ export function runDatabaseMaintenance() {
 export function runDbOptimizeIfDue(now = Date.now(), runOptimize = runDatabaseMaintenance) {
   const cadence = optimizeCadence();
   if (cadence.lastOptimizeAt && now - cadence.lastOptimizeAt < DB_OPTIMIZE_INTERVAL_MS) return { ran: false };
-  runOptimize();
   cadence.lastOptimizeAt = now;
+  runOptimize();
   return { ran: true };
 }

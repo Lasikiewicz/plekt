@@ -1,10 +1,10 @@
 import fs from "node:fs";
 import nodePath from "node:path";
 import { requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
+import { createPerUserState } from "../utils/perUserState.js";
 import { readFormData, readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
-import { fetchWithTimeout, assertSafeOutboundUrl } from "../utils/outbound.js";
-import { AUTH, verifyWebhookToken } from "../appConfig.js";
+import { fetchWithTimeout, assertSafeOutboundUrl, sameServerUrl } from "../utils/outbound.js";import { AUTH, verifyWebhookToken } from "../appConfig.js";
 import { db, parseJson, toJson, writeAuditLog } from "../db.js";
 import { createLoopStore } from "../utils/loopStore.js";
 import { listActiveSessions, deleteActiveSession, upsertActiveSession } from "../utils/activeSessions.js";
@@ -254,21 +254,23 @@ export async function handleConfig(req, res) {
 }
 
 const SEERR_MEDIA_STATUS_TTL_MS = 3 * 60 * 1000;
-const seerrMediaStatusCache = new Map();
+// Per user: Seerr availability depends on the signed-in user's own Seerr settings
+// (10 November 2026 audit, step 2).
+const seerrMediaStatusCaches = createPerUserState(() => new Map(), { maxEntries: 8 });
 function seerrMediaStatusCacheKey(mediaType, mediaId) {
   return `${mediaType}:${mediaId}`;
 }
 function invalidateSeerrMediaStatus(mediaType, mediaId) {
-  seerrMediaStatusCache.delete(seerrMediaStatusCacheKey(mediaType, mediaId));
+  seerrMediaStatusCaches().delete(seerrMediaStatusCacheKey(mediaType, mediaId));
 }
 // Sweep expired entries on every write so the map can't grow without bound on a
 // long-lived instance (entries were previously only overwritten, never removed).
 function setSeerrMediaStatusCache(key, entry) {
   const cutoff = Date.now() - SEERR_MEDIA_STATUS_TTL_MS;
-  for (const [existingKey, existing] of seerrMediaStatusCache) {
-    if (Number(existing?.cachedAtMs || 0) < cutoff) seerrMediaStatusCache.delete(existingKey);
+  for (const [existingKey, existing] of seerrMediaStatusCaches()) {
+    if (Number(existing?.cachedAtMs || 0) < cutoff) seerrMediaStatusCaches().delete(existingKey);
   }
-  seerrMediaStatusCache.set(key, entry);
+  seerrMediaStatusCaches().set(key, entry);
 }
 
 export async function handleSeerrStatus(req, res) {
@@ -793,7 +795,7 @@ export async function fetchConfiguredAppLinks(config = {}, media = {}, requested
 // correct; the cost of being wrong about an absent title is merely that it
 // stays absent for up to this window after being added.
 const EMPTY_APP_LINKS_TTL_MS = 60_000;
-const emptyAppLinksCache = new Map();
+const emptyAppLinksCaches = createPerUserState(() => new Map(), { maxEntries: 8 });
 
 function appLinksLookupKey(media = {}) {
   const ids = media.ids || {};
@@ -809,7 +811,7 @@ function appLinksLookupKey(media = {}) {
 }
 
 export function clearEmptyAppLinksCache() {
-  emptyAppLinksCache.clear();
+  emptyAppLinksCaches().clear();
 }
 
 export async function handleMediaAppLinks(req, res) {
@@ -823,12 +825,12 @@ export async function handleMediaAppLinks(req, res) {
   }
 
   const lookupKey = appLinksLookupKey(media);
-  const cachedEmptyAt = emptyAppLinksCache.get(lookupKey);
+  const cachedEmptyAt = emptyAppLinksCaches().get(lookupKey);
   if (cachedEmptyAt !== undefined) {
     if (Date.now() - cachedEmptyAt < EMPTY_APP_LINKS_TTL_MS) {
       return sendJson(res, { ok: true, links: [] }, 200, { "Cache-Control": "no-store" });
     }
-    emptyAppLinksCache.delete(lookupKey);
+    emptyAppLinksCaches().delete(lookupKey);
   }
 
   const config = await loadMediaConfig();
@@ -840,11 +842,11 @@ export async function handleMediaAppLinks(req, res) {
   }
   if (!links.length) {
     // Bound the map so a long browsing session cannot grow it without limit.
-    if (emptyAppLinksCache.size >= 500) {
-      const oldest = emptyAppLinksCache.keys().next().value;
-      if (oldest !== undefined) emptyAppLinksCache.delete(oldest);
+    if (emptyAppLinksCaches().size >= 500) {
+      const oldest = emptyAppLinksCaches().keys().next().value;
+      if (oldest !== undefined) emptyAppLinksCaches().delete(oldest);
     }
-    emptyAppLinksCache.set(lookupKey, Date.now());
+    emptyAppLinksCaches().set(lookupKey, Date.now());
   }
   return sendJson(res, { ok: true, links }, 200, { "Cache-Control": "no-store" });
 }
@@ -930,7 +932,7 @@ export async function handleSeerrMediaStatus(req, res) {
   }
 
   const cacheKey = seerrMediaStatusCacheKey(mediaType, mediaId);
-  const cached = seerrMediaStatusCache.get(cacheKey);
+  const cached = seerrMediaStatusCaches().get(cacheKey);
   if (cached && Date.now() - cached.cachedAtMs < SEERR_MEDIA_STATUS_TTL_MS && !req.query.forceRefresh) {
     return sendJson(res, cached.body);
   }
@@ -1026,21 +1028,6 @@ export async function handleSeerrMediaStatus(req, res) {
   }
 }
 
-// Compares two server URLs after URL normalization (case of scheme and host,
-// default ports, trailing slashes), falling back to exact text when unparsable.
-function sameServerUrl(a, b) {
-  const normalize = (value) => {
-    const textValue = String(value || "").trim().replace(/\/+$/, "");
-    try {
-      return new URL(textValue).href.replace(/\/+$/, "");
-    } catch {
-      return textValue;
-    }
-  };
-  const left = normalize(a);
-  return Boolean(left) && left === normalize(b);
-}
-
 export async function handleTestConnection(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
   if (req.method !== "POST") return methodNotAllowed(res);
@@ -1125,13 +1112,27 @@ export async function handleTestPlexNotifications(req, res) {
 
   if (!baseUrl || !token) {
     const config = await loadMediaConfig().catch(() => null);
-    baseUrl = baseUrl || config?.plex?.baseUrl || "";
+    const savedBaseUrl = String(config?.plex?.baseUrl || "").replace(/\/+$/, "");
+    // The saved token only ever goes to the saved server (same rule as handleTestConnection).
+    if (!token && baseUrl && !sameServerUrl(baseUrl, savedBaseUrl)) {
+      return sendJson(res, {
+        ok: false,
+        error: "Enter the token to test a server URL that differs from the saved one.",
+        code: "TOKEN_REQUIRED_FOR_NEW_URL",
+      }, 400);
+    }
+    baseUrl = baseUrl || savedBaseUrl;
     token = token || config?.plex?.token || "";
     clientIdentifier = config?.plex?.clientIdentifier || "";
   }
 
   if (!baseUrl || !token) {
     return sendJson(res, { ok: false, error: "Plex URL and token are required" }, 400);
+  }
+  try {
+    assertSafeOutboundUrl(baseUrl, { label: "Plex URL" });
+  } catch (error) {
+    return sendJson(res, { ok: false, error: error.message || "Invalid URL" }, 400);
   }
 
   const result = await probePlexNotificationSocket({ baseUrl, token, clientIdentifier });
