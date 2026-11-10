@@ -1,7 +1,20 @@
 {
-  "version": "2.2.4.2.0",
-  "build": 0,
+  "version": "2.2.4.2.1",
+  "build": 1,
   "resetCommit": "505aee1335665c3efafabd5dbbd836a29dea591a",
-  "updatedAt": "2026-11-09T17:13:42.855Z",
-  "entries": []
+  "updatedAt": "2026-11-10T08:56:32.959Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-11-10T08:56:32.959Z",
+      "commit": "613ec52759568fa56f1bb7c86e60271495210e4a",
+      "message": "Fix - Review and repair alternate-order history conflicts",
+      "author": "Lasikiewicz",
+      "details": [
+        "Manual episode actions use the selected TVDB order when saving new watches.",
+        "Earlier watches with uncertain episode identity appear in Manual Watch review with aired and selected-order candidates.",
+        "An administrator confirms the intended episode before Plekt repairs history after verifying a local backup."
+      ]
+    }
+  ]
 }
