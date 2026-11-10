@@ -1,13 +1,13 @@
 {
-  "version": "2.2.4.2.3",
-  "build": 3,
+  "version": "2.2.4.2.4",
+  "build": 4,
   "resetCommit": "505aee1335665c3efafabd5dbbd836a29dea591a",
-  "updatedAt": "2026-11-10T22:05:34.462Z",
+  "updatedAt": "2026-11-10T22:09:15.660Z",
   "entries": [
     {
-      "build": 3,
-      "date": "2026-11-10T22:05:34.462Z",
-      "commit": "95c595f62c9af974c6d6d45df9a1446f00a3487a",
+      "build": 4,
+      "date": "2026-11-10T22:09:15.660Z",
+      "commit": "dd4c1a63c719a1dd17e96d381768214dd728de64",
       "message": "This update includes review and repair alternate-order history conflicts and harden sync, history recovery and selected episode ordering.",
       "author": "Lasikiewicz",
       "details": [
@@ -17,7 +17,7 @@
         "Force Sync of an already-synced title no longer removes a Trakt play without adding it back.",
         "Added users no longer share a show identity cache, Seerr status cache, scheduler guard, dispatch sweep flag or live-change prune timer.",
         "Unwatches and duplicate watches need stronger evidence, so a partly watched Plex item or an Emby-only watch is no longer changed on thin evidence.",
-        "A partial or failed provider read for Plex watchlists, playlists, resume feeds or Jellyfin watched scans is no longer treated as a complete one.",
+        "A partial or failed provider read for Plex watchlists, playlists, resume feeds or Jellyfin watched scans is no longer treated as a complete one; resume scans continue across full pages when Plex omits the total count.",
         "A throwing lease renewal or scheduled job still schedules the next run, and a stalled response body now stops at the configured timeout.",
         "Old session cookies stop working for a re-created user, an administrator password reset signs the user out, and repeated slashes no longer skip rate limits.",
         "The cloud metadata block also catches trailing dots, IPv4-mapped and NAT64 IPv6 forms and more metadata addresses.",

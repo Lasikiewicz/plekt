@@ -1,5 +1,5 @@
-import { elements } from "./state.js?v=2.2.4.2.3";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.2.3";
+import { elements } from "./state.js?v=2.2.4.2.4";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.2.4";
 
 export function createOnboardingBackups({ getBackupData, currentStep, api, setMessage, loadBackupSetupData }) {
 function backblazeDestination() {

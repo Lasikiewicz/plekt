@@ -1,7 +1,7 @@
-import { state } from "./state.js?v=2.2.4.2.3";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.3";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.2.3";
-import { renderFieldRow } from "./settings-ui.js?v=2.2.4.2.3";
+import { state } from "./state.js?v=2.2.4.2.4";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.4";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.2.4";
+import { renderFieldRow } from "./settings-ui.js?v=2.2.4.2.4";
 
 async function request(action, body, method = "POST") {
   const response = await fetch(`/api/anidb/${action}`, {
