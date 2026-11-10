@@ -1,4 +1,4 @@
-import { state } from "./state.js?v=2.2.4.2.0";
+import { state } from "./state.js?v=2.2.4.2.0"; import { renderEpisodeOrderConflict } from "./episode-order-conflict.js?v=2.2.4.2.0";
 import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.0";
 import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.2.4.2.0";
 import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.2.0";
@@ -172,7 +172,7 @@ export function groupManualWatchReviews(reviews = []) {
   const groups = [];
   const byKey = new Map();
   for (const review of Array.isArray(reviews) ? reviews : []) {
-    if (review.review_kind === "source_mismatch") {
+    if (review.review_kind === "source_mismatch" || review.review_kind === "episode_order_conflict") {
       groups.push({ kind: "mismatch", key: `mismatch:${review.id}`, title: reviewShowTitle(review), reviews: [review] });
       continue;
     }
@@ -1708,7 +1708,7 @@ export function renderManualWatchReviewPage() {
       .map((group) => group.kind === "show"
         ? renderReviewShowGroup(group, query, { isTopmost: group.key === topGroupKey })
         : group.kind === "mismatch"
-          ? renderSourceMismatchCard(group.reviews[0])
+          ? (group.reviews[0].review_kind === "episode_order_conflict" ? renderEpisodeOrderConflict(group.reviews[0]) : renderSourceMismatchCard(group.reviews[0]))
           : renderReviewCard(group.reviews[0], { eagerPoster: group.key === topGroupKey }))
       .join("");
     bindRenderedReviewDetails(container);

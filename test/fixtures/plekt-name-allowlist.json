@@ -2273,7 +2273,7 @@
           1
         ],
         [
-          "- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed, listActiveUpNextProviderItems and 6 more",
+          "- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed and 7 more",
           1
         ]
       ]

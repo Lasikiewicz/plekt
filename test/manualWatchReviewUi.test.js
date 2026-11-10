@@ -51,6 +51,14 @@ test("source mismatch notifications stay separate from watched-state decision gr
   assert.equal(groups[0].reviews[0].id, "m1");
 });
 
+test("episode order conflicts stay separate and describe the incoming episode", async () => {
+  const conflict = { id:"c1", review_kind:"episode_order_conflict", media_type:"episode", title:"Futurama - S02E02", media:{incoming:{name:"Mars University"}} };
+  assert.equal(groupManualWatchReviews([conflict])[0].kind, "mismatch");
+  const { renderEpisodeOrderConflict } = await import("../public/modules/episode-order-conflict.js?v=2.2.4.2.0");
+  assert.match(renderEpisodeOrderConflict(conflict), /Mars University/);
+  assert.match(renderEpisodeOrderConflict(conflict), /Review episode identity/);
+});
+
 test("a show group whose title two shows share looks its show up by proven ids, never by title alone", () => {
   // Live: the 2001 Scrubs group drew the 2026 reboot's poster from a title lookup.
   const plex = { id: "p", media_type: "episode", show_title: "Scrubs", season: 1, episode: 23, show_title_ambiguous: true, media: {} };

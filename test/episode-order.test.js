@@ -199,6 +199,103 @@ test("batch preflight failure leaves watch history and tracker write intents unt
   assert.equal(db.prepare("SELECT COUNT(*) AS count FROM tracker_write_intents").get().count, beforeIntents);
 });
 
+test("manual displayed episode uses the selected alternate order when numbering_source is absent", async () => {
+  seedCatalogue();
+  saveRaw({ order: "dvd", mappings: [] });
+  await saveMapping(DVD_110, OFFICIAL_2101);
+  const [resolved] = await preflightOrderRecords([{
+    type: "episode", tvdb_id: TVDB_ID, season: 1, episode: 10,
+    title: "Futurama - S01E10", source: "manual",
+  }], {});
+  assert.deepEqual([resolved.season, resolved.episode], [2, 1]);
+  assert.equal(resolved.watch_provenance.episode_order.airedId, OFFICIAL_2101);
+});
+
+test("legacy history at the aired coordinate blocks translation without changing history", async () => {
+  const { insertWatchRecordSync } = await import("../server/src/utils/dataRepo.js");
+  seedCatalogue();
+  saveRaw({ order: "official", mappings: [] });
+  insertWatchRecordSync({ type: "episode", tvdb_id: TVDB_ID, season: 2, episode: 1,
+    title: "Futurama - S02E01 - Legacy", source: "manual", watched_at: "2026-10-01T00:00:00Z" }, { id: "legacy-order-collision" });
+  try {
+    saveRaw({ order: "dvd", mappings: [] });
+    await saveMapping(DVD_110, OFFICIAL_2101);
+    const before = db.prepare("SELECT * FROM watch_history WHERE id=?").get("legacy-order-collision");
+    await assert.rejects(preflightOrderRecords([{ type: "episode", tvdb_id: TVDB_ID, season: 1, episode: 10,
+      title: "Futurama - S01E10", source: "manual" }], {}), /Existing history at this coordinate needs episode identity review/);
+    const { resolveOrderMediaForPolling } = await import("../server/src/utils/episodeOrderWatch.js");
+    const messages = [];
+    const pollResult = await resolveOrderMediaForPolling({ type: "episode", source: "plex", tvdb_id: TVDB_ID,
+      season: 2, episode: 1, title: "Futurama - S02E01", watchProvenance: {
+        episode_order: { tvdbId: TVDB_ID, dvdId: DVD_110, airedId: OFFICIAL_2101, order: "dvd" },
+      } }, {}, message => messages.push(message));
+    assert.equal(pollResult, null);
+    assert.match(messages[0], /Existing history at this coordinate needs episode identity review/);
+    assert.deepEqual(db.prepare("SELECT * FROM watch_history WHERE id=?").get("legacy-order-collision"), before);
+    const { listPendingManualWatchReviews } = await import("../server/src/utils/manualWatchReview.js");
+    const { previewEpisodeOrderConflict, repairEpisodeOrderConflict } = await import("../server/src/utils/episodeOrderConflict.js");
+    const review = listPendingManualWatchReviews().find(item => item.review_kind === "episode_order_conflict" && item.media.rowId === "legacy-order-collision");
+    assert.ok(review);
+    const preview = await previewEpisodeOrderConflict(review.id);
+    const option = preview.options.find(item => item.airedId === OFFICIAL_2101);
+    assert.ok(option);
+    let backups = 0;
+    const backup = async () => { backups++; return { name: "test-backup" }; };
+    await assert.rejects(repairEpisodeOrderConflict(review.id, { revision: "stale", ...option, confirm: true }, { backup }), /changed/);
+    await assert.rejects(repairEpisodeOrderConflict(review.id, { revision: preview.revision, ...option }, { backup }), /Confirm/);
+    assert.equal(backups, 0);
+    await assert.rejects(repairEpisodeOrderConflict(review.id, { revision:preview.revision, ...option, confirm:true }, { backup:async () => { throw new Error("backup unavailable"); } }), /backup unavailable/);
+    assert.deepEqual(db.prepare("SELECT * FROM watch_history WHERE id=?").get("legacy-order-collision"), before);
+    await repairEpisodeOrderConflict(review.id, { revision: preview.revision, ...option, confirm: true }, { backup });
+    assert.equal(backups, 1);
+    assert.equal(JSON.parse(db.prepare("SELECT watch_provenance FROM watch_history WHERE id=?").get("legacy-order-collision").watch_provenance).episode_order.airedId, OFFICIAL_2101);
+    assert.equal((await preflightOrderRecords([{ type: "episode", tvdb_id: TVDB_ID, season: 1, episode: 10, title: "Futurama - S01E10", source: "manual" }], {})).length, 1);
+  } finally {
+    db.prepare("DELETE FROM watch_history WHERE id=?").run("legacy-order-collision");
+    db.prepare("DELETE FROM manual_watch_reviews WHERE media_key=?").run("episode-order-conflict:legacy-order-collision");
+  }
+});
+
+test("reviewed legacy episode moves only after backup and refuses changed related state", async () => {
+  const { insertWatchRecordSync } = await import("../server/src/utils/dataRepo.js");
+  const { listPendingManualWatchReviews } = await import("../server/src/utils/manualWatchReview.js");
+  const { previewEpisodeOrderConflict, repairEpisodeOrderConflict } = await import("../server/src/utils/episodeOrderConflict.js");
+  seedCatalogue(); saveRaw({ order:"official", mappings:[] });
+  db.prepare("INSERT OR REPLACE INTO tvdb_metadata_cache(id,tvdb_id,title,details,updated_at_ms) VALUES(?,?,?,?,?)").run(`series_${TVDB_ID}`,TVDB_ID,"Futurama",toJson({id:SERIES_ID,name:"Futurama",episodes:[],remoteIds:[{sourceName:"IMDB",id:"tt0149460"},{sourceName:"TheMovieDB.com",id:"615"}]}),Date.now());
+  insertWatchRecordSync({ type:"episode", tvdb_id:TVDB_ID, imdb_id:"tt0149460", tmdb_id:"615", season:1, episode:10, title:"Futurama - S01E10 - Legacy", source:"manual", watched_at:"2026-10-01T00:00:00Z" }, { id:"legacy-order-move" });
+  try {
+    saveRaw({ order:"dvd", mappings:[] });
+    await saveMapping(DVD_110, OFFICIAL_2101); await saveMapping(DVD_2101, OFFICIAL_110);
+    await assert.rejects(preflightOrderRecords([{ type:"episode", tvdb_id:TVDB_ID, season:2, episode:1, title:"Futurama - S02E01", source:"manual" }], {}), /identity review/);
+    const review = listPendingManualWatchReviews().find(item => item.media?.rowId === "legacy-order-move");
+    const row = db.prepare("SELECT * FROM watch_history WHERE id=?").get("legacy-order-move");
+    db.prepare("INSERT INTO playstate(media_key,title,media_type,state,season,episode) VALUES(?,?,?,?,?,?)").run(row.media_key, row.title, "episode", "watched", 1, 10);
+    let preview = await previewEpisodeOrderConflict(review.id);
+    assert.equal(preview.options.length, 2);
+    const chosen = preview.options.find(item => item.airedId === OFFICIAL_2101);
+    db.prepare(`INSERT INTO tracker_write_intents(id,provider,connection_id,account_id,logical_key,media_key,media_json,action,watched_at,event_type,fingerprint,due_at,expires_at,created_at,updated_at)
+      VALUES('order-intent','trakt','connection','account','logical',?,'{}','watched','2026-10-01','watch','fingerprint',0,1,0,0)`).run(row.media_key);
+    await assert.rejects(repairEpisodeOrderConflict(review.id, {revision:preview.revision,...chosen,confirm:true}, {backup:async () => ({name:"backup"})}), /changed/);
+    preview = await previewEpisodeOrderConflict(review.id);
+    await assert.rejects(repairEpisodeOrderConflict(review.id, {revision:preview.revision,...chosen,confirm:true}, {backup:async () => ({name:"backup"})}), /tracker_write_intents/);
+    db.prepare("DELETE FROM tracker_write_intents WHERE id='order-intent'").run();
+    preview = await previewEpisodeOrderConflict(review.id);
+    const changedBackup = async () => { db.prepare("UPDATE playstate SET watched_at=? WHERE media_key=?").run("changed", row.media_key); return {name:"backup"}; };
+    await assert.rejects(repairEpisodeOrderConflict(review.id, { revision:preview.revision, ...chosen, confirm:true }, {backup:changedBackup}), /changed during backup/);
+    assert.equal(db.prepare("SELECT season FROM watch_history WHERE id=?").get(row.id).season, 1);
+    preview = await previewEpisodeOrderConflict(review.id);
+    await repairEpisodeOrderConflict(review.id, { revision:preview.revision, ...chosen, confirm:true }, {backup:async () => ({name:"backup"})});
+    const moved = db.prepare("SELECT * FROM watch_history WHERE id=?").get(row.id);
+    assert.deepEqual([moved.season,moved.episode], [2,1]);
+    assert.equal(db.prepare("SELECT episode FROM playstate WHERE media_key=?").get(moved.media_key).episode, 1);
+    db.prepare("DELETE FROM playstate WHERE media_key=?").run(moved.media_key);
+  } finally {
+    db.prepare("DELETE FROM tracker_write_intents WHERE id='order-intent'").run();
+    db.prepare("DELETE FROM watch_history WHERE id=?").run("legacy-order-move");
+    db.prepare("DELETE FROM manual_watch_reviews WHERE media_key=?").run("episode-order-conflict:legacy-order-move");
+  }
+});
+
 test("captured TVDB Futurama identity links DVD S01E10 to aired S02E01 automatically", () => {
   // Read-only provider capture, 2 November 2026: /v4/series/73871/episodes/{official|dvd}.
   const aired = {id:131183,seriesId:73871,season:2,episode:1,name:"A Flight to Remember"};

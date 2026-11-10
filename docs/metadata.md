@@ -107,15 +107,21 @@ are revision-checked against the current catalogue and mapping preview.
 Switching back to Aired restores the show's existing TVDB/TMDB structure choice from
 Fix Match; DVD selection never overwrites that preference.
 
-New DVD-order watch actions are resolved to canonical aired coordinates before local history
+Manual watch actions on displayed episodes use the show's selected order, even if the request
+does not include an order label. New alternate-order watch actions are resolved to canonical aired coordinates before local history
 is saved or outbound intent is queued. A missing or ambiguous mapping blocks the whole watch.
 For Plex, Emby, and Jellyfin, the resolver requires one exact episode TVDB ID in that
 destination's series episode list and retains the destination's native episode ID and
 coordinates. Trakt resolution requires the exact episode TVDB ID and a verified parent
 series TVDB ID. If connected Simkl is a watched destination, the current resolver blocks
 the mapping because it cannot verify the leaf episode identity from its available read path.
-Existing unproven history or shows whose local rows use TMDB numbering can require review
-before a mapping is accepted.
+Existing unproven history at a target coordinate enters Manual Watch review. The administrator
+compares the aired and selected-order candidates and explicitly chooses which episode the
+earlier watch represents. Plekt verifies a local watch-history backup before repairing the row;
+it moves associated watched and progress state only when the keys are unambiguous. Existing
+history, pending tracker work or other state at either coordinate can block a move, and changed
+metadata or related state requires a fresh preview. Retry the original sync after repair.
+Shows whose local rows use TMDB numbering can also require review before a mapping is accepted.
 
 The Netflix CSV importer is a separate matching path: it keeps TMDB episode coordinates.
 `netflixImport.js` orchestrates previews, review and commit; `netflixCsv.js` owns CSV and

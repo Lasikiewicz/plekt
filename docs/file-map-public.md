@@ -30,6 +30,7 @@ Part of the file map (with [file-map-server.md](file-map-server.md) and [file-ma
 | `settings-services.js` | Media-server and metadata-provider card grids, edit dialogs, config saves, connection tests, and the inline Sync Tuning form, including the app-marked watched-flag policy. |
 | `netflix-import.js` | Settings Netflix CSV preview, grouped title review, and one-time watch-history commit. |
 | `manual-watch-review.js` | Manual Watch review page and policy actions. The compact sidebar count and summary polling live in `status-indicators.js`. |
+| `episode-order-conflict.js` | Manual Watch review card and confirmation dialog for earlier episode-order history conflicts. |
 | `install-check.js` | Opt-in anonymous daily check: the Settings → General → Privacy switch and payload preview, and the one-time question card. Loaded after first paint; wired by `app-events.js`. |
 | `rating-sync-settings.js` | Personal Rating Sync on/off control, provider summary, Sync now, status polling, and queue feedback. |
 | `watchlist-sync-settings.js` | Plex Watchlist Sync on/off control, Plex summary, Sync now, and status polling. |

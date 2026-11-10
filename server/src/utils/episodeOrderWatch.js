@@ -6,6 +6,7 @@ import { getTvdbOrderCatalogue, getCachedTvdbOrderCatalogue } from "./tvdbOrderG
 import { readShowNumbering } from "./seasonSource.js";
 import { resolveEpisodeOrderTargets, resolveSourceOrderEpisode } from "./episodeOrderTargets.js";
 import { loadMediaConfig } from "./configStore.js";
+import { enqueueEpisodeOrderConflict } from "./manualWatchReview.js";
 
 const verifiedOrder = Symbol("verified episode-order dispatch");
 // Compared in memory only, within seconds of being made; deliberately not hashed or stored.
@@ -32,7 +33,7 @@ export async function resolveOrderWatch(record, config, { display = false, state
   // client displayed it in, else the show's selected order.
   const order = identity ? provenanceOrder(identity) : isAlternateOrder(record.numbering_source) ? record.numbering_source : readEpisodeOrder(tvdbId).order;
   let dvd, aired;
-  if (display && isAlternateOrder(record.numbering_source)) ({ dvd, aired } = await dvdToAired(tvdbId, record.season, record.episode, record.numbering_source));
+  if (display && !identity && isAlternateOrder(order)) ({ dvd, aired } = await dvdToAired(tvdbId, record.season, record.episode, order));
   else {
     const catalogue = await getTvdbOrderCatalogue(tvdbId);
     const links = orderLinks(catalogue, readEpisodeOrder(tvdbId), order);
@@ -47,9 +48,13 @@ export async function resolveOrderWatch(record, config, { display = false, state
   const resolved = await resolveEpisodeOrderTargets({ aired, media:record, config, stateType });
   // Existing unproven rows at the storage coordinate may mean a different
   // episode under a media server's own order. Never merge or replace those.
-  const collisions = db.prepare("SELECT id,source,season,episode,title,tvdb_id,watch_provenance FROM watch_history WHERE media_type='episode' AND tvdb_id=? AND season=? AND episode=?").all(tvdbId, aired.season, aired.episode);
+  const collisions = db.prepare("SELECT * FROM watch_history WHERE media_type='episode' AND tvdb_id=? AND season=? AND episode=?").all(tvdbId, aired.season, aired.episode);
   const catalogue = await getTvdbOrderCatalogue(tvdbId);
-  if (collisions.some(row=>Number(provenanceOf(row).episode_order?.airedId) !== aired.id)) throw episodeOrderError("Existing history at this coordinate needs episode identity review. No watched state was changed.");
+  const conflicts = collisions.filter(row=>Number(provenanceOf(row).episode_order?.airedId) !== aired.id);
+  if (conflicts.length) {
+    for (const row of conflicts.filter(row => !provenanceOf(row).episode_order)) enqueueEpisodeOrderConflict(row, { season: aired.season, episode: aired.episode, name: aired.name, id: aired.id }, episodeOrderRevision(catalogue, readEpisodeOrder(tvdbId)));
+    throw episodeOrderError("Existing history at this coordinate needs episode identity review. No watched state was changed.");
+  }
   return { ...record, tvdb_id:tvdbId, ...(record.ids ? {ids:{...record.ids,tvdb:tvdbId}} : {}), season:aired.season, episode:aired.episode, numbering_source:undefined,
     title:String(record.title || "").replace(/\bS\d+E\d+\b/i, code(aired.season,aired.episode)),
     provider_items:resolved.providerItems, providerItems:resolved.providerItems, provider_item_id:undefined, providerItemId:undefined,

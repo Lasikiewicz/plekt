@@ -357,10 +357,10 @@ function rowToReview(row, { includeWatchContext = true } = {}) {
     updated_at: Number(row.updated_at || 0),
     reviewed_at: Number(row.reviewed_at || 0) || null,
     media,
-    review_kind: media.reviewKind === "source_mismatch" ? "source_mismatch" : "manual_watch",
+    review_kind: ["source_mismatch", "episode_order_conflict"].includes(media.reviewKind) ? media.reviewKind : "manual_watch",
     reason: text(media.reason),
   };
-  if (review.review_kind !== "source_mismatch" && includeWatchContext && review.media_type === "episode") {
+  if (review.review_kind === "manual_watch" && includeWatchContext && review.media_type === "episode") {
     review.watch_context = manualWatchReviewWatchContext(review);
     Object.assign(review, reviewShowIdentity(review));
   }
@@ -412,7 +412,7 @@ export function listPendingManualWatchReviews({ includeWatchContext = true } = {
   const pending = [];
   for (const row of selectPendingReviewsStmt.all()) {
     const review = rowToReview(row, { includeWatchContext });
-    if (review.review_kind === "source_mismatch") { pending.push(review); continue; }
+    if (review.review_kind !== "manual_watch") { pending.push(review); continue; }
     if (reviewIsAlreadyWatched(review)) setManualWatchReviewStatus(review.id, "dismissed", RESOLVED_BY_LOCAL_STATE);
     else pending.push(review);
   }
@@ -618,6 +618,20 @@ export function enqueueSourceMismatchReview(media = {}, { fingerprint = "" } = {
   if (existing) updateReviewStmt.run(values);
   else insertReviewStmt.run({ ...values, created_at: now });
   return { queued: true, status: "pending", review: getManualWatchReview(values.id) };
+}
+
+export function enqueueEpisodeOrderConflict(row, incoming, revision) {
+  const mediaKey = `episode-order-conflict:${row.id}`;
+  const existing = sourceMismatchByKeyStmt.get(mediaKey);
+  const fingerprint = `${row.updated_at}:${revision}`;
+  if (existing?.status === "dismissed" && existing.source_fingerprint === fingerprint) return;
+  const now = Date.now();
+  const values = { id: existing?.id || crypto.randomUUID(), media_key: mediaKey, source: row.source || "unknown",
+    source_item_id: null, title: row.title || "Episode order conflict", media_type: "episode", show_title: row.show_title || null,
+    episode_title: row.episode_title || null, season: row.season, episode: row.episode, release_date: null,
+    observed_watched_at: null, source_fingerprint: fingerprint,
+    media_json: toJson({ reviewKind: "episode_order_conflict", rowId: row.id, incoming }), updated_at: now };
+  if (existing) updateReviewStmt.run(values); else insertReviewStmt.run({ ...values, created_at: now });
 }
 
 export function setManualWatchReviewStatus(id, status, decisionMode = null) {

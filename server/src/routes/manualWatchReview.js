@@ -571,10 +571,18 @@ export async function handleManualWatchReview(req, res, path) {
     }, 200, { "Cache-Control": "no-store" });
   }
   if (req.method !== "POST") return methodNotAllowed(res);
-  if (!id || !["approve", "dismiss", "defer"].includes(action)) return sendJson(res, { error: "Review action is invalid" }, 400);
+  if (!id || !["approve", "dismiss", "defer", "episode-order-preview", "episode-order-repair"].includes(action)) return sendJson(res, { error: "Review action is invalid" }, 400);
 
   const review = getManualWatchReview(id);
   if (!review) return sendJson(res, { error: "Manual watch review not found" }, 404);
+  if (review.review_kind === "episode_order_conflict") {
+    try {
+      const { previewEpisodeOrderConflict, repairEpisodeOrderConflict } = await import("../utils/episodeOrderConflict.js");
+      if (action === "episode-order-preview") return sendJson(res, await previewEpisodeOrderConflict(id), 200, { "Cache-Control": "no-store" });
+      if (action === "episode-order-repair") return sendJson(res, await repairEpisodeOrderConflict(id, await readJson(req)), 200, { "Cache-Control": "no-store" });
+      return sendJson(res, { error: "Review the episode identity before repairing history." }, 400);
+    } catch (error) { return sendJson(res, { error: error.message }, error.status || 500); }
+  }
   if (review.review_kind === "source_mismatch") {
     if (action !== "dismiss") return sendJson(res, { error: "Source mismatch reviews only support dismiss." }, 400);
     const updated = setManualWatchReviewStatus(id, "dismissed", "source_mismatch");
