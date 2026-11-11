@@ -1,11 +1,11 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.8";
-import { state, elements } from "./state.js?v=2.2.4.2.8";
-import { escapeHtml, escapeAttribute, slug, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.2.4.2.8";
-import { renderMediaCard } from "./media-card.js?v=2.2.4.2.8";
-import { hydratePosters, posterOverflowMenu, proxiedArtworkUrl } from "./images.js?v=2.2.4.2.8";
-import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.8";
-import { closePosterOverflowMenu } from "./poster-menu.js?v=2.2.4.2.8";
-import { loadRouteModule } from "./route-modules.js?v=2.2.4.2.8";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.9";
+import { state, elements } from "./state.js?v=2.2.4.2.9";
+import { escapeHtml, escapeAttribute, slug, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.2.4.2.9";
+import { renderMediaCard } from "./media-card.js?v=2.2.4.2.9";
+import { hydratePosters, posterOverflowMenu, proxiedArtworkUrl } from "./images.js?v=2.2.4.2.9";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.9";
+import { closePosterOverflowMenu } from "./poster-menu.js?v=2.2.4.2.9";
+import { loadRouteModule } from "./route-modules.js?v=2.2.4.2.9";
 
 // A separate panel includes dropped titles with no watch history. Filtering the
 // paginated history/library rows would silently omit those titles.

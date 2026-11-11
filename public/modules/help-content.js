@@ -1,7 +1,7 @@
-import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.2.4.2.8";
-import { state } from "./state.js?v=2.2.4.2.8";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.2.8";
-import { webhookTestButton } from "./webhook-test.js?v=2.2.4.2.8";
+import { buildAuthHeaders, getWebhookPath, getWebhookToken } from "./auth.js?v=2.2.4.2.9";
+import { state } from "./state.js?v=2.2.4.2.9";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.2.9";
+import { webhookTestButton } from "./webhook-test.js?v=2.2.4.2.9";
 
 function webhookAckEntry(acks, provider) {
   return acks?.[provider] || null;

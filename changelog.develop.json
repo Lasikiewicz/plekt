@@ -1,14 +1,14 @@
 {
-  "version": "2.2.4.2.5",
-  "build": 5,
+  "version": "2.2.4.2.9",
+  "build": 9,
   "resetCommit": "505aee1335665c3efafabd5dbbd836a29dea591a",
-  "updatedAt": "2026-11-11T00:20:01.916Z",
+  "updatedAt": "2026-11-11T11:38:29.279Z",
   "entries": [
     {
-      "build": 5,
-      "date": "2026-11-11T00:20:01.916Z",
-      "commit": "25ca097f3121b49ebc36911ae11b1efbd585ef74",
-      "message": "This update includes review and repair alternate-order history conflicts, harden sync, history recovery and selected episode ordering, and preserve approved alternate-order watches through manual review.",
+      "build": 9,
+      "date": "2026-11-11T11:38:29.279Z",
+      "commit": "9cc5165f01c2836b07f695bf5e574327b980f548",
+      "message": "This update includes review and repair alternate-order history conflicts, harden sync, history recovery and selected episode ordering, preserve approved alternate-order watches through manual review, and slim the Docker image, tidy the retiring-image notice and harden frontend interactions.",
       "author": "Lasikiewicz",
       "details": [
         "Manual episode actions use the selected TVDB order when saving new watches.",
@@ -32,12 +32,22 @@
         "Explain that full backup restores preserve the destination machine's media and tracker connections and require reconnecting missing services.",
         "Keep newly approved DVD and alternate-order watches visible when an older dashboard snapshot still marks the episode unwatched, while respecting genuinely newer unwatches.",
         "Refresh derived watch-state caches after successful review decisions so reopening a show reflects the saved decision immediately.",
-        "Preserve verified episode identities when played-flag webhooks apply the watch-date policy, allowing queued reviews to approve and target the correct episode."
+        "Preserve verified episode identities when played-flag webhooks apply the watch-date policy, allowing queued reviews to approve and target the correct episode.",
+        "The Docker image no longer includes the demo artwork that only the public demo uses, so installs and updates download roughly half as much.",
+        "The Docker image is smaller again: its dependency layer drops from 129 MB to about 39 MB by leaving out the npm cache and native builds for other platforms.",
+        "The container healthcheck no longer fails in demo mode, where there is no scheduler to find.",
+        "The notice on the retiring Docker image no longer covers the sidebar logo on windows about 761 to 900 px wide, and it now sits below the top bar on phones instead of hiding its heading.",
+        "An install running the retiring Docker image now also prints a one-line notice in its startup log pointing to the Plekt image.",
+        "Keep confirmations safe to cancel and settle replaced dialogs",
+        "Keep the app usable when browser storage is blocked or full",
+        "Preserve newer dashboard options and Up Next watch prompts during slow or failed requests",
+        "Retry transient search failures instead of retaining them for the session"
       ],
       "messageFragments": [
         "Fix - Review and repair alternate-order history conflicts",
         "Fix - Harden sync, history recovery and selected episode ordering",
-        "Fix - Preserve approved alternate-order watches through manual review"
+        "Fix - Preserve approved alternate-order watches through manual review",
+        "Fix - Slim the Docker image, tidy the retiring-image notice and harden frontend interactions"
       ]
     }
   ]
