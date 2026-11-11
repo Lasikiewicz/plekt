@@ -9,6 +9,7 @@ import { setGlobalDispatcher, Agent } from "undici";
 import { loadLocalEnv } from "./src/env.js";
 import { installProcessErrorHandlers } from "./src/utils/processErrorHandlers.js";
 import { brandEnv, logLegacyEnvNames } from "./src/utils/brandEnv.js";
+import { isLegacyImage } from "./src/utils/legacyImage.js";
 
 loadLocalEnv();
 logLegacyEnvNames();
@@ -563,6 +564,9 @@ server?.on("listening", async () => {
   const address = server.address();
   const listeningPort = typeof address === "object" && address ? address.port : PORT;
   console.log(`plekt listening on http://localhost:${listeningPort}`);
+  if (isLegacyImage()) {
+    console.log("This install runs the retiring Plembfin Docker image. Switch to ghcr.io/lasikiewicz/plekt or plembfin/plekt; the old name keeps receiving updates until at least 11 April 2027.");
+  }
   if (brandEnv("BUILD_CHECK") === "1") {
     server.close((error) => {
       if (error) {

@@ -1,4 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.5"; import { renderDroppedView } from "./dropped-title-views.js?v=2.2.4.2.5";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.8"; import { renderDroppedView } from "./dropped-title-views.js?v=2.2.4.2.8";
+import { storageGet, storageSet } from "./utils.js?v=2.2.4.2.8";
 import {
   state, elements, explorerCardModeKey, SessionCache,
   EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS,
@@ -6,26 +7,26 @@ import {
   HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS,
   HISTORY_VIEW_KEY, HISTORY_FILTER_KEY,
   HISTORY_VIEW_MODES, HISTORY_FILTERS,
-} from "./state.js?v=2.2.4.2.5";
+} from "./state.js?v=2.2.4.2.8";
 import {
   escapeHtml, escapeAttribute, slug, showTitleFrom, showName, tvShowBaseHrefFromEpisode,
   movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, platformBadge, sourceClass, sourceBadgeHtml, formatDate,
   computeProgress, sanitizeTitle, episodeTitle, episodeCode, appendRestInChunks,
-} from "./utils.js?v=2.2.4.2.5";
-import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.2.4.2.5";
+} from "./utils.js?v=2.2.4.2.8";
+import { posterMarkup, posterOverflowMenu, hydratePosters, bindPosterImageErrorHandler, tmdbPoster, tmdbProfile, proxiedArtworkUrl } from "./images.js?v=2.2.4.2.8";
 import {
   historySyncPill, renderSyncStatusDot, renderMediaSyncPills,
   renderAvailabilityPills, renderShowAvailabilityPills, showAvailIssuePopup,
   isWatchedHistoryAction,
-} from "./sync.js?v=2.2.4.2.5";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.2.5";
-import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.2.4.2.5";
-import { renderMediaCard } from "./media-card.js?v=2.2.4.2.5";
-import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.2.4.2.5";
-import { cardArtAttribute } from "./card-art.js?v=2.2.4.2.5";
-import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.2.4.2.5";
-import { renderHistoryDayGroups } from "./history-day-view.js?v=2.2.4.2.5";
-import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.2.4.2.5";
+} from "./sync.js?v=2.2.4.2.8";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.2.8";
+import { isStaleExplorerPage } from "./explorer-page-cache.js?v=2.2.4.2.8";
+import { renderMediaCard } from "./media-card.js?v=2.2.4.2.8";
+import { renderDashboardHistoryPageCard } from "./dashboard.js?v=2.2.4.2.8";
+import { cardArtAttribute } from "./card-art.js?v=2.2.4.2.8";
+import { historyPosterOverlay } from "./history-poster-overlay.js?v=2.2.4.2.8";
+import { renderHistoryDayGroups } from "./history-day-view.js?v=2.2.4.2.8";
+import { nextAiringCell, nextAiringDateValue, mergeShowAiringMetadata, formatListDate, futureListDate } from "./stats.js?v=2.2.4.2.8";
 // ---------------------------------------------------------------------------
 // Callback injection - functions defined outside the 2636-4016 range in app.js
 // ---------------------------------------------------------------------------
@@ -76,12 +77,12 @@ function initExplorerEvents() {
   });
   elements.explorerHideWatched?.addEventListener("change", () => {
     state.hideWatchedShows = elements.explorerHideWatched.checked;
-    localStorage.setItem(HIDE_WATCHED_KEY_SHOWS, String(state.hideWatchedShows));
+    storageSet(HIDE_WATCHED_KEY_SHOWS, String(state.hideWatchedShows));
     renderExplorer();
   });
   elements.explorerHideEnded?.addEventListener("change", () => {
     state.hideEndedShows = elements.explorerHideEnded.checked;
-    localStorage.setItem(HIDE_ENDED_KEY_SHOWS, String(state.hideEndedShows));
+    storageSet(HIDE_ENDED_KEY_SHOWS, String(state.hideEndedShows));
     renderExplorer();
   });
   elements.explorerSearchInput?.addEventListener("input", () => {
@@ -126,7 +127,7 @@ function initExplorerEvents() {
       const filter = button.dataset.historyFilter || "all";
       if (!HISTORY_FILTERS.includes(filter) || filter === state.historyViewFilter) return;
       state.historyViewFilter = filter;
-      localStorage.setItem(HISTORY_FILTER_KEY, filter);
+      storageSet(HISTORY_FILTER_KEY, filter);
       resetHistoryView([state.historyViewSearch, state.historyViewFilter].join("|"));
       renderHistoryView();
     });
@@ -137,7 +138,7 @@ function initExplorerEvents() {
       const view = button.dataset.historyView || "grid";
       if (!HISTORY_VIEW_MODES.includes(view) || view === state.historyViewMode) return;
       state.historyViewMode = view;
-      localStorage.setItem(HISTORY_VIEW_KEY, view);
+      storageSet(HISTORY_VIEW_KEY, view);
       renderHistoryView();
     });
   }
@@ -148,14 +149,14 @@ function initExplorerEvents() {
       if (!view || view === currentExplorerView()) return;
       if (state.explorerMode === "shows") {
         state.explorerViewShows = view;
-        localStorage.setItem(EXPLORER_VIEW_KEY_SHOWS, view);
+        storageSet(EXPLORER_VIEW_KEY_SHOWS, view);
         state.showsRaw = [];
         state.showsOffset = 0;
         state.showsHasMore = true;
         state.showsLoading = false;
       } else {
         state.explorerViewMovies = view;
-        localStorage.setItem(EXPLORER_VIEW_KEY_MOVIES, view);
+        storageSet(EXPLORER_VIEW_KEY_MOVIES, view);
         state.moviesRaw = [];
         state.moviesOffset = 0;
         state.moviesHasMore = true;
@@ -720,7 +721,7 @@ export function renderSearchPage() {
 function syncExplorerCardMode() {
   const nextAirListLocked = state.explorerMode === "shows" && state.explorerSortShows === "next_air_asc";
   let compact = false;
-  try { compact = localStorage.getItem(explorerCardModeKey(state.explorerMode)) === "1"; } catch { /* storage unavailable */ }
+  compact = storageGet(explorerCardModeKey(state.explorerMode)) === "1";
   compact = compact && !nextAirListLocked;
   document.querySelector('#explorer-view-root, [data-view-panel="explorer"]')?.classList.toggle("page-card-mode-compact", compact);
   document.querySelectorAll('[data-card-mode-toggle="explorer"]').forEach((button) => {
@@ -1093,10 +1094,10 @@ export function currentExplorerSort() {
 export function setCurrentExplorerSort(value) {
   if (state.explorerMode === "shows") {
     state.explorerSortShows = value;
-    localStorage.setItem(EXPLORER_SORT_KEY_SHOWS, value);
+    storageSet(EXPLORER_SORT_KEY_SHOWS, value);
   } else {
     state.explorerSortMovies = value;
-    localStorage.setItem(EXPLORER_SORT_KEY_MOVIES, value);
+    storageSet(EXPLORER_SORT_KEY_MOVIES, value);
   }
 }
 function explorerGridClass(isShows = false) {

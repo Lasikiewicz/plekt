@@ -18,3 +18,7 @@ scratch
 *.md
 
 dist
+
+# Demo artwork is only for the public demo and ships in the separate demo layer
+# (packaging/demo-image), never in the normal image.
+public/demo-assets

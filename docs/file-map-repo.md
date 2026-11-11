@@ -10,11 +10,12 @@ Part of the file map (with [file-map-server.md](file-map-server.md) and [file-ma
 | `changelog.json` | Bundled release history. `scripts/promote-alpha-to-main.js` appends an entry and bumps the version locally, as part of "Force to main"; served verbatim at `GET /changelog.json` and consumed by the in-app changelog/update check. |
 | `package.json` | Dependencies and npm scripts (`start`, `dev`, `test`, `build`, `docs:check`, `demo:verify`, `seed:demo`, `prepare`). Version is set locally by `scripts/promote-alpha-to-main.js` as part of "Force to main". |
 | `package-lock.json` | Locked dependency tree. Version field is CI-managed alongside `package.json`. |
-| `Dockerfile` | `node:25-trixie-slim` image: installs prod deps, copies `server/`, `public/`, `changelog.json`, creates the non-root `plekt` user, and uses the separate SQLite worker-health probe so synchronous maintenance cannot make the container fail its HTTP healthcheck. |
+| `Dockerfile` | `node:25-trixie-slim` image: installs prod deps (and strips the npm cache and native builds for other platforms in the same layer), copies `server/`, `public/`, `changelog.json`, creates the non-root `plekt` user, and uses the separate SQLite worker-health probe so synchronous maintenance cannot make the container fail its HTTP healthcheck. |
 | `docker-compose.yml` | Published-image quick-start: port 5056, `./data:/data`, required admin password from `.env`. |
 | `docker-compose.dev.yml` | Local source-build overlay with local image, optional Trakt credentials and resource limits. |
 | `docker-compose.secure.yml` | Hardened overlay: read-only rootfs, tmpfs `/tmp`, required env vars (`ADMIN_PASSWORD`, `SESSION_SECRET`, `API_KEY`, `WEBHOOK_SECRET`), forces `COOKIE_SECURE=true`. |
-| `.dockerignore` | Excludes `node_modules`, `data`, `docs`, `scratch`, markdown, and secrets from the Docker build context while whitelisting the required runtime scripts. |
+| `.dockerignore` | Excludes `node_modules`, `data`, `docs`, `scratch`, markdown, secrets and `public/demo-assets` from the Docker build context while whitelisting the required runtime scripts. |
+| `packaging/demo-image/` | `Dockerfile` and `Dockerfile.dockerignore` for the thin `<version>-demo` layer: the released Plekt image plus `public/demo-assets`, built in the main and manual publish workflows and deployed to the OCI public demo. |
 | `.env.example` | Commented template of every supported environment variable - copy to `.env` (loaded by `server/src/env.js`). The variables are documented in the README [Configuration Reference](../README.md#configuration-reference); conventions are in [architecture-flows.md](architecture-flows.md#environment-variables). |
 | `website/` | Static Astro documentation site. Its build reads the root release data and shared assets, runs the website checks, and outputs `website/dist/` for Cloudflare Pages. |
 | `.editorconfig` | Editor whitespace/indent conventions. |

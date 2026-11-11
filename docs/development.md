@@ -338,7 +338,8 @@ values already committed" - none of them write anything back to their branch.
   pre-push test failure follows the bounded retry procedure above; never bypass the gate.
   The promotion command refuses to mutate anything without `--confirm`.
 - After the main image workflow succeeds, its `Deploy public demo to OCI` job pulls the
-  exact released tag on the dedicated Oracle Cloud Compute instance serving
+  exact released `<version>-demo` tag (the released image plus the demo artwork layer from
+  `packaging/demo-image`) on the dedicated Oracle Cloud Compute instance serving
   [demo.plekt.net](https://demo.plekt.net/), keeps `PLEKT_DEMO_MODE=1` and the
   existing `/data` mount, and verifies the released version plus the public-demo
   health/guardrail checks. Publishing to GHCR alone does not restart this container.
@@ -459,8 +460,10 @@ version, creates
 or updates the matching GitHub Release with the formatted body from
 `scripts/generate-release-notes.js`, then posts the `changelog.json` entry to Discord via
 `scripts/notify-discord-release.js main` (see "Discord release notifications" below).
-The dependent `Deploy public demo to OCI` job then pulls the exact version tag on the
-Oracle instance and runs the public-demo verification. It does not write anything back
+After the Plekt and legacy images are pushed, the same job builds `:<version>-demo` on the
+released tag from `packaging/demo-image/Dockerfile` (GHCR only, both architectures). It adds
+`public/demo-assets`, which the normal image leaves out. The dependent
+`Deploy public demo to OCI` job then pulls that `-demo` tag on the Oracle instance and runs the public-demo verification. It does not write anything back
 to `main`.
 `docker-publish.yml` is a manual (`workflow_dispatch`) image build that skips the
 changelog step.
@@ -713,7 +716,11 @@ not valid semver. See `docs/decisions.md` entry 18.
   that has one, which needs a Python and compiler toolchain the image does not carry.
   Skipping install scripts leaves the prebuilt binary that already ships in the package
   for this platform, which is the binary its loader prefers. better-sqlite3 is the only
-  production dependency with an install script.
+  production dependency with an install script. The same layer then deletes the npm cache,
+  the Alpine and WebAssembly sharp builds, the SQLite source, and every better-sqlite3 binary
+  except the one for the build's own architecture (`linux-x64` or `linux-arm64`), which takes
+  the dependency layer from 129 MB to about 39 MB. If a dependency starts to need one of the
+  removed files, the boot check and `npm run build` will not catch it; run the image.
 - **`docker-compose.yml`** - default quick-start: pulls `ghcr.io/lasikiewicz/plekt:latest`,
   port 5056, `./data:/data`, and requires `ADMIN_PASSWORD` from `.env`.
   It sets `PLEKT_PUBLISHED_PORT=5056` for the startup webhook port advisory
@@ -729,6 +736,8 @@ not valid semver. See `docs/decisions.md` entry 18.
   [hardening.md](hardening.md).
 - **`.dockerignore`** - keeps `data/`, `docs/`, markdown, and scratch files out of the
   image; whitelists only the install, entrypoint, and worker-health scripts the image needs.
+  It also excludes `public/demo-assets`; the demo layer's own
+  `packaging/demo-image/Dockerfile.dockerignore` brings that folder back for the demo image.
 
 ## One-shot operational scripts
 

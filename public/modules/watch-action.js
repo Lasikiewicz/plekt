@@ -1,15 +1,15 @@
-import { state, elements } from "./state.js?v=2.2.4.2.5";
-import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.4.2.5";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.5";
-import { isWatchedHistoryAction } from "./sync.js?v=2.2.4.2.5";
-import { mergeShowDetail } from "./explorer.js?v=2.2.4.2.5";
-import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.2.5"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.4.2.5";
-import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.2.5";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.2.5";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.2.5";
-import { episodeStillUrl } from "./images.js?v=2.2.4.2.5";
-import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.2.5";
-import { ifLoaded } from "./route-modules.js?v=2.2.4.2.5";
+import { state, elements } from "./state.js?v=2.2.4.2.8";
+import { escapeHtml, escapeAttribute, formatDate, toDateTimeInputValue, episodeCode, seasonLabel, formatSeasonTitle, formatTmdbDate, showEpisodeKey } from "./utils.js?v=2.2.4.2.8";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.8";
+import { isWatchedHistoryAction } from "./sync.js?v=2.2.4.2.8";
+import { mergeShowDetail } from "./explorer.js?v=2.2.4.2.8";
+import { dedupeMediaRecords } from "./media-records.js?v=2.2.4.2.8"; import { preflightEpisodeOrderAction } from "./episode-order.js?v=2.2.4.2.8";
+import { tvSeasonAvailability } from "./media-detail-shared.js?v=2.2.4.2.8";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.2.8";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.2.8";
+import { episodeStillUrl } from "./images.js?v=2.2.4.2.8";
+import { mergeProviderOutcomes, providerOutcomeNotice } from "./plex-history-policy.js?v=2.2.4.2.8";
+import { ifLoaded } from "./route-modules.js?v=2.2.4.2.8";
 
 const resetPartWatchedView = ifLoaded("dashboard", "resetPartWatchedView");
 const renderPartWatched = ifLoaded("dashboard", "renderPartWatched");
@@ -665,6 +665,7 @@ export function openWatchDatePrompt(action) {
     return;
   }
   state.pendingWatchAction = action;
+  state.watchPromptVersion = (state.watchPromptVersion || 0) + 1;
   // Always mount on document.body so that position:fixed inset:0 covers the
   // full viewport. Mounting inside mediaDetailRoot() would place the overlay
   // inside an ancestor that has backdrop-filter, which - per the CSS spec -
@@ -674,15 +675,14 @@ export function openWatchDatePrompt(action) {
   document.body.insertAdjacentHTML("beforeend", renderWatchDatePrompt(action));
   mountWatchDateCustomPicker();
 }
-
 export function closeWatchDatePrompt() {
   state.pendingWatchAction = null;
+  state.watchPromptVersion = (state.watchPromptVersion || 0) + 1;
   // A show refresh can render a second copy inside the current detail root
   // while the body-mounted prompt is open. Remove every copy so a stale
   // dialog cannot remain over the page after a date choice is submitted.
   document.querySelectorAll?.(".watch-date-overlay")?.forEach((overlay) => overlay.remove());
 }
-
 function actionEpisodes(action = {}) {
   return [...(action.episodes || []), ...(action.resyncEpisodes || [])];
 }

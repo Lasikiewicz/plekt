@@ -1,19 +1,19 @@
-import { state, elements } from "./state.js?v=2.2.4.2.5";
-import { escapeHtml, escapeAttribute, formatDate, formatTmdbDate, isDemoMode } from "./utils.js?v=2.2.4.2.5";
-import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters } from "./images.js?v=2.2.4.2.5";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml } from "./sync.js?v=2.2.4.2.5";
-import { fetchTmdbDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.2.5";
-import { renderWatchDatePrompt, isMovieSavingWatchAction } from "./watch-action.js?v=2.2.4.2.5";
-import { authHeaders, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.2.5";
-import { personalRatingPillHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.2.5";
-import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.5";
+import { state, elements } from "./state.js?v=2.2.4.2.8";
+import { escapeHtml, escapeAttribute, formatDate, formatTmdbDate, isDemoMode } from "./utils.js?v=2.2.4.2.8";
+import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters } from "./images.js?v=2.2.4.2.8";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml } from "./sync.js?v=2.2.4.2.8";
+import { fetchTmdbDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.2.8";
+import { renderWatchDatePrompt, isMovieSavingWatchAction } from "./watch-action.js?v=2.2.4.2.8";
+import { authHeaders, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.2.8";
+import { personalRatingPillHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.2.8";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.8";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderMediaImagesSection, renderMediaFacts,
   renderExternalRatingPills, ratingPillHtml, renderSeerrRequestPill, fetchSeerrMediaStatus,
   refreshActiveMediaDetailAfterSeerrStatus, rankedRecommendations, recommendedTvShowsForMovie,
   renderRecommendationSection, hydrateMediaAppLinks, renderCollectionSection, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.2.4.2.5";
+} from "./media-detail-shared.js?v=2.2.4.2.8";
 
 // Watch history list - playHistory (every { id, watched_at, source } entry for
 // this movie, collapsed server-side in dedupeMovies/collapseMovieCluster) has

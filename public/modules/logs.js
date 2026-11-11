@@ -8,8 +8,9 @@ export function replaceLogContent(el, html, forceScroll = false) {
   el.scrollTop = follow ? el.scrollHeight : scrollTop;
 }
 
-export function readStoredDebugLogs(storage = localStorage) {
+export function readStoredDebugLogs(storage) {
   try {
+    storage ||= globalThis.localStorage;
     const parsed = JSON.parse(storage.getItem(DEBUG_LOGS_KEY) || "[]");
     return Array.isArray(parsed) ? parsed.slice(-MAX_DEBUG_LOGS) : [];
   } catch (error) {
@@ -17,11 +18,12 @@ export function readStoredDebugLogs(storage = localStorage) {
   }
 }
 
-export function appendDebugLog(logs, message, details, storage = localStorage) {
+export function appendDebugLog(logs, message, details, storage) {
   const timestamp = new Date().toISOString();
   const suffix = details === undefined ? "" : ` ${typeof details === "string" ? details : JSON.stringify(details)}`;
   const nextLogs = [...logs, `[${timestamp}] ${message}${suffix}`].slice(-MAX_DEBUG_LOGS);
   try {
+    storage ||= globalThis.localStorage;
     storage.setItem(DEBUG_LOGS_KEY, JSON.stringify(nextLogs));
   } catch (error) {
     // Ignore storage quota errors
@@ -29,8 +31,8 @@ export function appendDebugLog(logs, message, details, storage = localStorage) {
   return nextLogs;
 }
 
-export function clearDebugLogs(storage = localStorage) {
-  storage.removeItem(DEBUG_LOGS_KEY);
+export function clearDebugLogs(storage) {
+  try { (storage || globalThis.localStorage).removeItem(DEBUG_LOGS_KEY); } catch { /* Storage is optional. */ }
   return [];
 }
 

@@ -1,5 +1,5 @@
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.2.4.2.5";
-import { tmdbPoster, proxiedArtworkUrl } from "./images.js?v=2.2.4.2.5";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.2.4.2.8";
+import { tmdbPoster, proxiedArtworkUrl } from "./images.js?v=2.2.4.2.8";
 
 // Season Posters tab for the Edit Images dialog. The first view lists the
 // show's seasons with their current posters. Choosing a season shows the same

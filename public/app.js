@@ -1,18 +1,19 @@
-import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=2.2.4.2.5";
-import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./modules/logs.js?v=2.2.4.2.5";
-import { createLogsViewer } from "./modules/logs-viewer.js?v=2.2.4.2.5";
-import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=2.2.4.2.5";
-import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=2.2.4.2.5";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=2.2.4.2.5";
-import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=2.2.4.2.5";
-import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=2.2.4.2.5";
-import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=2.2.4.2.5";
-import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=2.2.4.2.5";
-import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=2.2.4.2.5";
-import { initSupervisorSwitch, refreshSwitchUsers } from "./modules/supervisor-switch.js?v=2.2.4.2.5";
-import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=2.2.4.2.5";
-import { cachedExplorerPage, rememberExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows } from "./modules/explorer-page-cache.js?v=2.2.4.2.5";
-import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=2.2.4.2.5";
+import { buildAuthHeaders, buildNowPlayingUrl, currentUser, getWebhookToken, onAuthChange, readStoredAdminToken, rotateWebhookSecret, scrubTokenFromLocation, signInAdmin, signOutAdmin, updateAdminCredentials } from "./modules/auth.js?v=2.2.4.2.8";
+import { storageGet, storageSet, storageRemove, openConfirmDialog } from "./modules/utils.js?v=2.2.4.2.8";
+import { appendDebugLog, clearDebugLogs, logsToText, readStoredDebugLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./modules/logs.js?v=2.2.4.2.8";
+import { createLogsViewer } from "./modules/logs-viewer.js?v=2.2.4.2.8";
+import { applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareSettingsShell, scrollToSettingsSection, settingsPathForLegacy } from "./modules/settings-shell.js?v=2.2.4.2.8";
+import { state, elements, ACTIVE_VIEW_KEY, ACTIVE_SETTINGS_TAB_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS, HIDE_WATCHED_KEY_SHOWS, HIDE_ENDED_KEY_SHOWS, HISTORY_VIEW_KEY, HISTORY_FILTER_KEY, HISTORY_VIEW_MODES, HISTORY_FILTERS, PERSONAL_MEDIA_VIEWS, PRIMARY_VIEWS } from "./modules/state.js?v=2.2.4.2.8";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, isDemoMode, slug, movieSlug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showName, showTitleFrom, episodeTitle, startOfWeek, addDays, toDateInputValue, toDateTimeInputValue, formatDayName, formatDayDate, formatWeekRange, formatShortTime, formatNumber, formatDate, formatDateShort, shortMonthLabel, normalizePlatformSource, platformName, platformBadge, sourceClass, computeProgress, formatDuration, formatPlaybackClock, formatNowPlayingMeta, idLine, csvRows, normalizeHeader, formatTmdbDate, ordinalDay, formatLongAiringDate, knownShowAirtime, formatEpisodeAirtime, showEpisodeKey, episodeCode, seasonLabel, versionDisplayLabel } from "./modules/utils.js?v=2.2.4.2.8";
+import { isCachedStorageImageUrl, compactPosterUrl, clearPersistentPosterLookupCache, cachedPosterLookup, rememberPosterLookup, posterServerConfig, configuredImageUrl, posterUrlFor, posterMarkup, posterFallbackElement, lookupPosterUrl, hydratePosterFallbacks, bindPosterImageErrorHandler, hydratePosterImages, hydratePosters, tmdbImage, tmdbPoster, bestTmdbLogo, tmdbProfile, proxiedArtworkUrl } from "./modules/images.js?v=2.2.4.2.8";
+import { initSync, nowPlayingUrl, telemetryLineValue, historyAction, isWatchedHistoryAction, syncStatus, historySyncPill, getActiveTargets, sourcePlatform, normalizeTargetStatus, targetStateUnavailable, targetStateNoop, hasConfirmedMediaAvailability, sharedLibraryAvailability, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip, renderSyncStatusDot, showAvailIssuePopup, renderAvailabilityPills, renderShowAvailabilityPills, renderMediaSyncPills, telemetryTargetStates, syncJobSortWeight, renderTargetPills, syncJobMediaType, syncHistoryTone, syncHistoryActionLabel, syncHistoryTargetPills, categorizeIssues, renderIssueCategory, renderSyncJobs, renderSyncHistory, loadSyncJobs, loadSyncHistory, activeSessionsKey, setActiveSessions, renderActiveSessions, loadActiveSessions, pollNowPlayingOnce, startHistoryPolling, stopHistoryPolling, syncNowPlayingPolling, triggerRetrySync, triggerCronSync, triggerStopSync, triggerForceSync, isSyncProgressActive } from "./modules/sync.js?v=2.2.4.2.8";
+import { startLiveUpdates, stopLiveUpdates } from "./modules/live-updates.js?v=2.2.4.2.8";
+import { APPEARANCE_DEFAULTS, applyAppearanceToBody, loadAppearanceSettings } from "./modules/appearance.js?v=2.2.4.2.8";
+import { loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary as renderCoreManualWatchReviewSummary, renderSyncActivityStatus as renderCoreSyncActivityStatus, setSyncActivityProgress as setCoreSyncActivityProgress, setSyncAttentionSummary as setCoreSyncAttentionSummary, startStatusSummaryPolling, stopStatusSummaryPolling } from "./modules/status-indicators.js?v=2.2.4.2.8";
+import { initSupervisorSwitch, refreshSwitchUsers } from "./modules/supervisor-switch.js?v=2.2.4.2.8";
+import { movieBySlugOrId, nowPlayingHref } from "./modules/media-routing.js?v=2.2.4.2.8";
+import { cachedExplorerPage, rememberExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows } from "./modules/explorer-page-cache.js?v=2.2.4.2.8";
+import { DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, ensureShellModules, ifLoaded, installEarlyActivationCapture, replayEarlyActivation,isRouteModuleLoaded, loadRouteModule, loadRouteModules, registerRouteModuleInitializer, routeModulesLoaded } from "./modules/route-modules.js?v=2.2.4.2.8";
 
 // Route, dialog, media-detail, and maintenance modules load on demand through
 // modules/route-modules.js: a route downloads only the modules it renders.
@@ -370,7 +371,7 @@ const THEME_KEY = "plembfin:theme";
 
 function updateThemeIcon() {
   const isLightMode = document.documentElement.classList.contains("light-mode");
-  const src = isLightMode ? "/plekt_header_logo_light.png?v=2.2.4.2.5" : "/plekt_header_logo_dark.png?v=2.2.4.2.5";
+  const src = isLightMode ? "/plekt_header_logo_light.png?v=2.2.4.2.8" : "/plekt_header_logo_dark.png?v=2.2.4.2.8";
   // Several logos can exist at once - the sidebar, setup wizard, and locked
   // login panel all need to track the selected theme.
   for (const logo of document.querySelectorAll(".brand-logo, [data-theme-logo]")) {
@@ -379,7 +380,7 @@ function updateThemeIcon() {
 }
 
 function initializeTheme() {
-  const savedTheme = localStorage.getItem(THEME_KEY);
+  const savedTheme = storageGet(THEME_KEY);
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
   const shouldUseLightMode = savedTheme === "light" || (savedTheme === null && !prefersDark);
 
@@ -402,10 +403,10 @@ function toggleTheme() {
   const isLightMode = root.classList.contains("light-mode");
   if (isLightMode) {
     root.classList.remove("light-mode");
-    localStorage.setItem(THEME_KEY, "dark");
+    storageSet(THEME_KEY, "dark");
   } else {
     root.classList.add("light-mode");
-    localStorage.setItem(THEME_KEY, "light");
+    storageSet(THEME_KEY, "light");
   }
   updateThemeIcon();
 }
@@ -869,36 +870,6 @@ async function loadAppVersion() {
 }
 
 
-function openConfirmDialog({ title = "Are you sure?", body = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false } = {}) {
-  return new Promise((resolve) => {
-    document.querySelectorAll(".confirm-dialog-overlay").forEach((el) => el.remove());
-    const overlay = document.createElement("div");
-    overlay.className = "edit-dialog-overlay confirm-dialog-overlay";
-    let settled = false;
-    const finish = (value) => {
-      if (settled) return;
-      settled = true;
-      overlay.remove();
-      resolve(value);
-    };
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) finish(false); });
-    overlay.innerHTML = `
-      <div class="edit-dialog">
-        <h3>${escapeHtml(title)}</h3>
-        ${body ? `<p class="confirm-dialog-body">${escapeHtml(body)}</p>` : ""}
-        <div class="edit-dialog-actions">
-          <button class="${danger ? "button-danger" : "button-primary"} confirm-dialog-confirm" type="button">${escapeHtml(confirmLabel)}</button>
-          <button class="button-ghost confirm-dialog-cancel" type="button">${escapeHtml(cancelLabel)}</button>
-        </div>
-      </div>
-    `;
-    overlay.querySelector(".confirm-dialog-confirm").addEventListener("click", () => finish(true));
-    overlay.querySelector(".confirm-dialog-cancel").addEventListener("click", () => finish(false));
-    document.body.appendChild(overlay);
-    overlay.querySelector(".confirm-dialog-confirm").focus();
-  });
-}
-
 function closeGlobalSearchDropdown() {
   document.getElementById("globalSearchDropdown")?.remove();
 }
@@ -1191,7 +1162,8 @@ async function loadGlobalDiscovery(query) {
   const normalized = query.trim().toLowerCase();
   if (normalized.length < 2) return;
   const token = ++state.globalSearchRequestToken;
-  state.globalDiscoveryResults.set(normalized, { loading: true, results: [] });
+  const loading = { loading: true, results: [] };
+  state.globalDiscoveryResults.set(normalized, loading);
   renderGlobalSearchDropdown(query);
   // Both catalogues are queried at once so TVDB series appear as quickly as TMDB
   // ones, and so an unavailable TMDB does not hold back or hide TVDB results.
@@ -1199,15 +1171,18 @@ async function loadGlobalDiscovery(query) {
     !isDemoMode() && state.savedConfig.tmdb?.configured ? fetchTmdbDiscovery(query) : Promise.resolve({ results: [] }),
     isDemoMode() ? Promise.resolve([]) : tvdbShowSearch(query),
   ]);
-  state.globalDiscoveryResults.set(normalized, {
+  if (state.globalDiscoveryResults.get(normalized) !== loading) return;
+  const discoveryResult = {
     loading: false,
     results: tmdb.results,
     tvdbShows,
     error: tmdb.error && !tvdbShows.length ? tmdb.error : "",
-  });
+  };
+  state.globalDiscoveryResults.set(normalized, discoveryResult);
   if (token === state.globalSearchRequestToken && elements.globalSearchInput?.value.trim().toLowerCase() === normalized) {
     renderGlobalSearchDropdown(query);
   }
+  if (tmdb.error && state.globalDiscoveryResults.get(normalized) === discoveryResult) state.globalDiscoveryResults.delete(normalized);
 }
 
 function logDebug(message, details) {
@@ -2055,7 +2030,7 @@ function selectView(view, { fresh = false } = {}) {
 function selectBackupsTab(tab) {
   const validTabs = ["settings", "restore"];
   state.activeBackupsTab = validTabs.includes(tab) ? tab : "settings";
-  localStorage.setItem("activeBackupsTab", state.activeBackupsTab);
+  storageSet("activeBackupsTab", state.activeBackupsTab);
   if (state.activeBackupsTab === "restore") {
     state.remoteBackupFiles = [];
     state.remoteBackupFilesLoading = false;
@@ -2304,7 +2279,7 @@ function applyActiveViewNow() {
     clearMediaDetailState();
   }
   syncSettingsStatusLifecycle();
-  localStorage.setItem(ACTIVE_VIEW_KEY, state.activeView);
+  storageSet(ACTIVE_VIEW_KEY, state.activeView);
   applyDemoUiRestrictions();
   document.querySelector(".page-shell")?.setAttribute("data-active-view", state.activeView);
   // The setup wizard and locked login are full-page flows - the sidebar and
@@ -2465,7 +2440,7 @@ function applyActiveViewNow() {
     const route = parseSettingsRoute(rawPath, { mustChangePassword: state.mustChangePassword });
     state.activeSettingsRoute = route;
     state.activeSettingsTab = route.group;
-    localStorage.setItem(ACTIVE_SETTINGS_TAB_KEY, route.group);
+    storageSet(ACTIVE_SETTINGS_TAB_KEY, route.group);
     applySettingsRoute(route);
     refreshTautulliImport();
     // Cheap, network-free repaint of the Trakt Plex notes now the saved config
@@ -2572,7 +2547,7 @@ async function saveAdminCredentials() {
     elements.currentAdminPassword.value = "";
     elements.newAdminPassword.value = "";
     elements.confirmAdminPassword.value = "";
-    localStorage.setItem("adminUsername", username);
+    storageSet("adminUsername", username);
     renderAdminCredentialsStatus("Login updated. Other dashboard sessions have been signed out.", "success");
     setMessage(`Login updated for ${username}.`, "success");
     // Re-check whether the default-password flag has been cleared.
@@ -3037,10 +3012,10 @@ async function unlockWithToken(password, email = elements.adminEmail?.value) {
   state.currentUser = result.user;
   state.token = result.token;
   if (elements.settingsUsername) elements.settingsUsername.value = cleanEmail;
-  localStorage.setItem("adminUsername", cleanEmail);
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(LEGACY_UPPER_TOKEN_KEY);
-  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  storageSet("adminUsername", cleanEmail);
+  storageRemove(TOKEN_KEY);
+  storageRemove(LEGACY_UPPER_TOKEN_KEY);
+  storageRemove(LEGACY_TOKEN_KEY);
   setUnlocked(true);
   selectView(state.activeView);
   await loadHistory().catch((error) => {
@@ -3116,9 +3091,9 @@ async function lockDashboard() {
   state.nowPlayingLastFetchAt = 0;
   state.configLoaded = false;
   state.savedConfig = {};
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(LEGACY_UPPER_TOKEN_KEY);
-  localStorage.removeItem(LEGACY_TOKEN_KEY);
+  storageRemove(TOKEN_KEY);
+  storageRemove(LEGACY_UPPER_TOKEN_KEY);
+  storageRemove(LEGACY_TOKEN_KEY);
   await signOutAdmin().catch(() => { });
   elements.adminToken.value = "";
   if (elements.settingsUsername) elements.settingsUsername.value = "";
@@ -3388,7 +3363,7 @@ function initialize() {
   }
   applyAppearanceToBody(APPEARANCE_DEFAULTS);
   applyDemoUiRestrictions(false);
-  elements.adminEmail.value = isDemoMode() ? "demo" : (localStorage.getItem("adminUsername") || "");
+  elements.adminEmail.value = isDemoMode() ? "demo" : (storageGet("adminUsername") || "");
   elements.adminToken.value = isDemoMode() ? "demo" : "";
   elements.settingsUsername.value = elements.adminEmail.value;
   applyActiveView();
@@ -3482,7 +3457,7 @@ function initialize() {
     if (user && token && !state.configLoaded) {
       const fullPath = window.location.pathname + window.location.search + window.location.hash;
       elements.settingsUsername.value = user.username || user.email || "";
-      localStorage.setItem("adminUsername", user.email || "");
+      storageSet("adminUsername", user.email || "");
       setUnlocked(true);
       applyMustChangePassword();
       if (!isDemoMode() && !state.mustChangePassword && fullPath !== "/setup") {

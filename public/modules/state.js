@@ -1,6 +1,6 @@
-import { readStoredAdminToken } from "./auth.js?v=2.2.4.2.5";
-import { readStoredDebugLogs } from "./logs.js?v=2.2.4.2.5";
-import { isDemoMode } from "./utils.js?v=2.2.4.2.5";
+import { readStoredAdminToken } from "./auth.js?v=2.2.4.2.8";
+import { readStoredDebugLogs } from "./logs.js?v=2.2.4.2.8";
+import { isDemoMode, storageGet } from "./utils.js?v=2.2.4.2.8";
 
 const TOKEN_KEY = "adminToken";
 const LEGACY_UPPER_TOKEN_KEY = "ADMIN_TOKEN";
@@ -56,10 +56,10 @@ const initialState = {
   mustChangePassword: false,
   currentUser: undefined,
   // Custom Lists was renamed Playlists; a stored view from before keeps working.
-  activeView: (localStorage.getItem(ACTIVE_VIEW_KEY) || "dashboard").replace(/^custom-lists$/, "playlists"),
-  activeSettingsTab: localStorage.getItem(ACTIVE_SETTINGS_TAB_KEY) || "general",
+  activeView: (storageGet(ACTIVE_VIEW_KEY) || "dashboard").replace(/^custom-lists$/, "playlists"),
+  activeSettingsTab: storageGet(ACTIVE_SETTINGS_TAB_KEY) || "general",
   activeSettingsRoute: null,
-  activeBackupsTab: localStorage.getItem("activeBackupsTab") || "settings",
+  activeBackupsTab: storageGet("activeBackupsTab") || "settings",
   remoteBackupFiles: [],
   remoteBackupFilesLoading: false,
   remotePlektBackupFiles: [],
@@ -156,10 +156,10 @@ const initialState = {
   showsLoading: false,
   showsRequestVersion: 0,
   showsQueryKey: "",
-  explorerSortMovies: localStorage.getItem(EXPLORER_SORT_KEY_MOVIES) || "title_asc",
-  explorerSortShows: localStorage.getItem(EXPLORER_SORT_KEY_SHOWS) || "title_asc",
-  hideWatchedShows: localStorage.getItem(HIDE_WATCHED_KEY_SHOWS) === "true",
-  hideEndedShows: localStorage.getItem(HIDE_ENDED_KEY_SHOWS) === "true",
+  explorerSortMovies: storageGet(EXPLORER_SORT_KEY_MOVIES) || "title_asc",
+  explorerSortShows: storageGet(EXPLORER_SORT_KEY_SHOWS) || "title_asc",
+  hideWatchedShows: storageGet(HIDE_WATCHED_KEY_SHOWS) === "true",
+  hideEndedShows: storageGet(HIDE_ENDED_KEY_SHOWS) === "true",
   partWatchedRaw: [],
   partWatchedOffset: 0,
   partWatchedHasMore: true,
@@ -191,8 +191,8 @@ const initialState = {
   upNextMutationRefreshQueued: false,
   upNextRequestVersion: 0,
   upNextAbortController: null,
-  explorerViewMovies: localStorage.getItem(EXPLORER_VIEW_KEY_MOVIES) || "posters",
-  explorerViewShows: localStorage.getItem(EXPLORER_VIEW_KEY_SHOWS) || "posters",
+  explorerViewMovies: storageGet(EXPLORER_VIEW_KEY_MOVIES) || "posters",
+  explorerViewShows: storageGet(EXPLORER_VIEW_KEY_SHOWS) || "posters",
   posterLookupCache: new SessionCache(),
   posterLookupInflight: new Map(),
   tmdbDetailsCache: new SessionCache(),
@@ -239,8 +239,8 @@ const initialState = {
   explorerScrollArmed: false,
   posterHydrateScrollScheduled: false,
   historyViewSearch: "",
-  historyViewMode: HISTORY_VIEW_MODES.includes(localStorage.getItem(HISTORY_VIEW_KEY)) ? localStorage.getItem(HISTORY_VIEW_KEY) : "days",
-  historyViewFilter: HISTORY_FILTERS.includes(localStorage.getItem(HISTORY_FILTER_KEY)) ? localStorage.getItem(HISTORY_FILTER_KEY) : "all",
+  historyViewMode: HISTORY_VIEW_MODES.includes(storageGet(HISTORY_VIEW_KEY)) ? storageGet(HISTORY_VIEW_KEY) : "days",
+  historyViewFilter: HISTORY_FILTERS.includes(storageGet(HISTORY_FILTER_KEY)) ? storageGet(HISTORY_FILTER_KEY) : "all",
   historyViewSearchTimer: undefined,
   historyViewRaw: [],
   historyViewOffset: 0,
@@ -266,7 +266,7 @@ const initialState = {
   // The demo is a visual product tour: show the bundled stills on first load
   // so an unwatched episode is not mistaken for missing artwork. The toggle
   // remains available if a visitor wants spoiler protection for that session.
-  hideEpisodeSpoilers: isDemoMode() ? false : localStorage.getItem(HIDE_EPISODE_SPOILERS_KEY) !== "false",
+  hideEpisodeSpoilers: isDemoMode() ? false : storageGet(HIDE_EPISODE_SPOILERS_KEY) !== "false",
   showModalRequestToken: 0,
   showModalEpisodes: [],
   showModalEpisodeIndex: new Map(),

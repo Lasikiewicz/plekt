@@ -291,7 +291,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `up-next-shared.js`: chooseUpNextRemovalScope, isShowInUpNext, manualShowMatches, nowPlayingFirst, oneCardPerEpisode, provenDifferentShow and 6 more
 - `up-next.js`: addShowToUpNext, chooseUpNextRemovalScope, initUpNext, isUpNextItemDismissed, loadUpNext, openDismissedUpNextModal and 17 more
 - `upcoming.js`: initUpcoming, loadUpcoming, openUpcomingToToday, renderUpcoming
-- `utils.js`: actualWatchHistory, addDays, appendRestInChunks, computeProgress, csvRows, episodeCode and 52 more
+- `utils.js`: actualWatchHistory, addDays, appendRestInChunks, computeProgress, csvRows, episodeCode and 58 more
 - `watch-action.js`: applyWatchDateChoice, closeWatchDatePrompt, confirmAndDeleteMedia, confirmAndMarkUnwatched, dateAtMiddayIso, hasSavingWatchActionForShow and 24 more
 - `watchlist-sync-settings.js`: applyWatchlistSyncConfig, initWatchlistSyncSettings, refreshWatchlistSyncStatus, resumeWatchlistSyncSettings, runWatchlistSyncNow, stopWatchlistSyncSettings
 - `webhook-test.js`: WEBHOOK_TEST_PROVIDERS, webhookTestButton, webhookTestFailureAdvice, webhookTestFailureLabel

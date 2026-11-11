@@ -23,9 +23,16 @@ COPY scripts/install-git-hooks.js ./scripts/install-git-hooks.js
 COPY scripts/docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY scripts/check-worker-health.js ./scripts/check-worker-health.js
 COPY scripts/seed-demo-catalog.js ./scripts/seed-demo-catalog.js
+# Same layer: drop the npm cache and the native builds this glibc image can never load
+# (Alpine and WebAssembly sharp, every other platform's SQLite binary, the SQLite
+# source used only for compiling). The kept binary matches the build's architecture.
 RUN npm ci --omit=dev --ignore-scripts \
     && sed -i 's/\r$//' /usr/local/bin/docker-entrypoint.sh \
-    && chmod +x /usr/local/bin/docker-entrypoint.sh
+    && chmod +x /usr/local/bin/docker-entrypoint.sh \
+    && rm -rf /root/.npm \
+        node_modules/@img/*musl* node_modules/@img/sharp-wasm32 \
+        node_modules/better-sqlite3/deps node_modules/better-sqlite3/src \
+    && find node_modules/better-sqlite3/prebuilds -type f ! -name "linux-$(node -p process.arch).node" -delete
 
 # Application code.
 COPY server ./server

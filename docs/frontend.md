@@ -9,6 +9,10 @@ the module rules. Feature-specific behavior lives in the per-feature docs
 
 ## Structure
 
+Confirmation dialogs cancel on Escape; destructive confirmations initially focus Cancel.
+If browser storage is unavailable, the shell and library view preferences fall back to
+defaults and changes remain usable for the current session.
+
 The sidebar footer places the signed-in account and build/version button above the GitHub, plekt.net, and GitHub Sponsors links. The version button stays in the footer when the Appearance panel opens.
 
 ## Brand colours

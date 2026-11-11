@@ -1,18 +1,18 @@
-import { state, elements } from "./state.js?v=2.2.4.2.5";
-import { escapeHtml, escapeAttribute, platformIconMarkup } from "./utils.js?v=2.2.4.2.5";
-import { SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.2.4.2.5";
-import { renderFieldRow } from "./settings-ui.js?v=2.2.4.2.5";
-import { embyWebhookSetup, jellyfinWebhookSetup } from "./help-content.js?v=2.2.4.2.5";
-import { PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_LABEL } from "./plex-history-policy.js?v=2.2.4.2.5";
+import { state, elements } from "./state.js?v=2.2.4.2.8";
+import { escapeHtml, escapeAttribute, platformIconMarkup, storageGet } from "./utils.js?v=2.2.4.2.8";
+import { SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.2.4.2.8";
+import { renderFieldRow } from "./settings-ui.js?v=2.2.4.2.8";
+import { embyWebhookSetup, jellyfinWebhookSetup } from "./help-content.js?v=2.2.4.2.8";
+import { PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_LABEL } from "./plex-history-policy.js?v=2.2.4.2.8";
 
-import { createOnboardingBackups } from "./onboarding-backups.js?v=2.2.4.2.5";
+import { createOnboardingBackups } from "./onboarding-backups.js?v=2.2.4.2.8";
 
 export function createOnboardingSections(context) {
 const { backblazeDestination, renderBackblazeCard, renderBackup, updateBackupContinueAction, setPassphraseError, saveBackupSetup, saveBackblazeAction, testBackblazeAction } = createOnboardingBackups(context);
 const { getStatus, getBackupData, MEDIA_SERVERS, WATCH_IMPORT_MODES, isPreClaimSetup, serverImportPending, watchlistSyncPending, seasonSourcePending, setupWatchImportMode, setupFastLocalPacing, setupUpNextSync, setupPlexHistoricalSync, currentStep, api, setMessage, loadBackupSetupData } = context;
 function claimedAdminUsername() {
   const user = state.currentUser || {};
-  return String(user.username || user.email || localStorage.getItem("adminUsername") || "admin").trim() || "admin";
+  return String(user.username || user.email || storageGet("adminUsername") || "admin").trim() || "admin";
 }
 
 function currentInstanceAddress() {

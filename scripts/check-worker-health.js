@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
+import { isDemoMode } from "../server/src/utils/demoMode.js";
 
 function checkSqliteReadable(dbPath, { requireLeaseTable = false } = {}) {
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
@@ -26,7 +27,10 @@ try {
   const dbPath = fs.existsSync(legacyDbPath) ? legacyDbPath : path.join(dataDir, "plekt.db");
   const { schemaOk, lease } = checkSqliteReadable(dbPath, { requireLeaseTable: true });
   const role = String(process.env.ROLE || "all").trim().toLowerCase();
+  // The hosted demo never starts the scheduler coordinator (server.js), so there is no lease
+  // holder to find; it is healthy as long as its database is readable.
   const workerHealthy = role === "web"
+    || isDemoMode()
     || (lease?.holder_id && Number(lease.expires_at) > Date.now());
   if (!schemaOk || !workerHealthy) process.exit(1);
 

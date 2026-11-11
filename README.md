@@ -147,6 +147,8 @@ page, and **Background Art** (on the Dashboard and detail pages) shows the large
 behind the page. Both are on by default; turning one off also stops that artwork loading.
 Settings help panels share the background treatment of their main sections. These choices
 are saved in your browser and restored when you reopen Plekt.
+If browser storage is unavailable, the shell and library view preferences use defaults
+and remain changeable for the current session.
 On a phone, open the navigation drawer to reach them.
 When the sidebar Appearance panel is open, the build/version button appears above the Light/Dark choices; when it is closed, the button returns to the sidebar footer.
 The **Hide Links** checkbox hides all project links, including GitHub Sponsors, from the bottom

@@ -1,5 +1,5 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.5";
-import { state } from "./state.js?v=2.2.4.2.5";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.8";
+import { state } from "./state.js?v=2.2.4.2.8";
 
 // The Now Playing / Up Next panel options (cog beside the Dashboard heading).
 // Saved server-wide in the `nowPlaying` config section, so every device shows
@@ -82,21 +82,52 @@ if (hasDocument) {
       }
     };
 
-    const commit = async (changes, section = "nowPlaying") => {
-      const previous = state.savedConfig;
-      const next = { ...(section === "nowPlaying" ? nowPlayingOptions() : previous?.[section]), ...changes };
-      state.savedConfig = { ...previous, [section]: next };
+    let saveQueue = Promise.resolve();
+    const pendingKeys = new Map();
+    const commit = (changes, section = "nowPlaying") => {
+      const previous = { ...(section === "nowPlaying" ? nowPlayingOptions() : state.savedConfig?.[section]) };
+      const key = Object.keys(changes)[0];
+      const keyId = `${section}:${key}`;
+      const user = state.currentUser;
+      const token = state.token;
+      const sessionIsCurrent = () => state.currentUser === user && state.token === token;
+      let pending = pendingKeys.get(keyId);
+      if (!pending || pending.user !== user || pending.token !== token) {
+        pending = { confirmed: previous[key], revision: 0, count: 0, user, token };
+        pendingKeys.set(keyId, pending);
+      }
+      const revision = ++pending.revision;
+      pending.count += 1;
+      state.savedConfig = { ...state.savedConfig, [section]: { ...previous, ...changes } };
       document.dispatchEvent(new CustomEvent("plembfin:config-changed"));
       showError("");
-      try {
-        const saved = await savePanelOptions(next, section);
-        state.savedConfig = { ...state.savedConfig, [section]: saved };
-      } catch (error) {
-        state.savedConfig = previous;
-        showError(error.message || "Could not save.");
-      }
-      renderMenu();
-      document.dispatchEvent(new CustomEvent("plembfin:config-changed"));
+      saveQueue = saveQueue.then(async () => {
+        try {
+          if (!sessionIsCurrent()) return;
+          // The server merges individual section fields. Sending only this
+          // change avoids overwriting settings refreshed elsewhere in the UI.
+          const saved = await savePanelOptions(changes, section);
+          if (!sessionIsCurrent()) return;
+          pending.confirmed = saved[key] ?? changes[key];
+          if (pending.revision === revision) {
+            state.savedConfig = { ...state.savedConfig, [section]: { ...state.savedConfig?.[section], [key]: pending.confirmed } };
+          }
+        } catch (error) {
+          if (!sessionIsCurrent()) return;
+          if (pending.revision === revision) {
+            state.savedConfig = { ...state.savedConfig, [section]: { ...state.savedConfig?.[section], [key]: pending.confirmed } };
+            showError(error.message || "Could not save.");
+          }
+        } finally {
+          pending.count -= 1;
+          if (!pending.count && pendingKeys.get(keyId) === pending) pendingKeys.delete(keyId);
+          if (sessionIsCurrent()) {
+            renderMenu();
+            document.dispatchEvent(new CustomEvent("plembfin:config-changed"));
+          }
+        }
+      });
+      return saveQueue;
     };
 
     button.addEventListener("click", () => setOpen(menu.classList.contains("hidden")));

@@ -4,8 +4,8 @@
 // PLEKT_LEGACY_IMAGE=1 (the Plembfin tags). On the Plekt image, bare metal and
 // local development the route answers `legacyImage: false` and nothing is drawn.
 //
-// It is a small card pinned to the top centre rather than a row in the page
-// layout, so it cannot disturb any view (the dashboard is a fixed-height grid).
+// It is a small card pinned to the top centre of the content area, clear of the sidebar (below the 56px mobile top bar at 760px
+// and under) rather than a row in the page layout, so it cannot disturb any view (the dashboard is a fixed-height grid).
 // Dismissing hides it for the installed version only, so it returns after every
 // update until the install switches to the Plekt image.
 
@@ -14,7 +14,7 @@ const STYLE_ID = "legacy-image-banner-style";
 const DISMISS_KEY = "plekt.legacyImageBannerDismissedFor";
 
 const STYLE = `
-.legacy-image-banner{position:fixed;top:calc(1rem + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:60;box-sizing:border-box;width:min(25rem,calc(100vw - 2rem));display:grid;gap:.6rem;padding:.9rem 1rem;border:1px solid var(--border,rgba(127,127,127,.35));border-radius:.75rem;background:var(--surface,#141b22);color:var(--text,#f8fafc);box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:.86rem;line-height:1.45}
+.legacy-image-banner{position:fixed;top:calc(1rem + env(safe-area-inset-top,0px));left:calc(var(--sidebar-width,0px) + (100vw - var(--sidebar-width,0px)) / 2);transform:translateX(-50%);z-index:60;box-sizing:border-box;width:min(25rem,calc(100vw - var(--sidebar-width,0px) - 2rem));display:grid;gap:.6rem;padding:.9rem 1rem;border:1px solid var(--border,rgba(127,127,127,.35));border-radius:.75rem;background:var(--surface,#141b22);color:var(--text,#f8fafc);box-shadow:0 10px 30px rgba(0,0,0,.35);font-size:.86rem;line-height:1.45}
 .legacy-image-banner-title{margin:0;font-size:.95rem;font-weight:700}
 .legacy-image-banner p{margin:0;color:var(--text-muted,inherit);opacity:.92}
 .legacy-image-banner ul{margin:0;padding:0;list-style:none;display:grid;gap:.25rem}
@@ -23,7 +23,7 @@ const STYLE = `
 .legacy-image-banner a.legacy-image-banner-link,.legacy-image-banner button{min-height:2.25rem;padding:.35rem .85rem;border-radius:.6rem;font:inherit;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .legacy-image-banner a.legacy-image-banner-link{background:#f59e0b;color:#1c1200;text-decoration:none;border:1px solid transparent}
 .legacy-image-banner button{background:transparent;color:inherit;border:1px solid rgba(127,127,127,.5)}
-@media (max-width:760px){.legacy-image-banner{left:.75rem;right:.75rem;width:auto;transform:none;top:calc(.75rem + env(safe-area-inset-top,0px))}}
+@media (max-width:760px){.legacy-image-banner{left:.75rem;right:.75rem;width:auto;transform:none;top:calc(56px + .5rem + env(safe-area-inset-top,0px))}}
 `;
 
 function readDismissed() {

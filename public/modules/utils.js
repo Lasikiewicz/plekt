@@ -305,9 +305,9 @@ export function platformSourceValues(entry = {}) {
 
 export function platformIconUrl(value) {
   const normalized = normalizePlatformSource(value);
-  if (normalized === "plembfin") return "/icons/plekt.png?v=2.2.4.2.5";
+  if (normalized === "plembfin") return "/icons/plekt.png?v=2.2.4.2.8";
   const extension = "svg";
-  return `/icons/${normalized}.${extension}?v=2.2.4.2.5`;
+  return `/icons/${normalized}.${extension}?v=2.2.4.2.8`;
 }
 
 export function platformIconMarkup(value, className = "source-badge-icon", wrapperClass = "source-badge-icon-set") {
@@ -318,8 +318,8 @@ export function platformIconMarkup(value, className = "source-badge-icon", wrapp
   }
 
   return `<span class="${escapeAttribute(wrapperClass)} theme-aware-icon-set" aria-hidden="true">
-    <img class="${safeClassName} theme-aware-icon--light" src="/icons/plekt-light.png?v=2.2.4.2.5" alt="" loading="eager" decoding="async" />
-    <img class="${safeClassName} theme-aware-icon--dark" src="/icons/plekt.png?v=2.2.4.2.5" alt="" loading="eager" decoding="async" />
+    <img class="${safeClassName} theme-aware-icon--light" src="/icons/plekt-light.png?v=2.2.4.2.8" alt="" loading="eager" decoding="async" />
+    <img class="${safeClassName} theme-aware-icon--dark" src="/icons/plekt.png?v=2.2.4.2.8" alt="" loading="eager" decoding="async" />
   </span>`;
 }
 
@@ -597,4 +597,46 @@ export function appendRestInChunks(key, rest, { append, onComplete, chunkSize = 
   };
   if (rest.length) schedule(step);
   else step();
+}
+export function storageGet(key) {
+  try { return globalThis.localStorage.getItem(key); } catch { return null; }
+}
+export function storageSet(key, value) {
+  try { globalThis.localStorage.setItem(key, value); } catch { /* Storage is optional. */ }
+}
+export function storageRemove(key) {
+  try { globalThis.localStorage.removeItem(key); } catch { /* Storage is optional. */ }
+}
+
+let cancelConfirmDialog;
+export function registerConfirmDialog(cancel) {
+  cancelConfirmDialog?.();
+  cancelConfirmDialog = cancel;
+}
+export function releaseConfirmDialog(cancel) {
+  if (cancelConfirmDialog !== cancel) return false;
+  cancelConfirmDialog = undefined;
+  return true;
+}
+export function openConfirmDialog({ title = "Are you sure?", body = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false } = {}) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "edit-dialog-overlay confirm-dialog-overlay";
+    const finish = (value) => {
+      if (!releaseConfirmDialog(cancel)) return;
+      document.removeEventListener("keydown", onKeydown, true);
+      overlay.remove();
+      resolve(value);
+    };
+    const cancel = () => finish(false);
+    const onKeydown = (event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); cancel(); } };
+    registerConfirmDialog(cancel);
+    overlay.addEventListener("click", (event) => { if (event.target === overlay) cancel(); });
+    overlay.innerHTML = `<div class="edit-dialog"><h3>${escapeHtml(title)}</h3>${body ? `<p class="confirm-dialog-body">${escapeHtml(body)}</p>` : ""}<div class="edit-dialog-actions"><button class="${danger ? "button-danger" : "button-primary"} confirm-dialog-confirm" type="button">${escapeHtml(confirmLabel)}</button><button class="button-ghost confirm-dialog-cancel" type="button">${escapeHtml(cancelLabel)}</button></div></div>`;
+    overlay.querySelector(".confirm-dialog-confirm").addEventListener("click", () => finish(true));
+    overlay.querySelector(".confirm-dialog-cancel").addEventListener("click", cancel);
+    document.addEventListener("keydown", onKeydown, true);
+    document.body.appendChild(overlay);
+    overlay.querySelector(danger ? ".confirm-dialog-cancel" : ".confirm-dialog-confirm").focus();
+  });
 }

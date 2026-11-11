@@ -57,6 +57,13 @@ test("validateConfig rejects a non-boolean Up Next sync setting", () => {
   assert.ok(errors.some((message) => message.includes("upNextSync.enabled")));
 });
 
+test("partial Now Playing saves preserve the other panel options", async () => {
+  await saveMediaConfig({ nowPlaying: { allowPartWatched: false, allowUpNext: true, itemCount: 2 } });
+  await saveMediaConfig({ nowPlaying: { allowUpNext: false } });
+  const config = await loadMediaConfig();
+  assert.deepEqual(config.nowPlaying, { allowPartWatched: false, allowUpNext: false, itemCount: 2 });
+});
+
 test("publicMediaConfig reports overridden vs default tuning fields", async () => {
   const config = await loadMediaConfig();
   const pub = publicMediaConfig(config);

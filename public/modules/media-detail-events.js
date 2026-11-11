@@ -1,9 +1,9 @@
-import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=2.2.4.2.5";
-import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource } from "./utils.js?v=2.2.4.2.5";
-import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=2.2.4.2.5";
-import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=2.2.4.2.5";
-import { movieBySlugOrId } from "./media-routing.js?v=2.2.4.2.5";
-import { ifLoaded, lazyExport, loadRouteModules, loadedRouteModule } from "./route-modules.js?v=2.2.4.2.5";
+import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=2.2.4.2.8";
+import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource, storageSet } from "./utils.js?v=2.2.4.2.8";
+import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=2.2.4.2.8";
+import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=2.2.4.2.8";
+import { movieBySlugOrId } from "./media-routing.js?v=2.2.4.2.8";
+import { ifLoaded, lazyExport, loadRouteModules, loadedRouteModule } from "./route-modules.js?v=2.2.4.2.8";
 
 // This module wires document-wide handlers that the dashboard and library
 // pages use too, so it loads with the shell. Its route modules are therefore
@@ -867,7 +867,7 @@ export function attachMediaDetailEvents() {
     const spoilerToggle = event.target.closest("[data-hide-episode-spoilers]");
     if (!spoilerToggle) return;
     state.hideEpisodeSpoilers = spoilerToggle.checked;
-    localStorage.setItem(HIDE_EPISODE_SPOILERS_KEY, String(spoilerToggle.checked));
+    storageSet(HIDE_EPISODE_SPOILERS_KEY, String(spoilerToggle.checked));
     const ctx = state.activeShowRenderContext;
     if (ctx?.show) {
       renderShowModalContent(ctx.show, {

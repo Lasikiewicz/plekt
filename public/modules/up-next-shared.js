@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.2.4.2.5";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.2.4.2.5";
+import { state } from "./state.js?v=2.2.4.2.8";
+import { escapeAttribute, escapeHtml, slug, registerConfirmDialog, releaseConfirmDialog } from "./utils.js?v=2.2.4.2.8";
 
 function identityValues(item = {}, kind = "tmdb") {
   const capitalized = `${kind.charAt(0).toUpperCase()}${kind.slice(1)}`;
@@ -156,13 +156,17 @@ export function upNextRemovalMatches(removed = {}, item = {}, scope = "show") {
 
 export function chooseUpNextRemovalScope(item = {}) {
   return new Promise((resolve) => {
-    document.querySelectorAll(".confirm-dialog-overlay").forEach((el) => el.remove());
     const overlay = document.createElement("div");
     overlay.className = "edit-dialog-overlay confirm-dialog-overlay";
     const finish = (value) => {
+      if (!releaseConfirmDialog(cancel)) return;
+      document.removeEventListener("keydown", onKeydown, true);
       overlay.remove();
       resolve(value);
     };
+    const cancel = () => finish(null);
+    const onKeydown = (event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); cancel(); } };
+    registerConfirmDialog(cancel);
     const title = item.show_title || item.showTitle || item.title || "this show";
     overlay.addEventListener("click", (event) => { if (event.target === overlay) finish(null); });
     overlay.innerHTML = `
@@ -177,9 +181,10 @@ export function chooseUpNextRemovalScope(item = {}) {
       </div>
     `;
     overlay.querySelectorAll("[data-scope]").forEach((button) => button.addEventListener("click", () => finish(button.dataset.scope)));
-    overlay.querySelector(".confirm-dialog-cancel").addEventListener("click", () => finish(null));
+    overlay.querySelector(".confirm-dialog-cancel").addEventListener("click", cancel);
+    document.addEventListener("keydown", onKeydown, true);
     document.body.appendChild(overlay);
-    overlay.querySelector(".confirm-dialog-confirm").focus();
+    overlay.querySelector(".confirm-dialog-cancel").focus();
   });
 }
 
