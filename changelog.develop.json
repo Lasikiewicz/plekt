@@ -1,54 +1,7 @@
 {
-  "version": "2.2.4.2.9",
-  "build": 9,
-  "resetCommit": "505aee1335665c3efafabd5dbbd836a29dea591a",
-  "updatedAt": "2026-11-11T11:38:29.279Z",
-  "entries": [
-    {
-      "build": 9,
-      "date": "2026-11-11T11:38:29.279Z",
-      "commit": "9cc5165f01c2836b07f695bf5e574327b980f548",
-      "message": "This update includes review and repair alternate-order history conflicts, harden sync, history recovery and selected episode ordering, preserve approved alternate-order watches through manual review, and slim the Docker image, tidy the retiring-image notice and harden frontend interactions.",
-      "author": "Lasikiewicz",
-      "details": [
-        "Manual episode actions use the selected TVDB order when saving new watches.",
-        "Earlier watches with uncertain episode identity appear in Manual Watch review with aired and selected-order candidates.",
-        "An administrator confirms the intended episode before Plekt repairs history after verifying a local backup.",
-        "Force Sync of an already-synced title no longer removes a Trakt play without adding it back.",
-        "Added users no longer share a show identity cache, Seerr status cache, scheduler guard, dispatch sweep flag or live-change prune timer.",
-        "Unwatches and duplicate watches need stronger evidence, so a partly watched Plex item or an Emby-only watch is no longer changed on thin evidence.",
-        "A partial or failed provider read for Plex watchlists, playlists, resume feeds or Jellyfin watched scans is no longer treated as a complete one; resume scans continue across full pages when Plex omits the total count.",
-        "A throwing lease renewal or scheduled job still schedules the next run, and a stalled response body now stops at the configured timeout.",
-        "Old session cookies stop working for a re-created user, an administrator password reset signs the user out, and repeated slashes no longer skip rate limits.",
-        "The cloud metadata block also catches trailing dots, IPv4-mapped and NAT64 IPv6 forms and more metadata addresses.",
-        "Testing a Plex notification or Tautulli connection with a different URL now needs its own token or key instead of reusing the saved one.",
-        "Keep watched episodes on their selected DVD or alternate-order cards when dashboard history refreshes, and clear obsolete review markers after a verified mapping.",
-        "Rebuild show progress after history restores and data wipes so restored and removed shows have current counts without a restart.",
-        "Include older watches beyond the newest 25,000 rows when filtering and deduplicating history.",
-        "Apply watch-date and record deletions atomically with their related playstate changes.",
-        "Retain cached cast, videos, artwork and next-airing dates during temporary metadata outages, and retry incomplete show records after five minutes.",
-        "Retry failed TVDB artwork discovery and poster downloads without leaving requests stuck or recording failures for redacted source URLs.",
-        "Use the server's local calendar day for release-date filters, next-airing dates and playlist rules, including full provider timestamps for today.",
-        "Explain that full backup restores preserve the destination machine's media and tracker connections and require reconnecting missing services.",
-        "Keep newly approved DVD and alternate-order watches visible when an older dashboard snapshot still marks the episode unwatched, while respecting genuinely newer unwatches.",
-        "Refresh derived watch-state caches after successful review decisions so reopening a show reflects the saved decision immediately.",
-        "Preserve verified episode identities when played-flag webhooks apply the watch-date policy, allowing queued reviews to approve and target the correct episode.",
-        "The Docker image no longer includes the demo artwork that only the public demo uses, so installs and updates download roughly half as much.",
-        "The Docker image is smaller again: its dependency layer drops from 129 MB to about 39 MB by leaving out the npm cache and native builds for other platforms.",
-        "The container healthcheck no longer fails in demo mode, where there is no scheduler to find.",
-        "The notice on the retiring Docker image no longer covers the sidebar logo on windows about 761 to 900 px wide, and it now sits below the top bar on phones instead of hiding its heading.",
-        "An install running the retiring Docker image now also prints a one-line notice in its startup log pointing to the Plekt image.",
-        "Keep confirmations safe to cancel and settle replaced dialogs",
-        "Keep the app usable when browser storage is blocked or full",
-        "Preserve newer dashboard options and Up Next watch prompts during slow or failed requests",
-        "Retry transient search failures instead of retaining them for the session"
-      ],
-      "messageFragments": [
-        "Fix - Review and repair alternate-order history conflicts",
-        "Fix - Harden sync, history recovery and selected episode ordering",
-        "Fix - Preserve approved alternate-order watches through manual review",
-        "Fix - Slim the Docker image, tidy the retiring-image notice and harden frontend interactions"
-      ]
-    }
-  ]
+  "version": "2.2.4.3.0",
+  "build": 0,
+  "resetCommit": "9d36db47b77100e69f310a7d6a1ab48f754ed6e5",
+  "updatedAt": "2026-11-11T12:11:15.036Z",
+  "entries": []
 }
