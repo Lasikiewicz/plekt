@@ -146,3 +146,4 @@ jobs:
           push: true
           tags: ${{ steps.legacy_meta.outputs.tags }}
           build-args: BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:develop-${{ steps.develop.outputs.build }}
+          platforms: linux/amd64,linux/arm64

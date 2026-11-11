@@ -101,9 +101,7 @@ jobs:
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
         with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=alpha
             type=raw,value=alpha-${{ steps.alpha.outputs.build }}
@@ -122,6 +120,27 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: true
           sbom: true
+
+      # The retiring Plembfin names get the same image plus PLEKT_LEGACY_IMAGE=1
+      # (packaging/legacy-image/Dockerfile). It runs after the Plekt push so a failure
+      # here cannot stop the Plekt image from publishing.
+      - name: Extract legacy Docker metadata
+        id: legacy_meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
+          tags: |
+            type=raw,value=alpha
+            type=raw,value=alpha-${{ steps.alpha.outputs.build }}
+
+      - name: Build and push legacy alpha image
+        uses: docker/build-push-action@v7
+        with:
+          context: packaging/legacy-image
+          push: true
+          tags: ${{ steps.legacy_meta.outputs.tags }}
+          build-args: BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:alpha-${{ steps.alpha.outputs.build }}
+          platforms: linux/amd64,linux/arm64
 
       - name: Publish GitHub prerelease notes
         env:

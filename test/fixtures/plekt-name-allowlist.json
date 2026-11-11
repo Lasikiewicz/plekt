@@ -246,6 +246,10 @@
         [
           "# preserves the owner's account casing (Lasikiewicz/plembfin), which",
           1
+        ],
+        [
+          "# The retiring Plembfin names get the same image plus PLEKT_LEGACY_IMAGE=1",
+          1
         ]
       ]
     },
@@ -279,6 +283,10 @@
         ],
         [
           "docker.io/plembfin/plembfin",
+          1
+        ],
+        [
+          "# The retiring Plembfin names (GHCR and Docker Hub) get the same image plus",
           1
         ]
       ]
@@ -332,6 +340,10 @@
         ],
         [
           "\"$PLEMBFIN_TRAKS_COLLECTOR_ORIGIN\"",
+          1
+        ],
+        [
+          "# The retiring Plembfin names (GHCR and Docker Hub) get the same image plus",
           1
         ]
       ]
@@ -4665,6 +4677,10 @@
         ],
         [
           "const isStreamedUpload = (req) => /^\\/api\\/plembfin-backups\\/upload\\/?$/i.test(String(req.path || \"\"));",
+          1
+        ],
+        [
+          "console.log(\"This install runs the retiring Plembfin Docker image. Switch to ghcr.io/lasikiewicz/plekt or plembfin/plekt; the old name keeps receiving updates until at least 11 April 2027.\");",
           1
         ]
       ]
@@ -11775,6 +11791,32 @@
       "lines": [
         [
           "# plembfin-website Pages project or its Functions. Deploy steps and the read",
+          1
+        ]
+      ]
+    },
+    "test/legacyImage.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "assert.deepEqual(notice.newImages, [\"ghcr.io/lasikiewicz/plekt\", \"plembfin/plekt\"]);",
+          1
+        ]
+      ]
+    },
+    "test/legacyImageBanner.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "newImages: [\"ghcr.io/lasikiewicz/plekt\", \"plembfin/plekt\"],",
+          1
+        ],
+        [
+          "switchUrl: \"https://plekt.net/docs/upgrading-from-plembfin/#switching-from-the-plembfin-docker-image\",",
+          1
+        ],
+        [
+          "assert.match(banner.text, /plembfin\\/plekt \\(Docker Hub\\)/);",
           1
         ]
       ]

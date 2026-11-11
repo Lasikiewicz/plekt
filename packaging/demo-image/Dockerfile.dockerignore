@@ -1,0 +1,5 @@
+# Used instead of the root .dockerignore for packaging/demo-image/Dockerfile.
+# The only thing this build needs is the demo artwork the normal image leaves out.
+*
+!public/demo-assets
+public/demo-assets/**/*.md

@@ -89,9 +89,7 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
             ${{ env.DOCKERHUB_IMAGE }}
-            ${{ env.LEGACY_DOCKERHUB_IMAGE }}
           tags: |
             type=raw,value=latest
             type=raw,value=${{ steps.release.outputs.version }}
@@ -107,6 +105,43 @@ jobs:
           platforms: linux/amd64,linux/arm64
           provenance: true
           sbom: true
+
+      # The retiring Plembfin names (GHCR and Docker Hub) get the same image plus
+      # PLEKT_LEGACY_IMAGE=1 (packaging/legacy-image/Dockerfile). It runs after the Plekt
+      # push so a failure here cannot stop the Plekt image from publishing.
+      - name: Extract legacy Docker metadata
+        id: legacy_meta
+        uses: docker/metadata-action@v6
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.LEGACY_IMAGE_NAME }}
+            ${{ env.LEGACY_DOCKERHUB_IMAGE }}
+          tags: |
+            type=raw,value=latest
+            type=raw,value=${{ steps.release.outputs.version }}
+
+      - name: Build and push legacy Docker image
+        uses: docker/build-push-action@v7
+        with:
+          context: packaging/legacy-image
+          push: true
+          tags: ${{ steps.legacy_meta.outputs.tags }}
+          build-args: BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}
+          platforms: linux/amd64,linux/arm64
+
+      # The public demo needs the demo artwork the normal image leaves out. It gets it from
+      # a thin layer on the released Plekt tag, pushed as <version>-demo to GHCR only
+      # (packaging/demo-image/Dockerfile). Runs after the Plekt push so a failure here
+      # cannot stop the Plekt image from publishing; the OCI deploy below pulls this tag.
+      - name: Build and push demo layer
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packaging/demo-image/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}-demo
+          build-args: BASE_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.release.outputs.version }}
+          platforms: linux/amd64,linux/arm64
 
       - name: Publish GitHub release notes
         env:
@@ -126,7 +161,7 @@ jobs:
       contents: read
     env:
       RELEASE_VERSION: ${{ needs.update.outputs.version }}
-      RELEASE_IMAGE: ghcr.io/lasikiewicz/plekt:${{ needs.update.outputs.version }}
+      RELEASE_IMAGE: ghcr.io/lasikiewicz/plekt:${{ needs.update.outputs.version }}-demo
       OCI_DEMO_HOST: ${{ vars.OCI_DEMO_HOST }}
       OCI_DEMO_USER: ${{ vars.OCI_DEMO_USER || 'opc' }}
       OCI_DEMO_KNOWN_HOSTS: ${{ vars.OCI_DEMO_KNOWN_HOSTS }}
@@ -173,7 +208,7 @@ jobs:
           echo "SSH_KEY_PATH=$key_path" >> "$GITHUB_ENV"
           echo "KNOWN_HOSTS_PATH=$known_hosts_path" >> "$GITHUB_ENV"
 
-      - name: Deploy the exact release image to OCI
+      - name: Deploy the exact release demo image to OCI
         run: |
           set -euo pipefail
           remote_script="/tmp/plembfin-oracle-demo-${GITHUB_RUN_ID}.sh"

@@ -196,8 +196,8 @@ jobs:
             exit 1
           fi
           echo "RELEASE_VERSION=$release_version" >> "$GITHUB_ENV"
-          echo "RELEASE_IMAGE=ghcr.io/lasikiewicz/plekt:$release_version" >> "$GITHUB_ENV"
-          echo "Deploying existing image ghcr.io/lasikiewicz/plekt:$release_version"
+          echo "RELEASE_IMAGE=ghcr.io/lasikiewicz/plekt:$release_version-demo" >> "$GITHUB_ENV"
+          echo "Deploying existing demo image ghcr.io/lasikiewicz/plekt:$release_version-demo"
 
       - name: Check OCI deployment configuration
         env:

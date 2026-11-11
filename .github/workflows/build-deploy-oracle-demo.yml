@@ -87,9 +87,22 @@ jobs:
           provenance: true
           sbom: true
 
+      # The normal image leaves public/demo-assets out, so the demo gets its artwork from
+      # the thin demo layer on top (packaging/demo-image/Dockerfile). The deploy below
+      # pulls this tag, not the base one.
+      - name: Build and push demo layer
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: packaging/demo-image/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.release.outputs.image }}-demo
+          build-args: BASE_IMAGE=${{ steps.release.outputs.image }}
+
       - name: Confirm both demo image architectures
         env:
-          RELEASE_IMAGE: ${{ steps.release.outputs.image }}
+          RELEASE_IMAGE: ${{ steps.release.outputs.image }}-demo
         run: |
           set -euo pipefail
           docker buildx imagetools inspect "$RELEASE_IMAGE"
@@ -101,7 +114,7 @@ jobs:
     permissions:
       contents: read
     env:
-      RELEASE_IMAGE: ${{ needs.build.outputs.image }}
+      RELEASE_IMAGE: ${{ needs.build.outputs.image }}-demo
       RELEASE_VERSION: ${{ needs.build.outputs.version }}
       OCI_DEMO_HOST: ${{ vars.OCI_DEMO_HOST }}
       OCI_DEMO_USER: ${{ vars.OCI_DEMO_USER || 'opc' }}

@@ -152,7 +152,8 @@ not part of this release gate.
 
 The `Publish Main Release` workflow now builds an AMD64/ARM64 image and its dependent
 `Deploy public demo to OCI` job copies `scripts/deploy-oracle-demo.sh` to the instance
-over pinned SSH, pulls the exact `ghcr.io/lasikiewicz/plekt:<version>` tag, and
+over pinned SSH, pulls the exact `ghcr.io/lasikiewicz/plekt:<version>-demo` tag (the released
+image plus the demo artwork, built by `packaging/demo-image`), and
 recreates only the configured demo container while preserving its `/data` mount. It
 then runs `scripts/verify-oracle-demo.js` against its default verification target
 (the legacy demo hostname, which remains supported).
