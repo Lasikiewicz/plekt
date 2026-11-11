@@ -517,9 +517,19 @@ already in flight is not cancelled; the guard only prevents new competing outbou
      fallen back to release dates), which otherwise made a newly inserted watched item
      invisible to this safety net right after it was added. `checkPlexUnwatchedFast`
      (`scheduler.js`, a smaller batch of 10 checked every minute alongside the WebSocket
-     listener) uses the same helper. `checkEmbyUnwatchedStatus` and
+     listener) uses the same helper. Both Plex checks read the Plex item the watch came from
+     (the row's provenance `item_id`, source plex) rather than looking one up by the row's
+     aired season and episode, because Plex can number a show in another order (a DVD-order
+     watch of aired S02E05 is Plex's S02E01, and the item at Plex's 2/5 is a different
+     episode). A row with no stored Plex item id and an alternate-order identity is skipped;
+     an aired-order row with no id keeps the coordinate lookup (`plexUnwatchCheckTarget` in
+     `utils/episodeOrderWatch.js`). `checkEmbyUnwatchedStatus` and
      `checkJellyfinUnwatchedStatus` do the same for a smaller batch (5 records, checked
-     sequentially rather than concurrently) every 5 minutes instead of every 1, since their
+     sequentially rather than concurrently) every 5 minutes instead of every 1. They hold no
+     provider item id for a watch that came from another server, so they leave out every row
+     with an alternate-order identity (`isAlternateOrderEpisodeRow`) rather than look it up by
+     aired numbers: a DVD-order watch was otherwise unwatched about 14 minutes later, because
+     Emby's item at the aired numbers is a different, unplayed episode. The polls are only a backstop, since their
      webhooks natively report unwatch and these polls only ever backstop a missed or
      misconfigured webhook. Emby is enabled by default with
      `EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED`; Jellyfin's ambiguous library `Played=false`

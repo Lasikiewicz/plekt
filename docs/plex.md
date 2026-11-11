@@ -157,7 +157,13 @@ Two Plex-specific caveats (also in [webhooks.md](webhooks.md)):
 `plexNotificationListener.js` connects to `ws(s)://<plex>/:/websockets/notifications`
 and watches `timeline` notifications for movies (type 1), shows (type 2), seasons
 (type 3), and episodes (type 4) from the library section (supporting both array and
-single-object `TimelineEntry` payloads). Show and season changes are expanded to their
+single-object `TimelineEntry` payloads). It also takes the item from the `ended` frame of
+an `activity` notification of type `library.refresh.items` (the key is the
+`Context.key` path `/library/metadata/<id>`). Checked live on Plex 1.43.4: a watched or
+unwatched change never sends a `timeline` frame, neither from the API nor from Plex Web.
+Plex Web's Mark as watched/unwatched instead produces that `activity` frame, and an API
+`/:/scrobble` call produces no frame at all, so the adaptive poller below is what catches
+those (see channel 3). These item-refresh frames are rate-limited: a library-wide metadata refresh in Plex sends one per item, so after 50 in a 60 second window the rest of the burst is dropped and one log line says so (timeline entries are never limited; the poller still catches watch changes). Started and updated `activity` frames repeat the same key and are ignored. Show and season changes are expanded to their
 episodes so bulk watched/unwatched actions propagate immediately. It is pure transport: reconnect with backoff (3s → 60s), debounce per
 ratingKey (2.5s), then hand each changed ratingKey to `onLibraryItemChange` - capped at 2
 concurrent handlers, queueing the rest. Show and season containers fan out at most two
@@ -220,6 +226,15 @@ proves the full path works - including any reverse proxy's WebSocket upgrade in 
 Plex.
 
 ## Inbound channel 3: scheduler polling
+
+The adaptive poller (`server/src/utils/plexAdaptivePoller.js`, every 5 seconds while active
+and 30 seconds when idle) is what catches a manual Mark as watched from the API or a client
+that sends no socket frame. Each poll reads the 10 newest items from the history head and
+10 per library section sorted by `lastViewedAt`, and passes every item newer than its last
+seen time to `onLibraryItemChange`. A manual mark never appears in Plex's history, only in
+the section sort, and the cursor moves past everything it read, so the window must be larger
+than the biggest burst of marks between two polls: with a window of 2, marking three
+episodes within a couple of seconds lost the oldest one for good.
 
 Full watched-library scans used by Force Sync and restore page each selected section
 in containers of 200 items. A failed section/page rejects the scan; Force Sync records

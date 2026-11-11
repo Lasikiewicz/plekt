@@ -13,7 +13,7 @@ import { recoverStaleSyncOperation, runScheduledSync } from "./scheduled.js";
 import { watchedPlayedSyncEnabled } from "./utils/syncFlags.js";
 import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
-import { keepOrderProvenance, resolveOrderMediaForPolling } from "./utils/episodeOrderWatch.js";
+import { keepOrderProvenance, plexUnwatchCheckTarget, resolveOrderMediaForPolling } from "./utils/episodeOrderWatch.js";
 import { applyUnwatchedTransition } from "./utils/watchStateTransitions.js";
 import { plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
 import { pollConnectedTrackers } from "./utils/trackerSync.js";
@@ -1062,14 +1062,15 @@ async function checkPlexUnwatchedFast(plexConfig) {
 
   for (const record of records) {
     try {
+      // The row's numbers are aired numbers; Plex may number the show differently.
+      const target = plexUnwatchCheckTarget(record);
+      if (target.skip) continue;
       const media = {
         title: record.title,
         type: record.media_type,
         source: "plex",
         isValid: true,
-        itemId: record.watch_provenance?.source === "plex"
-          ? record.watch_provenance.item_id || undefined
-          : undefined,
+        itemId: target.itemId,
         ids: {
           imdb: record.imdb_id || undefined,
           tmdb: record.tmdb_id || undefined,

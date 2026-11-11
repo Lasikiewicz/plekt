@@ -382,7 +382,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `episodeOrderConflict.js`: previewEpisodeOrderConflict, repairEpisodeOrderConflict
 - `episodeOrderTargets.js`: matchEpisodeOrderTarget, resolveEpisodeOrderTargets, resolveSourceOrderEpisode
 - `episodeOrderUpNext.js`: orderCoordinate, orderDetails, orderRevision, orderSeason, resolveOrderUpNextItem
-- `episodeOrderWatch.js`: assertOrderInsert, keepOrderProvenance, preflightOrderRecords, prepareEpisodeOrderTarget, resolveOrderMediaForPolling, resolveOrderUpNextAction and 1 more
+- `episodeOrderWatch.js`: assertOrderInsert, isAlternateOrderEpisodeRow, keepOrderProvenance, plexUnwatchCheckTarget, preflightOrderRecords, prepareEpisodeOrderTarget and 3 more
 - `episodeTitleRepair.js`: episodeNameFromSeason, isPlaceholderEpisodeTitleValue, resolveStoredEpisodeName, resolvedEpisodeTitleForRecord
 - `eventLoop.js`: yieldToEventLoop
 - `fanartGateway.js`: fanartBuiltInAvailable, getAllFanartMovieImages, getAllFanartTvImages, getFanartMovieArt, getFanartTvArt, getFanartTvSeasonPosters

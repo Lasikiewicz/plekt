@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parsePlexNotificationRatingKeys } from "../server/src/utils/plexNotificationListener.js";
+import { parsePlexNotificationRatingKeys, createPlexNotificationListener } from "../server/src/utils/plexNotificationListener.js";
 
 test("parsePlexNotificationRatingKeys extracts rating keys from single object TimelineEntry", () => {
   const singlePayload = JSON.stringify({
@@ -71,6 +71,26 @@ test("parsePlexNotificationRatingKeys ignores bulk library refresh activity", ()
   assert.deepEqual(keys, []);
 });
 
+test("parsePlexNotificationRatingKeys takes the item from the ended library.refresh.items activity a client's watched toggle produces", () => {
+  const frame = (event, type = "library.refresh.items", key = "/library/metadata/6501") => JSON.stringify({
+    NotificationContainer: {
+      type: "activity",
+      size: 1,
+      ActivityNotification: [
+        { event, uuid: "ec939786", Activity: { uuid: "ec939786", type, title: "Refreshing", Context: { key } } },
+      ],
+    },
+  });
+
+  assert.deepEqual(parsePlexNotificationRatingKeys(frame("ended")), ["6501"]);
+  // The started/updated frames repeat the same key, and other activity types are not item changes.
+  assert.deepEqual(parsePlexNotificationRatingKeys(frame("started")), []);
+  assert.deepEqual(parsePlexNotificationRatingKeys(frame("ended", "library.update.section")), []);
+  // Only an item metadata path is a ratingKey; a section or children path is not.
+  assert.deepEqual(parsePlexNotificationRatingKeys(frame("ended", "library.refresh.items", "/library/sections/2")), []);
+  assert.deepEqual(parsePlexNotificationRatingKeys(frame("ended", "library.refresh.items", "/library/metadata/6496/children")), []);
+});
+
 test("parsePlexNotificationRatingKeys includes show and season containers for bulk watch-state changes", () => {
   const containerPayload = JSON.stringify({
     NotificationContainer: {
@@ -107,4 +127,40 @@ test("parsePlexNotificationRatingKeys ignores timeline entries outside supported
   });
 
   assert.deepEqual(parsePlexNotificationRatingKeys(payload), []);
+});
+
+test("the listener rate-limits item refresh activity so a bulk metadata refresh cannot flood the handler", async () => {
+  const activityFrame = (id) => JSON.stringify({
+    NotificationContainer: {
+      type: "activity",
+      size: 1,
+      ActivityNotification: [{ event: "ended", Activity: { type: "library.refresh.items", Context: { key: `/library/metadata/${id}` } } }],
+    },
+  });
+  const timelineFrame = (id) => JSON.stringify({
+    NotificationContainer: { type: "timeline", size: 1, TimelineEntry: [{ identifier: "com.plexapp.plugins.library", itemID: id, type: 4 }] },
+  });
+
+  const handled = [];
+  const logs = [];
+  let socket;
+  const listener = createPlexNotificationListener({
+    getPlexConfig: async () => ({ baseUrl: "http://127.0.0.1:32400", token: "t" }),
+    onLibraryItemChange: async (ratingKey) => { handled.push(ratingKey); },
+    logger: (message) => logs.push(message),
+    socketFactory: () => (socket = { close() {} }),
+  });
+  listener.start();
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  for (let id = 1; id <= 80; id++) socket.onmessage({ data: activityFrame(id) });
+  // A timeline entry is never limited, even in the middle of an activity burst.
+  socket.onmessage({ data: timelineFrame("9000") });
+  await new Promise((resolve) => setTimeout(resolve, 2700 + 200));
+  listener.stop();
+
+  const activityHandled = handled.filter((key) => key !== "9000");
+  assert.equal(activityHandled.length, 50, "only the first 50 item refreshes in the window are handled");
+  assert.ok(handled.includes("9000"));
+  assert.equal(logs.filter((line) => /bulk metadata refresh/.test(line)).length, 1, "the burst is logged once");
 });

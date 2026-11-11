@@ -3,8 +3,9 @@ import { assertSafeOutboundUrl } from "./outbound.js";
 
 // Plex Media Server pushes real-time notifications over a WebSocket at
 // `/:/websockets/notifications`. Unlike the webhook (which only fires for playback
-// events), this stream carries `timeline` notifications whenever a library item's
-// state changes - including when an item is marked watched/unwatched in any Plex client.
+// events), this stream reports library item changes. On Plex 1.43 a client marking an
+// item watched/unwatched arrives as a `library.refresh.items` activity frame (see
+// parsePlexNotificationRatingKeys), not as a `timeline` frame.
 // We use it to detect unwatch events the webhook can never deliver, then verify the
 // actual view state with a targeted metadata lookup before propagating.
 //
@@ -26,6 +27,8 @@ const RECONNECT_MAX_MS = 60_000;
 const DEBOUNCE_MS = 2500;
 const IDLE_WATCHDOG_MS = 5 * 60 * 1000;
 const WATCHDOG_CHECK_INTERVAL_MS = 30_000;
+const ACTIVITY_BURST_LIMIT = 50;
+const ACTIVITY_BURST_WINDOW_MS = 60_000;
 
 // Plex TimelineEntry.type: 1 = movie, 2 = show, 3 = season, 4 = episode.
 const WATCH_STATE_TIMELINE_TYPES = new Set([1, 2, 3, 4]);
@@ -125,17 +128,21 @@ export function isPlexPlayingNotification(raw) {
   return payload?.NotificationContainer?.type === "playing";
 }
 
-export function parsePlexNotificationRatingKeys(raw) {
+// Splits a frame's ratingKeys by where they came from: a timeline entry, or the ended
+// library.refresh.items activity (which a bulk metadata refresh also produces, so the
+// listener rate-limits it separately).
+function extractPlexNotificationKeys(raw) {
   let payload;
   try {
     payload = JSON.parse(decodeFrame(raw));
   } catch {
-    return [];
+    return { timeline: [], activity: [] };
   }
   const container = payload?.NotificationContainer;
-  if (!container) return [];
+  if (!container) return { timeline: [], activity: [] };
 
   const keys = [];
+  const activityKeys = [];
 
   if (container.type === "timeline") {
     const rawEntries = container.TimelineEntry;
@@ -152,7 +159,34 @@ export function parsePlexNotificationRatingKeys(raw) {
     }
   }
 
-  return [...new Set(keys)];
+  // Plex 1.43 never sends a `timeline` frame for a watched/unwatched flag change. A
+  // client's Mark as watched/unwatched (a plain /:/scrobble or /:/unscrobble call) instead
+  // surfaces as one `activity` frame of type library.refresh.items per item, whose
+  // Context.key is the item's metadata path, with event "ended" when it finishes. Only the
+  // "ended" frame is used: the started/updated frames repeat the same key four times.
+  // The handler verifies the real view state with a metadata lookup, so a refresh that did
+  // not change the watched flag is a harmless no-op re-check.
+  if (container.type === "activity") {
+    const rawActivities = container.ActivityNotification;
+    const activities = Array.isArray(rawActivities)
+      ? rawActivities
+      : rawActivities && typeof rawActivities === "object"
+      ? [rawActivities]
+      : [];
+    for (const notification of activities) {
+      if (notification?.event !== "ended") continue;
+      if (notification.Activity?.type !== "library.refresh.items") continue;
+      const match = /^\/library\/metadata\/(\d+)$/.exec(String(notification.Activity?.Context?.key || ""));
+      if (match) activityKeys.push(match[1]);
+    }
+  }
+
+  return { timeline: [...new Set(keys)], activity: [...new Set(activityKeys)] };
+}
+
+export function parsePlexNotificationRatingKeys(raw) {
+  const { timeline, activity } = extractPlexNotificationKeys(raw);
+  return [...new Set([...timeline, ...activity])];
 }
 
 // A burst of notifications (e.g. Plex announcing a large batch of changes right as
@@ -177,6 +211,9 @@ export function createPlexNotificationListener({ getPlexConfig, onLibraryItemCha
   const pending = new Map(); // ratingKey -> debounce timeout
   const handlerQueue = [];
   let activeHandlers = 0;
+  let activityWindowStartedAt = 0;
+  let activityKeysInWindow = 0;
+  let activityBurstLogged = false;
 
   function drainHandlerQueue() {
     while (activeHandlers < MAX_CONCURRENT_HANDLERS && handlerQueue.length > 0) {
@@ -269,9 +306,31 @@ function handleFrame(raw, onPlaySessionActivity) {
       logger(`Plex notifications: onPlaySessionActivity handler failed: ${error?.message || error}`);
     }
   }
-  for (const ratingKey of parsePlexNotificationRatingKeys(raw)) {
-    debounce(ratingKey);
+  const { timeline, activity } = extractPlexNotificationKeys(raw);
+  for (const ratingKey of timeline) debounce(ratingKey);
+  for (const ratingKey of activity) {
+    if (activityKeyAllowed()) debounce(ratingKey);
   }
+}
+
+// A library-wide metadata refresh in Plex sends one ended library.refresh.items frame
+// per item. Allow a normal run of manual marks (ACTIVITY_BURST_LIMIT items per window)
+// and drop the rest of a burst; the adaptive poller and the scheduled scans still catch
+// any watch change that was dropped.
+function activityKeyAllowed() {
+  const now = Date.now();
+  if (now - activityWindowStartedAt >= ACTIVITY_BURST_WINDOW_MS) {
+    activityWindowStartedAt = now;
+    activityKeysInWindow = 0;
+    activityBurstLogged = false;
+  }
+  activityKeysInWindow += 1;
+  if (activityKeysInWindow <= ACTIVITY_BURST_LIMIT) return true;
+  if (!activityBurstLogged) {
+    activityBurstLogged = true;
+    logger(`Plex notifications: more than ${ACTIVITY_BURST_LIMIT} item refreshes in ${Math.round(ACTIVITY_BURST_WINDOW_MS / 1000)}s (a bulk metadata refresh); ignoring the rest of this burst, the poller still catches watch changes`);
+  }
+  return false;
 }
 
   async function connect() {

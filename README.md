@@ -293,8 +293,9 @@ and the fixed bundled artwork and metadata catalogue is served without contactin
 live media or metadata services.
 The demo sends `X-Robots-Tag: noindex` and serves a `robots.txt` that disallows crawling;
 self-hosted installs do not receive that header.
-Each **Force to main** publishes the multi-architecture release image and deploys the
-exact released version to this OCI demo. Portainer is used only for local testing.
+Each **Force to main** publishes the multi-architecture release image, adds the demo
+artwork on top as a `<version>-demo` image (the normal image does not carry it), and deploys
+that exact released version to this OCI demo. Portainer is used only for local testing.
 If the demo needs a catch-up refresh without another promotion, run the **Deploy Public
 Demo** workflow manually from the `main` ref, type `DEPLOY`, and optionally provide an
 already-published release version. That deploy-only workflow does not change branches or

@@ -10,6 +10,7 @@ import { getManualWatchReview, listPendingManualWatchReviews, manualWatchReviewM
 import { createPerUserState } from "./perUserState.js";
 import { countPlaybackProgressRows, listPlaybackProgressRowsForReplay, getPlaybackProgressForMedia } from "./dataRepo.js";
 import { plexHeldStoredResume } from "./plexWatchstate.js";
+import { isAlternateOrderEpisodeRow, plexUnwatchCheckTarget } from "./episodeOrderWatch.js";
 
 const pendingPlexReviewPollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
 const plexResumePollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
@@ -183,11 +184,15 @@ export async function checkPlexUnwatchedStatus(config, loopStore) {
 
   for (const record of records) {
     try {
+      // The row's numbers are aired numbers; Plex may number the show differently.
+      const target = plexUnwatchCheckTarget(record);
+      if (target.skip) continue;
       const media = {
         title: record.title,
         type: record.media_type,
         source: "plex",
         isValid: true,
+        itemId: target.itemId,
         ids: {
           imdb: record.imdb_id || undefined,
           tmdb: record.tmdb_id || undefined,
@@ -198,7 +203,9 @@ export async function checkPlexUnwatchedStatus(config, loopStore) {
         watchProvenance: record.watch_provenance || null,
       };
 
-      const plexItem = await findPlexItem(config.plex, media);
+      const plexItem = target.itemId
+        ? await fetchPlexMetadataItem(config.plex, target.itemId).catch(() => null)
+        : await findPlexItem(config.plex, media);
       if (plexItem) {
         let confirmedItem = plexItem;
         let isWatched = Boolean(confirmedItem.viewCount && Number(confirmedItem.viewCount) > 0);
@@ -253,7 +260,7 @@ export async function checkEmbyUnwatchedStatus(config, loopStore) {
     return /target emby status:\s*(fulfilled|success)/.test(telemetry);
   };
   const records = (await listRecentTrackedWatchRows({ limit: 100, includeScheduled: true })).filter(
-    (record) => record.watched_at < threeMinutesAgo && embyWasConfirmedWatched(record),
+    (record) => record.watched_at < threeMinutesAgo && embyWasConfirmedWatched(record) && !isAlternateOrderEpisodeRow(record),
   ).slice(0, EMBY_LIKE_UNWATCHED_BATCH_SIZE);
   if (!records.length) return;
 
@@ -311,7 +318,7 @@ export async function checkJellyfinUnwatchedStatus(config, loopStore) {
     return /target jellyfin status:\s*(fulfilled|success)/.test(telemetry);
   };
   const records = (await listRecentTrackedWatchRows({ limit: 100, includeScheduled: true })).filter(
-    (record) => record.watched_at < threeMinutesAgo && jellyfinWasConfirmedWatched(record),
+    (record) => record.watched_at < threeMinutesAgo && jellyfinWasConfirmedWatched(record) && !isAlternateOrderEpisodeRow(record),
   ).slice(0, EMBY_LIKE_UNWATCHED_BATCH_SIZE);
   if (!records.length) return;
 

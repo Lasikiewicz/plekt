@@ -100,6 +100,30 @@ export async function resolveOrderUpNextAction(media, config) {
   return { ...resolved, source: media.source, media_key: undefined };
 }
 
+// Which Plex item a stored watch row should be checked against for an unwatch.
+// A row's season and episode are aired numbers, but Plex numbers a show in its
+// own order, so a lookup by those numbers can return a different, unwatched
+// episode (aired S02E05 is DVD S02E01) and the row is then wrongly unwatched
+// everywhere. Use the Plex item the watch came from when the row stored it.
+// With no stored Plex item id, a row with an alternate-order identity is not
+// checked at all: no coordinate lookup can be trusted for it. Aired-order rows
+// keep the coordinate lookup.
+export function plexUnwatchCheckTarget(record) {
+  const provenance = provenanceOf(record);
+  const itemId = String(provenance.source || "").toLowerCase() === "plex" ? String(provenance.item_id || "").trim() : "";
+  if (itemId) return { itemId };
+  return { skip: isEpisode(record) && Boolean(provenance.episode_order) };
+}
+
+// The Emby and Jellyfin unwatch polls find an item by a row's stored season and
+// episode, which are aired numbers, while those servers can number the show in
+// another order. They store no provider item id for a row that came from elsewhere,
+// so a row with an alternate-order identity is left out of those polls instead of
+// being unwatched because a different episode sits at its aired numbers.
+export function isAlternateOrderEpisodeRow(record) {
+  return isEpisode(record) && Boolean(provenanceOf(record).episode_order);
+}
+
 // Provenance builders replace media.watchProvenance wholesale; this carries the
 // verified episode_order identity (and any provider overrides) across, since the
 // insert guard refuses a translated row that has lost it.

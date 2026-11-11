@@ -8,6 +8,11 @@ const DEFAULT_ACTIVE_INTERVAL_MS = 5000;
 const DEFAULT_IDLE_INTERVAL_MS = 30000;
 const DEFAULT_IDLE_THRESHOLD_MS = 15 * 60 * 1000;
 const DEFAULT_UNWATCH_INTERVAL_MS = 10000;
+// How many of the newest watched items each poll reads per query. A manual "Mark as
+// watched" never appears in Plex's history and only shows in the per-section
+// lastViewedAt sort, so a window of 2 dropped the third item of a quick burst of marks
+// (the cursor then moved past it for good). 10 covers a burst between polls.
+const POLL_WINDOW_SIZE = 10;
 
 function trimTrailingSlash(value = "") {
   return String(value || "").replace(/\/+$/, "");
@@ -62,7 +67,7 @@ export function createPlexAdaptivePoller({
       const historyUrl = new URL(`${baseUrl}/status/sessions/history/all`);
       historyUrl.searchParams.set("sort", "viewedAt:desc");
       historyUrl.searchParams.set("X-Plex-Container-Start", "0");
-      historyUrl.searchParams.set("X-Plex-Container-Size", "4");
+      historyUrl.searchParams.set("X-Plex-Container-Size", String(POLL_WINDOW_SIZE));
       if (targetAccountId != null) {
         historyUrl.searchParams.set("accountID", String(targetAccountId));
       }
@@ -86,7 +91,7 @@ export function createPlexAdaptivePoller({
         sectionUrl.searchParams.set("unwatched", "0");
         sectionUrl.searchParams.set("sort", "lastViewedAt:desc");
         sectionUrl.searchParams.set("X-Plex-Container-Start", "0");
-        sectionUrl.searchParams.set("X-Plex-Container-Size", "2");
+        sectionUrl.searchParams.set("X-Plex-Container-Size", String(POLL_WINDOW_SIZE));
         sectionUrl.searchParams.set("type", section.type === "movie" ? "1" : "4");
         if (targetAccountId != null) {
           sectionUrl.searchParams.set("accountID", String(targetAccountId));
