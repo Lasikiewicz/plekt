@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.2.4.2.4";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.4.2.4";
-import { posterUrlFor, tmdbImage, tmdbPoster, episodeStillUrl, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isLocalArtworkUrl } from "./images.js?v=2.2.4.2.4";
-import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.4.2.4";
-import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.4.2.4";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.2.4";
-import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.2.4.2.4";
-import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.2.4";
-import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.2.4"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.4";
-import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.4.2.4";
-import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.4.2.4"; import { episodeOrderButtonHtml, episodeReviewNoticeHtml } from "./episode-order.js?v=2.2.4.2.4";
+import { state, elements } from "./state.js?v=2.2.4.2.5";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.2.4.2.5";
+import { posterUrlFor, tmdbImage, tmdbPoster, episodeStillUrl, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isLocalArtworkUrl } from "./images.js?v=2.2.4.2.5";
+import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.2.4.2.5";
+import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.2.4.2.5";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.2.4.2.5";
+import { renderWatchDatePrompt, seasonUnwatchButtonHtml, showUnwatchButtonHtml, savingEpisodeKeysForShow, markSavingEpisodeComplete, hasSavingWatchActionForShow } from "./watch-action.js?v=2.2.4.2.5";
+import { authHeaders, setMessage, syncPageTopbar, mediaDetailRoot, mediaDetailLoaderHtml, setMediaDetailActions, mediaInfoActionHtml, mediaForceSyncActionHtml, mediaToolsActionHtml, setMediaInfoContext, prepareInlineMediaDetail, bumpMediaRenderToken, currentMediaRenderToken } from "./media-detail-context.js?v=2.2.4.2.5";
+import { personalRatingPillHtml, personalEpisodeRatingButtonHtml, personalMediaActionsHtml } from "./personal-media.js?v=2.2.4.2.5"; import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.2.4.2.5";
+import { upNextShowActionHtml } from "./up-next-shared.js?v=2.2.4.2.5";
+import { watchSeasonCardSizes } from "./season-card-sizes.js?v=2.2.4.2.5"; import { episodeOrderButtonHtml, episodeReviewNoticeHtml } from "./episode-order.js?v=2.2.4.2.5";
 import {
   renderCastSection, renderTrailersSection, renderReviewsSection, renderRelatedShowsSection,
   renderMediaFacts, renderMediaImagesSection, renderExternalRatingPills, ratingPillHtml,
@@ -16,7 +16,7 @@ import {
   refreshActiveMediaDetailAfterSeerrStatus, episodeResolutionPillHtml,
   hydrateMediaAppLinks, mediaAppLinksHtml,
   markDetailPrimaryReady,
-} from "./media-detail-shared.js?v=2.2.4.2.4";
+} from "./media-detail-shared.js?v=2.2.4.2.5";
 
 let _playbackProgressRows = [];
 let _playbackProgressLoaded = false;
@@ -2541,6 +2541,7 @@ export function mergeShowWithLoadedHistory(show = {}) {
   const showIds = providerIdTokens(show);
   const byEpisode = new Map();
   const unwatchedEpisodeKeys = new Set();
+  const transitionAt = row => Number(row?.created_at) || Number(row?.updated_at) || Date.parse(row?.watched_at || "") || 0;
   const matchingSummaryEpisodes = (state.showsRaw || [])
     .filter((candidate) => {
       if (slug(candidate?.title || "") !== showKey) return false;
@@ -2556,11 +2557,10 @@ export function mergeShowWithLoadedHistory(show = {}) {
   for (const episode of showEpisodeRows) {
     if (episode.season == null || episode.episode == null) continue;
     const key = showEpisodeKey(episode.season, episode.episode);
-    // The detail endpoint deliberately keeps the latest unwatched transition
-    // as a tombstone so the show still resolves after its last watch is
-    // removed. The dashboard history feed only contains watched rows, so an
-    // older watch in state.history must not resurrect that episode here.
+    // Only a current unwatch can suppress a detail watch; summary snapshots may be older.
+    // created_at is the transition clock; updated_at can change during metadata refresh.
     if (!isWatchedHistoryAction(episode)) {
+      if (transitionAt(byEpisode.get(key)) > transitionAt(episode)) continue;
       unwatchedEpisodeKeys.add(key);
       byEpisode.delete(key);
       continue;

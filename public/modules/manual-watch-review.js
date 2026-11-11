@@ -1,9 +1,9 @@
-import { state } from "./state.js?v=2.2.4.2.4"; import { renderEpisodeOrderConflict } from "./episode-order-conflict.js?v=2.2.4.2.4";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.4";
-import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.2.4.2.4";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.2.4";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.2.4";
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.2.4.2.4";
+import { state } from "./state.js?v=2.2.4.2.5"; import { renderEpisodeOrderConflict } from "./episode-order-conflict.js?v=2.2.4.2.5";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.2.5";
+import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.2.4.2.5";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.2.4.2.5";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.2.4.2.5";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.2.4.2.5";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;
@@ -1864,8 +1864,7 @@ export async function loadManualWatchReview({ summaryOnly = false, refresh = fal
 
 async function postReviewAction(id, action, mode = "", watchedAt = "") {
   const payload = {};
-  if (mode) payload.mode = mode;
-  if (watchedAt) payload.watched_at = watchedAt;
+  if (mode) payload.mode = mode; if (watchedAt) payload.watched_at = watchedAt;
   const response = await fetch(`/api/manual-watch-review/${encodeURIComponent(id)}/${action}`, {
     method: "POST",
     headers: { ...authHeaders(), "Content-Type": "application/json" },
@@ -1880,6 +1879,7 @@ async function postReviewAction(id, action, mode = "", watchedAt = "") {
     if (Array.isArray(body.targetStates)) error.targetStates = body.targetStates;
     throw error;
   }
+  if (["approve", "dismiss"].includes(action)) _cb.clearDerivedUiCaches?.();
   return body;
 }
 

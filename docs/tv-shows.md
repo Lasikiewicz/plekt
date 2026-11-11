@@ -41,9 +41,12 @@ TMDB or TVDB id changes. This review does not alter watch history or provider st
 Manual Watch review approval revalidates a queued episode's original verified identity
 against current links and destinations, even if the selected order has since changed.
 Missing or invalid proof leaves the review pending; check the show's Episode order links.
+Played-flag webhooks preserve the verified order identity when applying the watch-date policy.
 Legacy reviews without proof cannot be approved by guessing their episode numbers.
 Manual Watch Review uses stored episode numbering for both its catalogue and queued
 watches; verified alternate-order reviews are labelled **Aired episode numbers**.
+Approval and dismissal invalidate the browser's show-detail cache. A newly approved
+watch keeps its selected-order display even when an older summary still says unwatched.
 Detail-page Force Sync imports translate the media server's episode identities before
 matching watch dates or saving history. Every imported episode is checked first; an
 unresolved episode stops the import before any watch state changes.

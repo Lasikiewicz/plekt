@@ -1,14 +1,14 @@
 {
-  "version": "2.2.4.2.4",
-  "build": 4,
+  "version": "2.2.4.2.5",
+  "build": 5,
   "resetCommit": "505aee1335665c3efafabd5dbbd836a29dea591a",
-  "updatedAt": "2026-11-10T22:09:15.660Z",
+  "updatedAt": "2026-11-11T00:20:01.916Z",
   "entries": [
     {
-      "build": 4,
-      "date": "2026-11-10T22:09:15.660Z",
-      "commit": "dd4c1a63c719a1dd17e96d381768214dd728de64",
-      "message": "This update includes review and repair alternate-order history conflicts and harden sync, history recovery and selected episode ordering.",
+      "build": 5,
+      "date": "2026-11-11T00:20:01.916Z",
+      "commit": "25ca097f3121b49ebc36911ae11b1efbd585ef74",
+      "message": "This update includes review and repair alternate-order history conflicts, harden sync, history recovery and selected episode ordering, and preserve approved alternate-order watches through manual review.",
       "author": "Lasikiewicz",
       "details": [
         "Manual episode actions use the selected TVDB order when saving new watches.",
@@ -29,11 +29,15 @@
         "Retain cached cast, videos, artwork and next-airing dates during temporary metadata outages, and retry incomplete show records after five minutes.",
         "Retry failed TVDB artwork discovery and poster downloads without leaving requests stuck or recording failures for redacted source URLs.",
         "Use the server's local calendar day for release-date filters, next-airing dates and playlist rules, including full provider timestamps for today.",
-        "Explain that full backup restores preserve the destination machine's media and tracker connections and require reconnecting missing services."
+        "Explain that full backup restores preserve the destination machine's media and tracker connections and require reconnecting missing services.",
+        "Keep newly approved DVD and alternate-order watches visible when an older dashboard snapshot still marks the episode unwatched, while respecting genuinely newer unwatches.",
+        "Refresh derived watch-state caches after successful review decisions so reopening a show reflects the saved decision immediately.",
+        "Preserve verified episode identities when played-flag webhooks apply the watch-date policy, allowing queued reviews to approve and target the correct episode."
       ],
       "messageFragments": [
         "Fix - Review and repair alternate-order history conflicts",
-        "Fix - Harden sync, history recovery and selected episode ordering"
+        "Fix - Harden sync, history recovery and selected episode ordering",
+        "Fix - Preserve approved alternate-order watches through manual review"
       ]
     }
   ]

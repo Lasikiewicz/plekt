@@ -71,7 +71,7 @@ import { mediaIsUpNextRailSeed } from "../utils/upNextSeedLedger.js";
 import { DISMISSED_TRAKT_NOT_FOUND_DETAIL } from "../utils/traktDismissals.js";
 import { traceLog } from "../utils/logVerbose.js";
 import { buildSyncMatchReport, unresolvedSyncMatchReport } from "../utils/syncMatchReport.js";
-import { inRowNumbering } from "../utils/showSeasonTranslation.js"; import { preflightOrderRecords, resolveOrderWatch } from "../utils/episodeOrderWatch.js";
+import { inRowNumbering } from "../utils/showSeasonTranslation.js"; import { keepOrderProvenance, preflightOrderRecords, resolveOrderWatch } from "../utils/episodeOrderWatch.js";
 import { listUpNextDismissals, recordUpNextDismissal, restoreAllUpNextDismissals, restoreUpNextDismissalsForMedia, restoreUpNextDismissalsSupersededByUnwatch, restoreUpNextDismissal } from "../utils/upNextDismissals.js";
 import { undropTitleForLivePlay } from "../utils/droppedTitles.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
@@ -3934,7 +3934,7 @@ export async function handleWebhook(req, res) {
       const { mode, dateChoice } = await resolveWebhookFlagWatchDate(media);
       media.watched_at = dateChoice.previewWatchedAt;
       const existingProvenance = media.watchProvenance || media.watch_provenance || {};
-      media.watchProvenance = buildWatchProvenance(
+      media.watchProvenance = keepOrderProvenance(existingProvenance, buildWatchProvenance(
         { ...media, playedAt: "" },
         {
           ingestPath: existingProvenance.ingest_path || `${media.source || "source"}_webhook`,
@@ -3944,7 +3944,7 @@ export async function handleWebhook(req, res) {
             `Import policy: ${dateChoice.reason}.`,
           ].filter(Boolean).join(" "),
         },
-      );
+      ));
 
       // An explicit provider "Mark played" event is a new user decision even
       // when the same item has a local delete tombstone. The tombstone still

@@ -112,7 +112,10 @@ they complete.
 
 For a selected alternate episode order, watched rows use the detail response's verified
 display coordinates. Dashboard summaries cannot replace those coordinates or add an
-untranslated watched episode; unwatched summary updates can suppress an older watch.
+untranslated watched episode. An unwatched summary suppresses a watched detail row only
+when its watch-state transition is at least as recent; a metadata refresh does not make
+an older unwatch authoritative. Successful Manual Watch review decisions clear the
+browser's derived watch-state caches before another detail lookup.
 
 Metadata, local watch detail, playback progress, and the optional IMDb pill enrich the
 existing page afterward. Enrichment patches the header, facts, and independently loaded

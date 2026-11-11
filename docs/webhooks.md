@@ -103,6 +103,11 @@ object. The crucial output is `media.phase`, derived per platform by
 | `ignored` | Not actionable | Dropped early. |
 
 Phase determination highlights:
+
+For a selected alternate episode order, played-flag events retain their verified aired
+episode identity when the watch-date policy rebuilds provenance. A queued Manual Watch
+review carries that proof through approval; a missing or invalid identity remains blocked.
+
 - **Plex**: `media.stop` → `completed` if progress ≥ 90 else `ended`; configured
   "active" events → `active`; "complete" events → `completed`.
 - **Emby/Jellyfin**: `markplayed` / `userdata saved with played=true` →
