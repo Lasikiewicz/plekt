@@ -1,10 +1,52 @@
 {
   "baseVersion": "2.2.4",
-  "build": 3,
-  "version": "2.2.4.3.0",
-  "updatedAt": "2026-11-11T12:11:15.036Z",
+  "build": 4,
+  "version": "2.2.4.4.0",
+  "updatedAt": "2026-11-12T01:22:18.797Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 4,
+      "version": "2.2.4.4.0",
+      "shortVersion": "2.2.4.4.0",
+      "date": "2026-11-12T01:22:18.797Z",
+      "commit": "4d4883a32124312032cfe4c728b137772bb98ac2",
+      "message": "Fix alternate episode-order watch states and improve Plex watch detection.",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Keep alternate-order episode watches from being unwatched again, and catch Plex watch changes made in bursts",
+        "Fix: A watch of an episode in an alternate order (such as a DVD-order show) is no longer marked unwatched again a few minutes later by the Plex, Emby and Jellyfin background checks, which looked the episode up by its aired numbers and read a different, unplayed episode.",
+        "Fix: Watched or unwatched changes made in Plex Web are now picked up through Plex's notification socket, and a burst of manual Mark as watched clicks in Plex no longer skips the oldest episodes."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Alternate-order episode watches no longer become unwatched after background checks on Plex, Emby or Jellyfin look up a different episode by its aired numbers.",
+          "Watched and unwatched changes made in Plex Web are picked up through the Plex notification socket.",
+          "Bursts of manual Mark as watched clicks in Plex no longer skip the oldest episodes."
+        ],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Up Next & watch-state",
+            "details": [
+              "Watched or unwatched changes made in Plex Web are now picked up through Plex's notification socket, and a burst of manual Mark as watched clicks in Plex no longer skips the oldest episodes."
+            ]
+          },
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Keep alternate-order episode watches from being unwatched again, and catch Plex watch changes made in bursts",
+              "A watch of an episode in an alternate order (such as a DVD-order show) is no longer marked unwatched again a few minutes later by the Plex, Emby and Jellyfin background checks, which looked the episode up by its aired numbers and read a different, unplayed episode."
+            ]
+          }
+        ],
+        "tweaks": []
+      }
+    },
     {
       "build": 3,
       "version": "2.2.4.3.0",
@@ -246,5 +288,5 @@
       ]
     }
   ],
-  "shortVersion": "2.2.4.3.0"
+  "shortVersion": "2.2.4.4.0"
 }

@@ -1,6 +1,6 @@
-import { state } from "./state.js?v=2.2.4.3.1";
-import { escapeHtml, slug } from "./utils.js?v=2.2.4.3.1";
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.3.1";
+import { state } from "./state.js?v=2.2.4.4.0";
+import { escapeHtml, slug } from "./utils.js?v=2.2.4.4.0";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.4.0";
 
 // Fix Match "Season and episode numbers" choice for one TV show: TVDB or TMDB.
 // Stored watches keep the media server's numbers; the server translates them

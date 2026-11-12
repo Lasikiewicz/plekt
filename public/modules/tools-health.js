@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.3.1";
-import { state, elements } from "./state.js?v=2.2.4.3.1";
-import { escapeHtml } from "./utils.js?v=2.2.4.3.1";
+import { buildAuthHeaders } from "./auth.js?v=2.2.4.4.0";
+import { state, elements } from "./state.js?v=2.2.4.4.0";
+import { escapeHtml } from "./utils.js?v=2.2.4.4.0";
 
 export function initHealthTools() {
   const button = document.querySelector("#refreshSyncHealthButton");
