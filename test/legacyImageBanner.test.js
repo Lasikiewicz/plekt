@@ -41,7 +41,8 @@ test("banner names both Plekt images and links to the guide", () => {
   assert.ok(banner);
   assert.match(banner.text, /ghcr\.io\/lasikiewicz\/plekt/);
   assert.match(banner.text, /plembfin\/plekt \(Docker Hub\)/);
-  assert.match(banner.text, /11 April 2027/);
+  // The banner formats the date in the viewer's locale: "11 April 2027" (en-GB) or "April 11, 2027" (en-US, as on CI).
+  assert.match(banner.text, /(?:11 April|April 11,) 2027/);
   assert.equal(banner.find("a")[0].href, notice.switchUrl);
   assert.equal(renderLegacyImageBanner(notice, body), null, "never drawn twice");
 });
