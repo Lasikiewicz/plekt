@@ -3,7 +3,7 @@ title: Media details and actions
 description: Understand the detail page, watch dates, Fix Match, artwork, the Options menu, and provider content.
 category: Features
 order: 5
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/modules/media-detail.js
   - public/modules/media-detail-context.js
@@ -190,6 +190,10 @@ creating another watch event. Episode rows show their saving state and progress 
 watch events arrive, while the action remains open until the final destination result settles.
 
 If the count is wrong, fix the show identity before applying a bulk action.
+
+For an earlier watch whose episode identity is uncertain after an order change, use
+[Manual Watch review](/docs/manual-watch-review/#resolve-an-earlier-episode-order-conflict)
+to compare the verified candidates before repairing it.
 
 ## Watch actions and dates
 

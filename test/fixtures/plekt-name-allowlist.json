@@ -1375,6 +1375,10 @@
         [
           "- Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.",
           1
+        ],
+        [
+          "- The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.",
+          1
         ]
       ]
     },
@@ -2221,6 +2225,14 @@
         ],
         [
           "\"Installs still running the Plembfin Docker image now see a dismissible notice card at the top of the app that tells them to switch to the Plekt image, with a link to the switch steps.\",",
+          2
+        ],
+        [
+          "\"Tweak: The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.\",",
+          1
+        ],
+        [
+          "\"The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.\",",
           2
         ]
       ]
@@ -11817,6 +11829,15 @@
         ],
         [
           "assert.match(banner.text, /plembfin\\/plekt \\(Docker Hub\\)/);",
+          1
+        ]
+      ]
+    },
+    "website/src/data/release-review.json": {
+      "reason": "website",
+      "lines": [
+        [
+          "\"upgrading-from-plembfin\": \"Reviewed 9cc5165: notice placement and a startup log line changed, but the image-switch and data-preservation steps did not.\"",
           1
         ]
       ]

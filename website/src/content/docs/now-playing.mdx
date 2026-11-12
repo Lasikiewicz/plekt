@@ -3,7 +3,7 @@ title: Now Playing
 description: See live sessions from Plex, Emby, and Jellyfin, with source, position, and progress.
 category: Features
 order: 3.1
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/modules/dashboard.js
   - public/modules/up-next.js
@@ -70,13 +70,14 @@ whole server.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/now-playing-options-dark.png"
   lightSrc="/assets/app-captures/now-playing-options-light.png"
-  alt="Plekt Now Playing panel with its options open, showing two allow checkboxes and an item count"
-  caption="The cog beside the panel heading sets which items can fill Now Playing and how many it holds."
+  alt="Plekt Now Playing panel with its options open, showing display and media-app sync controls"
+  caption="The cog controls the panel's items and the Up Next media-app sync setting."
 />
 
-- **Allow part watched items here** and **Allow Up Next items here** are both on by default. Part
+- **Show part watched items** and **Show Up Next items** are both on by default. Part
   watched items fill the free slots first, then the other [Up Next](/docs/up-next/) items.
-- The item count (1 to 3) sets how many cards the panel holds, live sessions included.
+- **Number of items** (1 to 3) sets how many cards the panel holds, live sessions included.
+- **Sync Up Next to media apps** changes the same saved setting as [Sync tuning](/docs/settings/sync/#up-next-provider-sync).
 
 While an episode or movie plays, its own Up Next card is hidden and never featured in the panel,
 so the title shows once, as its live session.

@@ -4,6 +4,49 @@ Release history for Plekt. This file covers published releases on `main` only -
 for the current pre-release build on `alpha` or `develop`, open **Settings → About**
 in a running instance, which lists that channel's build history separately.
 
+## v2.3.0 - 12 November 2026
+
+This update improves watch history and alternate episode orders, strengthens sync reliability, and reduces the Docker image size.
+
+[Plekt.net](https://plekt.net) · [Discord](https://discord.gg/7ZmEGKcRC5) · [Reddit](https://www.reddit.com/r/plekt/) · [GitHub](https://github.com/Lasikiewicz/plekt)
+
+### Bug Fixes
+
+#### Sync & provider recovery
+
+- Alternate-order episode watches no longer become unwatched when Plex, Emby or Jellyfin background checks inspect a different episode.
+- Plex Web watched and unwatched changes are picked up more reliably, including bursts of manual watches.
+- Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.
+- Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers.
+
+### Tweaks
+
+#### Up Next & watch-state
+
+- Up Next shows the selected episode order, and watch actions preserve verified episode identity when mappings change.
+- The dashboard Up Next cog controls media-app queue syncing, and its options popup fits smaller screens.
+
+#### Manual Watch review
+
+- Manual Watch Review shows aired and selected-order candidates for uncertain older watches. An administrator confirms repairs after a local backup is verified.
+
+#### Sync & connection recovery
+
+- Force Sync no longer removes a Trakt play without adding it back.
+- Sync handles incomplete provider reads more safely and needs stronger evidence before changing duplicate watches or unwatches.
+- Watch history searches include records beyond the newest 25,000, and show progress refreshes after history restores and data wipes.
+- Cached artwork and metadata remain available during temporary outages, with retries for failed downloads.
+- Release dates, next-airing dates and playlist rules use the server's local calendar day.
+- Full backup restores explain how destination connections are preserved and when services need reconnecting.
+- The Docker image is about half the size.
+- The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.
+- Security improvements strengthen session handling and connection tests.
+- Confirmations are safer to cancel, and Plekt remains usable when browser storage is blocked or full.
+- Transient search failures are retried instead of being retained for the session.
+- Episode thumbnails load after choosing a DVD or other TVDB order. Older unplaced watches stay out of episode cards and counts, with a notice; their records remain unchanged.
+- Clearing a resume position on Plex, Emby or Jellyfin clears it on the other servers, even when Plex misses the notification.
+- Plex missed-notification checks reconcile a watched-then-unwatched item and dismiss any superseded review.
+
 ## v2.2.4 - 5 November 2026
 
 This update adds per-show alternate episode orders, a Download range for logs, an opt-in anonymous install check and a Plembfin image notice, and fixes Trakt double writes and many sync, restore and sign-in gaps.

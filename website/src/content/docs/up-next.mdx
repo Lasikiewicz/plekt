@@ -3,7 +3,7 @@ title: Up Next
 description: One queue of resume cards and next episodes, pushed to the Plex, Emby, and Jellyfin rails.
 category: Features
 order: 3.2
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/modules/up-next.js
   - public/modules/dropped-titles.js
@@ -64,6 +64,9 @@ Each card shows the episode name, its season and episode code, and **Watch Now**
 a matching item in Plex, Emby, or Jellyfin when a connected server can provide one. A cached local
 resume card stays useful without a provider connection.
 
+For a show using a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order), the
+card displays the selected order while Plekt keeps its verified aired identity for syncing.
+
 ## Reloads and rebuilds
 
 After a page reload, Plekt paints the last Up Next cards your browser remembers (up to 30 cards,
@@ -85,6 +88,9 @@ When **Sync Up Next to media apps** is on in
 [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning) (it is by default), Plekt queues
 one background push whenever the queue changes, even with the Dashboard closed. Use **Sync Up
 Next** for an immediate push.
+
+The Dashboard's [Now Playing and Up Next options cog](/docs/dashboard/#now-playing-panel-options)
+controls the same saved setting.
 
 The [Works on](#works-on) table shows the rail each app uses. For a ready episode, Plekt checks that it is unwatched, released, and follows a fully watched run.
 It then refreshes the app's calculated rail from the watched episode just before it. Genuine

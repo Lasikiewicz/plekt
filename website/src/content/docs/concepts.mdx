@@ -3,7 +3,7 @@ title: The sync model
 description: How Plekt records canonical state, routes changes, and explains delivery.
 category: Understand the app
 order: 2
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - docs/architecture.md
   - docs/webhooks.md
@@ -100,6 +100,10 @@ account-level Watchlist as its only provider and keeps the local movie/show list
 Watched state is not the same as a resume marker.
 
 A stopped item can have a resume position without counting as watched.
+
+Clearing that position on a connected Plex, Emby or Jellyfin server is propagated to the
+other matched servers. See [Cross-platform resume](/docs/cross-platform-resume/) for the
+requirements and Plex's missed-notification fallback.
 
 When playback passes the configured watched threshold (90% by default), Plekt records a
 completed watch and propagates it.

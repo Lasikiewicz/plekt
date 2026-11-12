@@ -3,7 +3,7 @@ title: TV Shows media page
 description: Read and use a single TV show media page in Plekt.
 category: Features
 order: 3.1
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/app.js
   - public/index.html
@@ -17,6 +17,8 @@ sourcePaths:
   - public/modules/edit-dialogs.js
   - docs/media-detail.md
 screenshots:
+  - /assets/app-captures/tv-episode-order-dialog-dark.png
+  - /assets/app-captures/tv-episode-order-dialog-light.png
   - /assets/app-captures/tv-detail-page-dark.png
   - /assets/app-captures/tv-detail-page-light.png
   - /assets/app-captures/tv-spoilers-on-dark.png
@@ -273,6 +275,13 @@ Choose **Episode order** when your media server numbers a show differently from 
 aired order, for example by DVD order. The control is for the administrator and appears on a
 show that has a TheTVDB ID. When a non-Aired order is in use, its name follows the label, for
 example **Episode order: DVD order**.
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/tv-episode-order-dialog-dark.png"
+  lightSrc="/assets/app-captures/tv-episode-order-dialog-light.png"
+  alt="Plekt Episode order dialog previewing DVD Order for a show, with each server episode mapped to its aired episode"
+  caption="Previewing DVD Order: each row maps the media server's numbering to the aired episode."
+/>
 
 The dialog offers **Aired order** plus every other order TheTVDB lists for that show, such as
 DVD, absolute or alternate, under TheTVDB's own names. A show with no alternatives says so and

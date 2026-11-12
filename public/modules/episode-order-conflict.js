@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.2.4.4.0";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.2.4.4.0";
-import { state } from "./state.js?v=2.2.4.4.0";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.0";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.0";
+import { state } from "./state.js?v=2.3.0.0.0";
 
 const code = e => `S${String(e.season).padStart(2,"0")}E${String(e.episode).padStart(2,"0")}`;
 const label = e => `${code(e)} · ${e.name || "Untitled episode"}`;

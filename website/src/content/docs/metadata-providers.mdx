@@ -3,7 +3,7 @@ title: Metadata providers
 description: Configure TMDB, TheTVDB, Fanart.tv, OMDb, and YouTube for metadata and artwork.
 category: Connect services
 order: 4.8
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - docs/metadata.md
 screenshots:
@@ -39,6 +39,8 @@ number of times and then pauses requests to that provider for a short cool-down 
 retrying without limit.
 
 A provider outage can affect new enrichment without erasing the local watch archive.
+Plekt keeps cached artwork and details available during temporary outages and retries
+incomplete metadata and failed artwork downloads.
 
 Use [Settings → Metadata](/docs/settings/#metadata) to refresh after correcting a key.
 

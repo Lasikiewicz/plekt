@@ -3,7 +3,7 @@ title: General
 description: Manage the administrator account, inspect system health, choose the optional anonymous install check, and maintain the local artwork cache.
 category: Settings
 order: 5.1
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -18,6 +18,8 @@ screenshots:
   - /assets/app-captures/settings-general-integrity-light.png
   - /assets/app-captures/settings-general-storage-cache-dark.png
   - /assets/app-captures/settings-general-storage-cache-light.png
+  - /assets/app-captures/settings-general-privacy-dark.png
+  - /assets/app-captures/settings-general-privacy-light.png
 ---
 
 import ScreenshotFigure from "../../../components/ScreenshotFigure.astro";
@@ -67,6 +69,13 @@ the named feature guide and review [Logs](/docs/settings/logs/) for the first us
 
 Privacy holds one optional switch, **Send an anonymous daily check**. It lets the maintainer
 count how many installs are active and which versions they run. It is off until you turn it on.
+
+<ScreenshotFigure
+  darkSrc="/assets/app-captures/settings-general-privacy-dark.png"
+  lightSrc="/assets/app-captures/settings-general-privacy-light.png"
+  alt="Plekt Privacy settings with the anonymous daily check switch on, what is and is never sent, and the exact message shown"
+  caption="The Privacy panel prints the exact message before you turn the check on."
+/>
 
 - **What is sent:** at most once a day, a small message saying Plekt is running, with its
   version, release type, and CPU type, plus flags saying whether this is a new install or its

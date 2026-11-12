@@ -1,9 +1,9 @@
 ---
-title: "Plex or Jellyfin watch progress not syncing?"
+title: "Plex, Emby or Jellyfin watch progress not syncing?"
 description: Trace one watch event from its source through Plekt and on to the destination.
 category: Guides
 order: 7.1
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - website/src/content/docs/integrations.mdx
   - website/src/content/docs/sync-tools.mdx
@@ -19,7 +19,7 @@ screenshots:
 
 import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
-*Plekt steps reviewed against v2.2.2.*
+*Plekt steps reviewed against v2.2.4.*
 
 When a film or episode is watched on one server but stays unwatched, or keeps the wrong resume position elsewhere, trace one event before changing anything. Repeatedly toggling watched state can make it harder to tell which service has the latest value.
 
@@ -27,9 +27,19 @@ When a film or episode is watched on one server but stays unwatched, or keeps th
 
 1. Choose one film or episode and one direction, such as Plex to Jellyfin. Note the source, destination, title, year or episode, and approximate event time.
 2. Open the source service and confirm that it recorded the watched state or playback position. If the source is wrong, fix playback reporting there first.
-3. Confirm how the source reaches Plekt. Plex uses its built-in WebSocket notifications plus scheduled checks. Emby and Jellyfin can use the Plekt plugin or webhooks alongside polling, and the [webhook Test button](/docs/settings/webhooks/#test-an-emby-or-jellyfin-sender) confirms a manual mark arrives. Follow the [Jellyfin setup guide](/docs/jellyfin/) and choose one event method, not both. Without an event, playback checks run every 5 minutes while idle and every 10 seconds once playback is detected, so a new session can take a few minutes to appear.
-4. Confirm Plekt is connected to the intended server and account. The Plekt host must be able to reach the server URL; a connection that works in your browser does not prove that the host can reach it.
+3. Confirm how the source reaches Plekt using the app-specific checks below.
+4. Confirm [Settings → Media servers](/docs/settings/media-servers/) connects Plekt to the intended server and account. The Plekt host must be able to reach the server URL; a connection that works in your browser does not prove that the host can reach it.
 5. Check that the destination contains the same title. Compare the year, season, episode number, and provider identity before correcting a match. Duplicate titles and differently matched episodes can look like failed syncs.
+
+### Check the source app
+
+- **Plex:** uses its built-in WebSocket listener plus scheduled checks; no Plex webhook setup is needed. Follow the [Plex guide](/docs/plex/).
+- **Emby:** use the Plekt plugin or Emby's built-in webhook alongside polling. Follow the [Emby guide](/docs/emby/) and configure one event sender.
+- **Jellyfin:** use the Plekt plugin or Jellyfin Webhooks plugin alongside polling. Follow the [Jellyfin guide](/docs/jellyfin/) and configure one event sender.
+
+For Emby and Jellyfin, the [Test button](/docs/settings/webhooks/#test-an-emby-or-jellyfin-sender) checks that a manual played mark reaches Plekt. It does not prove that playback progress reaches every destination.
+
+Without an event, live playback checks run every 5 minutes while idle and every 10 seconds while active. Manual watched-state changes also depend on [scheduled sync and review settings](/docs/settings/sync/); those playback intervals are not a deadline for every watched-state change.
 
 ## Read the destination result
 
@@ -46,10 +56,10 @@ Open [Sync Activity](/docs/sync-tools/#read-an-activity-row), find the newest ev
 - **Failed** means the provider request did not complete. Check [Settings → Logs](/docs/settings/logs/) for the provider detail.
 - **Success** means Plekt recorded a successful delivery response. Confirm the resulting state in the destination service too.
 
-Correct the cause shown in the row. If a retry is available, retry only the affected item or destination, then confirm that its result updates. Avoid a library-wide replay for a single mismatch.
+Correct the cause shown in the row. If a retry is available, [retry the affected result](/docs/sync-tools/#retry-one-result), then confirm that its result updates. Missing media is skipped rather than retried. Avoid a library-wide replay for a single mismatch.
 
 ## If it still disagrees
 
-Make a backup before changing credentials, resetting history, or restoring data. Keep the event time and non-secret error text for a support report. Do not post API keys, webhook tokens, private library names, or account identifiers.
+Make a [backup](/docs/settings/backup/#local-backups) before resetting history or [restoring data](/docs/settings/restore/#local-restore). Keep the event time and non-secret error text for a support report. Do not post API keys, webhook tokens, private library names, or account identifiers.
 
-Plekt can show and retry its own provider deliveries. It cannot repair a provider-side outage or guarantee a match for every title. See the [Plex integration guide](/docs/plex/), [Jellyfin integration guide](/docs/jellyfin/), and [Sync Activity guide](/docs/sync-tools/).
+Plekt can show and retry its own provider deliveries. It cannot repair a provider-side outage or guarantee a match for every title. See the [Plex integration guide](/docs/plex/), [Emby integration guide](/docs/emby/), [Jellyfin integration guide](/docs/jellyfin/), and [Sync Activity guide](/docs/sync-tools/).

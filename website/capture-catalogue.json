@@ -146,7 +146,8 @@
     },
     "now-playing-options": {
       "pages": [
-        "dashboard"
+        "dashboard",
+        "now-playing"
       ],
       "variants": [
         "dark",
@@ -157,10 +158,6 @@
       "framing": {
         "type": "element",
         "target": {
-          "css": ".live-panel",
-          "padding": 16
-        },
-        "through": {
           "css": "#nowPlayingOptionsMenu"
         },
         "noScroll": true,
@@ -168,18 +165,20 @@
       },
       "automation": "auto",
       "sources": [
+        "public/index.html",
         "public/modules/dashboard.js",
         "public/modules/dashboard-modern.js",
+        "public/modules/now-playing-options.js",
         "public/modules/sync.js"
       ],
       "sizes": {
         "dark": {
-          "height": 194,
-          "width": 1255
+          "height": 245,
+          "width": 352
         },
         "light": {
-          "height": 194,
-          "width": 1255
+          "height": 245,
+          "width": 352
         }
       },
       "steps": [
@@ -3492,6 +3491,100 @@
           "width": 1231
         }
       }
+    },
+    "settings-general-privacy": {
+      "pages": [
+        "settings/general"
+      ],
+      "variants": [
+        "dark",
+        "light"
+      ],
+      "route": "/settings/general",
+      "state": "Settings general page at scroll top; the Privacy panel showing the anonymous daily check switch, its status line and the exact payload as they stand.",
+      "framing": {
+        "type": "crop",
+        "source": "settings-general",
+        "target": {
+          "subPanel": "install-check"
+        }
+      },
+      "automation": "auto",
+      "sources": [
+        "public/modules/settings-shell.js",
+        "public/modules/settings-ui.js",
+        "public/modules/settings-events.js",
+        "public/modules/install-check.js"
+      ],
+      "sizes": {
+        "dark": {
+          "width": 1231,
+          "height": 326
+        },
+        "light": {
+          "width": 1231,
+          "height": 326
+        }
+      }
+    },
+    "tv-episode-order-dialog": {
+      "pages": [
+        "tv-shows/media-page"
+      ],
+      "variants": [
+        "dark",
+        "light"
+      ],
+      "route": "/tvshow/naruto",
+      "state": "Naruto detail; Options, Episode order: the dialog open with every order TVDB lists and the DVD Order previewed. Only the preview card is clicked; Use, Link and Remove link are never pressed; close the dialog afterwards.",
+      "framing": {
+        "type": "element",
+        "target": {
+          "css": ".episode-order-dialog[open]"
+        },
+        "padding": 0,
+        "noScroll": true
+      },
+      "automation": "auto",
+      "sources": [
+        "public/modules/episode-order.js",
+        "public/modules/media-detail.js",
+        "public/modules/media-detail-show.js",
+        "public/modules/media-detail-shared.js"
+      ],
+      "sizes": {
+        "dark": {
+          "height": 642,
+          "width": 1382
+        },
+        "light": {
+          "height": 642,
+          "width": 1382
+        }
+      },
+      "steps": [
+        {
+          "click": ".actions-tools-trigger"
+        },
+        {
+          "wait": 600
+        },
+        {
+          "click": ".actions-tools-panel >> text=Episode order"
+        },
+        {
+          "waitFor": ".episode-order-dialog[open]"
+        },
+        {
+          "wait": 2500
+        },
+        {
+          "click": ".episode-order-dialog >> text=DVD Order"
+        },
+        {
+          "wait": 3500
+        }
+      ]
     }
   },
   "cropSources": {

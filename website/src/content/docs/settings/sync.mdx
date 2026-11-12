@@ -3,7 +3,7 @@ title: Sync
 description: Tune synchronization, run controlled repair tools, and review delivery history.
 category: Settings
 order: 5.6
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -77,6 +77,7 @@ should remain unchanged; Plekt's own Up Next view remains available.
 
 Provider feed failures retain the last successful observation and do not clear the local queue.
 For the target mapping and native-rail behavior, see [Dashboard → Up Next](/docs/dashboard/#up-next).
+The dashboard's Now Playing and Up Next options cog changes this same saved toggle.
 
 ## Manual Watch review
 
@@ -150,7 +151,9 @@ state.
 ### Import Watched Status
 
 Pulls watched state from one selected server or all connected destinations into Plekt. It does
-not send changes out or remove remote state.
+not send changes out or remove remote state. For a show using a non-Aired
+[episode order](/docs/tv-shows/media-page/#episode-order), Plekt verifies episode identity
+before saving so differently ordered media-server episodes remain distinct.
 
 ## Sync issues and match report
 

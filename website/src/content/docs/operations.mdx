@@ -3,7 +3,7 @@ title: Backups and operations
 description: Keep Plekt recoverable with backups, safe imports, hardening, and routine maintenance.
 category: Sync and maintain
 order: 6
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - docs/backups.md
   - docs/watch-history-backups.md
@@ -117,6 +117,8 @@ A restore changes local state and may queue follow-up sync work.
 Restoring a full Plekt backup saves a recovery copy of your current database first, and only
 the install administrator can restore or upload a backup (uploads are limited to 4 GB). See
 [Restore](/docs/settings/restore/).
+Media-server and tracker connections stay as configured on the destination; reconnect any
+services missing there before resuming sync.
 
 If a server was offline, let it reconnect before deciding that the archive is wrong.
 

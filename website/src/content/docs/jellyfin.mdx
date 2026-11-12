@@ -3,7 +3,7 @@ title: Jellyfin
 description: Connect Jellyfin for playback events, watch history, resume progress, and playlists.
 category: Connect services
 order: 4.3
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - docs/jellyfin.md
   - docs/webhooks.md
@@ -35,6 +35,8 @@ change the address, enter the token again before testing. The same applies to
 For a show set to a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order), the
 scheduled recently-watched import and live playback completion are translated to the aired
 episode before they are saved.
+Cleared resume positions are also sent to matching connected servers; see
+[Cross-platform resume](/docs/cross-platform-resume/).
 
 The password is not stored after token exchange.
 

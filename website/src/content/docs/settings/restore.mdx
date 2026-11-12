@@ -3,7 +3,7 @@ title: Restore
 description: Restore watch history or a full encrypted Plekt backup from local or remote storage.
 category: Settings
 order: 5.8
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/index.html
   - public/modules/tools-backups.js
@@ -37,9 +37,10 @@ storage. Always inspect the source, preview, and scope before confirming.
 Choose the local source, select **Watch History** or **Plekt**, review the preview, and choose
 the merge or replacement behavior offered by the dialog.
 
-**Merge into existing state** adds the backup's watched items without touching other watched
-items on connected apps. **Replace existing state** clears current watched items on each
-connected app, then reapplies only the backup set.
+For a Watch History restore, both choices replace Plekt's local watch history, playstate and
+resume progress with the backup. **Merge into existing state** adds its watched items to
+connected apps without touching their other watched items. **Replace existing state** clears
+current watched items on each connected app, then reapplies only the backup set.
 
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-restore-merge-replace-dark.png"
@@ -56,6 +57,11 @@ little free disk space.
 Before a full Plekt restore replaces anything, Plekt saves a recovery copy of your current
 database in the full-backups folder. If the restore stops part way, the error names where that
 copy is, so you can return to the state from just before the restore.
+
+A full restore keeps the media-server and tracker connections already configured on the
+destination machine; it does not restore those connections from the backup. Reconnect any
+services missing on the destination before resuming sync. See
+[Media servers](/docs/settings/media-servers/) and [Connections](/docs/settings/connections/).
 
 ## Remote restore
 

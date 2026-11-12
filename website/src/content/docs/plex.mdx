@@ -3,7 +3,7 @@ title: Plex
 description: Connect Plex for library state, playback events, watch history, playlists, and account watchlist sync.
 category: Connect services
 order: 4.1
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - docs/plex.md
   - docs/webhooks.md
@@ -28,6 +28,8 @@ Plex needs a server URL and token, or the account connection flow.
 Plekt attaches to Plex's notification WebSocket once the URL and token are configured, so
 no external listener is required for watched/unwatched changes. Playback checks back it up
 every 5 minutes while idle and every 10 seconds once playback is detected.
+Manual watched or unwatched changes made in Plex Web also use this notification connection;
+background checks reconcile missed changes, including a cleared resume position.
 
 Each Plekt user should connect their own Plex account. Account sign-in refuses a Plex account
 that is already connected to another Plekt user, so watch histories stay separate. When an

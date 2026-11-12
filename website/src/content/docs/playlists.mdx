@@ -3,7 +3,7 @@ title: Playlists
 description: Collect movies and TV shows into ordered playlists and keep them in sync with Plex, Emby, and Jellyfin.
 category: Features
 order: 3.33
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - public/index.html
   - public/modules/playlists.js
@@ -91,6 +91,8 @@ the rule:
 - Genres, original language (English is ticked on a new playlist), years or a decade, watched
   state (movies only), and recently added (library source only).
 - **Maximum** titles (20 by default) and the order: ranked, or by full release date.
+
+Release-date rules use the Plekt server's local calendar day.
 
 Talk and news shows, and library titles not yet matched to TMDB, IMDb, or TVDB, are left out.
 An automatic playlist can be Movies or TV, not Mixed. A TV one holds the next episode to watch

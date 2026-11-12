@@ -3,7 +3,7 @@ title: Emby
 description: Connect Emby for library state, playback, watch history, resume progress, and playlists.
 category: Connect services
 order: 4.2
-sourceVersion: "2.2.4"
+sourceVersion: "2.3.0"
 sourcePaths:
   - docs/emby.md
   - docs/webhooks.md
@@ -35,6 +35,8 @@ change the address, enter the token again before testing. The same applies to
 runs several items at once while keeping each item's order. For a show set to a non-Aired
 [episode order](/docs/tv-shows/media-page/#episode-order), the scheduled recently-watched import
 and live playback completion are translated to the aired episode before they are saved.
+Cleared resume positions are also sent to matching connected servers; see
+[Cross-platform resume](/docs/cross-platform-resume/).
 
 The Plekt Emby plugin is available as a local beta. Use the in-app Emby setup guide for
 plugin installation, or use Emby's built-in webhooks as an alternative. Enable only one
@@ -50,4 +52,3 @@ and enable:
 Leave unrelated event categories off until the core event path works. To confirm a manual mark
 reaches Plekt, use the [webhook Test button](/docs/settings/webhooks/#test-an-emby-or-jellyfin-sender).
 
-They add noise without improving watched-state sync.

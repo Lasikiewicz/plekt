@@ -1,7 +1,115 @@
 {
-  "version": "2.2.4",
-  "updatedAt": "2026-11-05T22:24:37.070Z",
+  "version": "2.3.0",
+  "updatedAt": "2026-11-12T09:53:21.154Z",
   "entries": [
+    {
+      "version": "2.3.0",
+      "version5Digit": "2.3.0.0.0",
+      "date": "2026-11-12T09:53:21.154Z",
+      "commit": "941febbbdcd64af11716bfe24099ed45b93955e5",
+      "message": "This update improves watch history and alternate episode orders, strengthens sync reliability, and reduces the Docker image size.",
+      "websiteUrl": "https://plekt.net",
+      "author": "Lasikiewicz",
+      "details": [
+        "Fix: Alternate-order episode watches no longer become unwatched when Plex, Emby or Jellyfin background checks inspect a different episode.",
+        "Fix: Plex Web watched and unwatched changes are picked up more reliably, including bursts of manual watches.",
+        "Fix: Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.",
+        "Fix: Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers.",
+        "Tweak: Manual Watch Review shows aired and selected-order candidates for uncertain older watches. An administrator confirms repairs after a local backup is verified.",
+        "Tweak: Force Sync no longer removes a Trakt play without adding it back.",
+        "Tweak: Sync handles incomplete provider reads more safely and needs stronger evidence before changing duplicate watches or unwatches.",
+        "Tweak: Watch history searches include records beyond the newest 25,000, and show progress refreshes after history restores and data wipes.",
+        "Tweak: Cached artwork and metadata remain available during temporary outages, with retries for failed downloads.",
+        "Tweak: Release dates, next-airing dates and playlist rules use the server's local calendar day.",
+        "Tweak: Full backup restores explain how destination connections are preserved and when services need reconnecting.",
+        "Tweak: The Docker image is about half the size.",
+        "Tweak: The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.",
+        "Tweak: Security improvements strengthen session handling and connection tests.",
+        "Tweak: Confirmations are safer to cancel, and Plekt remains usable when browser storage is blocked or full.",
+        "Tweak: Transient search failures are retried instead of being retained for the session.",
+        "Tweak: Episode thumbnails load after choosing a DVD or other TVDB order. Older unplaced watches stay out of episode cards and counts, with a notice; their records remain unchanged.",
+        "Tweak: Up Next shows the selected episode order, and watch actions preserve verified episode identity when mappings change.",
+        "Tweak: Clearing a resume position on Plex, Emby or Jellyfin clears it on the other servers, even when Plex misses the notification.",
+        "Tweak: Plex missed-notification checks reconcile a watched-then-unwatched item and dismiss any superseded review.",
+        "Tweak: The dashboard Up Next cog controls media-app queue syncing, and its options popup fits smaller screens."
+      ],
+      "sections": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          "Alternate-order episode watches no longer become unwatched when Plex, Emby or Jellyfin background checks inspect a different episode.",
+          "Plex Web watched and unwatched changes are picked up more reliably, including bursts of manual watches.",
+          "Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.",
+          "Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers."
+        ],
+        "tweaks": [
+          "Manual Watch Review shows aired and selected-order candidates for uncertain older watches. An administrator confirms repairs after a local backup is verified.",
+          "Force Sync no longer removes a Trakt play without adding it back.",
+          "Sync handles incomplete provider reads more safely and needs stronger evidence before changing duplicate watches or unwatches.",
+          "Watch history searches include records beyond the newest 25,000, and show progress refreshes after history restores and data wipes.",
+          "Cached artwork and metadata remain available during temporary outages, with retries for failed downloads.",
+          "Release dates, next-airing dates and playlist rules use the server's local calendar day.",
+          "Full backup restores explain how destination connections are preserved and when services need reconnecting.",
+          "The Docker image is about half the size.",
+          "The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.",
+          "Security improvements strengthen session handling and connection tests.",
+          "Confirmations are safer to cancel, and Plekt remains usable when browser storage is blocked or full.",
+          "Transient search failures are retried instead of being retained for the session.",
+          "Episode thumbnails load after choosing a DVD or other TVDB order. Older unplaced watches stay out of episode cards and counts, with a notice; their records remain unchanged.",
+          "Up Next shows the selected episode order, and watch actions preserve verified episode identity when mappings change.",
+          "Clearing a resume position on Plex, Emby or Jellyfin clears it on the other servers, even when Plex misses the notification.",
+          "Plex missed-notification checks reconcile a watched-then-unwatched item and dismiss any superseded review.",
+          "The dashboard Up Next cog controls media-app queue syncing, and its options popup fits smaller screens."
+        ]
+      },
+      "sectionGroups": {
+        "newFeatures": [],
+        "majorBugFixes": [
+          {
+            "title": "Sync & provider recovery",
+            "details": [
+              "Alternate-order episode watches no longer become unwatched when Plex, Emby or Jellyfin background checks inspect a different episode.",
+              "Plex Web watched and unwatched changes are picked up more reliably, including bursts of manual watches.",
+              "Import Watched Status verifies every episode before saving and keeps episodes distinct when media servers use different orders.",
+              "Manual Watch Review matches episode names to stored numbering and labels verified alternate-order watches with aired episode numbers."
+            ]
+          }
+        ],
+        "tweaks": [
+          {
+            "title": "Up Next & watch-state",
+            "details": [
+              "Up Next shows the selected episode order, and watch actions preserve verified episode identity when mappings change.",
+              "The dashboard Up Next cog controls media-app queue syncing, and its options popup fits smaller screens."
+            ]
+          },
+          {
+            "title": "Manual Watch review",
+            "details": [
+              "Manual Watch Review shows aired and selected-order candidates for uncertain older watches. An administrator confirms repairs after a local backup is verified."
+            ]
+          },
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Force Sync no longer removes a Trakt play without adding it back.",
+              "Sync handles incomplete provider reads more safely and needs stronger evidence before changing duplicate watches or unwatches.",
+              "Watch history searches include records beyond the newest 25,000, and show progress refreshes after history restores and data wipes.",
+              "Cached artwork and metadata remain available during temporary outages, with retries for failed downloads.",
+              "Release dates, next-airing dates and playlist rules use the server's local calendar day.",
+              "Full backup restores explain how destination connections are preserved and when services need reconnecting.",
+              "The Docker image is about half the size.",
+              "The notice on the retiring Plembfin image no longer obscures the sidebar logo or phone heading.",
+              "Security improvements strengthen session handling and connection tests.",
+              "Confirmations are safer to cancel, and Plekt remains usable when browser storage is blocked or full.",
+              "Transient search failures are retried instead of being retained for the session.",
+              "Episode thumbnails load after choosing a DVD or other TVDB order. Older unplaced watches stay out of episode cards and counts, with a notice; their records remain unchanged.",
+              "Clearing a resume position on Plex, Emby or Jellyfin clears it on the other servers, even when Plex misses the notification.",
+              "Plex missed-notification checks reconcile a watched-then-unwatched item and dismiss any superseded review."
+            ]
+          }
+        ]
+      }
+    },
     {
       "version": "2.2.4",
       "version5Digit": "2.2.4.0.0",
