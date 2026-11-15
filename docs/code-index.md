@@ -285,7 +285,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `tools-playstate-aliases.js`: initPlaystateAliasTools, loadPlaystateAliases
 - `tools-split-episode-repair.js`: initSplitEpisodeRepairTools, loadSplitEpisodeAudit
 - `tools-wipe-data.js`: initWipeDataTools, loadWipeDataPreview, runWipeData
-- `tools.js`: APPEARANCE_DEFAULTS, appendImportLog, applyAppearanceToBody, cancelFullSyncWatchstates, createPlektBackupNow, createPlektBackupRemoteNow and 52 more
+- `tools.js`: APPEARANCE_DEFAULTS, appendImportLog, applyAppearanceToBody, cancelFullSyncWatchstates, createPlektBackupNow, createPlektBackupRemoteNow and 53 more
 - `tracker-full-sync.js`: fullSyncView, initTrackerFullSync, initialSyncText, previewGroupSummary, previewGroupTitle, previewGroups and 8 more
 - `tracker-settings.js`: initTrackerSettings, refreshTrackerPolicyNotes, refreshTrackerSettings, traktSyncCompletionMessage
 - `up-next-shared.js`: chooseUpNextRemovalScope, isShowInUpNext, manualShowMatches, nowPlayingFirst, oneCardPerEpisode, provenDifferentShow and 6 more

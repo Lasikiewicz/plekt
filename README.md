@@ -602,7 +602,9 @@ playstate together or leaves both unchanged if it fails.
 ## Importing Watch History
 
 **From Trakt (one-time):** export your Trakt watch history as JSON, then upload it under
-**Settings → Connections → Trakt**. Imported watches propagate automatically; use
+**Settings → Connections → Trakt**. Only the history file (`watched-history.json` or
+`history.json`) is needed; per-show summaries and collection files from a full export are
+skipped because they are not individual watches. Imported watches propagate automatically; use
 **Settings → Sync → Sync Tools → Full Sync Watchstates** afterward to replay everything
 to a newly connected server.
 

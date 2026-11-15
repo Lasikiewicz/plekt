@@ -125,7 +125,18 @@ function firstPresent(...values) {
   return values.find((value) => value != null && value !== "");
 }
 
-function mapImportRecord(record) {
+// A Trakt watched-shows.json record is one per-show summary (show object, seasons array,
+// last_watched_at) with no episode. It is not a watch, and reading it as one stored the
+// show's TMDB id as a movie id, adding an unrelated movie at the show's last watch time.
+function isShowSummaryRecord(record) {
+  if (Array.isArray(record.seasons)) return true;
+  const hasShowObject = record.show != null && typeof record.show === "object";
+  const hasEpisode = firstPresent(record.episode, record.episode_number, record.season) !== undefined;
+  return hasShowObject && !hasEpisode;
+}
+
+export function mapImportRecord(record) {
+  if (!record || typeof record !== "object" || isShowSummaryRecord(record)) return undefined;
   const source = record.source || "trakt_import";
   const movie = record.movie || {};
   const show = record.show || {};
@@ -141,7 +152,6 @@ function mapImportRecord(record) {
     record.last_watched_at ||
     record.lastWatchedAt ||
     record.scrobbled_at ||
-    record.collected_at ||
     record.date ||
     record.watched_date ||
     record.Date ||
