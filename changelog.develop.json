@@ -1,7 +1,19 @@
 {
-  "version": "2.3.0.0.0",
-  "build": 0,
+  "version": "2.3.0.0.1",
+  "build": 1,
   "resetCommit": "941febbbdcd64af11716bfe24099ed45b93955e5",
-  "updatedAt": "2026-11-12T09:53:21.154Z",
-  "entries": []
+  "updatedAt": "2026-11-15T18:45:21.827Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-11-15T18:45:21.827Z",
+      "commit": "35407d0bc0fb145fb277b6c42210bbe19d0652b5",
+      "message": "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
+      "author": "Lasikiewicz",
+      "details": [
+        "Importing every file from a Trakt export no longer adds a random, unrelated movie for each show. The per-show summaries in watched-shows.json are now skipped instead of being read as movies that carried the show's TMDB number.",
+        "Trakt collection files are no longer imported as watches, so movies you own but have not watched stay unwatched."
+      ]
+    }
+  ]
 }
