@@ -36,7 +36,7 @@
     "release:verify-live": "node scripts/verify-release-website.js"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.1",
+    "better-sqlite3": "^13.1.1",
     "busboy": "^1.6.0",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
