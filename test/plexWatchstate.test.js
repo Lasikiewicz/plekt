@@ -1,6 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { embyLikeUnplayedIsPartWatchedClear, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "../server/src/utils/plexWatchstate.js";
+import { embyLikeUnplayedIsPartWatchedClear, isNewerPlexNotificationWatch, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "../server/src/utils/plexWatchstate.js";
+import { resolvePlexWatchDate, resolveWatchImportDate } from "../server/src/utils/watchDates.js";
+
+test("repeated Plex played flags cannot use a fresh manual import date as evidence of a rewatch", () => {
+  const previous = "2026-11-17T20:00:00.000Z";
+  const metadata = { viewCount: "1", viewOffset: "3356000", lastViewedAt: Date.parse(previous) / 1000 };
+  const watchDate = resolvePlexWatchDate(metadata);
+  const manualDate = resolveWatchImportDate({ mode: "now", manualMark: watchDate.manualMark, now: Date.parse("2026-11-18T20:00:00Z") });
+  assert.ok(Date.parse(manualDate.watchedAt) > Date.parse(previous));
+  assert.equal(isNewerPlexNotificationWatch(watchDate, previous), false);
+  assert.equal(isNewerPlexNotificationWatch(resolvePlexWatchDate(metadata, { hasPlaybackEvidence: true }), previous), false);
+
+  const completed = { ...metadata, viewCount: "2", lastViewedAt: Date.parse(manualDate.watchedAt) / 1000 };
+  assert.equal(isNewerPlexNotificationWatch(resolvePlexWatchDate(completed, { hasPlaybackEvidence: true }), previous), true);
+});
 
 test("a positive-offset Plex rollback is repaired after recent threshold playback", () => {
   assert.equal(shouldRepairRecentPlexUnwatch({

@@ -461,7 +461,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `plexPlaylists.js`: addPlexPlaylistItems, clearPlexServerIdentifierCache, createPlexPlaylist, deletePlexPlaylist, fetchPlexPlaylist, fetchPlexPlaylistItems and 7 more
 - `plexTokenManager.js`: ensurePlexServerOwnership, getValidPlexServerToken, getValidPlexToken
 - `plexWatchlistClient.js`: add, addPlexWatchlistItem, capabilities, fetchPlexWatchlistRss, fetchPlexWatchlistSnapshot, listManagedItems and 6 more
-- `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, embyLikeUnplayedIsPartWatchedClear, plexHeldStoredResume, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, providerHeldStoredResume and 1 more
+- `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, embyLikeUnplayedIsPartWatchedClear, isNewerPlexNotificationWatch, plexHeldStoredResume, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear and 2 more
 - `posterCache.js`: cacheArtworkFromUrl, cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache and 5 more
 - `processErrorHandlers.js`: installProcessErrorHandlers
 - `processRole.js`: createInstanceId, resolveProcessRole, roleHasWeb, roleHasWorker

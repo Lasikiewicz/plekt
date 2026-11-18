@@ -15,7 +15,7 @@ import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
 import { keepOrderProvenance, plexUnwatchCheckTarget, resolveOrderMediaForPolling } from "./utils/episodeOrderWatch.js";
 import { applyUnwatchedTransition } from "./utils/watchStateTransitions.js";
-import { plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
+import { isNewerPlexNotificationWatch, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
 import { pollConnectedTrackers } from "./utils/trackerSync.js";
 import { kickSimklFullSyncRuns } from "./utils/trackers/simklFullSyncRunner.js";
 import { getTrackerConnection } from "./utils/trackerConnectionRepo.js";
@@ -662,6 +662,13 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
   const viewCount = Number(metadata.viewCount || 0);
   const viewOffset = Number(metadata.viewOffset || 0);
   if (viewCount > 0) {
+    // A historical played flag on an active rewatch must leave resume progress alone.
+    const threshold = watchedThresholdPercent();
+    const liveRows = await loadLiveTrackingCache().catch(() => []);
+    if (liveRows.some((row) => row.source_platform === "plex"
+      && String(parseLivePayload(row).mediaId).replace(/^\/library\/metadata\//, "") === String(ratingKey)
+      && row.last_progress < threshold && Date.now() - row.updated_at < 60_000)) return;
+
     const playstate = await getPlaystateForMedia(media).catch(() => null);
     const watchDate = resolvePlexNotificationWatchDate(metadata, {
       hasPlaybackEvidence: await hasRecentPlexThresholdPlayback(media),
@@ -714,7 +721,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     }
 
     const loopStore = createLoopStore();
-    const isNewerWatch = playstate?.watched_at && new Date(watchedAt).getTime() > new Date(playstate.watched_at).getTime() + 10000;
+    const isNewerWatch = isNewerPlexNotificationWatch(watchDate, playstate?.watched_at);
 
     // Plex stamps lastViewedAt when *we* mark an item played, so every outbound
     // sync makes an already-recorded watch look freshly viewed here. A view time
@@ -739,7 +746,6 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
           watchedAt,
         });
       }
-      await deletePlaybackProgress(media).catch(() => null);
       return;
     }
 
@@ -791,13 +797,12 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     // exact playstate match.
     const existingByAnyKey = await findWatchedByAnyMediaKey(media).catch(() => null);
     if (isAuthoritativeRestoreActive()) return;
-    if (existingByAnyKey && !isNewerWatch) {
+    if (existingByAnyKey && !isNewerPlexNotificationWatch(watchDate, existingByAnyKey.watched_at)) {
       console.log("Plex notifications: already recorded under a different key; repairing playstate instead of logging a new watch", {
         title: media.title,
         ratingKey,
       });
       await upsertPlaystateForMedia(media, "watched", existingByAnyKey.watched_at, { skipInvalidate: true });
-      await deletePlaybackProgress(media).catch(() => null);
       return;
     }
 

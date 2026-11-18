@@ -4018,10 +4018,10 @@ export async function handleWebhook(req, res) {
         });
       }
       if (existingCanonicalState === "watched") {
-        // The local watch is authoritative, but the reporting app may be
-        // ahead of another connected app. Reconcile the canonical watched
-        // state to every configured destination, including the reporter, so
-        // an already-watched item cannot leave the other apps mismatched.
+        if (!isExplicitPlayedFlagEvent(media) && await getPlaybackProgressForMedia(media).catch(() => null)) {
+          return sendJson(res, { ok: true, inserted: false, skipped: true, reason: "Played flag ignored while resume progress exists" });
+        }
+        // Reconcile the authoritative local watch across all connected apps.
         const canonicalMedia = {
           ...media,
           watched_at: existingPlaystate?.watched_at || existingWatchedHistory?.watched_at || media.watched_at,
@@ -4144,7 +4144,7 @@ export async function handleWebhook(req, res) {
             : "already marked watched today",
           playstateUpdatedAt: existingPlaystate.updated_at,
         });
-        await deletePlaybackProgress(media).catch(() => null);
+        if (!isPlayedFlagEcho) await deletePlaybackProgress(media).catch(() => null);
         await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
         return sendJson(res, {
           ok: true,

@@ -234,9 +234,9 @@ flag - including Plekt's own outbound sync - and they can deliver it hours
 after the fact. The parser marks these with `playedFlagOnly` on the normalized
 payload. They carry no playback evidence, so:
 
-- **A played-flag event for an item already marked watched** is dropped: no new
-  `watch_history` row, no re-propagation. The calendar day it lands on is
-  meaningless, because delivery time says nothing about when the play happened.
+- **A played-flag event for an item already marked watched** adds no history.
+  When a generic update arrives during a rewatch with saved progress, Plekt keeps
+  the resume position and skips watched-state reconciliation.
 - **A played-flag event for an item not yet watched** enters Manual Watch review
   when review is required, including when Plekt currently has an explicit
   unwatched state. It is not written to watch history or propagated until the

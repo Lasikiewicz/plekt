@@ -170,6 +170,11 @@ concurrent handlers, queueing the rest. Show and season containers fan out at mo
 episode handlers at a time, and repeated same-state notifications are coalesced for one
 minute. A notification burst therefore cannot multiply into a provider and database storm
 while the current state is being verified.
+
+During a tracked rewatch below the watched threshold, a Plex notification carrying the
+item's existing played flag leaves the resume position intact. For an already-watched
+item, a library notification can record a rewatch only with playback evidence and a
+newer Plex view timestamp. The manual-watch date setting applies to new watched marks.
 Config reloads invalidate pending connection attempts, so a settings restart cannot
 open a second socket. Briefly successful connections retain reconnect backoff; it
 resets after a connection has remained open for at least 30 seconds.

@@ -1,5 +1,11 @@
 export const PLEX_WATCHED_ROLLBACK_GRACE_MS = 5 * 60 * 1000;
 
+// Manual-watch date policies can synthesize a fresh timestamp for every repeat
+// notification. Only a newer provider playback timestamp can open a rewatch.
+export function isNewerPlexNotificationWatch(watchDate, previousWatchedAt) {
+  return Date.parse(watchDate.sourceTimestamp) > Date.parse(previousWatchedAt) + 10000;
+}
+
 // Plex can briefly publish viewCount=0 immediately after scrobbling a live
 // session while retaining the session's positive viewOffset. That combination
 // is not a trustworthy manual unwatch when Plembfin either saw the matching

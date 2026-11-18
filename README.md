@@ -84,6 +84,7 @@ None of these talk to each other - they all talk to Plekt.
 
 - **Remembers** every watch, once, locally in SQLite
 - **Syncs** watched/unwatched state across Plex, Emby, Jellyfin, and Trakt
+  and preserves resume progress when a watched-state notification repeats during a rewatch.
 - **Enriches** with posters, cast, episodes, and ratings from TMDB, TheTVDB, Fanart.tv, and OMDb
 - **Connects** to Overseerr/Jellyseerr for requests and availability
 
