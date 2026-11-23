@@ -195,3 +195,120 @@ test("a playing episode matches only the card for the same season and episode", 
   assert.equal(sessionMatchesCardArt(session, card(1, 7)), false);
   assert.equal(sessionMatchesCardArt(session, ""), false);
 });
+
+test("Up Next resume cards render remaining time beside percentage watched", async () => {
+  const { formatRemainingDuration } = await import("../public/modules/utils.js");
+  assert.equal(formatRemainingDuration(30 * 60_000, 60 * 60_000), "30m left");
+  assert.equal(formatRemainingDuration(28 * 60_000, 100 * 60_000), "1h 12m left");
+  assert.equal(formatRemainingDuration(59.5 * 60_000, 60 * 60_000), "<1m left");
+  assert.equal(formatRemainingDuration(10_000, 0), "");
+
+  const card = renderDashboardUpNextCard({
+    id: "resume-ep",
+    media_type: "episode",
+    queue_kind: "resume",
+    playback_position_known: true,
+    title: "Slow Horses - S04E02",
+    show_title: "Slow Horses",
+    season: 4,
+    episode: 2,
+    position_ms: 12 * 60_000,
+    duration_ms: 48 * 60_000,
+    progress: 25,
+  });
+  assert.match(card, /class="part-watched-progress-text">25% watched<\/span>/);
+  assert.match(card, /class="up-next-remaining-text">· 36m left<\/span>/);
+});
+
+test("Up Next cards surface Rewatch, New episode, and Pinned cues", () => {
+  const previousManual = state.upNextManualShows;
+  try {
+    state.upNextManualShows = [{ title: "Severance", tmdb_id: "95396" }];
+    const rewatchPinned = renderDashboardUpNextCard({
+      id: "rewatch-ep",
+      media_type: "episode",
+      queue_kind: "next_up",
+      up_next_lane: "rewatch",
+      title: "Severance - S01E02",
+      show_title: "Severance",
+      show_tmdb_id: "95396",
+      season: 1,
+      episode: 2,
+    });
+    assert.match(rewatchPinned, /class="up-next-cue up-next-cue--rewatch"[^>]*>Rewatch<\/span>/);
+    assert.match(rewatchPinned, /class="up-next-cue up-next-cue--pinned"[^>]*>Pinned<\/span>/);
+
+    const newlyAired = renderDashboardUpNextCard({
+      id: "new-ep",
+      media_type: "episode",
+      queue_kind: "next_up",
+      up_next_lane: "new",
+      title: "Other Show - S03E01",
+      show_title: "Other Show",
+      show_tmdb_id: "12345",
+      season: 3,
+      episode: 1,
+    });
+    assert.match(newlyAired, /class="up-next-cue up-next-cue--new"[^>]*>New episode<\/span>/);
+    assert.doesNotMatch(newlyAired, /up-next-cue--pinned/);
+  } finally {
+    state.upNextManualShows = previousManual;
+  }
+});
+
+test("Up Next display sort and sync button status helpers handle newly_aired and provider status", async () => {
+  const { sortUpNextDisplayItems, upNextSyncButtonState } = await import("../public/modules/up-next-shared.js");
+  const sorted = sortUpNextDisplayItems([
+    { id: "resume-1", queue_kind: "resume", playback_position_known: true, air_date: "2015-01-01" },
+    { id: "older-air", queue_kind: "next_up", air_date: "2024-03-01", show_latest_watched_at: "2026-09-10T00:00:00Z" },
+    { id: "newer-air", queue_kind: "next_up", air_date: "2026-09-01", show_latest_watched_at: "2026-08-01T00:00:00Z" },
+  ], "newly_aired");
+  assert.deepEqual(sorted.map((item) => item.id), ["resume-1", "newer-air", "older-air"]);
+
+  const now = 1_700_000_000_000;
+  const succeeded = upNextSyncButtonState({
+    signedIn: true,
+    syncEnabled: true,
+    syncing: false,
+    loading: false,
+    now,
+    syncStatus: {
+      at: now - 5 * 60_000,
+      mode: "auto",
+      status: "succeeded",
+      pushedProviders: ["plex", "emby"],
+    },
+  });
+  assert.equal(succeeded.status, "succeeded");
+  assert.equal(succeeded.label, "Synced 5m ago");
+  assert.match(succeeded.title, /Auto-sync 5m ago to Plex, Emby\./);
+
+  const partial = upNextSyncButtonState({
+    signedIn: true,
+    syncEnabled: true,
+    syncing: false,
+    loading: false,
+    now,
+    syncStatus: {
+      at: now - 2 * 60_000,
+      mode: "manual",
+      status: "partial",
+      pushedProviders: ["emby"],
+      unreachableProviders: ["jellyfin"],
+    },
+  });
+  assert.equal(partial.status, "partial");
+  assert.equal(partial.label, "Partial sync · 2m ago");
+  assert.match(partial.title, /Manual sync 2m ago: synced Emby; Jellyfin unreachable\./);
+});
+
+
+test("desktop Dashboard gives the library selection banner its own auto row", async () => {
+  const { readFile } = await import("node:fs/promises");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+  const compact = css.replace(/\s+/g, " ");
+  assert.match(
+    compact,
+    /@media \(min-width: 761px\) \{ \.page-shell\[data-active-view="dashboard"\] \.app-shell:has\(> #librarySelectionBanner:not\(\.hidden\)\) \{ grid-template-rows: auto minmax\(0, 1fr\); \}/,
+  );
+});

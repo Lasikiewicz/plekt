@@ -244,13 +244,19 @@ export function renderSyncStatusDot(entry = {}, style = "") {
   return `<span class="sync-status-dot sync-status-dot--${tone}" data-sync-status-dot="true" role="button" tabindex="0" title="${escapeAttribute(tooltip)}" aria-label="${escapeAttribute(tooltip)}"${styleAttr}></span>`;
 }
 
+let activeAvailIssueCleanup = null;
+
 export function showAvailIssuePopup(anchorEl) {
+  if (typeof activeAvailIssueCleanup === "function") {
+    activeAvailIssueCleanup();
+    activeAvailIssueCleanup = null;
+  }
   const existing = document.getElementById("avail-issue-popup");
   if (existing) existing.remove();
 
   const message = anchorEl.dataset.availIssue || "Unknown issue.";
-  const lines = message.split("\\n");
-  const [headline, ...steps] = lines;
+  const lines = message.split("\n").filter((line) => line.length > 0);
+  const [headline = "Unknown issue.", ...steps] = lines;
 
   const popup = document.createElement("div");
   popup.id = "avail-issue-popup";
@@ -279,11 +285,20 @@ export function showAvailIssuePopup(anchorEl) {
   popup.style.left = `${left}px`;
   popup.style.top = `${top}px`;
 
+  let attachTimer = null;
+  const teardown = () => {
+    if (attachTimer !== null) {
+      clearTimeout(attachTimer);
+      attachTimer = null;
+    }
+    popup.remove();
+    document.removeEventListener("click", outsideClick, true);
+    document.removeEventListener("keydown", escKey);
+    if (activeAvailIssueCleanup === teardown) activeAvailIssueCleanup = null;
+  };
   const closePopup = (event) => {
     if (!popup.contains(event?.target) || event?.target.classList.contains("avail-issue-close")) {
-      popup.remove();
-      document.removeEventListener("click", outsideClick, true);
-      document.removeEventListener("keydown", escKey);
+      teardown();
     }
   };
   const outsideClick = (event) => {
@@ -291,8 +306,11 @@ export function showAvailIssuePopup(anchorEl) {
   };
   const escKey = (event) => { if (event.key === "Escape") closePopup(); };
 
+  activeAvailIssueCleanup = teardown;
   popup.querySelector(".avail-issue-close").addEventListener("click", closePopup);
-  setTimeout(() => {
+  attachTimer = setTimeout(() => {
+    attachTimer = null;
+    if (!popup.isConnected) return;
     document.addEventListener("click", outsideClick, true);
     document.addEventListener("keydown", escKey);
   }, 0);

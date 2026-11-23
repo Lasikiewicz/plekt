@@ -3,6 +3,11 @@ import { finishTrackerWriteIntent, listDueTrackerWriteIntents } from "./trackerW
 import { simklBacklogIntentCurrent, recordSimklBacklogResult } from './trackers/simklBacklogDispatch.js';
 import { invalidateHistoryDerivedCaches } from './dataRepo.js';
 import { db } from '../db.js';
+import { authorizeQueuedLibraryWatch } from "./queuedLibraryMonitoring.js";
+import { recheckHeldSimklWrites } from "./trackers/simklHeldWrites.js";
+
+const deferUnverifiedIntent = db.prepare(`UPDATE tracker_write_intents SET due_at = ?
+  WHERE id = ? AND status = ? AND due_at = ?`);
 
 export async function syncPendingTrackerWriteIntents(logger = console.log) {
   let completed = 0;
@@ -12,7 +17,12 @@ export async function syncPendingTrackerWriteIntents(logger = console.log) {
       if(intent.provider==='simkl'&&!simklBacklogIntentCurrent(intent))return;
       const media = { ...JSON.parse(intent.media_json), watched_at: intent.watched_at,
         watchRecordId: intent.watch_record_id, trackerWriteIntentId: intent.id, syncTargets: [intent.provider] };
-      const results = await dispatchTrackerWatchState(media, intent.action);
+      const isLibraryCurrent = await authorizeQueuedLibraryWatch(media);
+      if (!isLibraryCurrent) {
+        deferUnverifiedIntent.run(Date.now() + 5 * 60_000, intent.id, intent.status, intent.due_at);
+        return;
+      }
+      const results = await dispatchTrackerWatchState(media, intent.action, { isCancelled: () => !isLibraryCurrent() });
       if(intent.provider==='simkl'&&await recordSimklBacklogResult(intent,results))telemetryWritten=true;
       // A deliberate policy skip (for example an alternate-order show for Simkl)
       // returns before the adapter, so nothing finished the intent and it was
@@ -38,8 +48,9 @@ export async function syncPendingTrackerWriteIntents(logger = console.log) {
   // chunk. Retain sequential delivery for other trackers and their play logs.
   const simkl=listDueTrackerWriteIntents(Date.now(),100,'simkl',{includeLinked:true});
   await Promise.all(simkl.map(dispatch));
+  const rechecked = await recheckHeldSimklWrites(logger);
   // Only a changed row moves the data version; an unchanged pass must not
   // make every history cache rebuild.
-  if(telemetryWritten)await invalidateHistoryDerivedCaches('simkl-backlog-dispatch');
-  return completed;
+  if(telemetryWritten || rechecked.telemetryWritten)await invalidateHistoryDerivedCaches('simkl-backlog-dispatch');
+  return completed + rechecked.completed;
 }

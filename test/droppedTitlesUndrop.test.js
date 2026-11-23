@@ -8,7 +8,7 @@ const { db } = await import("../server/src/db.js");
 const { insertWatchRecordSync, batchInsertWatchRecords } = await import("../server/src/utils/dataRepo.js");
 const { handleWebhook } = await import("../server/src/routes/sync.js");
 const { AUTH } = await import("../server/src/appConfig.js");
-const { loadMediaConfig, saveMediaConfig } = await import("../server/src/utils/configStore.js");
+const { loadMediaConfig, saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 
 const reacherShow = { media_type: "tv", title: "Reacher", tmdb_id: "108978" };
 const reacherRow = (watchedAt) => ({
@@ -37,9 +37,20 @@ function responseCapture() {
 }
 
 async function sendJellyfin(body) {
+  saveProviderLibraryMonitoring("jellyfin", { serverId: "jf-test-srv", selectedIds: ["jf-lib-1"] });
   const headers = { "content-type": "application/json", "x-plekt-webhook-secret": AUTH.webhookSecret };
   const response = responseCapture();
-  await handleWebhook({ method: "POST", query: {}, headers, get: (name) => headers[String(name).toLowerCase()] || "", body }, response);
+  await handleWebhook({
+    method: "POST",
+    query: {},
+    headers,
+    get: (name) => headers[String(name).toLowerCase()] || "",
+    body: {
+      ServerId: "jf-test-srv",
+      LibraryContext: { Version: 1, ServerId: "jf-test-srv", LibraryId: "jf-lib-1", ResolutionStatus: "resolved" },
+      ...body,
+    },
+  }, response);
   return response;
 }
 

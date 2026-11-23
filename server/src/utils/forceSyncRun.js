@@ -242,6 +242,10 @@ export async function runForceSync(logger = console.log, {
   function findLooseMatch(media, groups) {
     for (const group of groups) {
       if (media.type !== group.type) continue;
+      if (media.type === "episode" && (
+        Number(media.season) !== Number(group.season)
+        || Number(media.episode) !== Number(group.episode)
+      )) continue;
       if (media.imdb && group.imdb && media.imdb === group.imdb) return group;
       if (media.tmdb && group.tmdb && media.tmdb === group.tmdb) return group;
       if (media.tvdb && group.tvdb && media.tvdb === group.tvdb) return group;
@@ -422,12 +426,13 @@ export async function runForceSync(logger = console.log, {
     let newestTime = 0;
 
     if (lastHistoryRecord) {
-      newestState = lastHistoryRecord.syncAction === "unwatched" ? "unwatched" : "watched";
+      const actionLower = String(lastHistoryRecord.syncAction || "").toLowerCase();
+      newestState = (actionLower === "unwatched" || actionLower === "unplayed") ? "unwatched" : "watched";
       newestTime = new Date(lastHistoryRecord.watchedAt).getTime();
     }
 
     let serverWatchedOn = new Set();
-    let mediaObj = serverWatchedEntry ? serverWatchedEntry.media : null;
+    let mediaObj = serverWatchedEntry ? { ...serverWatchedEntry.media } : null;
 
     if (serverWatchedEntry) {
       serverWatchedOn = serverWatchedEntry.group.watchedOn;
@@ -449,6 +454,12 @@ export async function runForceSync(logger = console.log, {
     }
 
     if (!mediaObj) return true;
+    mediaObj = {
+      ...mediaObj,
+      source: "force_sync",
+      syncIntent: "historical",
+      watched_at: lastHistoryRecord?.watchedAt || mediaObj.watched_at || undefined,
+    };
 
     if (newestState === "watched") {
       const inHistory = historyRecords.some(r => r.syncAction === "watched");
@@ -470,7 +481,7 @@ export async function runForceSync(logger = console.log, {
           try {
             await recordOutboundPlayedMarks(mediaObj, [target], loopStore).catch(() => null);
             const result = await markPlayedTarget(target, mediaObj);
-            if (result?.status !== "not_found") {
+            if (result?.status !== "not_found" && result?.status !== "skipped_by_policy") {
               const itemIds = Array.isArray(result?.itemIds) && result.itemIds.length
                 ? result.itemIds
                 : result?.itemId
@@ -482,7 +493,7 @@ export async function runForceSync(logger = console.log, {
                 await recordOutboundPlayedMarks(mediaObj, [target], loopStore).catch(() => null);
               }
             }
-            if (result?.status !== "not_found") propagatedCount++;
+            if (result?.status !== "not_found" && result?.status !== "skipped_by_policy") propagatedCount++;
           } catch (err) {
             logger(`Error: failed to mark played for "${mediaObj.title}" on ${target}: ${err.message}`);
           }

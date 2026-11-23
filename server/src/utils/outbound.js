@@ -1,6 +1,9 @@
+import dns from "node:dns/promises";
 import fs from "node:fs";
 import http from "node:http";
 import https from "node:https";
+import net from "node:net";
+import { Agent, Dispatcher1Wrapper } from "undici";
 import { outboundTimeoutMs } from "./tuning.js";
 import { acquireOutboundSlot, noteOutboundResponse, configureOutboundGovernor } from "./outboundGovernor.js";
 import { isDemoMode } from "./demoMode.js";
@@ -230,6 +233,51 @@ function redirectRequestOptions(options, status, fromUrl, toUrl) {
   return redirected;
 }
 
+const NATIVE_FETCH = globalThis.fetch;
+let customDnsLookup = null;
+
+export function __setOutboundDnsLookupForTest(fn) {
+  customDnsLookup = typeof fn === "function" ? fn : null;
+}
+
+async function resolveAndCheckOutboundHost(url, { label = "Outbound URL" } = {}) {
+  const host = String(url?.hostname || "").replace(/^\[|\]$/g, "");
+  if (!host || net.isIP(host) !== 0) return null;
+  const lookupFn = customDnsLookup || ((hostname, opts) => dns.lookup(hostname, opts));
+  let addresses;
+  try {
+    addresses = await lookupFn(host, { all: true, verbatim: true });
+  } catch {
+    // Allow unresolvable test hostnames (e.g. *.test with stubbed fetch) or
+    // real DNS failures to be handled by the underlying transport.
+    return null;
+  }
+  const list = Array.isArray(addresses) ? addresses : addresses ? [addresses] : [];
+  for (const entry of list) {
+    const address = typeof entry === "string" ? entry : entry?.address;
+    if (address && isBlockedMetadataHost(address)) {
+      throw outboundPolicyError(`${label} resolves to a blocked metadata endpoint`, OUTBOUND_POLICY_CODES.METADATA);
+    }
+  }
+  return list.filter((entry) => typeof entry === "object" && entry?.address);
+}
+
+function createPinnedDispatcher(addresses) {
+  if (!addresses?.length) return null;
+  // Node's bundled fetch can use the legacy dispatcher handler interface.
+  return new Dispatcher1Wrapper(new Agent({
+    keepAliveTimeout: 5000,
+    connections: 4,
+    connect: {
+      lookup: (_hostname, options, callback) => {
+        if (options?.all) return callback(null, addresses);
+        const first = addresses[0];
+        return callback(null, first.address, first.family || (net.isIPv6(first.address) ? 6 : 4));
+      },
+    },
+  }));
+}
+
 async function fetchFollowingSafeRedirects(url, options) {
   let currentUrl = assertSafeOutboundUrl(url, { label: "Outbound URL" });
   let currentOptions = { ...options, redirect: "manual" };
@@ -240,7 +288,18 @@ async function fetchFollowingSafeRedirects(url, options) {
     // cloud-metadata endpoints and unsafe URL forms at this shared request boundary.
     // CodeQL's js/request-forgery query is excluded repo-wide in
     // .github/codeql/codeql-config.yml for this exact reason - see that file for why.
-    const response = await fetch(currentUrl, currentOptions);
+    const resolvedAddresses = await resolveAndCheckOutboundHost(currentUrl, {
+      label: redirects === 0 ? "Outbound URL" : "Outbound redirect URL",
+    });
+    const usePinned = Boolean(resolvedAddresses?.length && !currentOptions.dispatcher && globalThis.fetch === NATIVE_FETCH);
+    const pinnedDispatcher = usePinned ? createPinnedDispatcher(resolvedAddresses) : null;
+    let response;
+    try {
+      const requestOptions = pinnedDispatcher ? { ...currentOptions, dispatcher: pinnedDispatcher } : currentOptions;
+      response = await fetch(currentUrl, requestOptions);
+    } finally {
+      if (pinnedDispatcher) pinnedDispatcher.close().catch(() => null);
+    }
     if (![301, 302, 303, 307, 308].includes(response.status)) return response;
 
     const location = response.headers.get("location");

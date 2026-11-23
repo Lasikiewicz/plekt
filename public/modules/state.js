@@ -172,6 +172,7 @@ const initialState = {
   upNextDismissed: [],
   upNextLoading: false,
   upNextSyncing: false,
+  upNextSyncStatus: null,
   upNextLoadedAt: 0,
   upNextError: "",
   upNextErrorCode: "",
@@ -347,3 +348,9 @@ globalThis[storeKey] = sharedStore;
 
 export const state = sharedStore.state;
 export const elements = sharedStore.elements;
+
+export function currentTenantCacheKey(user = state.currentUser) {
+  const base = user?.uid || user?.email || user?.username || "local";
+  const active = String(user?.activeUser || "").trim();
+  return active ? `${base}:${active}` : base;
+}

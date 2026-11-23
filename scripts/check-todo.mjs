@@ -28,7 +28,10 @@ const REMOTE_TESTING_PATTERN = /^Requires Remote Testing$/;
 const ENTRY = /^- \[[ x-]\] (?:Issue #\d+: )?\[[^\]]+\]\(plan\//;
 // The date on the entry line: `16 October 2026` or, when the time is known, `16 October 2026, 18:42`.
 const DATE_LINE = /\]\(plan\/[^)\s]+\) - (\d{1,2} \w+ \d{4})(?:, (\d{1,2}:\d{2}))?/m;
-const NOT_PLANS = new Set(["README.md", "updates.md"]);
+// next-release-checks.md is the standing release gate that Force to main reads; it is not a todo item.
+const NOT_PLANS = new Set(["README.md", "updates.md", "next-release-checks.md"]);
+// The summary under an entry is "a few words", never a paragraph (user decision, 12 November 2026).
+const MAX_SUMMARY_LENGTH = 160;
 
 function readStdin() {
   try {
@@ -108,6 +111,19 @@ function check() {
     }
     return 0;
   };
+  const changelogPath = path.join(root, "CHANGELOG.md");
+  const released = fs.existsSync(changelogPath)
+    ? fs.readFileSync(changelogPath, "utf8").match(/^## v(\d+)\.(\d+)\.(\d+)\b/m)
+    : null;
+  if (released) {
+    const [, major, minor, patch] = released.map(Number);
+    const expectedRelease = `${major}.${minor + 1}.0`;
+    if (releaseVersion && releaseVersion !== expectedRelease) errors.push(`next Release should be v${expectedRelease} after v${major}.${minor}.${patch}`);
+    const hotfixHeading = headings.find(({ name }) => HOTFIX_PATTERN.test(name))?.name;
+    const hotfixVersion = hotfixHeading?.match(/^Hotfix: v(\d+\.\d+\.\d+) \(Expected\)$/)?.[1];
+    const expectedHotfix = `${major}.${minor}.${patch + 1}`;
+    if (hotfixVersion && hotfixVersion !== expectedHotfix) errors.push(`Hotfix should be v${expectedHotfix} after v${major}.${minor}.${patch}`);
+  }
   // Post-release tasks are active only after their version has been released,
   // so they rise above Release only when that version is older than the expected version.
   const postShouldBeFirst = postHasEntries && compareVersions(postVersion, releaseVersion) < 0;
@@ -162,11 +178,14 @@ function check() {
       sectionName = heading[2];
       previous = Infinity;
     }
+    if (/^\s*- \[x\]/.test(line)) errors.push(`line ${i + 1} is ticked; todo.md lists only open work, so remove finished items (the plan keeps the record) and archive finished plans`);
     if (!ENTRY.test(line)) return;
     const link = line.match(/\]\((plan\/[^)\s]+)\)/);
     if (link) counts.set(link[1], (counts.get(link[1]) || 0) + 1);
     const summaryLine = (lines[i + 1] || "").trim();
     if (!summaryLine || ENTRY.test(summaryLine)) errors.push(`the entry on line ${i + 1} has no summary line under it`);
+    // The TODO summary is a few words; detail belongs in the plan's "Where we are" and step files.
+    else if (summaryLine.length > MAX_SUMMARY_LENGTH) errors.push(`the summary on line ${i + 2} is ${summaryLine.length} characters; keep it under ${MAX_SUMMARY_LENGTH} and put the detail in the plan`);
     const date = line.match(DATE_LINE);
     if (!date) {
       errors.push(`the entry on line ${i + 1} has no date after its plan link`);

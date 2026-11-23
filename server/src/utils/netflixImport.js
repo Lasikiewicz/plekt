@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { titleKey, parseNetflixEpisodePart, readNetflixCsv } from "./netflixCsv.js";
 import { episodesInLists, episodeInterpretations, evidenceKey, resolveShowEvidence, looseEpisodeMatch, rowEpisodes, learnedNetflixSeason, learnedNetflixSeasonLabel, impliedSeasonHint, episodeSuggestions } from "./netflixEpisodes.js";
 export { NETFLIX_MIN_WATCH_SECONDS, parseNetflixDate, parseNetflixEpisodePart, netflixCsvProfiles, readNetflixCsv, parseNetflixCsv } from "./netflixCsv.js";
@@ -6,12 +7,13 @@ import { batchInsertWatchRecords, getCachedHistory, mediaKeyFor } from "./dataRe
 import { searchTmdb, getTmdbDetails, getTmdbShowSeasonLists, getTmdbAlternativeTitles } from "./tmdbGateway.js";
 import { getNetflixEpisodeAliases, resolveNetflixVerifiedRow } from "./netflixEpisodeAliases.js";
 import { getNetflixCatalogue } from "./netflixCatalogue.js";
+import { createPerUserState } from "./perUserState.js";
 
 export const NETFLIX_SOURCE = "netflix_import";
 
 const PREVIEW_TTL_MS = 30 * 60 * 1000;
 const ALTERNATIVE_TITLE_CANDIDATES = 5;
-const previews = new Map();
+const previewsByUser = createPerUserState(() => new Map());
 
 
 async function tmdbMovieRuntime(id) {
@@ -787,7 +789,8 @@ export async function prepareNetflixImport(csv, {
 }
 
 export function saveNetflixPreview(preview) {
-  const id = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const previews = previewsByUser();
+  const id = randomUUID();
   previews.set(id, { preview, expiresAt: Date.now() + PREVIEW_TTL_MS });
   for (const [key, value] of previews) if (value.expiresAt < Date.now()) previews.delete(key);
   return id;
@@ -805,6 +808,7 @@ export async function reviewNetflixPreview(previewId, { groupId, tmdbId, query }
   getEpisodeAliases = getNetflixEpisodeAliases,
   getHistory = getCachedHistory,
 } = {}) {
+  const previews = previewsByUser();
   const saved = previews.get(String(previewId));
   if (!saved || saved.expiresAt < Date.now()) throw Object.assign(new Error("The Netflix preview expired. Upload the CSV again."), { status: 410 });
   if (saved.busy) throw Object.assign(new Error("This Netflix preview is already being updated."), { status: 409 });
@@ -925,6 +929,7 @@ export async function commitNetflixImport(previewId, {
   reviewedRows = [],
   getSeasonLists = getTmdbShowSeasonLists,
 } = {}) {
+  const previews = previewsByUser();
   const saved = previews.get(String(previewId));
   if (!saved || saved.expiresAt < Date.now()) {
     throw Object.assign(new Error("The Netflix preview expired. Upload the CSV again."), { status: 410 });

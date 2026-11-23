@@ -43,7 +43,10 @@ const enqueue = createSimklBatchQueue({
     if (!Number.isSafeInteger(metadata.quotaRemaining) || metadata.quotaRemaining < SIMKL_BATCH_QUOTA_RESERVE + 3) {
       throw quotaError(chunk.length);
     }
-    return { preSendCursor: data.all, fresh, ticket };
+    return { preSendCursor: data.all, fresh, ticket, quotaRemaining: metadata.quotaRemaining };
+  },
+  onBeforeSendAbort({ ticket, quotaRemaining } = {}) {
+    if (ticket && Number.isSafeInteger(quotaRemaining)) budget.complete(ticket, quotaRemaining);
   },
   claim(chunk) {
     db.transaction(() => {

@@ -11,6 +11,7 @@ const { getWatchRecordById, insertWatchRecord, upsertPlaystateForMedia } = await
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 const { recordOutboundPlayedMarks, recordOutboundRailRefresh, recordOutboundUnplayedMarks } = await import("../server/src/utils/syncOrchestrator.js");
 const { UP_NEXT_SEED_DEVICE_ID } = await import("../server/src/utils/embyClient.js");
+const { saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 
 function request({ contentType = "", userAgent = "test-agent", body = "" } = {}) {
   const headers = { "content-type": contentType, "user-agent": userAgent };
@@ -109,11 +110,14 @@ test("a watched callback caused by Plembfin is acknowledged without re-reconcili
 
   const trackerSync = await import("../server/src/utils/trackerSync.js");
   trackerSync.resetTrackerEventCheckThrottle();
+  saveProviderLibraryMonitoring("jellyfin", { serverId: "echo-guard-server", selectedIds: ["jf-lib-1"] });
   const response = responseCapture();
   await handleWebhook(webhookRequest({
     ServerId: "echo-guard-server",
+    LibraryContext: { Version: 1, ServerId: "echo-guard-server", ItemId: "jf-echo-1", LibraryId: "jf-lib-1", ResolutionStatus: "resolved" },
     NotificationType: "ItemMarkPlayed",
     Item: {
+      Id: "jf-echo-1",
       Type: "Movie",
       Name: media.title,
       ProviderIds: { Tmdb: media.ids.tmdb },
@@ -155,9 +159,12 @@ test("a native rail refresh callback never unwatches or deletes watch history", 
 
   const trackerSync = await import("../server/src/utils/trackerSync.js");
   trackerSync.resetTrackerEventCheckThrottle();
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-rail-srv", selectedIds: ["emby-lib-1"] });
   const response = responseCapture();
   await handleWebhook(webhookRequest({
     Event: "item.markunplayed",
+    Server: { Id: "emby-rail-srv" },
+    LibraryContext: { Version: 1, ServerId: "emby-rail-srv", LibraryId: "emby-lib-1", ResolutionStatus: "resolved" },
     Item: {
       Id: media.itemId,
       Type: "Movie",
@@ -227,12 +234,15 @@ test("Emby Up Next seed callbacks never become active sessions", async () => {
   assert.equal(seedResponse.body.active, false);
   assert.equal((await listActiveSessions()).length, 0);
 
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-seed-srv", selectedIds: ["emby-lib-1"] });
   const realPayload = {
     ...seedPayload,
+    Server: { Id: "emby-seed-srv" },
+    LibraryContext: { Version: 1, ServerId: "emby-seed-srv", ItemId: "emby-martian-1", LibraryId: "emby-lib-1", ResolutionStatus: "resolved" },
     DeviceId: "a-real-device",
     DeviceName: "Real Emby Player",
     SessionId: "real-emby-session",
-    Item: { ...seedPayload.Item, Name: "The Martian" },
+    Item: { ...seedPayload.Item, Id: "emby-martian-1", Name: "The Martian" },
   };
   const realResponse = responseCapture();
   await handleWebhook(webhookRequest(realPayload), realResponse);

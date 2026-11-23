@@ -1810,6 +1810,30 @@ const migrations = [
         )`);
     },
   },
+  {
+    id: 64,
+    up(database) {
+      // poster_cache had only its primary key, so every poster read looked the
+      // row up by (media_key, variant) and by storage_path with a full scan.
+      // On the real database that was about 0.12 ms per lookup at 5,000 rows;
+      // the indexes bring it to a search. IF NOT EXISTS keeps a second run safe.
+      const columns = new Set(database.pragma("table_info(poster_cache)").map((column) => column.name));
+      if (!["media_key", "variant", "updated_at_ms", "storage_path"].every((column) => columns.has(column))) return;
+      database.exec(`
+        CREATE INDEX IF NOT EXISTS idx_poster_cache_media_variant ON poster_cache(media_key, variant, updated_at_ms);
+        CREATE INDEX IF NOT EXISTS idx_poster_cache_storage_path ON poster_cache(storage_path);
+      `);
+    },
+  },
+  {
+    id: 65,
+    up(database) {
+      const columns = new Set(database.pragma("table_info(up_next_manual_shows)").map((column) => column.name));
+      if (columns.size && !columns.has("target_season")) {
+        database.exec("ALTER TABLE up_next_manual_shows ADD COLUMN target_season INTEGER");
+      }
+    },
+  },
 ];
 
 function parseJsonValue(value, fallback) {
@@ -2209,15 +2233,17 @@ export function dataVersionTrigger(version) {
   return dataVersionTriggers.get(version) || "observed";
 }
 
-export function bumpDataVersion(reason = "") {
+export function bumpDataVersion(reason = "", { adoptTrigger = false } = {}) {
   if (isNonAdminTenantContext(DATA_DIR)) {
     const entry = getTenantVersionEntry(getUserContext().dataDir);
-    const sharedBeforeBump = Number(selectHistoryVersion.get()?.version || 1);
-    if (sharedBeforeBump > entry.dataVersion) {
-      entry.dataVersion = sharedBeforeBump;
-      entry.lastCheckAt = Date.now();
-      noteDataVersionTrigger(entry.dataVersion, reason);
-      return entry.dataVersion;
+    if (adoptTrigger) {
+      const sharedBeforeBump = Number(selectHistoryVersion.get()?.version || 1);
+      if (sharedBeforeBump > entry.dataVersion) {
+        entry.dataVersion = sharedBeforeBump;
+        entry.lastCheckAt = Date.now();
+        noteDataVersionTrigger(entry.dataVersion, reason);
+        return entry.dataVersion;
+      }
     }
     const row = bumpHistoryVersion.get(Date.now());
     entry.dataVersion = Math.max(entry.dataVersion + 1, Number(row?.version || 1));
@@ -2225,16 +2251,17 @@ export function bumpDataVersion(reason = "") {
     noteDataVersionTrigger(entry.dataVersion, reason);
     return entry.dataVersion;
   }
-  const sharedBeforeBump = Number(selectHistoryVersion.get()?.version || 1);
-  // Canonical SQLite writes advance the version atomically via triggers. Adopt
-  // that generation instead of double-bumping, which preserves the safe
-  // one-row cache carry-forward optimization. File-only changes still need an
-  // explicit increment below.
-  if (sharedBeforeBump > dataVersion) {
-    dataVersion = sharedBeforeBump;
-    lastDataVersionCheckAt = Date.now();
-    noteDataVersionTrigger(dataVersion, reason);
-    return dataVersion;
+  if (adoptTrigger) {
+    const sharedBeforeBump = Number(selectHistoryVersion.get()?.version || 1);
+    // Canonical SQLite writes advance the version atomically via triggers. Adopt
+    // that generation instead of double-bumping, which preserves the safe
+    // one-row cache carry-forward optimization.
+    if (sharedBeforeBump > dataVersion) {
+      dataVersion = sharedBeforeBump;
+      lastDataVersionCheckAt = Date.now();
+      noteDataVersionTrigger(dataVersion, reason);
+      return dataVersion;
+    }
   }
   const row = bumpHistoryVersion.get(Date.now());
   dataVersion = Math.max(dataVersion + 1, Number(row?.version || 1));

@@ -24,6 +24,7 @@ import {
 import { createLoopStore } from "../utils/loopStore.js";
 import { syncMediaPlaystate } from "../utils/syncOrchestrator.js";
 import { applyUnwatchedTransition } from "../utils/watchStateTransitions.js";
+import { buildLibrarySkipDiagnostic, LIBRARY_MONITORING_PROVIDERS, resolveItemLibraryMembership } from "../utils/librarySelection.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "../utils/watchProvenance.js";
 import { isoDateTime, resolveWatchImportDate } from "../utils/watchDates.js";
 import {
@@ -165,6 +166,19 @@ async function dismissReview(review) {
 
   const config = await loadMediaConfig();
   const media = await reviewMediaWithIdentity(review, config);
+  const reviewSource = String(review.source || "").trim().toLowerCase();
+  if (LIBRARY_MONITORING_PROVIDERS.includes(reviewSource)) {
+    const decision = await resolveItemLibraryMembership(reviewSource, config, {
+      ...media,
+      source_item_id: review.source_item_id || media.itemId || media.providerItemId || undefined,
+    }, { lane: "interactive" });
+    if (!decision.allowed) {
+      throw Object.assign(
+        new Error(`${buildLibrarySkipDiagnostic(reviewSource, decision, media.title)} The review remains pending.`),
+        { status: 409, code: "LIBRARY_NOT_MONITORED", libraryStatus: decision.status },
+      );
+    }
+  }
   const source = String(review.source || media.source || "").trim().toLowerCase();
   if (!REVIEW_SOURCES.has(source)) {
     throw Object.assign(new Error("This review has no supported reporting app, so it remains pending."), { status: 400 });
@@ -333,6 +347,21 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
   }
 
   const config = await loadMediaConfig();
+  const reviewSource = String(review.source || "").trim().toLowerCase();
+  if (LIBRARY_MONITORING_PROVIDERS.includes(reviewSource)) {
+    const rawMedia = manualWatchReviewMedia(review);
+    const decision = await resolveItemLibraryMembership(reviewSource, config, {
+      ...rawMedia,
+      // An empty string masks the fallback to the stored provider provenance.
+      source_item_id: review.source_item_id || rawMedia.itemId || rawMedia.providerItemId || undefined,
+    }, { lane: "interactive" });
+    if (!decision.allowed) {
+      throw Object.assign(
+        new Error(`${buildLibrarySkipDiagnostic(reviewSource, decision, rawMedia.title)} The review remains pending.`),
+        { status: 409, code: "LIBRARY_NOT_MONITORED", libraryStatus: decision.status },
+      );
+    }
+  }
   const requested = String(requestedMode || "").toLowerCase();
   const mode = REVIEW_MODES.has(requested)
     ? requested
@@ -345,18 +374,9 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
   }
   media = await resolveOrderWatch(media, config);
   let dateChoice;
-  if (mode === "detected") {
-    const detectedAt = isoDateTime(review.updated_at || review.created_at);
-    const watchedAt = detectedAt
-      || isoDateTime(review.observed_watched_at || media.watched_at)
-      || new Date().toISOString();
-    dateChoice = {
-      watchedAt,
-      previewWatchedAt: watchedAt,
-      requiresReview: false,
-      reason: "review detection time",
-    };
-  } else if (mode === "custom") {
+  if (mode === "custom" || (requestedWatchedAt && requested === mode && mode !== "now")) {
+    // Bulk review sends the dates shown before saving. Earlier approvals in
+    // the batch can change the history used by the episode timing policy.
     const watchedAt = isoDateTime(requestedWatchedAt);
     if (!watchedAt) {
       throw Object.assign(new Error("A valid manual watch date and time is required."), { status: 400 });
@@ -368,7 +388,18 @@ async function approveReview(review, requestedMode = "", requestedWatchedAt = ""
       watchedAt,
       previewWatchedAt: watchedAt,
       requiresReview: false,
-      reason: "manual date and time",
+      reason: mode === "custom" ? "manual date and time" : "confirmed watch date",
+    };
+  } else if (mode === "detected") {
+    const detectedAt = isoDateTime(review.updated_at || review.created_at);
+    const watchedAt = detectedAt
+      || isoDateTime(review.observed_watched_at || media.watched_at)
+      || new Date().toISOString();
+    dateChoice = {
+      watchedAt,
+      previewWatchedAt: watchedAt,
+      requiresReview: false,
+      reason: "review detection time",
     };
   } else {
     const historyRows = mode === "episode_timing" ? await getCachedHistory().catch(() => []) : [];
@@ -586,7 +617,7 @@ export async function handleManualWatchReview(req, res, path) {
   if (review.review_kind === "source_mismatch") {
     if (action !== "dismiss") return sendJson(res, { error: "Source mismatch reviews only support dismiss." }, 400);
     const updated = setManualWatchReviewStatus(id, "dismissed", "source_mismatch");
-    const pendingReviews = listPendingManualWatchReviews();
+    const pendingReviews = listPendingManualWatchReviews({ includeWatchContext: false });
     return sendJson(res, {
       ok: true, id, status: "dismissed", review: updated,
       count: countPendingManualWatchReviewItems(pendingReviews), reviewCount: pendingReviews.length,
@@ -598,7 +629,7 @@ export async function handleManualWatchReview(req, res, path) {
       const result = review.status === "pending"
         ? await dismissReview(review)
         : { id, status: review.status, action: "unwatched", source: review.source, review };
-      const pendingReviews = listPendingManualWatchReviews();
+      const pendingReviews = listPendingManualWatchReviews({ includeWatchContext: false });
       return sendJson(res, {
         ok: true,
         ...result,
@@ -610,13 +641,14 @@ export async function handleManualWatchReview(req, res, path) {
       return sendJson(res, {
         ok: false,
         error: error.message || "Manual watch review dismissal failed",
+        ...(error.code === "LIBRARY_NOT_MONITORED" ? { code: error.code, libraryStatus: error.libraryStatus } : {}),
         ...(Array.isArray(error?.failureTargets) ? { failureTargets: error.failureTargets } : {}),
         ...(Array.isArray(error?.targetStates) ? { targetStates: error.targetStates } : {}),
       }, Number.isInteger(status) ? status : 500);
     }
   }
   if (action === "defer") {
-    const pendingReviews = listPendingManualWatchReviews();
+    const pendingReviews = listPendingManualWatchReviews({ includeWatchContext: false });
     return sendJson(res, {
       ok: true,
       review,
@@ -630,7 +662,7 @@ export async function handleManualWatchReview(req, res, path) {
     const result = review.status === "pending"
       ? await serializedApproval(review, body.mode || body.watchImportMode, body.watched_at || body.watchedAt)
       : { id, status: review.status, mode: review.decision_mode, watchedAt: review.media?.watched_at || "", review };
-    const pendingReviews = listPendingManualWatchReviews();
+    const pendingReviews = listPendingManualWatchReviews({ includeWatchContext: false });
     return sendJson(res, {
       ok: true,
       ...result,
@@ -639,6 +671,10 @@ export async function handleManualWatchReview(req, res, path) {
     }, 200, { "Cache-Control": "no-store" });
   } catch (error) {
     const status = Number(error?.status);
-    return sendJson(res, { ok: false, error: error.message || "Manual watch review approval failed" }, Number.isInteger(status) ? status : 500);
+    return sendJson(res, {
+      ok: false,
+      error: error.message || "Manual watch review approval failed",
+      ...(error.code === "LIBRARY_NOT_MONITORED" ? { code: error.code, libraryStatus: error.libraryStatus } : {}),
+    }, Number.isInteger(status) ? status : 500);
   }
 }

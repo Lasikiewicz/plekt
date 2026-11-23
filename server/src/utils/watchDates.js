@@ -199,19 +199,19 @@ function validTimingRow(row = {}) {
 
 /**
  * Find the same-season watched episode used by the media-page "before/after"
- * picker. The scanner has less metadata than the page, so runtime falls back
- * to the incoming provider item and then to a one-minute separation.
+ * picker, returning both the computed timestamp and the anchor episode it came
+ * from. Returns null when no other watched episode exists in that season.
  */
-export function episodeTimingWatchDate(media = {}, historyRows = [], fallbackDate = "") {
+export function episodeTimingWatchMatch(media = {}, historyRows = []) {
   if (String(media.type || media.media_type || "").toLowerCase() !== "episode") {
-    return isoDateTime(fallbackDate) || "";
+    return null;
   }
   const season = Number(media.season);
   const episode = Number(media.episode);
-  if (!Number.isFinite(season) || !Number.isFinite(episode)) return isoDateTime(fallbackDate) || "";
+  if (!Number.isFinite(season) || !Number.isFinite(episode)) return null;
 
   const targetShowKey = normalizeShowKey(showTitleForTiming(media));
-  if (!targetShowKey) return isoDateTime(fallbackDate) || "";
+  if (!targetShowKey) return null;
 
   const candidates = (Array.isArray(historyRows) ? historyRows : [])
     .filter(validTimingRow)
@@ -220,21 +220,46 @@ export function episodeTimingWatchDate(media = {}, historyRows = [], fallbackDat
     .map((row) => ({ ...row, watchedAt: isoDateTime(row.watched_at || row.watchedAt) }))
     .filter((row) => row.watchedAt);
 
+  const codeFor = (row) => `S${String(Number(row.season)).padStart(2, "0")}E${String(Number(row.episode)).padStart(2, "0")}`;
+
   const previous = candidates
     .filter((row) => Number(row.episode) < episode)
     .sort((a, b) => Number(b.episode) - Number(a.episode))[0];
   if (previous) {
-    return new Date(Date.parse(previous.watchedAt) + timingSeparationMs(previous, media)).toISOString();
+    return {
+      watchedAt: new Date(Date.parse(previous.watchedAt) + timingSeparationMs(previous, media)).toISOString(),
+      direction: "after",
+      anchorSeason: Number(previous.season),
+      anchorEpisode: Number(previous.episode),
+      anchorCode: codeFor(previous),
+      anchorWatchedAt: previous.watchedAt,
+    };
   }
 
   const next = candidates
     .filter((row) => Number(row.episode) > episode)
     .sort((a, b) => Number(a.episode) - Number(b.episode))[0];
   if (next) {
-    return new Date(Date.parse(next.watchedAt) - timingSeparationMs(next, media)).toISOString();
+    return {
+      watchedAt: new Date(Date.parse(next.watchedAt) - timingSeparationMs(next, media)).toISOString(),
+      direction: "before",
+      anchorSeason: Number(next.season),
+      anchorEpisode: Number(next.episode),
+      anchorCode: codeFor(next),
+      anchorWatchedAt: next.watchedAt,
+    };
   }
 
-  return isoDateTime(fallbackDate) || "";
+  return null;
+}
+
+/**
+ * Find the same-season watched episode used by the media-page "before/after"
+ * picker. The scanner has less metadata than the page, so runtime falls back
+ * to the incoming provider item and then to a one-minute separation.
+ */
+export function episodeTimingWatchDate(media = {}, historyRows = [], fallbackDate = "") {
+  return episodeTimingWatchMatch(media, historyRows)?.watchedAt || isoDateTime(fallbackDate) || "";
 }
 
 /**

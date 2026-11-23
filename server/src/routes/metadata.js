@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import nodePath from "node:path";
 import { requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
+import { createPerUserState } from "../utils/perUserState.js";
 import { readFormData, readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout, assertSafeOutboundUrl } from "../utils/outbound.js";
@@ -12,7 +13,7 @@ import { listActiveSessions, deleteActiveSession, upsertActiveSession } from "..
 import { hydrateCachedSession, loadLiveTrackingCache } from "../utils/liveSessions.js";
 import { runForceSync } from "../utils/forceSyncRun.js";
 import { runScheduledSync } from "../scheduled.js";
-import { appendSyncHistory, loadMediaConfig, mergeIncomingConfig, publicMediaConfig, saveMediaConfig, validateConfig, getSyncHistory, loadRuntimeState, setRuntimeState, appendRuntimeLog } from "../utils/configStore.js";
+import { appendSyncHistory, loadMediaConfig, mergeIncomingConfig, publicMediaConfig, saveMediaConfig, saveUpNextShowOverride, validateConfig, getSyncHistory, loadRuntimeState, setRuntimeState, appendRuntimeLog } from "../utils/configStore.js";
 import { findPlexItem, markPlexPlayed, setPlexProgress, markPlexUnplayedByRatingKey, fetchPlexWatchedItems, fetchPlexMetadataItem, fetchPlexSeriesEpisodes } from "../utils/plexClient.js";
 import { probePlexNotificationSocket } from "../utils/plexNotificationListener.js";
 import { markEmbyPlayed, setEmbyProgress, markEmbyUnplayedById, fetchEmbyWatchedItems, findEmbyItems, fetchEmbySeriesEpisodes } from "../utils/embyClient.js";
@@ -32,7 +33,9 @@ import { getUpNextCacheSnapshot } from "../utils/upNextCache.js";
 import { buildUpNextProjection } from "../utils/upNextService.js";
 import { refreshUpNextProviderFeeds } from "../utils/upNextProviderSync.js";
 import { getActiveUpNextProviderItemById } from "../utils/upNextRepository.js";
+import { readUpNextSyncStatus } from "../utils/upNextAutoSync.js";
 import { listManualUpNextShows, removeManualUpNextShow, upsertManualUpNextShow } from "../utils/upNextManual.js";
+import { getUpNextShowOptions } from "../utils/upNextShowOptions.js";
 import { restoreUpNextDismissalsForMedia } from "../utils/upNextDismissals.js";
 import { providerArtworkPathsForCandidate } from "../utils/upNextIdentity.js";
 import { getManualWatchReview } from "../utils/manualWatchReview.js";
@@ -168,7 +171,7 @@ function isCachedStorageUrl(value = "") {
   return raw.startsWith("/media/posters/") || raw.startsWith("/media/backdrops/");
 }
 
-const inflight = new Map();
+const inflightByUser = createPerUserState(() => new Map());
 
 async function findLiveSessionPosterRow(mediaKey) {
   if (!mediaKey) return null;
@@ -337,6 +340,7 @@ async function resolvePosterPayload({ rowId, provider = "", fallbackRequested = 
     if (cached?.cached && row.poster_url && !providerImageRequested) return { payload: cached, status: 200 };
 
     // If another request is already processing this mediaKey, wait for it to complete.
+    const inflight = inflightByUser();
     if (inflight.has(mediaKey)) {
       await inflight.get(mediaKey);
       const recheck = usableCachedPoster(await getPosterCache(mediaKey));
@@ -470,7 +474,7 @@ async function resolvePosterPayload({ rowId, provider = "", fallbackRequested = 
     }
     return { payload: { url: null, cached: false, source: "error" }, status: 200 };
   } catch (error) {
-    inflight.delete(rowId);
+    inflightByUser().delete(rowId);
     console.error("Poster lookup failed", { id: rowId, error: error.message || String(error) });
     return { payload: { url: null, cached: false, source: "error" }, status: 200 };
   }
@@ -1277,19 +1281,17 @@ export async function handleUpNext(req, res) {
     // a warm cache hit never calls the build at all.
     const build = async (ctx) => buildUpNextProjection({
       mediaConfig: mediaConfig || await loadMediaConfig().catch(() => null),
+      refreshLibrary: refresh,
       ...ctx,
     });
     const snapshot = await getUpNextCacheSnapshot(build, { refresh, revalidate, allowStale, trigger: "dashboard" });
     // The body carries live provider feed status and the server keeps its own
     // snapshot cache, so an HTTP-cached copy would only hide an outage.
     return sendJson(res, {
-      items: snapshot.items,
-      builtAt: snapshot.builtAt,
-      upNextVersion: snapshot.upNextVersion,
-      sourceVersion: snapshot.sourceVersion,
-      sourceStatus: snapshot.sourceStatus,
-      cacheStale: snapshot.stale,
-      manualShows: listManualUpNextShows(),
+      items: snapshot.items, builtAt: snapshot.builtAt, upNextVersion: snapshot.upNextVersion,
+      sourceVersion: snapshot.sourceVersion, sourceStatus: snapshot.sourceStatus,
+      cacheStale: snapshot.stale, manualShows: listManualUpNextShows(),
+      syncStatus: await readUpNextSyncStatus().catch(() => null),
     }, 200, { "Cache-Control": "private, no-store", Vary: "Authorization" });
   } catch (error) {
     console.error("Up Next request failed", error);
@@ -1299,19 +1301,38 @@ export async function handleUpNext(req, res) {
 
 export async function handleUpNextShow(req, res) {
   if (req.method === "OPTIONS") return sendOptions(res);
-  if (req.method !== "POST") return methodNotAllowed(res);
+  if (req.method !== "GET" && req.method !== "POST") return methodNotAllowed(res);
   if (!(await requireAdmin(req, res))) return;
+  if (req.method === "GET") {
+    const title = String(req.query.title || req.query.show_title || req.query.showTitle || "").trim();
+    const tmdbId = String(req.query.tmdb_id || req.query.tmdbId || req.query.show_tmdb_id || "").trim();
+    const tvdbId = String(req.query.tvdb_id || req.query.tvdbId || req.query.show_tvdb_id || "").trim();
+    const imdbId = String(req.query.imdb_id || req.query.imdbId || req.query.show_imdb_id || "").trim();
+    if (!title && !tmdbId && !tvdbId && !imdbId) return sendJson(res, { error: "A TV show identity is required" }, 400);
+    try {
+      const options = await getUpNextShowOptions({ title, tmdbId, tvdbId, imdbId });
+      return sendJson(res, options, 200, { "Cache-Control": "private, no-store", Vary: "Authorization" });
+    } catch (error) {
+      console.error("Up Next show options failed", error);
+      return sendJson(res, { error: "Could not load show season options" }, 500);
+    }
+  }
   const body = await readJson(req).catch(() => ({}));
   const title = String(body.title || body.show_title || body.showTitle || "").trim();
   if (!title) return sendJson(res, { error: "A TV show title is required" }, 400);
   try {
     const show = {
       title,
-      tmdb_id: body.tmdb_id || body.tmdbId || body.show_tmdb_id || body.showTmdbId || "",
-      tvdb_id: body.tvdb_id || body.tvdbId || body.show_tvdb_id || body.showTvdbId || "",
-      imdb_id: body.imdb_id || body.imdbId || body.show_imdb_id || body.showImdbId || "",
+      tmdb_id: String(body.tmdb_id ?? body.tmdbId ?? body.show_tmdb_id ?? body.showTmdbId ?? "").trim(),
+      tvdb_id: String(body.tvdb_id ?? body.tvdbId ?? body.show_tvdb_id ?? body.showTvdbId ?? "").trim(),
+      imdb_id: String(body.imdb_id ?? body.imdbId ?? body.show_imdb_id ?? body.showImdbId ?? "").trim(),
       poster_url: body.poster_url || body.posterUrl || body.show_poster_url || body.showPosterUrl || "",
+      target_season: body.target_season ?? body.targetSeason ?? body.season ?? null,
     };
+    if (body.action === "override") {
+      const upNextSync = saveUpNextShowOverride({ ...show, episodeChoice: body.episodeChoice, placement: body.placement });
+      return sendJson(res, upNextSync ? { ok: true, upNextSync } : { error: "A saved show identity is required." }, upNextSync ? 200 : 400);
+    }
     if (body.remove === true || body.action === "remove") {
       const removed = removeManualUpNextShow({ id: body.id, ...show });
       return sendJson(res, { ok: true, removed, manualShows: listManualUpNextShows() }, 200, { "Cache-Control": "no-store" });

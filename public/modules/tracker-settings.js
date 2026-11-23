@@ -5,6 +5,7 @@ import { initTrackerFullSync, renderTrackerFullSync } from "./tracker-full-sync.
 let getHeaders = () => ({ "Content-Type": "application/json" });
 let bound = false;
 let simklFlow = 0;
+let traktFlow = 0;
 let simklBusy = false;
 let simklViewRevision = 0;
 // Last known connection state, so the Plex notes can be repainted when the
@@ -283,9 +284,12 @@ async function disconnectSimkl() {
 }
 
 async function startTraktFlow({ clientId = "", clientSecret = "" } = {}) {
+  const flow = ++traktFlow;
   const isManual = Boolean(clientId || clientSecret);
   const connectBtn = el("traktConnectButton");
   const saveBtn = el("traktSaveManualButton");
+  const code = el("traktDeviceCode");
+  const flowActive = () => flow === traktFlow && Boolean(state.token) && Boolean(code?.isConnected);
   if (connectBtn) connectBtn.disabled = true;
   if (saveBtn) saveBtn.disabled = true;
   setMessage(isManual ? "Starting Trakt device sign-in with manual credentials…" : "Starting Trakt device sign-in…");
@@ -298,25 +302,33 @@ async function startTraktFlow({ clientId = "", clientSecret = "" } = {}) {
         initialSyncMode: el("traktInitialSyncMode")?.value || "baseline",
       }),
     });
-    const code = el("traktDeviceCode");
+    if (!flowActive()) return;
+    const url = new URL(start.verificationUrl);
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:" || (host !== "trakt.tv" && !host.endsWith(".trakt.tv")) || url.username || url.password || url.port) {
+      throw new Error("Trakt returned an unsafe sign-in link.");
+    }
     code.classList.remove("hidden");
     code.innerHTML = `<span>Enter this code in Trakt</span><b>${escapeText(start.userCode)}</b><small>The code expires automatically. Keep this page open while authorizing Plekt.</small><div class="settings-actions"><button id="traktCopyDeviceCode" class="button-ghost sync-action-btn sync-tool-button" type="button">Copy code</button><a id="traktOpenActivation" class="button-primary sync-action-btn sync-tool-button" target="_blank" rel="noopener noreferrer">Open Trakt</a></div>`;
-    el("traktOpenActivation").href = start.verificationUrl;
+    el("traktOpenActivation").href = url.href;
     el("traktCopyDeviceCode").addEventListener("click", async () => {
       try {
         await navigator.clipboard.writeText(start.userCode);
-        el("traktCopyDeviceCode").textContent = "Copied";
+        if (flow === traktFlow) el("traktCopyDeviceCode").textContent = "Copied";
       } catch {
-        setMessage(`Copy this Trakt code: ${start.userCode}`, "warning");
+        if (flow === traktFlow) setMessage(`Copy this Trakt code: ${start.userCode}`, "warning");
       }
     });
     code.scrollIntoView({ behavior: "smooth", block: "nearest" });
     setMessage("Copy the code, then open Trakt and approve Plekt. This page will finish automatically.");
     let interval = Math.max(2, Number(start.intervalSeconds || 5));
-    while (Date.now() < Number(start.expiresAt)) {
+    while (Date.now() < Number(start.expiresAt) && flowActive()) {
       await sleep(interval * 1000);
+      if (!flowActive()) return;
       const response = await fetch(`/api/tracker-auth/trakt/${encodeURIComponent(start.flowId)}/status`, { credentials: "same-origin", headers: getHeaders() });
       const body = await response.json().catch(() => ({}));
+      if (!flowActive()) return;
+      if (response.status === 401 || response.status === 403) return;
       if (response.status === 202 || body.status === "pending") { interval = Math.max(interval, Number(body.retryAfter || 0)); continue; }
       if (!response.ok) throw new Error(body.error || (body.status === "denied" ? "Trakt authorization was denied." : "Trakt sign-in expired."));
       if (body.status === "completed") {
@@ -327,12 +339,14 @@ async function startTraktFlow({ clientId = "", clientSecret = "" } = {}) {
         return;
       }
     }
-    throw new Error("Trakt sign-in expired. Start again.");
+    if (flowActive()) throw new Error("Trakt sign-in expired. Start again.");
   } catch (error) {
-    setMessage(error.message || "Trakt connection failed.", "error");
+    if (flow === traktFlow) setMessage(error.message || "Trakt connection failed.", "error");
   } finally {
-    if (connectBtn) connectBtn.disabled = false;
-    if (saveBtn) saveBtn.disabled = false;
+    if (flow === traktFlow) {
+      if (connectBtn) connectBtn.disabled = false;
+      if (saveBtn) saveBtn.disabled = false;
+    }
   }
 }
 
@@ -375,6 +389,8 @@ async function syncNow() {
 
 async function disconnect() {
   if (!window.confirm("Disconnect Trakt and delete its encrypted OAuth credentials from Plekt?")) return;
+  ++traktFlow;
+  el("traktDeviceCode")?.classList.add("hidden");
   try {
     await api("/api/tracker-connections/trakt", { method: "DELETE" });
     renderConnection(null);

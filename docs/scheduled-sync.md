@@ -13,6 +13,9 @@ Lease renewal, scheduled ticks and job polling schedule their next attempt even
 after an error. Daily database maintenance records failed attempts too, avoiding
 minute-by-minute retries. Each user's tick prunes old live-change events even
 when no dashboard is open.
+Once per day for each user, the scheduler also trims recognized raw request and
+response body fields from Sync Activity debug data older than 90 days. Rows and
+operational metadata, including retry and dismissal decisions, are retained.
 
 Recent-watch catch-up skips individual items that fail and continues the batch.
 Plex checks at most six libraries per pass and saves the next section to check,
@@ -291,6 +294,13 @@ Positions Plex never held and newer local progress are preserved.
 
 Implementation lives in `server/src/utils/unwatchedStatusPoll.js` (the fallback polls, run by
 `runDueUnwatchedPolls` from `scheduled.js`) and `server/src/scheduled.js`.
+
+Choose [monitored libraries](settings.md#media-servers-monitored-libraries) for each
+connected Plex, Emby, and Jellyfin server before running watch catch-up. When a connected server
+has zero selected libraries, watched, resume, Next Up, and personal-rating scans return no items
+instead of falling back to all libraries. Reducing a selection or hitting a partial/failed scan
+never creates synthetic unwatches or tracker removals, and queued watch retries recheck library
+membership and selection revision before dispatch.
 
 ## What it does each run
 
@@ -608,9 +618,29 @@ window above; they are not sent as one-item chunks the moment they arrive. The
 intent worker gathers up to 100 due Simkl intents per run, including intents linked
 to surviving watch rows. It records each result on that row without dropping other
 providers' telemetry. Changed dates/unwatched state cancel stale queued work;
-interrupted or uncertain writes still require review. Only existing captured
+interrupted or uncertain writes stay held. The queue checks up to 100 due held Simkl
+watches per pass with a read-only progress lookup. It clears a hold only when Simkl
+reports the movie or exact episode at the same watch timestamp, to the second. Inconclusive
+checks remain held and are eligible for another check after six hours. Rechecks respect
+Simkl's quota reserve and account holds. Only existing captured
 intents qualify, so this does not discover/send old backlog or enable Simkl
 full-sync push before its preview and approval safeguards.
+
+Sync Activity groups held writes by movie or show across trackers, with episode
+and provider details inside each show.
+**Recheck all** checks eligible held writes without waiting for the next scheduled
+check. It reads the tracker and clears only verified holds. **Cancel pending updates**
+cancels the writes in the selected groups after confirmation and preserves local
+and tracker watch history. The review panel shows the recheck result and how many
+writes are still held.
+
+**Retry failed** on a Sync Activity item shows the watch action, the affected
+destinations and their recorded errors before retrying. Previously recorded
+results target the failed destinations, while queued work uses the current sync settings.
+The popup stays open during the retry and shows the latest result and app errors.
+A Simkl failure that was never sent (for example, Plex reported the watch without IDs) is
+re-queued with the identity Plekt resolves now, and the popup reports it as queued for the
+next Simkl batch. If the retry is refused, the popup shows the server's reason.
 
 Full sync now uses stored, selected-item previews from `trackers/fullSyncPlans.js`.
 Initial snapshots establish a baseline regardless of legacy import flags; unapproved

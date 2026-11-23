@@ -8,6 +8,7 @@ const selectLatestType = db.prepare("SELECT * FROM background_jobs WHERE type = 
 const selectLogs = db.prepare("SELECT seq, timestamp, message FROM background_job_logs WHERE job_id = ? ORDER BY seq");
 const insertJob = db.prepare(`INSERT INTO background_jobs
   (id,type,status,requested_at,cancel_requested,payload) VALUES (@id,@type,'queued',@requestedAt,0,@payload)`);
+const hasActiveJob = db.prepare("SELECT 1 FROM background_jobs WHERE status IN ('queued', 'running') LIMIT 1");
 
 export const BACKGROUND_JOB_STALE_MS = 90_000;
 const RESTORE_PAUSED_JOB_TYPES = new Set(["cron_sync", "force_sync", "force_sync_plan", "up_next_sync", "up_next_priority_sync", "retry_all_sync_activity", "repair_playstate_episode_ids"]);
@@ -111,8 +112,11 @@ export function appendBackgroundJobLog(id, message, now = Date.now()) {
 }
 
 export function claimNextBackgroundJob({ holderId, generation, staleAfterMs = BACKGROUND_JOB_STALE_MS, now = Date.now() }) {
+  // Jobs enqueued after this read are picked up on the next poll. Once there
+  // is work, claiming and restore cancellation still run under the write lock.
+  if (!hasActiveJob.get()) return null;
   return db.transaction(() => {
-  if (!validateSchedulerLease({ holderId, generation, now })) return null;
+    if (!validateSchedulerLease({ holderId, generation, now })) return null;
 
     if (isAuthoritativeRestoreActive()) {
       cancelSyncJobsForRestoreInTransaction(now);

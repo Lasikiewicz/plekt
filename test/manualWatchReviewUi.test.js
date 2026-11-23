@@ -107,10 +107,10 @@ test("manual watch review separates season groups and names their action scope",
     ["Season 2", 1],
     ["Season 1", 2],
   ]);
-  assert.equal(reviewActionScopeLabel("show", "now"), "Mark all reviewed episodes watched");
-  assert.equal(reviewActionScopeLabel("show", "dismiss"), "Mark all reviewed episodes unwatched");
-  assert.equal(reviewActionScopeLabel("season", "now", "Emby", "Season 2"), "Mark reviewed Season 2 episodes watched");
-  assert.equal(reviewActionScopeLabel("season", "dismiss", "Emby", "Season 2"), "Mark reviewed Season 2 episodes unwatched");
+  assert.equal(reviewActionScopeLabel("show", "now"), "Confirm reviewed episodes…");
+  assert.equal(reviewActionScopeLabel("show", "dismiss"), "Dismiss reviewed episodes");
+  assert.equal(reviewActionScopeLabel("season", "now", "Emby", "Season 2"), "Confirm Season 2…");
+  assert.equal(reviewActionScopeLabel("season", "dismiss", "Emby", "Season 2"), "Dismiss Season 2");
 });
 
 test("manual watch review combines provider records for the same episode", () => {

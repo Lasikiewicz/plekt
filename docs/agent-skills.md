@@ -35,3 +35,4 @@ procedures; keep shared guidance in its owning docs instead of copying it into s
 | Task | Skill | Example request |
 | --- | --- | --- |
 | Start or stop the local app and named test containers | [plekt-local-stack](../.claude/skills/plekt-local-stack/SKILL.md) | `Start the server` |
+| Edit without running verification until disabled | [quick-edits](../.claude/skills/quick-edits/SKILL.md) | `Enable quick edits` |

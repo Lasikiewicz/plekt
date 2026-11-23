@@ -111,6 +111,10 @@ export async function executeForceSyncPlan(id, config, logger = () => {}, { sign
             result.missingItems.push({ title: action.media?.title || "Unknown title", target: action.target });
             return;
           }
+          if (remoteResult?.status === "skipped_by_policy") {
+            result.skippedActions = (result.skippedActions || 0) + 1;
+            return;
+          }
           if (remoteResult?.status !== "not_found") {
             const itemIds = Array.isArray(remoteResult?.itemIds) && remoteResult.itemIds.length
               ? remoteResult.itemIds

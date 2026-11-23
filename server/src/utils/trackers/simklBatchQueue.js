@@ -1,5 +1,5 @@
 // Concurrent eligible dispatches share a chunk, serially per generation.
-export function createSimklBatchQueue({ prepare, claim, send, finish, current, matches, maxItems = 100, partition=()=>'' }) {
+export function createSimklBatchQueue({ prepare, claim, send, finish, current, matches, onBeforeSendAbort, maxItems = 100, partition=()=>'' }) {
   const queues = new Map(), flights = new Map(),accountTails=new Map();
   async function drain(key, queue) {
     while (queue.items.length) {
@@ -16,8 +16,13 @@ export function createSimklBatchQueue({ prepare, claim, send, finish, current, m
           throw Object.assign(new Error('Competing Simkl watched intents need review'), { reviewBeforeSend: true });
         }
         const prepared = await prepare(queue.connection, chunk, queue.trigger);
-        current(queue.connection);
-        claim(chunk);
+        try {
+          current(queue.connection);
+          claim(chunk);
+        } catch (error) {
+          onBeforeSendAbort?.(prepared, error);
+          throw error;
+        }
         let results;
         try {
           results = await send(queue.connection, chunk.map(item => item.media), { trigger: queue.trigger, ...prepared });

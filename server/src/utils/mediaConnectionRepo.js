@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { db } from "../db.js";
 import { decryptCredential, encryptCredential } from "./credentialVault.js";
 import { assertSafeOutboundUrl, normalizeHttpUrl } from "./outbound.js";
+import { invalidateLibraryMembershipCache } from "./librarySelection.js";
 
 const PROVIDERS = new Set(["plex", "emby", "jellyfin"]);
 const AUTH_KINDS = new Set(["plex_jwt", "plex_managed_jwt", "plex_legacy", "emby_user", "jellyfin_quick_connect", "jellyfin_user", "legacy"]);
@@ -112,11 +113,13 @@ export function saveMediaConnection(input, { vaultOptions = {} } = {}) {
       expiresAt: input.accessTokenExpiresAt ?? null, refreshedAt: input.lastRefreshedAt ?? null, status: input.status || "connected", validatedAt: input.lastValidatedAt ?? now, serverOwned: input.serverOwned == null ? null : (input.serverOwned ? 1 : 0), now,
     });
   }).immediate();
+  invalidateLibraryMembershipCache({ provider });
   return getMediaConnection(provider);
 }
 
 export function disableMediaConnection(provider) {
   const result = db.prepare("UPDATE media_connections SET status='disabled', credential_ciphertext='', credential_iv='', credential_tag='', server_credential_ciphertext=NULL, server_credential_iv=NULL, server_credential_tag=NULL, updated_at=? WHERE provider=? AND status IN ('connected','reauth_required','legacy')").run(Date.now(), providerName(provider));
+  invalidateLibraryMembershipCache({ provider: providerName(provider) });
   return result.changes > 0;
 }
 
@@ -125,8 +128,8 @@ export function resolveConnectedProviderConfig(provider, legacyConfig = {}, opti
   if (!connection) return legacyConfig;
   const device = getActiveAuthDevice(provider);
   return provider === "plex"
-    ? { ...legacyConfig, baseUrl: connection.baseUrl, token: connection.serverCredential || connection.credential, username: connection.remoteUsername, connectionId: connection.id, remoteUserId: connection.remoteUserId, authKind: connection.authKind, serverOwned: connection.serverOwned, clientIdentifier: device?.deviceIdentifier || "" }
-    : { ...legacyConfig, baseUrl: connection.baseUrl, apiKey: connection.credential, userId: connection.remoteUserId, connectionId: connection.id, authKind: connection.authKind };
+    ? { ...legacyConfig, baseUrl: connection.baseUrl, token: connection.serverCredential || connection.credential, username: connection.remoteUsername, connectionId: connection.id, serverId: connection.serverId, serverName: connection.serverName, remoteUserId: connection.remoteUserId, authKind: connection.authKind, serverOwned: connection.serverOwned, clientIdentifier: device?.deviceIdentifier || "" }
+    : { ...legacyConfig, baseUrl: connection.baseUrl, apiKey: connection.credential, userId: connection.remoteUserId, connectionId: connection.id, serverId: connection.serverId, serverName: connection.serverName, authKind: connection.authKind };
 }
 
 export function createAuthFlow(input, { vaultOptions = {} } = {}) {

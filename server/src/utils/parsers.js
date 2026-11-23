@@ -1,6 +1,7 @@
 import { watchedThresholdPercent } from "./tuning.js";
 import { buildWatchProvenance } from "./watchProvenance.js";
 import { releaseDateForItem, releaseDateForPlexItem } from "./watchDates.js";
+import { normalizePluginLibraryContext } from "./librarySelection.js";
 
 const EMPTY_IDS = { imdb: undefined, tmdb: undefined, tvdb: undefined };
 const PLEX_ACTIVE_EVENTS = ["media.play", "media.resume", "media.progress", "media.pause"];
@@ -92,6 +93,13 @@ export function parsePlexMediaIds(metadata = {}, type = "") {
     Guid: metadata.GrandparentGuid || metadata.GrandparentGUID || [],
   });
   return preferProviderIds(itemIds, seriesIds);
+}
+
+export function isPlexLocalOnly(metadata = {}, type = metadata.type) {
+  const guids = [metadata.guid, ...(Array.isArray(metadata.Guid) ? metadata.Guid.map((entry) => entry?.id || entry) : [])].filter(Boolean);
+  return guids.length > 0
+    && guids.every((guid) => /^(?:local|com\.plexapp\.agents\.none):\/\//i.test(String(guid)))
+    && !Object.values(parsePlexMediaIds(metadata, type)).some(Boolean);
 }
 
 function extractTitle(type, metadata, source) {
@@ -456,6 +464,11 @@ function buildPayload({
   releaseDate = "",
   ingestPath = "",
   watchProvenance = null,
+  rawType = "",
+  librarySectionId = "",
+  serverId = "",
+  libraryContext = null,
+  localOnly = false,
   rawPayloadDebug = {},
 }) {
   const isActionable = ["active", "completed", "ended", "unplayed", "added"].includes(phase);
@@ -510,6 +523,11 @@ function buildPayload({
     itemId,
     seriesItemId: seriesItemId ? String(seriesItemId) : "",
     episodeTitle,
+    rawType: String(rawType || "").trim(),
+    librarySectionId: String(librarySectionId ?? "").trim(),
+    serverId: String(serverId || "").trim(),
+    libraryContext: normalizePluginLibraryContext(libraryContext),
+    localOnly,
     watchProvenance: resolvedWatchProvenance,
     rawPayloadDebug,
     isValid: Boolean(isActionable && type && source && title),
@@ -554,10 +572,16 @@ export async function parsePlexWebhook(formData) {
     const releaseDate = releaseDateForPlexItem(metadata);
     const user = payload.Account?.title || "";
     const client = plexClientFrom(payload);
+    const rawType = String(metadata.type || "").trim();
+    const librarySectionId = String(metadata.librarySectionID ?? metadata.librarySectionId ?? "").trim();
+    const serverId = String(payload.Server?.uuid || "").trim();
 
     if (phase === "ignored") {
       return buildPayload({
         type,
+        rawType,
+        librarySectionId,
+        serverId,
         source: "plex",
         title: event ? `Plex Raw Event: ${event} - ${title}` : title,
         ids,
@@ -586,9 +610,13 @@ export async function parsePlexWebhook(formData) {
 
     return buildPayload({
       type,
+      rawType,
+      librarySectionId,
+      serverId,
       source: "plex",
       title,
       ids,
+      localOnly: isPlexLocalOnly(metadata, type),
       season: metadata.parentIndex,
       episode: metadata.index,
       event,
@@ -637,9 +665,13 @@ export function buildPlexMediaFromMetadata(metadata = {}, { phase = "unplayed" }
   const releaseDate = releaseDateForPlexItem(metadata);
   return buildPayload({
     type,
+    rawType: String(metadata.type || "").trim(),
+    librarySectionId: String(metadata.librarySectionID ?? metadata.librarySectionId ?? "").trim(),
+    serverId: String(metadata.machineIdentifier || "").trim(),
     source: "plex",
     title,
     ids,
+    localOnly: isPlexLocalOnly(metadata, type),
     season: metadata.parentIndex,
     episode: metadata.index,
     event: "notification.viewstate",
@@ -686,10 +718,16 @@ export function parseJellyfinWebhook(json) {
     const client = embyLikeClientFrom(json, item);
     client.sessionId = client.sessionId || jellyfinFlatSessionId(json);
     const releaseDate = releaseDateForItem(item);
+    const rawType = String(firstDefined(item.Type, item.type, item.MediaType, item.mediaType, json.ItemType, json.itemType, json.Type, json.type) || "").trim();
+    const serverId = String(firstDefined(json.ServerId, json.serverId, json.Server?.Id, item.ServerId) || "").trim();
+    const libraryContext = normalizePluginLibraryContext(json.LibraryContext || json.libraryContext || item.LibraryContext || item.libraryContext);
 
     if (phase === "ignored") {
       return buildPayload({
         type,
+        rawType,
+        serverId,
+        libraryContext,
         source: "jellyfin",
         ids: providerIds,
         title: `Jellyfin Raw Event: ${event} - ${title}`,
@@ -722,6 +760,9 @@ export function parseJellyfinWebhook(json) {
 
     return buildPayload({
       type,
+      rawType,
+      serverId,
+      libraryContext,
       source: "jellyfin",
       title,
       ids: providerIds,
@@ -783,10 +824,16 @@ export function parseEmbyWebhook(json) {
     const episodeTitle = type === "episode" ? itemTitleFrom(item) : null;
     const client = embyLikeClientFrom(json, item);
     const releaseDate = releaseDateForItem(item);
+    const rawType = String(firstDefined(item.Type, item.type, item.MediaType, item.mediaType, json.ItemType, json.itemType, json.Type, json.type) || "").trim();
+    const serverId = String(firstDefined(json.Server?.Id, json.ServerId, json.serverId, item.ServerId) || "").trim();
+    const libraryContext = normalizePluginLibraryContext(json.LibraryContext || json.libraryContext || item.LibraryContext || item.libraryContext);
 
     if (phase === "ignored") {
       return buildPayload({
         type,
+        rawType,
+        serverId,
+        libraryContext,
         source: "emby",
         ids: providerIds,
         title: `Emby Raw Event: ${event} - ${title}`,
@@ -819,6 +866,9 @@ export function parseEmbyWebhook(json) {
 
     return buildPayload({
       type,
+      rawType,
+      serverId,
+      libraryContext,
       source: "emby",
       title,
       ids: providerIds,

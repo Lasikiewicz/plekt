@@ -787,19 +787,50 @@ export async function handleFullSyncWatchstates(req, res) {
   });
 }
 
-function resolveCustomPosterFetchUrl(rawUrl) {
+const ALLOWED_CUSTOM_ARTWORK_HOSTS = new Set([
+  "image.tmdb.org",
+  "artworks.thetvdb.com",
+  "thetvdb.com",
+  "assets.fanart.tv",
+  "fanart.tv",
+  "img.youtube.com",
+  "i.ytimg.com",
+]);
+
+function allowedCustomArtworkOrigins(config = {}) {
+  const origins = new Set();
+  for (const key of ["plex", "emby", "jellyfin"]) {
+    const raw = String(config?.[key]?.baseUrl || "").trim();
+    if (!raw) continue;
+    try { origins.add(new URL(raw).origin); } catch { /* ignore */ }
+  }
+  return origins;
+}
+
+function resolveCustomPosterFetchUrl(rawUrl, config = null) {
   const value = String(rawUrl || "").trim();
   if (!value) return "";
+  if (isCachedStorageUrl(value)) return value;
   if (value.startsWith("/api/tmdb-poster")) {
     try {
       const proxied = new URL(value, "http://localhost");
       const posterPath = proxied.searchParams.get("path") || "";
-      return posterPath ? `https://image.tmdb.org/t/p/w500${posterPath}` : "";
+      return posterPath && posterPath.startsWith("/") ? `https://image.tmdb.org/t/p/w500${posterPath}` : "";
     } catch {
       return "";
     }
   }
-  return value;
+  if (/^data:image\//i.test(value)) return value;
+  try {
+    const parsed = new URL(value);
+    if (!["http:", "https:"].includes(parsed.protocol)) return "";
+    const host = parsed.hostname.toLowerCase();
+    if (ALLOWED_CUSTOM_ARTWORK_HOSTS.has(host)) return parsed.toString();
+    if (config && allowedCustomArtworkOrigins(config).has(parsed.origin)) return parsed.toString();
+  } catch {
+    return "";
+  }
+  return "";
 }
 
 // Lists every watch date recorded for the same movie/episode as `id`, for the
@@ -1150,8 +1181,11 @@ export async function handleUpdateWatch(req, res) {
   let customPosterIds;
   let customBackdropUrl;
   let customSeasonPosterUrl;
+  const mediaConfigForArtwork = (body.poster_url || body.backdrop_url)
+    ? await loadMediaConfig({ resolveConnections: false }).catch(() => null)
+    : null;
   const chosenPoster = String(body.poster_url ?? "").trim();
-  const chosenPosterFetchUrl = resolveCustomPosterFetchUrl(chosenPoster);
+  const chosenPosterFetchUrl = resolveCustomPosterFetchUrl(chosenPoster, mediaConfigForArtwork);
   if (chosenPosterFetchUrl) {
     const editedRow = await getWatchRecordByIdLight(id).catch(() => null);
     const editedKey = editedRow?.media_key || (editedRow ? mediaKeyFor(editedRow) : null);
@@ -1217,7 +1251,7 @@ export async function handleUpdateWatch(req, res) {
   }
 
   const chosenBackdrop = String(body.backdrop_url ?? "").trim();
-  const chosenBackdropFetchUrl = resolveCustomPosterFetchUrl(chosenBackdrop);
+  const chosenBackdropFetchUrl = resolveCustomPosterFetchUrl(chosenBackdrop, mediaConfigForArtwork);
   if (chosenBackdropFetchUrl) {
     const editedRow = await getWatchRecordByIdLight(id).catch(() => null);
     const editedKey = editedRow?.media_key || (editedRow ? mediaKeyFor(editedRow) : null);

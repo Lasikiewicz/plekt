@@ -5,6 +5,12 @@ import { nativeProviderItemIds } from "./providerItemIds.js";
 import { canonicalPlayedDateIso } from "./watchSyncPolicy.js";
 import { traceLog } from "./logVerbose.js";
 import { ratingSnapshotPage } from "./ratingSnapshotSafety.js";
+import {
+  filterAuthorizedTargetItems,
+  getProviderLibrarySelection,
+  registerLibrarySelectionInvalidator,
+  resolveItemLibraryMembership,
+} from "./librarySelection.js";
 function trimTrailingSlash(value = "") {
   return String(value).replace(/\/+$/, "");
 }
@@ -102,28 +108,52 @@ function nativeEmbyItems(media = {}) {
   return nativeProviderItemIds(media, "emby").map((Id) => ({ Id }));
 }
 
-async function findEmbyItemsForMutation(config, media = {}) {
-  const direct = nativeEmbyItems(media);
-  if (direct.length) return direct;
-  const cache = media?.restoreLookupCache;
-  const items = cache && typeof cache.resolve === "function"
-    ? await cache.resolve(
-      restoreLookupKey("emby", config, media),
-      media,
-      () => findEmbyItems(config, media),
-    )
-    : await findEmbyItems(config, media);
-  if (items?.length || media.type !== "episode" || media.__identityRetry) return items || [];
+function embyLibraryEnforced(config = {}) {
+  return Boolean(config?.libraryMonitoringEnforced || Array.isArray(config?.monitoredLibraryIds));
+}
 
-  // A cached series episode list can predate an item added or reindexed in
-  // Emby. Refresh once on an exact episode miss before reporting not_found.
-  traceLog("Emby episode lookup missed; refreshing the cached series index", {
-    title: media.title,
-    season: media.season,
-    episode: media.episode,
-  });
-  invalidateEmbySeriesIdentity(config, media);
-  return findEmbyItemsForMutation(config, { ...media, __identityRetry: true });
+function effectiveEmbyLibraryIds(config = {}, requestedLibraryIds = null) {
+  if (!embyLibraryEnforced(config)) return requestedLibraryIds;
+  const monitored = getProviderLibrarySelection(config, "emby").selectedIds;
+  if (!monitored.length) return [];
+  if (Array.isArray(requestedLibraryIds)) {
+    if (!requestedLibraryIds.length) return [];
+    const allowed = new Set(monitored.map(String));
+    return requestedLibraryIds.map(String).filter((id) => allowed.has(id));
+  }
+  return monitored;
+}
+
+async function findEmbyItemsForMutation(config, media = {}) {
+  if (embyLibraryEnforced(config) && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+    return [];
+  }
+  const direct = nativeEmbyItems(media);
+  let items = direct;
+  if (!items.length) {
+    const cache = media?.restoreLookupCache;
+    items = cache && typeof cache.resolve === "function"
+      ? await cache.resolve(
+        restoreLookupKey("emby", config, media),
+        media,
+        () => findEmbyItems(config, media),
+      )
+      : await findEmbyItems(config, media);
+    if (!items?.length && media.type === "episode" && !media.__identityRetry) {
+      // A cached series episode list can predate an item added or reindexed in
+      // Emby. Refresh once on an exact episode miss before reporting not_found.
+      traceLog("Emby episode lookup missed; refreshing the cached series index", {
+        title: media.title,
+        season: media.season,
+        episode: media.episode,
+      });
+      invalidateEmbySeriesIdentity(config, media);
+      items = await findEmbyItemsForMutation(config, { ...media, __identityRetry: true });
+    }
+  }
+  if (!items?.length || !embyLibraryEnforced(config)) return items || [];
+  const { allowed } = await filterAuthorizedTargetItems("emby", config, items, { lane: media?.lane || "sync" });
+  return allowed;
 }
 
 function noMatchingLibraryItem(platform, media = {}) {
@@ -324,6 +354,13 @@ export function __resetEmbySeriesCache() {
   embyCacheNow = () => Date.now();
 }
 
+registerLibrarySelectionInvalidator(({ provider }) => {
+  if (!provider || provider === "emby") {
+    embySeriesCache.clear();
+    movieMisses.clear();
+  }
+});
+
 export function __setEmbySeriesCacheNow(fn) {
   embyCacheNow = typeof fn === "function" ? fn : () => Date.now();
 }
@@ -476,7 +513,11 @@ export async function findEmbyItems(config, media) {
 
 export async function markEmbyPlayed(config, media) {
   try {
-    requireEmbyConfig(config); media = await prepareEpisodeOrderTarget(media,"emby",config,"watched");
+    requireEmbyConfig(config);
+    if (embyLibraryEnforced(config) && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+      return { platform: "emby", status: "skipped", detail: "No monitored Emby libraries selected" };
+    }
+    media = await prepareEpisodeOrderTarget(media,"emby",config,"watched");
 
     const items = await findEmbyItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -536,7 +577,11 @@ export async function markEmbyPlayed(config, media) {
 
 export async function markEmbyUnplayed(config, media) {
   try {
-    requireEmbyConfig(config); media = await prepareEpisodeOrderTarget(media,"emby",config,"unwatched");
+    requireEmbyConfig(config);
+    if (embyLibraryEnforced(config) && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+      return { platform: "emby", status: "skipped", detail: "No monitored Emby libraries selected" };
+    }
+    media = await prepareEpisodeOrderTarget(media,"emby",config,"unwatched");
 
     const items = await findEmbyItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -596,6 +641,9 @@ async function showEmbyInResume(config, itemId, lane) {
 export async function setEmbyProgress(config, media) {
   try {
     requireEmbyConfig(config);
+    if (embyLibraryEnforced(config) && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+      return { platform: "emby", status: "skipped", detail: "No monitored Emby libraries selected" };
+    }
 
     const items = await findEmbyItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -691,6 +739,12 @@ export async function fetchEmbySeriesEpisodes(config, media) {
 export async function markEmbyUnplayedById(config, itemId, { lane = "sync" } = {}) {
   requireEmbyConfig(config);
   if (!itemId) return { platform: "emby", status: "not_found" };
+  if (embyLibraryEnforced(config)) {
+    const decision = await resolveItemLibraryMembership("emby", config, { Id: itemId }, { lane });
+    if (!decision.allowed) {
+      return { platform: "emby", status: "skipped", detail: decision.reason || "Emby item is outside monitored libraries" };
+    }
+  }
 
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${config.userId}/PlayedItems/${itemId}`);
   url.searchParams.set("api_key", config.apiKey);
@@ -705,6 +759,12 @@ export async function markEmbyUnplayedById(config, itemId, { lane = "sync" } = {
 export async function hideEmbyFromResume(config, itemId, { lane = "interactive" } = {}) {
   requireEmbyConfig(config);
   if (!itemId) return { platform: "emby", status: "not_found" };
+  if (embyLibraryEnforced(config)) {
+    const decision = await resolveItemLibraryMembership("emby", config, { Id: itemId }, { lane });
+    if (!decision.allowed) {
+      return { platform: "emby", status: "skipped", detail: decision.reason || "Emby item is outside monitored libraries" };
+    }
+  }
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${encodeURIComponent(config.userId)}/Items/${encodeURIComponent(itemId)}/HideFromResume`);
   url.searchParams.set("Hide", "true");
   const response = await fetchWithTimeout(url, { method: "POST", headers: authHeaders(config), lane });
@@ -737,10 +797,12 @@ function buildEmbyWatchedItemsUrl(config, { limit = 0, parentId = "" } = {}) {
 // inside the outbound timeout; a single unpaged request timed out on big libraries.
 export async function fetchEmbyWatchedItems(config, { limit = 0, libraryIds, isCancelled } = {}) {
   requireEmbyConfig(config);
-  const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
+  const scopedIds = effectiveEmbyLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   const items = [];
   for (const parentId of parents) {
-    items.push(...await fetchPagedFeed(
+    const page = await fetchPagedFeed(
       config,
       (start, pageSize) => {
         const url = buildEmbyWatchedItemsUrl(config, { parentId, limit });
@@ -750,7 +812,8 @@ export async function fetchEmbyWatchedItems(config, { limit = 0, libraryIds, isC
       },
       limit,
       { pageSize: 500, isCancelled, completeScan: true },
-    ));
+    );
+    items.push(...(parentId ? page.map((item) => ({ ...item, __queryLibraryId: String(parentId) })) : page));
   }
   return items;
 }
@@ -775,7 +838,9 @@ function buildEmbyLibraryItemsUrl(config, { parentId = "" } = {}) {
 // Emby even when Plembfin already knows that the same episode was watched.
 export async function fetchEmbyLibraryItems(config, { limit = 0, libraryIds } = {}) {
   requireEmbyConfig(config);
-  const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
+  const scopedIds = effectiveEmbyLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   const items = [];
   for (const parentId of parents) {
     items.push(...await fetchPagedFeed(
@@ -793,26 +858,37 @@ export async function fetchEmbyLibraryItems(config, { limit = 0, libraryIds } = 
   return items;
 }
 
-// User-visible libraries (views) with their stable ids, for sync scope selection.
+// User-visible video-capable libraries (views) with their stable ids.
+// Includes movies, tvshows, homevideos, musicvideos, and mixed libraries.
 export async function listEmbyLibraries(config) {
   requireEmbyConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const url = new URL(`${baseUrl}/Users/${config.userId}/Views`);
   url.searchParams.set("api_key", config.apiKey);
   const data = await fetchJson(url, config);
+  const excluded = new Set(["music", "books", "audiobooks", "photos", "playlists", "livetv", "boxsets", "folders", "trailers"]);
   return (data?.Items || [])
-    .filter((item) => ["movies", "tvshows"].includes(String(item.CollectionType || "").toLowerCase()))
-    .map((item) => ({
-      id: String(item.Id),
-      name: String(item.Name || item.Id),
-      type: String(item.CollectionType || "").toLowerCase() === "movies" ? "movie" : "show",
-    }));
+    .filter((item) => {
+      const col = String(item.CollectionType || "").trim().toLowerCase();
+      return Boolean(item?.Id) && (!col || !excluded.has(col));
+    })
+    .map((item) => {
+      const col = String(item.CollectionType || "").trim().toLowerCase();
+      return {
+        id: String(item.Id),
+        name: String(item.Name || item.Id),
+        type: col === "movies" ? "movie" : col === "tvshows" ? "show" : (col || "mixed"),
+        collectionType: col,
+      };
+    });
 }
 
 // Cheap watched-item count via TotalRecordCount, for plan staleness checks.
 export async function countEmbyWatchedItems(config, { libraryIds } = {}) {
   requireEmbyConfig(config);
-  const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
+  const scopedIds = effectiveEmbyLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return 0;
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   let total = 0;
   for (const parentId of parents) {
     const url = buildEmbyWatchedItemsUrl(config, { limit: 1, parentId });
@@ -824,6 +900,8 @@ export async function countEmbyWatchedItems(config, { libraryIds } = {}) {
 
 export async function fetchEmbyResumableItems(config, { limit = 0 } = {}) {
   requireEmbyConfig(config);
+  const enforced = embyLibraryEnforced(config);
+  if (enforced && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const buildNativeResumeUrl = (start, pageSize) => {
     const url = new URL(`${baseUrl}/Users/${encodeURIComponent(config.userId)}/Items/Resume`);
@@ -857,9 +935,13 @@ export async function fetchEmbyResumableItems(config, { limit = 0 } = {}) {
     return url;
   };
 
+  const filterIfEnforced = async (items) => (
+    enforced ? (await filterAuthorizedTargetItems("emby", config, items, { lane: "sync" })).allowed : items
+  );
+
   try {
     const native = await fetchPagedFeed(config, buildNativeResumeUrl, limit);
-    if (native.length) return native;
+    if (native.length) return filterIfEnforced(native);
     // Both queries exist on modern Emby and either one can come back empty
     // depending on the server: the generic IsResumable filter returns nothing
     // on some versions while Continue Watching is full, and on others
@@ -867,19 +949,21 @@ export async function fetchEmbyResumableItems(config, { limit = 0 } = {}) {
     // every resumable item - including genuine part-watches with a position
     // over half an hour. An empty answer from one is therefore not evidence
     // that there is nothing to resume, so ask the other before believing it.
-    return await fetchPagedFeed(config, buildLegacyResumeUrl, limit);
+    return filterIfEnforced(await fetchPagedFeed(config, buildLegacyResumeUrl, limit));
   } catch (error) {
     // A real auth/upstream failure must stay visible to the caller; only a
     // missing route falls through to the legacy query.
     if (Number(error?.status) !== 404) throw error;
-    return fetchPagedFeed(config, buildLegacyResumeUrl, limit);
+    return filterIfEnforced(await fetchPagedFeed(config, buildLegacyResumeUrl, limit));
   }
 }
 
 export async function fetchEmbyNextUpItems(config, { limit = 0 } = {}) {
   requireEmbyConfig(config);
+  const enforced = embyLibraryEnforced(config);
+  if (enforced && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  return fetchPagedFeed(config, (start, pageSize) => {
+  const items = await fetchPagedFeed(config, (start, pageSize) => {
     const url = new URL(`${baseUrl}/Shows/NextUp`);
     url.searchParams.set("UserId", config.userId);
     url.searchParams.set("Fields", "ProviderIds,SeriesProviderIds,UserData,PremiereDate,ProductionYear,RunTimeTicks,MediaSources");
@@ -890,6 +974,7 @@ export async function fetchEmbyNextUpItems(config, { limit = 0 } = {}) {
     url.searchParams.set("api_key", config.apiKey);
     return url;
   }, limit);
+  return enforced ? (await filterAuthorizedTargetItems("emby", config, items, { lane: "sync" })).allowed : items;
 }
 
 // Keep the reserved device identity for the native rail refresh and for
@@ -1050,51 +1135,73 @@ function embyRatingRecord(item = {}) {
   };
 }
 
-export async function fetchEmbyPersonalRatingSnapshot(config) {
+export async function fetchEmbyPersonalRatingSnapshot(config, { libraryIds } = {}) {
   requireEmbyConfig(config);
+  const scopedIds = effectiveEmbyLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   const records = [];
+  const seenItemIds = new Set();
   const pageSize = 200;
-  for (let start = 0; start <= 10_000_000; start += pageSize) {
-    const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${config.userId}/Items`);
-    url.searchParams.set("Recursive", "true");
-    url.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
-    url.searchParams.set("Fields", "ProviderIds,SeriesProviderIds,UserData,PremiereDate,ProductionYear");
-    url.searchParams.set("StartIndex", String(start));
-    url.searchParams.set("Limit", String(pageSize));
-    url.searchParams.set("api_key", config.apiKey);
-    const response = await fetchWithTimeout(url, { headers: authHeaders(config), lane: "sync" });
-    if (!response.ok) {
-      const error = new Error(`Emby rating scan failed with status ${response.status}`);
-      error.status = response.status;
-      throw error;
+  for (const parentId of parents) {
+    let completed = false;
+    for (let start = 0; start <= 10_000_000; start += pageSize) {
+      const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${config.userId}/Items`);
+      url.searchParams.set("Recursive", "true");
+      url.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
+      url.searchParams.set("Fields", "ProviderIds,SeriesProviderIds,UserData,PremiereDate,ProductionYear");
+      if (parentId) url.searchParams.set("ParentId", String(parentId));
+      url.searchParams.set("StartIndex", String(start));
+      url.searchParams.set("Limit", String(pageSize));
+      url.searchParams.set("api_key", config.apiKey);
+      const response = await fetchWithTimeout(url, { headers: authHeaders(config), lane: "sync" });
+      if (!response.ok) {
+        const error = new Error(`Emby rating scan failed with status ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const data = await response.json();
+      const page = ratingSnapshotPage(data, start, pageSize, "Emby");
+      for (const item of page) {
+        const id = String(item.Id || "");
+        if (id && seenItemIds.has(id)) continue;
+        if (id) seenItemIds.add(id);
+        const rating = Number(item.UserData?.Rating);
+        if (!Number.isFinite(rating) || rating < 1 || rating > 10) continue;
+        const record = embyRatingRecord(item);
+        record.rating = Math.round(rating);
+        if (Number.isInteger(record.rating) && record.rating >= 1 && record.rating <= 10) records.push(record);
+      }
+      const total = Number(data?.TotalRecordCount || 0);
+      if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) {
+        completed = true;
+        break;
+      }
     }
-    const data = await response.json();
-    const page = ratingSnapshotPage(data, start, pageSize, "Emby");
-    for (const item of page) {
-      const rating = Number(item.UserData?.Rating);
-      if (!Number.isFinite(rating) || rating < 1 || rating > 10) continue;
-      const record = embyRatingRecord(item);
-      record.rating = Math.round(rating);
-      if (Number.isInteger(record.rating) && record.rating >= 1 && record.rating <= 10) records.push(record);
-    }
-    const total = Number(data?.TotalRecordCount || 0);
-    if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) return records;
+    if (!completed) throw new Error("Emby rating snapshot exceeded the pagination safety limit");
   }
-  throw new Error("Emby rating snapshot exceeded the pagination safety limit");
+  return records;
 }
 
 async function writeEmbyPersonalRating(config, media, rating, { lane = "sync" } = {}) {
   requireEmbyConfig(config);
+  if (embyLibraryEnforced(config) && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+    return { platform: "emby", status: "skipped", detail: "No monitored Emby libraries selected" };
+  }
+  const type = media.media_type || media.mediaType || media.type;
+  const hasEpisodeCoordsInTitle = /(?:\s*-\s*|\s+)S\d+E\d+/i.test(String(media.title || ""));
   const lookup = {
     ...media,
-    type: media.media_type || media.mediaType || media.type,
+    lane,
+    type,
+    ...(type === "episode" && media.show_title && !hasEpisodeCoordsInTitle ? { title: media.show_title } : {}),
     ids: {
       tmdb: media.show_tmdb_id || media.tmdb_id,
       tvdb: media.show_tvdb_id || media.tvdb_id,
       imdb: media.show_imdb_id || media.imdb_id,
     },
   };
-  const items = await findEmbyItems(config, lookup);
+  const items = await findEmbyItemsForMutation(config, lookup);
   if (!items?.length) return { platform: "emby", status: "not_found" };
   let lastHttpStatus = 200;
   for (const item of items) {

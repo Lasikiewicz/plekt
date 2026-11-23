@@ -124,6 +124,7 @@ export async function signInAdmin(username, password) {
     const statusRes = await fetch("/api/auth/status", { credentials: "same-origin" });
     const statusData = await statusRes.json().catch(() => ({}));
     applyTenantStatusFlags(statusData);
+    if (cachedUser) cachedUser.activeUser = String(statusData.activeUser || "").trim();
   } catch { /* best-effort */ }
   await Promise.all([fetchAndCacheApiKey(), fetchAndCacheWebhookToken()]);
   return { user: cachedUser, token: "session" };

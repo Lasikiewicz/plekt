@@ -2,7 +2,7 @@ import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
 import { state, elements } from "./state.js?v=2.3.0.0.1";
 import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.3.0.0.1";
 import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.3.0.0.1";
-import { renderSyncAttentionItem } from "./sync-attention-cards.js?v=2.3.0.0.1";
+import { bindTrackerWriteReview, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview } from "./sync-attention-cards.js?v=2.3.0.0.1";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -18,7 +18,7 @@ const DEFAULT_PAGINATION = {
   hasNext: false,
 };
 
-let refreshTimer = null;
+let refreshTimer = null, visibilityRefreshHandler = null;
 let searchTimer = null;
 let activityChangeRefreshTimer = null;
 let loadRequestToken = 0;
@@ -395,8 +395,9 @@ function traktMatchIssueMessage(entry = {}) {
     : "";
 }
 
+const RETRYABLE_ACTIVITY_TARGETS = ["plex", "emby", "jellyfin", "trakt", "simkl"]; // mirrors retryableSyncActivityTargets in routes/sync.js
 export function hasRetryableActivityTarget(entry = {}) {
-  return (entry.targetStates || []).some((target) => ["error", "failed"].includes(String(target.status || "").toLowerCase()));
+  return (entry.targetStates || []).some((t) => ["error", "failed"].includes(String(t.status || "").toLowerCase()) && RETRYABLE_ACTIVITY_TARGETS.includes(String(t.target || "").trim().toLowerCase()));
 }
 
 export function isFailedSyncActivityEntry(entry = {}) {
@@ -559,10 +560,14 @@ function syncActivityEntryActionMarkup(entry = {}, groupKey = "") {
   const canDismiss = Boolean(id && showTitle && !awaitingRetry && !groupRetrying && matchIssue);
   const retryable = !awaitingRetry && isRetryableActivity(entry);
   const canRetry = retryable && !matchIssue && !groupRetrying;
+  const retryInfo = canRetry ? { title: entry.title || "This item", action: syncHistoryActionLabel(entry), queued: id.startsWith("queued:"),
+    failures: activityFailureTargets(entry)
+      .filter(({ target }) => RETRYABLE_ACTIVITY_TARGETS.includes(String(target).trim().toLowerCase()))
+      .map(({ target, detail }) => [activityPlatform(target).name, String(detail || "").trim()]) } : null;
   return `
     ${canFixMatch ? `<button class="button-ghost sync-activity-fix-match" type="button" data-sync-activity-fix-match="${escapeAttribute(id)}" data-sync-activity-fix-match-title="${escapeAttribute(showTitle)}" data-sync-activity-fix-match-current-tvdb="${escapeAttribute(activityTvdbId(entry))}" data-sync-activity-fix-match-source-season="${escapeAttribute(activityCoordinate(entry, "season"))}" data-sync-activity-fix-match-source-episode="${escapeAttribute(activityCoordinate(entry, "episode"))}" title="Choose the Trakt show/season mapping, then retry the episode">Fix show match</button>` : ""}
     ${canDismiss ? `<button class="button-ghost sync-activity-dismiss" type="button" data-sync-activity-dismiss="${escapeAttribute(id)}" data-sync-activity-dismiss-title="${escapeAttribute(showTitle)}" title="Mark the Trakt not-found error as intentionally skipped">Dismiss Trakt error</button>` : ""}
-    ${canRetry ? `<button class="button-ghost sync-activity-retry" type="button" data-sync-activity-retry="${escapeAttribute(id)}" ${retryingActivityIds.has(id) ? "disabled" : ""} title="Retry only the failed destinations">${retryingActivityIds.has(id) ? "Retrying..." : "Retry failed"}</button>` : ""}
+    ${canRetry ? `<button class="button-ghost sync-activity-retry" type="button" data-sync-activity-retry="${escapeAttribute(id)}" data-retry-info="${escapeAttribute(JSON.stringify(retryInfo))}" aria-haspopup="dialog" ${retryingActivityIds.has(id) ? "disabled" : ""}>${retryingActivityIds.has(id) ? "Retrying..." : "Retry failed…"}</button>` : ""}
   `;
 }
 
@@ -1124,14 +1129,18 @@ function setBulkRetryProgressFromLog(log) {
 
 async function pollRetryAllSyncActivity(onDone) {
   stopBulkRetryPoll();
+  if (!state.token) return;
   let body;
   try {
     const response = await fetch("/api/sync-history/retry-all", { headers: authHeaders(), cache: "no-store" });
+    if (response.status === 401 || response.status === 403) return;
     body = await response.json();
   } catch (error) {
+    if (!state.token) return;
     bulkRetryPollTimer = window.setTimeout(() => pollRetryAllSyncActivity(onDone), 3000);
     return;
   }
+  if (!state.token) return;
 
   const log = Array.isArray(body.log) ? body.log : [];
   if (body.active) {
@@ -2234,7 +2243,7 @@ export function renderSyncAttention() {
   const clientOnly = clientItems.length > 0 && clientItems.length === items.length;
   const trackerWriteOnly = items.length > 0 && items.every((item) => item.source === "tracker_write");
   const heading = trackerWriteOnly
-    ? `${count} tracker write${count === 1 ? "" : "s"} need review`
+    ? "Tracker write review"
     : affectedCount
     ? `${count} issue${count === 1 ? "" : "s"} · ${affectedCount} affected play${affectedCount === 1 ? "" : "s"}`
     : clientOnly
@@ -2242,7 +2251,7 @@ export function renderSyncAttention() {
       : `${count} issue${count === 1 ? "" : "s"} need${count === 1 ? "s" : ""} review`;
   const badge = blockingCount ? `${blockingCount} attention` : `${count} to review`;
   const hasMatchIssues = items.some((item) => item.source === "match_report");
-  const description = trackerWriteOnly ? "Check the tracker history before canceling a write." : serverItems.length
+  const description = trackerWriteOnly ? `${count} held ${count === 1 ? "write" : "writes"}. Recheck them together or select groups to cancel.` : serverItems.length
     ? (serverItems.every((item) => item.source === "unknown_tracker") ? "Your restored data includes a tracker this version can't sync." : serverItems.every((item) => item.source === "tracker_write" || item.source === "unknown_tracker") ? "Plekt is holding tracker writes it could not confirm. Review each one below." : "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below.")
     : hasMatchIssues
       ? "Choose the correct title to resolve these matches."
@@ -2258,11 +2267,11 @@ export function renderSyncAttention() {
       </div>
       ${trackerWriteOnly ? "" : `<span class="status-pill status-${blockingCount ? "error" : "warning"}">${escapeHtml(badge)}</span>`}
     </div>
-    <div class="sync-attention-list">${items.map((item) => item.source === "client"
+    <div class="sync-attention-list">${renderTrackerWriteReview(items, (item) => item.source === "client"
       ? clientAttentionItemMarkup(item)
       : item.source === "match_report"
         ? matchAttentionItemMarkup(item)
-        : syncAttentionItemMarkup(item)).join("")}</div>`;
+        : syncAttentionItemMarkup(item))}</div>`;
 }
 
 export async function loadSyncAttention({ force = false } = {}) {
@@ -2664,6 +2673,10 @@ export function setSyncActivitySearch(value) {
 
 export function resetSyncActivity() {
   loadRequestToken += 1;
+  stopBulkRetryPoll();
+  bulkRetryProgress = null;
+  bulkRetryQueueIds = new Set();
+  bulkRetryQueueGroupKeys = new Map();
   clearSyncActivityActionStatusTimer();
   syncActivityActionStatus = null;
   if (searchTimer) window.clearTimeout(searchTimer);
@@ -3075,17 +3088,17 @@ export async function loadSyncActivity({ force = false, page } = {}) {
 // quiet fallback for changes that do not emit a progress event.
 export function startSyncActivityRefresh() {
   stopSyncActivityRefresh();
-  refreshTimer = window.setInterval(() => {
-    if (state.activeView !== "syncActivity") return;
-    if (state.syncActivityPaused) return;
-    loadSyncActivity({ force: true }).catch(() => null);
-    loadSyncAttention({ force: true }).catch(() => null);
-  }, REFRESH_MS);
+  const refresh = () => { if (state.activeView !== "syncActivity" || state.syncActivityPaused) return; loadSyncActivity({ force: true }).catch(() => null); loadSyncAttention({ force: true }).catch(() => null); };
+  visibilityRefreshHandler = () => { if (document.visibilityState === "visible") refresh(); };
+  document.addEventListener("visibilitychange", visibilityRefreshHandler);
+  refreshTimer = window.setInterval(() => { if (document.visibilityState === "visible") refresh(); }, REFRESH_MS);
 }
 
 export function stopSyncActivityRefresh() {
   if (refreshTimer) window.clearInterval(refreshTimer);
   refreshTimer = null;
+  if (visibilityRefreshHandler) document.removeEventListener("visibilitychange", visibilityRefreshHandler);
+  visibilityRefreshHandler = null;
   if (activityChangeRefreshTimer) window.clearTimeout(activityChangeRefreshTimer);
   activityChangeRefreshTimer = null;
 }
@@ -3103,6 +3116,7 @@ export function initSyncActivityEvents(callbacks = {}) {
   const openConfirmDialog = (...args) => callbacks.openConfirmDialog
     ? callbacks.openConfirmDialog(...args)
     : Promise.resolve(true);
+  bindTrackerWriteReview(elements.syncActivityAttention, { confirm: callbacks.openConfirmDialog, refresh: () => loadSyncAttention({ force: true }), message: setMessage });
 
   // These controls only exist on the Sync Activity route. Keep their wiring
   // with the route module so the global event graph only owns shell status
@@ -3333,11 +3347,15 @@ export function initSyncActivityEvents(callbacks = {}) {
         traktSourceEpisode: fixMatch.dataset.syncActivityFixMatchSourceEpisode || "",
         traktTargetSeason: "1",
         onSkipLabel: "Skip Trakt for now",
+        onCancel: () => {
+          fixMatch.disabled = false;
+        },
         onSkip: async () => {
           try {
             await callbacks.dismissSyncActivity?.(activityId);
             setMessage(`Skipped the Trakt error for ${showTitle} for now.`, "muted");
           } catch (error) {
+            fixMatch.disabled = false;
             setMessage(`Could not skip the Trakt error for ${showTitle}: ${error.message || String(error)}`, "error");
           }
         },
@@ -3345,18 +3363,19 @@ export function initSyncActivityEvents(callbacks = {}) {
       return;
     }
 
-    const retry = event.target.closest("[data-sync-activity-retry]");
-    if (retry) {
-      callbacks.retrySyncActivity?.(retry.dataset.syncActivityRetry)?.catch?.(() => { });
-      return;
-    }
+    if (handleSyncActivityRetryClick(event, callbacks)) return;
 
     const older = event.target.closest("[data-sync-activity-group-more]");
     if (older) {
+      const originalLabel = older.textContent;
       older.disabled = true;
       older.textContent = "Loading older events...";
       callbacks.loadOlderSyncActivityGroup?.(older.dataset.syncActivityGroupMore, older.dataset.syncActivityGroupPage, older.dataset.syncActivityGroupLatestOnly)
-        ?.catch?.((error) => setMessage(error.message || "Could not load older activity.", "error"));
+        ?.catch?.((error) => {
+          older.disabled = false;
+          older.textContent = originalLabel;
+          setMessage(error.message || "Could not load older activity.", "error");
+        });
       return;
     }
 

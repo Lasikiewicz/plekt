@@ -44,6 +44,7 @@ let nextRequestAt = 0;
 let throttleQueue = [];
 let throttleTimer = null;
 let throttleSequence = 0;
+let lastKeyFingerprint;
 const THROTTLE_PRIORITY = { interactive: 0, sync: 1, enrichment: 2 };
 
 const seriesGetStmt = db.prepare("SELECT * FROM tvdb_metadata_cache WHERE id = ?");
@@ -67,7 +68,11 @@ function hash(value) {
 }
 
 function secretFingerprint(value) {
-  return crypto.pbkdf2Sync(String(value), "plembfin-tvdb-token-cache-v1", 100000, 32, "sha256").toString("hex");
+  const key = String(value);
+  if (lastKeyFingerprint?.key === key) return lastKeyFingerprint.fingerprint;
+  const fingerprint = crypto.pbkdf2Sync(key, "plembfin-tvdb-token-cache-v1", 100000, 32, "sha256").toString("hex");
+  lastKeyFingerprint = { key, fingerprint };
+  return fingerprint;
 }
 
 function canonicalTitle(value = "") {
@@ -720,12 +725,21 @@ export async function getTvdbSeasonEpisodes({ tvdbId, seasonNumber, lane = "enri
 // Up Next is a read path and must not turn a dashboard render into a provider
 // fan-out. Return whatever season data is already in SQLite, including a stale
 // row; the normal metadata warm-up path is responsible for refreshing it.
-export function getCachedTvdbSeasonEpisodes({ tvdbId, seasonNumber }) {
+export function getCachedTvdbSeasonEpisodes({ tvdbId, seasonNumber, allowSeriesFallback = false }) {
   const id = normalizeTvdbId(tvdbId);
   const number = Number(seasonNumber);
   if (!id || !Number.isInteger(number) || number < 0) return null;
   const row = seasonGetStmt.get(`${id}_${number}`);
   const details = row ? parseJson(row.details) : null;
+  if (details && typeof details === "object") {
+    const shaped = shapeEpisodes(details);
+    if (shaped.episodes.length || !allowSeriesFallback) return shaped;
+  }
+  if (!allowSeriesFallback) return null;
+  const seriesRow = seriesGetStmt.get(`series_${id}`);
+  const extended = seriesRow ? parseJson(seriesRow.details) : null;
+  const fromSeries = extended && typeof extended === "object" ? seasonFromSeriesEpisodes(id, extended, number) : null;
+  if (fromSeries?.details) return shapeEpisodes(fromSeries.details);
   return details && typeof details === "object" ? shapeEpisodes(details) : null;
 }
 

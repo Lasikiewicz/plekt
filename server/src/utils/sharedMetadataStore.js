@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS shared_provider_keys (
 
 const SHARED_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_tmdb_metadata_cache_type_tmdb_id ON tmdb_metadata_cache(media_type, tmdb_id, updated_at_ms);
+CREATE INDEX IF NOT EXISTS idx_tmdb_metadata_cache_tv_tvdb_id ON tmdb_metadata_cache((CASE WHEN json_valid(details) THEN json_extract(details, '$.external_ids.tvdb_id') END), updated_at_ms) WHERE media_type = 'tv';
 CREATE INDEX IF NOT EXISTS idx_tmdb_season_cache_show ON tmdb_season_cache(tmdb_id, season_number);
 CREATE INDEX IF NOT EXISTS idx_tvdb_metadata_cache_tvdb_id ON tvdb_metadata_cache(tvdb_id, updated_at_ms);
 CREATE INDEX IF NOT EXISTS idx_tvdb_season_cache_show ON tvdb_season_cache(tvdb_id, season_number);

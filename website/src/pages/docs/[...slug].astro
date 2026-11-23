@@ -25,16 +25,30 @@ const currentIndex = flatDocs.findIndex((item) => item.slug === entrySlug);
 const previous = currentIndex > 0 ? flatDocs[currentIndex - 1] : null;
 const next = currentIndex >= 0 && currentIndex < flatDocs.length - 1 ? flatDocs[currentIndex + 1] : null;
 const sourceLinks = entry.data.sourcePaths;
-const browserTitle = entrySlug === "history-search" ? "History" : entry.data.title;
+const browserTitle = entry.data.seoTitle ?? (entrySlug === "history-search" ? "History" : entry.data.title);
+const heading = entry.data.heading ?? entry.data.title;
+const url = new URL(`/docs/${entrySlug}/`, "https://plekt.net").href;
+const structuredData = [
+  {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Home", item: "https://plekt.net/" },
+      { "@type": "ListItem", position: 2, name: "Documentation", item: "https://plekt.net/docs/" },
+      { "@type": "ListItem", position: 3, name: heading, item: url },
+    ],
+  },
+  { "@context": "https://schema.org", "@type": "TechArticle", headline: heading, description: entry.data.description, url },
+];
 ---
 
 <SiteLayout title={browserTitle} description={entry.data.description}>
+  {structuredData.map((data) => <script type="application/ld+json" is:inline set:html={JSON.stringify(data).replace(/</g, "\\u003c")} />)}
   <div class="docs-shell docs-shell--article">
     <DocsSidebar currentSlug={entrySlug} />
     <article class="docs-main">
       <header class="article-header">
         <div class="article-heading">
-          <h1>{entry.data.title}</h1>
+          <h1>{heading}</h1>
           <p>{entry.data.description}</p>
         </div>
       </header>

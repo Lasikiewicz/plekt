@@ -1675,3 +1675,17 @@ a large historical batch before ordinary sync status can be clear.
 The per-minute Plex fallback also checks pending Plex watched-flag reviews by exact source ratingKey. A live unplayed item with no resume position supersedes its pending flag even if no usable notification arrives. Reviews from another provider, source-mismatch reviews, missing items, and items still watched or resumed are not evidence of a Plex clear. Existing outbound-echo, restore and automatic-unwatch burst guards still apply.
 
 **Enforced by:** `plexUnplayedHasWatchEvidence`, `plexUnplayedIsPartWatchedClear`, `embyLikeUnplayedIsPartWatchedClear` and `providerHeldStoredResume` in `server/src/utils/plexWatchstate.js`; their callers in `server/src/scheduler.js` and the unplayed phase of `handleWebhook` in `server/src/routes/sync.js`; `checkPlexUnwatchedStatus` in `server/src/utils/unwatchedStatusPoll.js`; `test/plexWatchstate.test.js` and `test/plexPendingReviewUnwatch.test.js`.
+
+### 67. Mirror requires a per-app preview and protects newly observed rail items
+
+**Date:** 2026-11-18  |  **Status:** Active
+
+Default Up Next pushes retain the add-only rule in decision 36. Mirror is the opt-in
+exception for Plex and Emby. It requires a preview for the connected account and hides
+only previously ingested items that are actively excluded by Plekt. Incomplete feed reads,
+new observations within 30 minutes, changed playback progress and ambiguous rewatch lanes
+prevent hides. Mirror restamps eligible visible episodes when their order changes.
+Jellyfin receives date-only ordering writes. Broad omission-based hiding would remove
+native rail items Plekt had never ingested or could not classify.
+
+The settings preview and `server/src/utils/upNextMirror.js` implement these rules.

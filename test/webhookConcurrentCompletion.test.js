@@ -6,6 +6,7 @@ makeTempDataDir("plekt-webhook-concurrent-completion-");
 
 const { handleWebhook } = await import("../server/src/routes/sync.js");
 const { AUTH } = await import("../server/src/appConfig.js");
+const { saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 
 function responseCapture() {
   const response = {
@@ -47,12 +48,15 @@ function webhookRequest(body) {
 // Each handler checks for an existing record and then inserts one. Without a
 // per-item lock both checks can see "no record" before either insert lands.
 test("two concurrent completions for one item record a single watch", async () => {
+  saveProviderLibraryMonitoring("jellyfin", { serverId: "concurrent-completion-server", selectedIds: ["jf-lib-1"] });
   const tmdb = "concurrent-completion-movie";
   const completion = () => webhookRequest({
     ServerId: "concurrent-completion-server",
+    LibraryContext: { Version: 1, ServerId: "concurrent-completion-server", ItemId: "jf-concurrent-1", LibraryId: "jf-lib-1", ResolutionStatus: "resolved" },
     NotificationType: "PlaybackStop",
     PlayedToCompletion: true,
     Item: {
+      Id: "jf-concurrent-1",
       Type: "Movie",
       Name: "Concurrent Completion Movie",
       ProviderIds: { Tmdb: tmdb },

@@ -423,6 +423,10 @@ function episodeCoordinatesFromTitle(title = "") {
 export function mediaKeyFor(record = {}) {
   const type = normalizeWatchMediaType(record.media_type || record.mediaType || record.type);
   const coordinates = [normalizeKeyPart(type), normalizeKeyPart(record.season), normalizeKeyPart(record.episode)].join(":");
+  if (record.source === "plex_personal_media") {
+    const provenance = normalizeWatchProvenance(record.watch_provenance || record.watchProvenance);
+    return `${coordinates}:plex-local:${provenance?.item_id || record.itemId || normalizeKeyPart(record.title)}`;
+  }
   const ids = record.ids || {};
   if (record.imdb_id || record.imdb || ids.imdb) return `${coordinates}:imdb:${normalizeKeyPart(record.imdb_id || record.imdb || ids.imdb)}`;
   if (record.tmdb_id || record.tmdb || ids.tmdb) return `${coordinates}:tmdb:${normalizeKeyPart(record.tmdb_id || record.tmdb || ids.tmdb)}`;
@@ -1462,7 +1466,7 @@ function queueAutomaticUpNextSync(reason) {
 // have already performed the exact provider reconciliation can opt out of the
 // follow-up job to avoid an immediate duplicate push.
 export async function invalidateHistoryDerivedCaches(reason = "", { skipUpNextAutoSync = false } = {}) {
-  await flushShowProgressUpdates().catch((err) => {
+  await flushShowProgressUpdates({ skipVersionBump: true }).catch((err) => {
     console.error("[dataRepo] Failed to flush show progress updates", err);
   });
   bumpDataVersion(reason);
@@ -1485,10 +1489,10 @@ function patchCachedRow(rows, freshRow) {
 async function invalidateAfterRowMetaWrite(id, oldRow, changed) {
   const caches = historyCaches();
   const previousVersion = getDataVersion();
-  await flushShowProgressUpdates().catch((err) => {
+  await flushShowProgressUpdates({ skipVersionBump: true }).catch((err) => {
     console.error("[dataRepo] Failed to flush show progress updates", err);
   });
-  const version = bumpDataVersion();
+  const version = bumpDataVersion("", { adoptTrigger: true });
   const freshRow = id ? selectByIdStmt.get(String(id)) : null;
   if (!oldRow || !freshRow || version !== previousVersion + 1) return;
 
@@ -1535,7 +1539,7 @@ export function insertWatchRecordSync(record, { id: presetId = "", watchlistConf
   assertRestoreWriteAllowed(normalized.source, { allowDuringRestore });
 
   // Queue show progress update
-  queueProgressUpdateForRecord(normalized);
+  if (normalized.source !== "plex_personal_media") queueProgressUpdateForRecord(normalized);
 
   const id = String(presetId || "").trim() || crypto.randomUUID();
   const params = watchRowParams(normalized);
@@ -1545,7 +1549,7 @@ export function insertWatchRecordSync(record, { id: presetId = "", watchlistConf
   // completed watch. Callers with a resolved provider config can queue the
   // fanout immediately; older/import paths without one are repaired by the
   // durable watchlist worker on its next pass.
-  if (isWatchedAction(normalized) && ["movie", "tv"].includes(normalized.media_type)) {
+  if (normalized.source !== "plex_personal_media" && isWatchedAction(normalized) && ["movie", "tv"].includes(normalized.media_type)) {
     recordWatchlistMutation({
       media: {
         type: normalized.media_type,
@@ -1629,6 +1633,7 @@ export function insertWatchRecordSync(record, { id: presetId = "", watchlistConf
 }
 
 export function prefetchWatchRecordAssets({ id = "", record = null } = {}) {
+  if (record?.source === "plex_personal_media") return Promise.resolve(null);
   if (!record || !((record.media_type === "movie" || isWatchedAction(record)) && (record.tmdb_id || record.title))) {
     return Promise.resolve(null);
   }
@@ -6860,6 +6865,7 @@ async function persistMovieProviderIds(recordId, record = {}, details = {}) {
 }
 
 async function prefetchTmdbMetadataBackground(mediaType, tmdbId, title, recordId = "", record = {}) {
+  if (record.source === "plex_personal_media") return null;
   // Watch-record tests intentionally use synthetic titles and provider ids.
   // Their fire-and-forget enrichment must not open real TMDB/TVDB requests or
   // leave the Node test runner waiting on the gateway throttle after the

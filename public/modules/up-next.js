@@ -1,20 +1,23 @@
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
 import { state, elements } from "./state.js?v=2.3.0.0.1";
-import { escapeAttribute, escapeHtml, slug } from "./utils.js?v=2.3.0.0.1";
+import { escapeAttribute, escapeHtml, openConfirmDialog, registerConfirmDialog, releaseConfirmDialog, slug } from "./utils.js?v=2.3.0.0.1";
 import { hydratePosters } from "./images.js?v=2.3.0.0.1";
 import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.3.0.0.1";
 import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.3.0.0.1";
 import {
-  manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml,
+  manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml, chooseUpNextAddOptions,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
+  upNextSortMode, sortUpNextDisplayItems, applyUpNextSyncControlState, handleUpNextDialogKey,
 } from "./up-next-shared.js?v=2.3.0.0.1";
 export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.3.0.0.1";
 import { renderMediaCard } from "./media-card.js?v=2.3.0.0.1";
 import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.3.0.0.1";
+import { openSettingsEditModal } from "./settings-ui.js?v=2.3.0.0.1";
 
 const UP_NEXT_TIMEOUT_MS = 20000;
 const UP_NEXT_DROP_SLIDE_MS = 600;
 const UP_NEXT_DISMISSED_KEY = "plembfin:upNextDismissed:v1";
+export { UP_NEXT_DISMISSED_KEY };
 // Last cards the server sent, painted at once on a page reload (marked as
 // checking) instead of loading tiles. The server reply always replaces them.
 const UP_NEXT_SNAPSHOT_KEY = "plekt:upNextSnapshot:v1";
@@ -33,7 +36,7 @@ const UP_NEXT_EXIT_MS = 200;
 
 let _cb = {};
 let actionsBound = false;
-let dismissedUpNext = readDismissedUpNext();
+const promptedLegacyDismissalAccounts = new Set();
 let upNextExitDeferred = false;
 let upNextExitRepaintTimer = null;
 
@@ -72,25 +75,61 @@ export function upNextAttentionOptions(error, action = "update") {
   };
 }
 
-export async function addShowToUpNext(button) {
+async function fetchUpNextShowOptions(show = {}) {
+  const params = new URLSearchParams();
+  if (show.title) params.set("title", show.title);
+  if (show.tmdb_id) params.set("tmdb_id", show.tmdb_id);
+  if (show.tvdb_id) params.set("tvdb_id", show.tvdb_id);
+  if (show.imdb_id) params.set("imdb_id", show.imdb_id);
+  const response = await fetch(`/api/up-next/show?${params.toString()}`, {
+    headers: { ...buildAuthHeaders(state.token) },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (response.status === 404 && body.error === "Not found") {
+    const error = new Error("The running Plekt server does not support adding TV shows to Up Next (POST /api/up-next/show). Restart Plekt, reload this page, and try again.");
+    error.status = 404;
+    error.code = "UP_NEXT_SHOW_ROUTE_MISSING";
+    throw error;
+  }
+  if (!response.ok) throw new Error(body.error || "Could not load Up Next season options. Try again.");
+  return body;
+}
+
+export async function addShowToUpNext(button, { chooseOptions = chooseUpNextAddOptions } = {}) {
   if (!button || button.disabled) return;
-  const title = button.dataset.upNextShowTitle || "TV show";
+  const show = showFromUpNextButton(button);
+  const title = show.title;
   button.disabled = true;
   button.setAttribute("aria-busy", "true");
   const label = button.querySelector("span");
   const originalLabel = label?.innerHTML || "";
   let actionSucceeded = false;
-  if (label) label.innerHTML = "Adding…";
+  if (label) label.innerHTML = "Loading…";
   try {
+    const showOptions = await fetchUpNextShowOptions(show);
+    if (label) label.innerHTML = originalLabel;
+    button.disabled = false;
+    button.removeAttribute("aria-busy");
+
+    const choice = await chooseOptions(show, showOptions);
+    if (!choice) return;
+
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    if (label) label.innerHTML = "Adding…";
+    const targetSeason = Number.isInteger(Number(choice.targetSeason)) && Number(choice.targetSeason) > 0
+      ? Number(choice.targetSeason)
+      : null;
     const response = await fetch("/api/up-next/show", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...buildAuthHeaders(state.token) },
       body: JSON.stringify({
         title,
-        tmdb_id: button.dataset.upNextShowTmdbId || "",
-        tvdb_id: button.dataset.upNextShowTvdbId || "",
-        imdb_id: button.dataset.upNextShowImdbId || "",
-        poster_url: button.dataset.upNextShowPosterUrl || "",
+        tmdb_id: show.tmdb_id,
+        tvdb_id: show.tvdb_id,
+        imdb_id: show.imdb_id,
+        poster_url: show.poster_url,
+        target_season: targetSeason,
       }),
     });
     const body = await response.json().catch(() => ({}));
@@ -103,12 +142,6 @@ export async function addShowToUpNext(button) {
       throw error;
     }
     if (Array.isArray(body.manualShows)) state.upNextManualShows = body.manualShows;
-    clearLocalUpNextDismissalsForShow({
-      title,
-      tmdb_id: button.dataset.upNextShowTmdbId || "",
-      tvdb_id: button.dataset.upNextShowTvdbId || "",
-      imdb_id: button.dataset.upNextShowImdbId || "",
-    });
     button.classList.add("is-added");
     if (label) label.innerHTML = "Remove from <br>Up Next";
     else button.textContent = "Remove from up next";
@@ -116,7 +149,10 @@ export async function addShowToUpNext(button) {
     button.dataset.upNextShowToggle = "remove";
     button.title = "Remove this show from the dashboard Up Next rail";
     actionSucceeded = true;
-    _cb.setMessage?.(`Added "${title}" to Up Next`, "success");
+    _cb.setMessage?.(
+      `Saved "${title}"${targetSeason ? ` (Season ${targetSeason})` : ""}. It appears in Up Next when an eligible episode is available.`,
+      "success",
+    );
     await loadUpNext({ force: true });
   } finally {
     if (!actionSucceeded && label) label.innerHTML = originalLabel;
@@ -214,7 +250,7 @@ function readDismissedUpNext() {
     if (Array.isArray(raw)) {
       const map = {};
       for (const id of raw) {
-        if (id) map[String(id).trim()] = Date.now();
+        if (id) map[String(id).trim()] = 0;
       }
       return map;
     }
@@ -225,76 +261,11 @@ function readDismissedUpNext() {
   }
 }
 
-function persistDismissedUpNext() {
+function persistDismissedUpNext(entries) {
   try {
-    const entries = Object.entries(dismissedUpNext);
-    const bounded = Object.fromEntries(entries.slice(-300));
-    localStorage.setItem(UP_NEXT_DISMISSED_KEY, JSON.stringify(bounded));
+    localStorage.setItem(UP_NEXT_DISMISSED_KEY, JSON.stringify(entries));
   } catch {
   }
-}
-
-// Adding a show from its media page is an explicit request to make it
-// eligible again. The server removes its dismissal, but older browser
-// sessions can still have the pre-server dismissal key in localStorage. Clear
-// every matching local key before the refreshed projection is rendered so the
-// newly added card cannot be filtered out locally.
-function clearLocalUpNextDismissalsForShow(show = {}) {
-  const identity = {
-    media_type: "episode",
-    show_title: show.title || show.show_title || show.showTitle || "",
-    show_tmdb_id: show.tmdb_id || show.tmdbId || show.show_tmdb_id || show.showTmdbId || "",
-    show_tvdb_id: show.tvdb_id || show.tvdbId || show.show_tvdb_id || show.showTvdbId || "",
-    show_imdb_id: show.imdb_id || show.imdbId || show.show_imdb_id || show.showImdbId || "",
-  };
-  const keys = new Set(upNextShowDismissalKeys(identity));
-  const candidates = [
-    ...(Array.isArray(state.upNextItems) ? state.upNextItems : []),
-    ...dismissedUpNextItems().map((entry) => {
-      const snapshot = dismissalSnapshot(entry);
-      return {
-        ...snapshot,
-        ...entry,
-        title: entry.show_title || snapshot.show_title || snapshot.showTitle || snapshot.title || "",
-        show_title: entry.show_title || snapshot.show_title || snapshot.showTitle || "",
-        show_tmdb_id: entry.show_tmdb_id || snapshot.show_tmdb_id || snapshot.showTmdbId || "",
-        show_tvdb_id: entry.show_tvdb_id || snapshot.show_tvdb_id || snapshot.showTvdbId || "",
-        show_imdb_id: entry.show_imdb_id || snapshot.show_imdb_id || snapshot.showImdbId || "",
-        media_type: "episode",
-      };
-    }),
-  ];
-  let changed = false;
-  for (const candidate of candidates) {
-    if (!manualShowMatches(show, candidate)) continue;
-    for (const key of upNextDismissalKeys(candidate)) {
-      if (!Object.prototype.hasOwnProperty.call(dismissedUpNext, key)) continue;
-      delete dismissedUpNext[key];
-      changed = true;
-    }
-  }
-  for (const key of keys) {
-    if (!Object.prototype.hasOwnProperty.call(dismissedUpNext, key)) continue;
-    delete dismissedUpNext[key];
-    changed = true;
-  }
-  if (changed) persistDismissedUpNext();
-  return changed;
-}
-
-export function isUpNextItemDismissed(item) {
-  if (!item) return false;
-  const keys = upNextDismissalKeys(item);
-  const dismissedAt = keys.map((key) => dismissedUpNext[key]).find(Boolean);
-  if (!dismissedAt) return false;
-
-  const updatedAt = Number(item.updated_at || item.updatedAt || 0);
-  if (updatedAt && updatedAt > dismissedAt && (Number(item.position_ms) > 0 || Number(item.progress) > 0)) {
-    for (const key of keys) delete dismissedUpNext[key];
-    persistDismissedUpNext();
-    return false;
-  }
-  return true;
 }
 
 export function removeUpNextItem(itemId, details = {}, { showScope = false, seasonScope = false } = {}) {
@@ -326,8 +297,6 @@ export function restoreUpNextItem(removal = {}) {
   const items = (Array.isArray(removal?.items) ? removal.items : [removal?.item])
     .filter((item) => item && typeof item === "object");
   if (!items.length) return;
-  for (const item of items) for (const key of upNextDismissalKeys(item)) delete dismissedUpNext[key];
-  persistDismissedUpNext();
   const index = Math.max(0, Math.min(Number(removal.index) || 0, state.upNextItems.length));
   const existingIds = new Set(state.upNextItems.map((candidate) => String(candidate?.id || candidate?.media_key || "")).filter(Boolean));
   const restored = items.filter((item) => {
@@ -675,10 +644,17 @@ export function setUpNextUnwatchSavingState() {
 
 async function loadDismissedUpNext() {
   if (!state.token) return [];
+  const token = state.token;
+  const sessionId = currentSessionIdentity();
+  const requestVersion = state.upNextRequestVersion;
   try {
-    const response = await fetch("/api/up-next/dismissed", { headers: buildAuthHeaders(state.token) });
+    const response = await fetch("/api/up-next/dismissed", {
+      headers: buildAuthHeaders(token),
+      signal: AbortSignal.timeout(UP_NEXT_TIMEOUT_MS),
+    });
     if (!response.ok) return state.upNextDismissed || [];
     const body = await response.json();
+    if (currentSessionIdentity() !== sessionId || state.upNextRequestVersion !== requestVersion) return [];
     state.upNextDismissed = Array.isArray(body.items) ? body.items : [];
   } catch {
     // Leave the last known list in place; the count is not worth failing the
@@ -687,66 +663,90 @@ async function loadDismissedUpNext() {
   return state.upNextDismissed;
 }
 
-// One-time move of this browser's stored dismissals to the server. Until it
-// runs, a browser that dismissed items before the change would show them back
-// in the queue.
 async function migrateLocalDismissals() {
-  const entries = Object.keys(dismissedUpNext || {});
-  if (!entries.length || !state.token) return false;
-  const items = (Array.isArray(state.upNextItems) ? state.upNextItems : [])
-    .filter((item) => isUpNextItemDismissed(item));
-  if (!items.length) {
-    // Nothing in the current queue matches, so the stored keys are stale.
-    dismissedUpNext = {};
-    persistDismissedUpNext();
-    return false;
+  const account = upNextSnapshotKey();
+  const token = state.token;
+  const sessionId = currentSessionIdentity();
+  if (!token || !account || promptedLegacyDismissalAccounts.has(account)) return;
+  const entries = readDismissedUpNext();
+  const matches = new Map();
+  for (const item of visibleUpNextItems()) {
+    for (const key of upNextDismissalKeys(item)) {
+      if (!Object.hasOwn(entries, key)) continue;
+      matches.set(key, matches.has(key) ? null : item);
+    }
   }
-  for (const item of items) {
-    await fetch("/api/up-next/remove", {
+  const candidates = new Map();
+  for (const [key, item] of matches) {
+    if (!item) continue;
+    const newerProgress = Number(item.updated_at || item.updatedAt) > Number(entries[key])
+      && (Number(item.position_ms) > 0 || Number(item.progress) > 0);
+    if (newerProgress) continue;
+    const keys = candidates.get(item) || [];
+    keys.push(key);
+    candidates.set(item, keys);
+  }
+  if (!candidates.size) return;
+  promptedLegacyDismissalAccounts.add(account);
+  const approved = await openConfirmDialog({
+    title: "Import old Up Next dismissals?",
+    body: `This browser has ${candidates.size} matching dismissals without an account. Import them into the account currently open in Plekt?`,
+    confirmLabel: "Import dismissals",
+    cancelLabel: "Not now",
+  });
+  const stillCurrent = () => currentSessionIdentity() === sessionId && upNextSnapshotKey() === account;
+  if (!approved || !stillCurrent()) return;
+  let imported = 0;
+  for (const [item, keys] of candidates) {
+    if (!stillCurrent()) return;
+    const response = await fetch("/api/up-next/remove", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...buildAuthHeaders(state.token) },
-      body: JSON.stringify({
-        media_key: item.media_key || item.id,
-        media_type: item.media_type || "",
-        title: item.title || "",
-        show_title: item.show_title || "",
-        season: item.season ?? "",
-        episode: item.episode ?? "",
-        tmdb_id: item.tmdb_id || item.show_tmdb_id || "",
-        imdb_id: item.imdb_id || item.show_imdb_id || "",
-        tvdb_id: item.tvdb_id || item.show_tvdb_id || "",
-        show_tmdb_id: item.show_tmdb_id || "",
-        show_imdb_id: item.show_imdb_id || "",
-        show_tvdb_id: item.show_tvdb_id || "",
-        provider_items: item.provider_items || {},
-      }),
+      headers: { "Content-Type": "application/json", ...buildAuthHeaders(token) },
+      signal: AbortSignal.timeout(UP_NEXT_TIMEOUT_MS),
+      body: JSON.stringify({ ...upNextSyncPayloadItem(item), importLegacyDismissal: true }),
     }).catch(() => null);
+    if (!response?.ok || !(await response.json().catch(() => ({}))).imported) continue;
+    const remaining = readDismissedUpNext();
+    for (const key of keys) if (Number(remaining[key]) <= Number(entries[key])) delete remaining[key];
+    persistDismissedUpNext(remaining);
+    imported += 1;
   }
-  dismissedUpNext = {};
-  persistDismissedUpNext();
-  return true;
+  if (!stillCurrent()) return;
+  if (imported) loadUpNext({ afterMutation: true });
+  if (imported < candidates.size) _cb.setMessage?.("Some old dismissals could not be imported. Reload the page to retry.", "muted");
 }
 
 // Clears the local dismissal so the card returns to the rail. The caller is
 // responsible for pushing the restored queue outward; restoring here and
 // pushing there keeps a failed provider push from silently re-hiding a card
 // the user explicitly asked to see again.
-export async function restoreDismissedUpNextItems(entries = []) {
+function currentSessionIdentity() {
+  const user = state.currentUser || {};
+  return `${state.token || ""}:${user.activeUser || ""}:${user.username || user.uid || user.email || ""}`;
+}
+
+export async function restoreDismissedUpNextItems(entries = [], { all = false } = {}) {
   const list = (Array.isArray(entries) ? entries : [entries]).filter(Boolean);
   if (!list.length) return 0;
+  const token = state.token;
+  const sessionId = currentSessionIdentity();
   let restored = 0;
-  for (const entry of list) {
+  const requests = all ? [{ all: true }] : list.map((entry) => ({ id: entry.id }));
+  for (const body of requests) {
+    if (currentSessionIdentity() !== sessionId) return 0;
     const response = await fetch("/api/up-next/restore", {
       method: "POST",
-      headers: { "Content-Type": "application/json", ...buildAuthHeaders(state.token) },
-      body: JSON.stringify({ id: entry.id }),
+      headers: { "Content-Type": "application/json", ...buildAuthHeaders(token) },
+      body: JSON.stringify(body),
     }).catch(() => null);
-    if (response?.ok) restored += 1;
+    if (response?.ok) restored += Number((await response.json().catch(() => ({}))).restored) || 0;
   }
-  if (!restored) return 0;
+  if (currentSessionIdentity() !== sessionId || !restored) return 0;
   await loadDismissedUpNext();
+  if (currentSessionIdentity() !== sessionId) return 0;
   state.upNextExitIds = [];
   await loadUpNext({ force: true });
+  if (currentSessionIdentity() !== sessionId) return 0;
   return restored;
 }
 
@@ -756,6 +756,7 @@ function closeDismissedUpNextModal() {
 
 export function openDismissedUpNextModal() {
   closeDismissedUpNextModal();
+  const opener = document.activeElement;
   const items = dismissedUpNextItems();
   const groups = dismissedUpNextGroups();
   const byKey = new Map(groups.map((group) => [group.key, group]));
@@ -770,10 +771,21 @@ export function openDismissedUpNextModal() {
       actionsHtml: `<button class="button-ghost" type="button" data-up-next-restore-group="${escapeHtml(group.key)}">Add back</button>`,
     });
   }).join("");
-  const body = items.length
+  const recentHides = Array.isArray(state.upNextSyncStatus?.recentMirrorHides)
+    ? state.upNextSyncStatus.recentMirrorHides
+    : (Array.isArray(state.upNextSyncStatus?.mirrorHides) ? state.upNextSyncStatus.mirrorHides : []);
+  const hideLogHtml = recentHides.length
+    ? `<div class="up-next-mirror-hide-log"><h4>Recent Mirror hides</h4><p class="muted-copy">Hidden items on Plex and Emby return when played again.</p><ul>${recentHides.slice(0, 20).map((entry) => {
+      const app = entry.provider === "plex" ? "Plex" : entry.provider === "emby" ? "Emby" : (entry.provider || "App");
+      const when = Number(entry.at) > 0 ? ` · ${new Date(entry.at).toLocaleString()}` : "";
+      const outcome = entry.status === "hidden" ? "Hidden" : entry.status === "skipped" ? "Skipped" : "Failed";
+      return `<li><b>${escapeHtml(app)}</b> · ${escapeHtml(entry.title || "Item")} · ${escapeHtml(entry.reason || "")} · ${escapeHtml(outcome)}${escapeHtml(when)}</li>`;
+    }).join("")}</ul></div>`
+    : "";
+  const body = (items.length
     ? `<p class="up-next-dismissed-intro">Dismissed on every device. Adding a card back returns it to Up Next and pushes the queue to your media servers.</p>
        <div class="up-next-dismissed-card-grid">${cards}</div>`
-    : `<p class="up-next-dismissed-intro">Nothing dismissed is currently unwatched in Plekt.</p>`;
+    : `<p class="up-next-dismissed-intro">Nothing dismissed is currently unwatched in Plekt.</p>`) + hideLogHtml;
   overlay.innerHTML = `
     <div class="edit-dialog settings-modal up-next-dismissed-modal" role="dialog" aria-modal="true" aria-label="Dismissed Up Next items">
       <header class="settings-modal-head">
@@ -789,19 +801,32 @@ export function openDismissedUpNextModal() {
       </footer>
     </div>
   `;
-  const onKeydown = (event) => { if (event.key === "Escape") close(); };
+  const onKeydown = (event) => handleUpNextDialogKey(event, overlay, close);
   const close = () => {
-    document.removeEventListener("keydown", onKeydown);
+    if (!releaseConfirmDialog(close)) return;
+    document.removeEventListener("keydown", onKeydown, true);
     overlay.remove();
+    if (opener && opener.isConnected !== false) opener.focus?.();
   };
+  registerConfirmDialog(close);
   overlay._upNextClose = close;
-  const restoreAndPush = async (restoreItems) => {
+  const restoreAndPush = async (restoreItems, options) => {
+    const sessionId = currentSessionIdentity();
     close();
-    const restored = await restoreDismissedUpNextItems(restoreItems);
-    if (!restored) return;
+    const restored = await restoreDismissedUpNextItems(restoreItems, options);
+    if (currentSessionIdentity() !== sessionId) return;
+    if (!restored) {
+      _cb.setMessage?.("No dismissed items were restored. Refresh the list and try again.", "muted");
+      return;
+    }
+    const partial = options?.all
+      ? (state.upNextDismissed || []).length > 0
+      : restored < restoreItems.length;
     _cb.setMessage?.(
-      `Added ${restored} item${restored === 1 ? "" : "s"} back to Up Next; pushing to your media servers…`,
-      "success",
+      partial
+        ? `Restored ${restored} of ${restoreItems.length} dismissed items. Refresh the list to retry the rest.`
+        : `Added ${restored} item${restored === 1 ? "" : "s"} back to Up Next.`,
+      partial ? "muted" : "success",
     );
     syncUpNextToProviders().catch(() => { });
   };
@@ -811,14 +836,14 @@ export function openDismissedUpNextModal() {
   }, true);
   overlay.querySelector(".settings-modal-close").addEventListener("click", close);
   overlay.querySelector(".settings-modal-cancel").addEventListener("click", close);
-  overlay.querySelector("[data-up-next-restore-all]")?.addEventListener("click", () => restoreAndPush(items));
+  overlay.querySelector("[data-up-next-restore-all]")?.addEventListener("click", () => restoreAndPush(items, { all: true }));
   overlay.querySelectorAll("[data-up-next-restore-group]").forEach((button) => {
     button.addEventListener("click", () => {
       const group = byKey.get(button.dataset.upNextRestoreGroup);
       if (group) restoreAndPush(group.entries);
     });
   });
-  document.addEventListener("keydown", onKeydown);
+  document.addEventListener("keydown", onKeydown, true);
   document.body.appendChild(overlay);
   hydratePosters(overlay, { allowNetwork: true });
   overlay.querySelector("[data-up-next-restore-group], .settings-modal-close")?.focus({ preventScroll: true });
@@ -836,9 +861,16 @@ function renderUpNextDismissedControl() {
   button.setAttribute("aria-label", label);
 }
 
+let renderedUpNextSortMode = "";
+
 function renderUpNextControls() {
   renderUpNextSyncControl();
   renderUpNextDismissedControl();
+  const sortMode = upNextSortMode();
+  if (renderedUpNextSortMode && sortMode !== renderedUpNextSortMode && state.upNextItems.length) {
+    renderedUpNextSortMode = sortMode;
+    renderUpNext();
+  }
 }
 
 const UP_NEXT_PROVIDER_LABELS = {
@@ -1096,14 +1128,8 @@ function scheduleUpNextExitRepaint() {
   }, UP_NEXT_EXIT_MS + 40);
 }
 
-// The server applies dismissals now, so whatever it returns is already the
-// visible queue. The local map is consulted only while a pre-migration browser
-// still has stored keys, and is cleared as soon as they are migrated.
 function visibleUpNextItems() {
-  const items = Array.isArray(state.upNextItems) ? state.upNextItems : [];
-  const pendingLocal = Object.keys(dismissedUpNext || {}).length > 0;
-  const filtered = pendingLocal ? items.filter((item) => !isUpNextItemDismissed(item)) : items;
-  return dedupeUpNextItems(filtered);
+  return dedupeUpNextItems(state.upNextItems || []);
 }
 
 function upNextSnapshotKey() {
@@ -1130,11 +1156,17 @@ function rememberUpNextSnapshot() {
   if (!key) return;
   try {
     // Only what the server confirmed: no in-flight saves or removals.
-    const items = visibleUpNextItems()
+    const items = sortUpNextDisplayItems(visibleUpNextItems())
       .filter((item) => item?.pending_sync !== true && !isUpNextWatchSaving(item) && !isUpNextRemovalPending(item))
       .slice(0, UP_NEXT_SNAPSHOT_MAX_ITEMS);
     if (!items.length) localStorage.removeItem(key);
-    else localStorage.setItem(key, JSON.stringify({ savedAt: Date.now(), items }));
+    else {
+      localStorage.setItem(key, JSON.stringify({
+        savedAt: Date.now(),
+        items,
+        manualShows: Array.isArray(state.upNextManualShows) ? state.upNextManualShows : [],
+      }));
+    }
   } catch {
     // Best effort; the server stays the source of truth.
   }
@@ -1147,38 +1179,12 @@ function applyUpNextSnapshot() {
   const snapshot = readUpNextSnapshot();
   if (!snapshot) return;
   state.upNextItems = snapshot.items;
+  if (Array.isArray(snapshot.manualShows) && !state.upNextManualShows.length) state.upNextManualShows = snapshot.manualShows;
   state.upNextFromCache = true;
 }
 
 function renderUpNextSyncControl() {
-  const button = elements.upNextSyncButton;
-  if (!button) return;
-  const syncing = state.upNextSyncing === true;
-  const loading = state.upNextLoading === true;
-  const signedIn = Boolean(state.token);
-  const syncEnabled = state.savedConfig?.upNextSync?.enabled !== false;
-  const label = button.querySelector(".up-next-sync-label");
-  button.disabled = !signedIn || !syncEnabled || syncing || loading;
-  button.setAttribute("aria-busy", String(syncing || loading));
-  if (label) label.textContent = syncing ? "Syncing…" : loading ? "Refreshing…" : "";
-  button.title = syncing
-    ? "Pushing Plekt Up Next to Plex, Emby, and Jellyfin…"
-    : loading
-      ? "Refreshing Up Next…"
-    : !signedIn
-      ? "Sign in to push Up Next to your media servers"
-      : !syncEnabled
-        ? "Up Next sync is disabled in Settings → Sync → Sync Tuning"
-        : "Push Plekt Up Next to Plex, Emby, and Jellyfin";
-  button.setAttribute("aria-label", syncing
-    ? "Pushing Plekt Up Next to connected media servers"
-    : loading
-      ? "Refreshing Up Next"
-    : !signedIn
-      ? "Sign in to push Up Next to your media servers"
-      : !syncEnabled
-        ? "Up Next sync is disabled in Settings, Sync Tuning"
-        : "Push Plekt Up Next to Plex, Emby, and Jellyfin");
+  applyUpNextSyncControlState(elements.upNextSyncButton);
 }
 
 function upNextSyncPayloadItem(item = {}) {
@@ -1256,13 +1262,23 @@ function upNextSyncMessage(body = {}) {
   if (legacyCleared) details.push(`cleared ${legacyCleared} legacy native-rail position${legacyCleared === 1 ? "" : "s"}`);
   if (railFailures) details.push(`native Up Next rail refresh failed for ${railFailures} item${railFailures === 1 ? "" : "s"}`);
   if (progressTargets.size) details.push(`resume position sent to ${upNextListLabel([...progressTargets])}`);
+  const mirrorHides = Array.isArray(body.mirrorHides) ? body.mirrorHides : [];
+  const hiddenMirrorItems = mirrorHides.filter((entry) => entry?.status === "hidden");
+  const failedMirrorHides = mirrorHides.filter((entry) => entry?.status === "failed");
+  if (hiddenMirrorItems.length) {
+    const names = hiddenMirrorItems.slice(0, 3).map((entry) => `${entry.title || "Item"} (${entry.reason || "Excluded"})`).join(", ");
+    details.push(`hid ${hiddenMirrorItems.length} item${hiddenMirrorItems.length === 1 ? "" : "s"} in Mirror mode (${names}; play again to restore)`);
+  }
+  if (failedMirrorHides.length) {
+    details.push(`Mirror hide failed for ${failedMirrorHides.length} item${failedMirrorHides.length === 1 ? "" : "s"}`);
+  }
   if (retained) details.push(`${retained} item${retained === 1 ? "" : "s"} listed only by the apps ${retained === 1 ? "was" : "were"} left in place`);
   if (failedFeeds.length) {
     details.push(`${upNextListLabel([...new Set(failedFeeds.map((feed) => providerNames[String(feed.provider || "").toLowerCase()] || feed.provider || "provider"))])} feed refresh failed`);
   }
   return {
     text: [intro, ...details].join(" "),
-    tone: failedFeeds.length || railFailures || legacyFailures ? "muted" : "success",
+    tone: failedFeeds.length || railFailures || legacyFailures || failedMirrorHides.length ? "muted" : "success",
   };
 }
 
@@ -1290,6 +1306,10 @@ export async function syncUpNextToProviders() {
     });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `Up Next sync failed (${response.status})`);
+    if (body.syncStatus && typeof body.syncStatus === "object") {
+      state.upNextSyncStatus = body.syncStatus;
+      renderUpNextControls();
+    }
     const message = upNextSyncMessage(body);
     _cb.setMessage?.(message.text, message.tone);
     // Re-read the provider snapshots after the push and any known resume
@@ -1308,10 +1328,112 @@ export async function syncUpNextToProviders() {
   }
 }
 
+let savingCustomOrder = false;
+let draggedOrderKey = "";
+
+export function openUpNextShowOptions(button) {
+  const show = showFromUpNextButton(button);
+  const token = state.token;
+  const sessionId = currentSessionIdentity();
+  const ids = ["tmdb_id", "tvdb_id", "imdb_id"];
+  const matches = (entry) => {
+    const shared = ids.filter((key) => show[key] && entry[key]);
+    return shared.length && shared.every((key) => show[key] === entry[key]);
+  };
+  const existing = (state.savedConfig?.upNextSync?.showOverrides || []).find(matches);
+  openSettingsEditModal({
+    title: `Up Next options for ${show.title}`,
+    fields: [
+      { key: "episodeChoice", label: "Episode choice", type: "select", value: existing?.episodeChoice || "next_in_order",
+        options: [{ value: "next_in_order", label: "Next in order" }, { value: "latest_released", label: "Latest released" }] },
+      { key: "placement", label: "Queue placement", type: "select", value: existing?.placement || "normal",
+        options: [{ value: "normal", label: "Follow queue order" }, { value: "top", label: "Pin to top" }, { value: "bottom", label: "Push to bottom" }] },
+    ],
+    async onSave(values) {
+      if (currentSessionIdentity() !== sessionId) return false;
+      const response = await fetch("/api/up-next/show", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...buildAuthHeaders(token) },
+        body: JSON.stringify({ ...show, ...values, action: "override" }),
+      });
+      if (!response.ok) throw new Error("Could not save these Up Next options.");
+      const body = await response.json();
+      if (currentSessionIdentity() !== sessionId) return false;
+      state.savedConfig = { ...state.savedConfig, upNextSync: body.upNextSync };
+      await loadUpNext({ afterMutation: true });
+      return true;
+    },
+  });
+}
+
+async function moveCustomUpNextItem(key, destination, offset = 0) {
+  const token = state.token;
+  const sessionId = currentSessionIdentity();
+  if (!token || savingCustomOrder || upNextSortMode() !== "custom") return;
+  const items = visibleUpNextItems().filter((item) => item.order_key);
+  const from = items.findIndex((item) => item.order_key === key);
+  if (from < 0) return;
+  const resume = (item) => item.queue_kind === "resume" && item.playback_position_known !== false;
+  const partition = state.savedConfig?.upNextSync?.partWatchedFirst !== false;
+  const to = destination ? items.findIndex((item) => item.order_key === destination)
+    : offset ? from + offset : items.findIndex((item) => !partition || resume(item) === resume(items[from]));
+  if (to < 0 || to === from || to >= items.length || (partition && resume(items[from]) !== resume(items[to]))) return;
+  const order = items.map((item) => item.order_key);
+  order.splice(to, 0, ...order.splice(from, 1));
+  savingCustomOrder = true;
+  try {
+    const response = await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...buildAuthHeaders(token) },
+      body: JSON.stringify({ upNextSync: { customOrder: order } }),
+    });
+    if (!response.ok) throw new Error("Could not save the Up Next order.");
+    const body = await response.json();
+    if (currentSessionIdentity() !== sessionId) return;
+    state.savedConfig = { ...state.savedConfig, upNextSync: body.config.upNextSync };
+    await loadUpNext({ afterMutation: true });
+  } catch (error) {
+    if (currentSessionIdentity() === sessionId) _cb.setMessage?.(error.message, "muted");
+  } finally {
+    savingCustomOrder = false;
+  }
+}
+
 export function initUpNext(callbacks = {}) {
   _cb = callbacks;
   if (actionsBound) return;
   actionsBound = true;
+  const bindCustomOrderListeners = (container) => {
+    if (!container) return;
+    container.addEventListener("click", (event) => {
+      const move = event.target.closest("[data-up-next-order-move]");
+      if (!move) return;
+      const key = move.closest("[data-up-next-order-key]")?.dataset.upNextOrderKey;
+      if (!key) return;
+      event.preventDefault();
+      moveCustomUpNextItem(key, "", Number(move.dataset.upNextOrderMove));
+    });
+    container.addEventListener("dragstart", (event) => {
+      const handle = event.target.closest("[data-up-next-order-key]");
+      if (!handle) return;
+      draggedOrderKey = handle.dataset.upNextOrderKey;
+      event.dataTransfer.setData("text/plain", draggedOrderKey);
+      event.dataTransfer.effectAllowed = "move";
+    });
+    container.addEventListener("dragover", (event) => {
+      if (draggedOrderKey && event.target.closest("[data-up-next-card-id]")) event.preventDefault();
+    });
+    container.addEventListener("drop", (event) => {
+      const target = event.target.closest("[data-up-next-card-id]")?.querySelector("[data-up-next-order-key]");
+      if (!draggedOrderKey || !target) return;
+      event.preventDefault();
+      moveCustomUpNextItem(draggedOrderKey, target.dataset.upNextOrderKey);
+      draggedOrderKey = "";
+    });
+    container.addEventListener("dragend", () => { draggedOrderKey = ""; });
+  };
+  bindCustomOrderListeners(elements.upNextPanel);
+  bindCustomOrderListeners(elements.nowPlayingGrid);
   elements.upNextPanel?.addEventListener("click", (event) => {
     const dropped = event.target.closest("[data-plekt-dropped-title-action]");
     if (dropped) { event.preventDefault(); event.stopPropagation(); handleDroppedTitleAction(dropped, { onSuccess: () => loadUpNext({ force: true }) }); return; }
@@ -1330,7 +1452,10 @@ export function initUpNext(callbacks = {}) {
     event.preventDefault();
     syncUpNextToProviders().catch(() => { });
   });
+  elements.upNextSyncButton?.addEventListener("pointerenter", () => renderUpNextSyncControl());
+  elements.upNextSyncButton?.addEventListener("focus", () => renderUpNextSyncControl());
   document.addEventListener("plembfin:config-changed", () => renderUpNextControls());
+  document.addEventListener("plekt:up-next-order-saved", () => loadUpNext({ afterMutation: true }));
   elements.upNextDismissedButton?.addEventListener("click", (event) => {
     event.preventDefault();
     openDismissedUpNextModal();
@@ -1357,10 +1482,14 @@ export function resetUpNext({ preserveItems = false } = {}) {
   state.upNextAbortController = null;
   if (!preserveItems) {
     state.upNextItems = [];
+    state.upNextDismissed = [];
+    state.upNextManualShows = [];
     state.upNextVersion = 0;
     state.upNextSourceVersion = "";
     state.upNextSourceStatus = [];
+    state.upNextSyncStatus = null;
     state.upNextFromCache = false;
+    renderedUpNextSortMode = "";
   }
   state.upNextLoading = false;
   state.upNextSyncing = false;
@@ -1447,7 +1576,9 @@ export function renderUpNext({ exitIds = [] } = {}) {
     return;
   }
 
-  const items = oneCardPerEpisode(nowPlayingFirst(visibleUpNextItems(), state.activeSessions || []));
+  const sortMode = upNextSortMode();
+  renderedUpNextSortMode = sortMode;
+  const items = nowPlayingFirst(oneCardPerEpisode(sortUpNextDisplayItems(visibleUpNextItems(), sortMode)), state.activeSessions || []);
 
   if (!state.upNextItems.length && (state.upNextLoading || (!state.upNextLoadedAt && !state.upNextError))) {
     if (section) section.classList.remove("hidden");
@@ -1459,7 +1590,7 @@ export function renderUpNext({ exitIds = [] } = {}) {
     return;
   }
 
-  if (state.upNextError && (state.upNextFromCache || !state.upNextItems.length)) {
+  if (state.upNextError && !state.upNextItems.length) {
     if (section) section.classList.remove("hidden");
     const presentation = upNextErrorPresentation();
     commitPanel(`<div class="empty-log up-next-empty-state" role="alert"><b>${escapeHtml(presentation.title)}</b><span>${escapeHtml(presentation.detail)}</span><button class="button-ghost" type="button" data-up-next-retry>Try again</button></div>`);
@@ -1475,14 +1606,24 @@ export function renderUpNext({ exitIds = [] } = {}) {
   if (section) section.classList.remove("hidden");
   const checkingCachedItems = state.upNextFromCache
     && (state.upNextLoading || (!state.upNextLoadedAt && !state.upNextError));
+  const refreshError = state.upNextError
+    ? `<div class="empty-log up-next-empty-state" role="alert"><span>Showing the last loaded queue. ${escapeHtml(upNextErrorPresentation().detail)}</span><button class="button-ghost" type="button" data-up-next-retry>Try again</button></div>`
+    : "";
   const html = items.slice(0, 30).map((item, index) => renderDashboardUpNextCard({
     ...item,
-    checking: checkingCachedItems,
+    checking: checkingCachedItems || Boolean(state.upNextError),
     saving: item.pending_sync === true || isUpNextWatchSaving(item),
     pending_removal: isUpNextRemovalPending(item),
     eager_poster: index < 12,
+    orderControls: sortMode === "custom" && item.order_key
+      ? `<div class="history-card-actions" draggable="true" data-up-next-order-key="${escapeAttribute(item.order_key)}">
+          <button class="button-ghost" type="button" data-up-next-order-move="-1" aria-label="Move earlier">↑</button>
+          <button class="button-ghost" type="button" data-up-next-order-move="1" aria-label="Move later">↓</button>
+          <button class="button-ghost" type="button" data-up-next-order-move="0">Move to start</button>
+        </div>`
+      : "",
   })).join("");
-  commitPanel(html, () => {
+  commitPanel(refreshError + html, () => {
     hydratePosters(panel, { allowNetwork: false });
     hydrateMediaAppLinks(panel, { allowNetwork: true }).catch(() => { });
   });
@@ -1501,6 +1642,7 @@ export async function loadUpNext({ force = false, fromSse = false, afterMutation
     return;
   }
 
+  const sessionId = currentSessionIdentity();
   const requestVersion = state.upNextRequestVersion + 1;
   state.upNextRequestVersion = requestVersion;
   const controller = new AbortController();
@@ -1528,32 +1670,29 @@ export async function loadUpNext({ force = false, fromSse = false, afterMutation
       requestError.code = body.code || "";
       throw requestError;
     }
-    if (requestVersion !== state.upNextRequestVersion) return;
+    if (requestVersion !== state.upNextRequestVersion || currentSessionIdentity() !== sessionId) return;
     const previousIds = new Set(visibleUpNextItems().map((item) => String(item?.id || "")).filter(Boolean));
     const fetchedItems = Array.isArray(body.items) ? body.items : [];
     const nextItems = filterPendingWatchedUpNextItems(
       preservePendingUpNextItems(fetchedItems),
       { authoritative: body.cacheStale !== true },
     );
-    const nextIds = new Set(nextItems.filter((item) => !isUpNextItemDismissed(item)).map((item) => String(item?.id || "")).filter(Boolean));
+    const nextIds = new Set(nextItems.map((item) => String(item?.id || "")).filter(Boolean));
     state.upNextExitIds = [...previousIds].filter((id) => !nextIds.has(id));
     state.upNextItems = nextItems;
     if (Array.isArray(body.manualShows)) state.upNextManualShows = body.manualShows;
+    if (body.syncStatus && typeof body.syncStatus === "object") state.upNextSyncStatus = body.syncStatus;
     const responseVersion = Number(body.upNextVersion);
     if (Number.isFinite(responseVersion) && responseVersion > 0) state.upNextVersion = responseVersion;
     state.upNextSourceVersion = String(body.sourceVersion || "");
     state.upNextSourceStatus = Array.isArray(body.sourceStatus) ? body.sourceStatus : [];
     state.upNextFromCache = body.cacheStale === true;
     state.upNextLoadedAt = state.upNextFromCache ? 0 : Date.now();
-    if (await migrateLocalDismissals()) {
-      await loadDismissedUpNext();
-      Promise.resolve().then(() => loadUpNext({ force: true })).catch(() => { });
-    } else {
-      await loadDismissedUpNext();
-    }
+    if (!state.upNextFromCache) migrateLocalDismissals().catch(() => {});
+    loadDismissedUpNext().then(() => renderUpNextControls());
     rememberUpNextSnapshot();
   } catch (error) {
-    if (requestVersion !== state.upNextRequestVersion) return;
+    if (requestVersion !== state.upNextRequestVersion || currentSessionIdentity() !== sessionId) return;
     state.upNextErrorCode = error?.name === "AbortError"
       ? "TIMEOUT"
       : error?.code || (Number(error?.status) === 404 ? "SERVER_ROUTE_MISSING" : Number(error?.status) === 401 ? "UNAUTHORIZED" : "");
@@ -1563,20 +1702,22 @@ export async function loadUpNext({ force = false, fromSse = false, afterMutation
     if (requestVersion === state.upNextRequestVersion) {
       state.upNextAbortController = null;
       state.upNextLoading = false;
-      renderUpNext();
-      const refreshQueued = state.upNextRefreshQueued;
-      const forceRefreshQueued = state.upNextForceRefreshQueued;
-      const mutationRefreshQueued = state.upNextMutationRefreshQueued;
-      state.upNextRefreshQueued = false;
-      state.upNextForceRefreshQueued = false;
-      state.upNextMutationRefreshQueued = false;
-      if (refreshQueued && (forceRefreshQueued || mutationRefreshQueued || state.activeView === "dashboard")) {
-        const afterMutation = mutationRefreshQueued && !forceRefreshQueued;
-        Promise.resolve().then(() => loadUpNext({
-          force: forceRefreshQueued,
-          afterMutation,
-          fromSse: !forceRefreshQueued && !afterMutation,
-        })).catch(() => { });
+      if (currentSessionIdentity() === sessionId) {
+        renderUpNext();
+        const refreshQueued = state.upNextRefreshQueued;
+        const forceRefreshQueued = state.upNextForceRefreshQueued;
+        const mutationRefreshQueued = state.upNextMutationRefreshQueued;
+        state.upNextRefreshQueued = false;
+        state.upNextForceRefreshQueued = false;
+        state.upNextMutationRefreshQueued = false;
+        if (refreshQueued && (forceRefreshQueued || mutationRefreshQueued || state.activeView === "dashboard")) {
+          const afterMutation = mutationRefreshQueued && !forceRefreshQueued;
+          Promise.resolve().then(() => loadUpNext({
+            force: forceRefreshQueued,
+            afterMutation,
+            fromSse: !forceRefreshQueued && !afterMutation,
+          })).catch(() => { });
+        }
       }
     }
   }

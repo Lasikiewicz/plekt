@@ -9466,6 +9466,47 @@ html:root .simple-feature-group + .simple-feature-group {
 .docs-home-guide-list { display: grid; gap: 0.5rem; }
 .docs-home-guide { padding: 0.6rem 0.65rem; border: 1px solid transparent; border-radius: 0.5rem; }
 .docs-home-guide:hover { border-color: var(--line); }
+
+/* Popular guides use a title and arrow, unlike the numbered feature rows. */
+[aria-labelledby="popular-guides-title"] .simple-feature-item {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 2.75rem;
+  padding-right: 1rem;
+}
+
+html:root .modern-home-intro .simple-home-lede p {
+  margin: 0;
+}
+
+html:root .modern-home-intro .simple-home-lede p + p {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .site-brand,
+  .simple-text-link,
+  .simple-button,
+  .quickstart-copy-button,
+  .theme-toggle,
+  .nav-icon-link,
+  .docs-tree-disclosure > summary,
+  .docs-tree-group > summary,
+  .docs-tree-link,
+  .docs-sidebar-home,
+  .docs-home-guide {
+    min-height: 2.75rem;
+  }
+  .docs-tree-link { display: flex; align-items: center; }
+}
+
+@media (max-width: 640px) {
+  .simple-home-comparison-table thead th:first-child,
+  .simple-home-comparison-table tbody th {
+    width: 10rem;
+    max-width: 10rem;
+  }
+}
 .install-choice-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin: 1rem 0 2rem; }
 .install-choice-card { display: grid; align-content: start; gap: 0.65rem; min-height: 10rem; padding: 1.2rem; border: 1px solid var(--line-strong); border-radius: 0.75rem; background: var(--surface); color: inherit; text-decoration: none; transition: border-color 150ms ease, transform 150ms ease, box-shadow 150ms ease; }
 .install-choice-card:hover, .install-choice-card:focus-visible { border-color: var(--accent); box-shadow: 0 0.4rem 1.4rem color-mix(in srgb, var(--accent) 12%, transparent); transform: translateY(-2px); }

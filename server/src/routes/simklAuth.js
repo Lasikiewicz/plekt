@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { writeAuditLog } from "../db.js";
 import { sendJson, methodNotAllowed } from "../utils/http.js";
 import { readJson } from "../utils/requestBody.js";
@@ -6,10 +7,21 @@ import {
   markTrackerAuthFlow, claimTrackerAuthFlowPoll, saveTrackerConnection,
 } from "../utils/trackerConnectionRepo.js";
 import { currentTrackerGeneration } from "../utils/trackers/generation.js";
+import { resolveAdminPrincipal } from "../utils/auth.js";
+import { createPerUserState } from "../utils/perUserState.js";
 import { BUNDLED_SIMKL_CLIENT_ID } from "../utils/simklAppConfig.js";
 import { startSimklDeviceAuth, pollSimklDeviceAuth, getSimklUser, simklDevicePollOutcome } from "../utils/trackers/simklAuth.js";
 
-const polling = new Set();
+const pollingByUser = createPerUserState(() => new Set());
+const flowOwnerByUser = createPerUserState(() => new Map());
+function simklSessionFingerprint(req) {
+  const principal = resolveAdminPrincipal(req);
+  if (!principal) return "";
+  return crypto
+    .createHash("sha256")
+    .update(`${principal.username || ""}:${principal.role || ""}:${principal.activeUser || "admin"}`)
+    .digest("base64url");
+}
 const pending = (res, flow) => sendJson(res, { status: "pending", retryAfter: flow.intervalSeconds }, 202);
 const expired = (res, flow, changed = false) => {
   markTrackerAuthFlow(flow.id, "expired");
@@ -30,6 +42,8 @@ export async function handleSimklAuth(req, res, path) {
       expiresAt: Date.now() + device.expires_in * 1000, initialSyncMode: body.initialSyncMode,
       preferEarlierWatchedDate: body.preferEarlierWatchedDate, expectedConnectionId,
     });
+    const fp = simklSessionFingerprint(req);
+    if (fp) flowOwnerByUser().set(flow.id, fp);
     writeAuditLog("tracker-auth.simkl.started", { detail: { flowId: flow.id } });
     return sendJson(res, { flowId: flow.id, userCode: flow.userCode, verificationUrl: flow.verificationUrl, intervalSeconds: flow.intervalSeconds, expiresAt: flow.expiresAt });
   }
@@ -38,10 +52,15 @@ export async function handleSimklAuth(req, res, path) {
   if (req.method !== "GET") return methodNotAllowed(res);
   const flow = getTrackerAuthFlow(match[1], { includeCredentials: true });
   if (!flow || flow.provider !== "simkl") return sendJson(res, { error: "Authentication flow not found" }, 404);
+  const expectedFp = flowOwnerByUser().get(flow.id);
+  if (expectedFp && expectedFp !== simklSessionFingerprint(req)) {
+    return sendJson(res, { error: "Authentication flow belongs to another session" }, 403);
+  }
   if (flow.status === "expired" || flow.expiresAt <= Date.now() || flow.expectedConnectionId == null) return expired(res, flow);
   if (flow.status === "completed") return sendJson(res, { status: "completed", connection: getTrackerConnection("simkl") });
   if (flow.status !== "pending") return sendJson(res, { status: "failed", error: "Simkl sign-in failed. Start the sign-in again." }, 409);
   if (currentTrackerGeneration("simkl") !== flow.expectedConnectionId) return expired(res, flow, true);
+  const polling = pollingByUser();
   if (polling.has(flow.id) || !claimTrackerAuthFlowPoll(flow.id)) return pending(res, flow);
   polling.add(flow.id);
   try {

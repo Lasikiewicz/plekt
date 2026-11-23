@@ -3,6 +3,7 @@ import { db } from "../db.js";
 import { getTrackerProtocolAdapter as getTrackerAdapter, trackerProviderIds } from "./trackers/registry.js";
 import { unknownTrackerProviderData } from "./trackerConnectionRepo.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
+import { createPerUserState } from "./perUserState.js";
 
 export const TRACKER_INTENT_RETENTION_MS = 30 * 86400_000;
 // Ordinary Simkl watched intents share one due time so the worker can send them
@@ -15,33 +16,38 @@ const terminal = new Set(["settled", "cancelled", "rejected"]);
 const KNOWN = "provider IN (SELECT value FROM json_each(?))";
 const known = () => JSON.stringify(trackerProviderIds());
 const read = (id) => db.prepare("SELECT * FROM tracker_write_intents WHERE id=?").get(id) || null;
+const intentMaintenanceState = createPerUserState(() => ({ lastPruneAt: null }));
+const INTENT_PRUNE_INTERVAL_MS = 5 * 60_000;
 
 export function trackerIntentConnectionCurrent(intent) {
   return Boolean(db.prepare("SELECT 1 FROM tracker_connections WHERE provider=? AND id=? AND remote_user_id=? AND status='connected'")
     .get(intent.provider, intent.connection_id, intent.account_id));
 }
 
-export function maintainTrackerWriteIntents(now = Date.now()) {
-  // These audit rejections followed a POST, rather than a catalogue rejection.
-  // Keep their uncertainty visible and durable instead of ageing them out and
-  // allowing a later full-sync preview to create another send.
-  db.prepare(`UPDATE tracker_write_intents SET status='review',settled_at=NULL,updated_at=?
+// These audit rejections followed a POST. Preserve them for review before pruning.
+const recoverAuditRejections = db.prepare(`UPDATE tracker_write_intents SET status='review',settled_at=NULL,updated_at=?
     WHERE provider='simkl' AND action='watched' AND status='rejected'
     AND last_error LIKE 'Not watched on Simkl current progress after %audit%'
-    AND EXISTS (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id)`)
-    .run(now);
-  // Simkl cannot recover an interrupted send by replaying it. Surface the
-  // current account's uncertainty even while activation/retry discovery is off.
-  // A live send keeps its lease; stale restored account data stays quarantined.
-  db.prepare(`UPDATE tracker_write_intents SET status='review',last_error='Interrupted Simkl write needs review; it will not be sent again automatically',updated_at=?
+    AND EXISTS (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id)`);
+const recoverSimklSends = db.prepare(`UPDATE tracker_write_intents SET status='review',last_error='Interrupted Simkl write needs review; it will not be sent again automatically',updated_at=?,due_at=MAX(due_at,?)
     WHERE provider='simkl' AND (status='uncertain' OR (status='sending' AND due_at<=?))
-    AND EXISTS (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id)`)
-    .run(now, now);
-  db.prepare(`DELETE FROM tracker_write_intents WHERE ${KNOWN} AND settled_at IS NOT NULL AND settled_at<? AND status IN ('settled','cancelled','rejected')`)
-    .run(known(), now - TRACKER_INTENT_RETENTION_MS);
-  db.prepare(`UPDATE tracker_write_intents SET status='uncertain',last_error='Interrupted send; correlate before retry',updated_at=? WHERE ${KNOWN} AND status='sending' AND due_at<=?`).run(now, known(), now);
-  db.prepare(`UPDATE tracker_write_intents SET status='review',last_error='Unresolved tracker write is older than 30 days',updated_at=? WHERE ${KNOWN} AND settled_at IS NULL AND created_at<? AND status NOT IN ('review','sending')`)
-    .run(now, known(), now - TRACKER_INTENT_RETENTION_MS);
+    AND EXISTS (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id)`);
+const pruneSettledIntents = db.prepare(`DELETE FROM tracker_write_intents WHERE ${KNOWN} AND settled_at IS NOT NULL AND settled_at<? AND status IN ('settled','cancelled','rejected')`);
+const recoverExpiredSends = db.prepare(`UPDATE tracker_write_intents SET status='uncertain',last_error='Interrupted send; correlate before retry',updated_at=? WHERE ${KNOWN} AND status='sending' AND due_at<=?`);
+const reviewExpiredIntents = db.prepare(`UPDATE tracker_write_intents SET status='review',last_error='Unresolved tracker write is older than 30 days',updated_at=? WHERE ${KNOWN} AND settled_at IS NULL AND created_at<? AND status NOT IN ('review','sending')`);
+
+export function maintainTrackerWriteIntents(now = Date.now(), { prune = true } = {}) {
+  const providers = known();
+  const cutoff = now - TRACKER_INTENT_RETENTION_MS;
+  recoverAuditRejections.run(now);
+  recoverSimklSends.run(now, now + 5 * 60_000, now);
+  const maintenance = intentMaintenanceState();
+  if (prune || maintenance.lastPruneAt === null || now < maintenance.lastPruneAt || now - maintenance.lastPruneAt >= INTENT_PRUNE_INTERVAL_MS) {
+    pruneSettledIntents.run(providers, cutoff);
+    maintenance.lastPruneAt = now;
+  }
+  recoverExpiredSends.run(now, providers, now);
+  reviewExpiredIntents.run(now, providers, cutoff);
 }
 
 function simklWatchedDueAt(connectionId, now) {
@@ -96,7 +102,7 @@ const DUE_INTENTS = `FROM tracker_write_intents i JOIN tracker_connections c ON 
 // Orphan intents by default. Simkl's explicit includeLinked gather also updates
 // each surviving watch row's telemetry; other trackers retain the row retry path.
 export function listDueTrackerWriteIntents(now = Date.now(), limit = 15, provider = "", { includeLinked = false } = {}) {
-  maintainTrackerWriteIntents(now);
+  maintainTrackerWriteIntents(now, { prune: false });
   // Paced Simkl full-sync intents belong to their run's quota policy only.
   return db.prepare(`SELECT i.* ${DUE_INTENTS} AND i.status IN ('pending','retry','uncertain')
     AND i.logical_key NOT LIKE 'simkl-full-sync:%'
@@ -106,7 +112,7 @@ export function listDueTrackerWriteIntents(now = Date.now(), limit = 15, provide
 
 // Watch records whose failed or interrupted tracker write is due again.
 export function trackerRetryRecordIds(now = Date.now()) {
-  maintainTrackerWriteIntents(now);
+  maintainTrackerWriteIntents(now, { prune: false });
   return new Set(db.prepare(`SELECT DISTINCT i.watch_record_id AS id ${DUE_INTENTS} AND i.status IN ('retry','uncertain') AND i.watch_record_id IS NOT NULL`)
     .all(known(), now).map((row) => String(row.id)));
 }
@@ -163,6 +169,19 @@ export function trackerIntentForDispatch(provider, connection, media, action) {
   return intent;
 }
 
+// An explicit Activity retry may reopen a write that validation stopped before
+// any send (attempts=0, "Not sent: ..."), using the retry's resolved identity.
+// Anything that was ever attempted stays held, so this can never duplicate a play.
+export function reopenUnsentTrackerWriteIntent(intent, media, now = Date.now()) {
+  if (!intent || intent.attempts !== 0 || !["cancelled", "review"].includes(intent.status)
+      || !String(intent.last_error || "").startsWith("Not sent:")) return intent;
+  const due = intent.provider === "simkl" && intent.action === "watched" ? simklWatchedDueAt(intent.connection_id, now) : now;
+  db.prepare(`UPDATE tracker_write_intents SET status='pending',last_error='',settled_at=NULL,media_key=?,media_json=?,
+      due_at=?,expires_at=?,updated_at=? WHERE id=? AND attempts=0`)
+    .run(getTrackerAdapter(intent.provider).identity.key(media), JSON.stringify(media), due, now + TRACKER_INTENT_RETENTION_MS, now, intent.id);
+  return read(intent.id);
+}
+
 export function claimTrackerWriteIntent(id, now = Date.now()) {
   return db.transaction(() => {
     const intent = read(id);
@@ -178,6 +197,25 @@ export function finishTrackerWriteIntent(id, status, error = "", remoteEventId =
   if (!intent || !trackerIntentConnectionCurrent(intent)) return;
   db.prepare("UPDATE tracker_write_intents SET status=?,last_error=?,remote_event_id=COALESCE(?,remote_event_id),settled_at=?,updated_at=?,due_at=? WHERE id=?")
     .run(status, error, remoteEventId == null ? null : String(remoteEventId), terminal.has(status) ? now : null, now, now + Math.min(6 * 3600_000, 60_000 * 5 ** Math.max(0, intent.attempts - 1)), id);
+}
+
+export function settleLinkedTrackerWriteIntent(provider, connection, media = {}, action = "watched", remoteEventId = null) {
+  if (!connection?.id) return false;
+  if (media.trackerWriteIntentId) {
+    const intent = read(media.trackerWriteIntentId);
+    if (!intent || intent.provider !== provider || intent.status === "settled") return false;
+    finishTrackerWriteIntent(intent.id, "settled", "", remoteEventId);
+    return true;
+  }
+  if (!media.watchRecordId) return false;
+  const linked = db.prepare(`SELECT * FROM tracker_write_intents WHERE provider=? AND connection_id=? AND account_id=?
+      AND watch_record_id=? AND action=? AND status<>'settled' AND status<>'cancelled' ORDER BY created_at,id`)
+    .all(provider, connection.id, connection.remoteUserId || "", String(media.watchRecordId), action);
+  const dispatchDate = media.watched_at || media.watchedAt;
+  const matching = linked.filter((item) => !dispatchDate || Date.parse(item.watched_at) === Date.parse(dispatchDate));
+  if (matching.length !== 1) return false;
+  finishTrackerWriteIntent(matching[0].id, "settled", "", remoteEventId);
+  return true;
 }
 
 export function correlateTrackerObservation(provider, connection, entry) {
@@ -209,18 +247,35 @@ export function trackerWriteAttentionItems() {
   maintainTrackerWriteIntents();
   return db.prepare(`SELECT * FROM tracker_write_intents WHERE status='review' AND (${KNOWN} OR (provider='simkl' AND EXISTS
     (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id))) ORDER BY created_at`).all(known()).map((intent) => {
-    const knownUnsent = intent.provider === "simkl" && String(intent.last_error || "").startsWith("Not sent:");
+    const reason = String(intent.last_error || "");
+    const knownUnsent = intent.provider === "simkl"
+      && (reason.startsWith("Not sent:") || (intent.attempts === 0 && !reason.startsWith("Not watched on Simkl current progress after")));
+    const competing = /^(?:Ambiguous provider event |Competing Simkl watched intents)/.test(reason);
+    const media = JSON.parse(intent.media_json);
+    const title = media.title || intent.media_key;
+    const episodeCode = /\bS\d+E\d+\b/i.exec(title)?.[0];
+    const mediaType = media.type || media.media_type || media.mediaType;
+    const isShow = ["episode", "show", "tv", "series"].includes(mediaType) || Boolean(media.showTitle || media.show_title);
+    const groupTitle = isShow ? media.showTitle || media.show_title || title.split(/\s*[-–:]?\s+S\d+E\d+\b/i)[0] : title;
+    const titleKey = groupTitle.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
+    const season = media.season == null ? NaN : Number(media.season);
+    const episode = media.episode == null ? NaN : Number(media.episode);
     const explanation = knownUnsent
-      ? "Plekt checked this write before contacting Simkl and stopped because the media identity or watch date could not be verified. It was not sent."
+      ? "Plekt stopped this write before contacting Simkl. It was not sent."
       : "Plekt cannot tell whether this write reached the tracker, so it will not send it again automatically. Another send could create a duplicate play.";
     const recommendations = knownUnsent
       ? ["Correct this title's identity or watch date in Plekt, then create a new sync write if it is still needed.", "Cancel this held write to remove the warning. Local watch history is not changed."]
       : [`Check this title's history on ${getTrackerAdapter(intent.provider).label}.`, "If the play is there, or you do not want it sent, cancel this write. Local watch history is not changed."];
     return {
       id: `tracker-intent-${intent.id}`, kind: "tracker_write_review", provider: intent.provider, severity: "warning",
-      title: `${getTrackerAdapter(intent.provider).label}: ${JSON.parse(intent.media_json).title || intent.media_key}`,
+      title: `${getTrackerAdapter(intent.provider).label}: ${title}`,
+      groupKey: JSON.stringify([isShow ? "show" : "movie", titleKey]),
+      groupTitle, isShow,
+      episodeCode: Number.isInteger(season) && Number.isInteger(episode)
+        ? `S${String(season).padStart(2, "0")}E${String(episode).padStart(2, "0")}` : isShow ? episodeCode : undefined,
       watchedAt: intent.watched_at,
       reason: intent.last_error || "Tracker write requires review", intentId: intent.id,
+      notSent: knownUnsent, competing,
       source: "tracker_write", status: "review", createdAt: intent.created_at, canSkip: true, skipLabel: "Cancel this write",
       skipTitle: "Cancel this tracker write?", explanationHeading: "Why this write is held",
       skipNote: "Cancelling means Plekt will not send this write. Local watch history is not changed.",

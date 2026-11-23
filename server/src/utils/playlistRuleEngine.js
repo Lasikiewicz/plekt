@@ -13,6 +13,7 @@ import { discoverTmdbPage, trendingTmdbPage } from "./tmdbGateway.js";
 import { configuredProvider } from "./upNextLibraryLookup.js";
 import { runWithConcurrency } from "./concurrency.js";
 import { airDayOf, todayLocalDate } from "./watchDates.js";
+import { createPerUserState } from "./perUserState.js";
 
 // Automatic playlists (plan/archive/custom-playlist-sync step 8b, decisions 32
 // to 52). A rule is evaluated into the ordered list of items the playlist
@@ -653,9 +654,10 @@ export function applyPlaylistRuleResult(listId, rows, now = Date.now()) {
     const existing = new Set(current.map((item) => item.media_key));
     for (const item of removals) deleteItemStmt.run(listId, item.media_key);
     let added = 0;
+    let filledPosters = 0;
     rows.forEach((row, position) => {
       if (existing.has(row.media_key)) {
-        if (row.poster_url) fillPosterStmt.run(row.poster_url, listId, row.media_key);
+        if (row.poster_url) filledPosters += fillPosterStmt.run(row.poster_url, listId, row.media_key).changes;
         return;
       }
       insertItemStmt.run({ list_id: listId, overview: "", poster_url: "", ...row, position, now });
@@ -669,7 +671,8 @@ export function applyPlaylistRuleResult(listId, rows, now = Date.now()) {
     if (changed) touchOrderStmt.run(now, now, listId);
     clearHoldStmt.run(listId);
     markCheckedStmt.run(now, null, listId);
-    return { status: changed ? "changed" : "unchanged", added, removed: removals.length, reordered };
+    const visibleChange = changed || filledPosters > 0 || !list.rule_checked_at || Boolean(list.rule_hold_json || list.rule_error);
+    return { status: changed ? "changed" : "unchanged", added, removed: removals.length, reordered, visibleChange };
   });
 }
 
@@ -686,12 +689,10 @@ export function isPlaylistRuleChecking(listId) {
 export async function checkPlaylistRule(listId, options = {}) {
   const id = text(listId);
   checkingRules.add(id);
-  bumpDataVersion();
   try {
     return await runPlaylistRuleCheck(id, options);
   } finally {
     checkingRules.delete(id);
-    bumpDataVersion();
   }
 }
 
@@ -710,23 +711,25 @@ async function runPlaylistRuleCheck(listId, { config, deps = {}, force = false }
   } catch (error) {
     const message = errorText(error);
     markCheckedStmt.run(resolvedDeps.now(), message, list.id);
-    bumpDataVersion();
+    if (!list.rule_checked_at || list.rule_error !== message) bumpDataVersion();
     console.warn(`[playlists] Rule check of playlist ${list.id} failed; items left unchanged: ${message}`);
     return { listId: list.id, status: "error", error: message };
   }
   const result = await withPlaylistLock(list.id, async () => applyPlaylistRuleResult(list.id, rows, resolvedDeps.now()));
-  bumpDataVersion();
-  return { listId: list.id, ...result };
+  const { visibleChange, ...publicResult } = result;
+  if (visibleChange || result.status === "held") bumpDataVersion();
+  return { listId: list.id, ...publicResult };
 }
 
 // The items that last sent each playlist to a move-on check, so a check that
 // fails is not repeated every pass for the same watch.
-const moveOnAttempts = new Map();
+const moveOnAttemptsByUser = createPerUserState(() => new Map());
 
 // Automatic playlists not checked in the last hour (decision 36), then those
 // with the switch off whose show was watched since, so it moves on to its next
 // episode at this pass (decision 68).
 export async function checkDuePlaylistRules({ config, deps = {}, now = Date.now() } = {}) {
+  const moveOnAttempts = moveOnAttemptsByUser();
   const results = [];
   for (const { id } of selectDueListsStmt.all(now - RULE_CHECK_INTERVAL_MS)) {
     results.push(await checkPlaylistRule(id, { config, deps }));

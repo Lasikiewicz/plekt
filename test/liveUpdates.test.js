@@ -243,7 +243,7 @@ test("liveUpdates broadcasts history version changes", async () => {
 
   const output = getOutput();
   assert.ok(output.includes(`"type":"history-version"`));
-  assert.ok(output.includes(`"version":${newVersion}`));
+  assert.ok(output.includes(`"version":${newVersion + getProgressVersion()}`));
 
   res.close();
 });

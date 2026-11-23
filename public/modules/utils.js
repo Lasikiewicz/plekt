@@ -36,6 +36,31 @@ export function sanitizeTitle(value) {
   return raw;
 }
 
+export function safeHttpUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    if (!["http:", "https:"].includes(url.protocol)) return "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+export function safeCssBackgroundUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw || /[\r\n\u0000]/.test(raw)) return "";
+  let normalized = "";
+  if (raw.startsWith("/") && !raw.startsWith("//")) {
+    normalized = raw;
+  } else {
+    normalized = safeHttpUrl(raw);
+  }
+  if (!normalized) return "";
+  return normalized.replace(/['"()\\\s]/g, (ch) => `%${ch.charCodeAt(0).toString(16).toUpperCase().padStart(2, "0")}`);
+}
+
 export function safeImageUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -333,6 +358,21 @@ export function computeProgress(offsetMs = 0, durationMs = 0) {
   return Math.max(0, Math.min(100, Math.round((Number(offsetMs || 0) / Number(durationMs || 1)) * 100)));
 }
 
+export function formatRemainingDuration(positionMs = 0, durationMs = 0) {
+  const duration = Number(durationMs);
+  if (!Number.isFinite(duration) || duration <= 0) return "";
+  const position = Number(positionMs);
+  const safePosition = Number.isFinite(position) && position > 0 ? position : 0;
+  const remainingMs = Math.max(0, duration - safePosition);
+  if (remainingMs <= 0) return "";
+  if (remainingMs < 60_000) return "<1m left";
+  const totalMinutes = Math.round(remainingMs / 60_000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes}m left`;
+  return minutes > 0 ? `${hours}h ${minutes}m left` : `${hours}h left`;
+}
+
 export function formatDuration(value) {
   const totalSeconds = Math.max(0, Math.floor(Number(value || 0) / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -618,25 +658,77 @@ export function releaseConfirmDialog(cancel) {
   cancelConfirmDialog = undefined;
   return true;
 }
-export function openConfirmDialog({ title = "Are you sure?", body = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false } = {}) {
+export function trapDialogKey(event, overlay, onEscape) {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopPropagation();
+    onEscape?.();
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const controls = [...(overlay?.querySelectorAll?.(
+    "button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], summary, [tabindex]:not([tabindex=\"-1\"])",
+  ) || [])].filter((el) => !el.hidden && !el.closest?.(".hidden"));
+  if (!controls.length) return;
+  const first = controls[0];
+  const last = controls.at(-1);
+  if (event.shiftKey ? document.activeElement === first : document.activeElement === last) {
+    event.preventDefault();
+    (event.shiftKey ? last : first)?.focus?.();
+  }
+}
+
+export function openConfirmDialog({ title = "Are you sure?", body = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false, runOnConfirm, pendingLabel = "Working…" } = {}) {
   return new Promise((resolve) => {
+    const opener = document.activeElement;
     const overlay = document.createElement("div");
     overlay.className = "edit-dialog-overlay confirm-dialog-overlay";
     const finish = (value) => {
       if (!releaseConfirmDialog(cancel)) return;
       document.removeEventListener("keydown", onKeydown, true);
       overlay.remove();
+      if (opener && opener.isConnected !== false) opener.focus?.();
       resolve(value);
     };
-    const cancel = () => finish(false);
-    const onKeydown = (event) => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); cancel(); } };
+    let running = false;
+    let started = false;
+    const cancel = () => finish(started);
+    const dismiss = () => { if (!running) cancel(); };
+    const onKeydown = (event) => trapDialogKey(event, overlay, dismiss);
     registerConfirmDialog(cancel);
-    overlay.addEventListener("click", (event) => { if (event.target === overlay) cancel(); });
-    overlay.innerHTML = `<div class="edit-dialog"><h3>${escapeHtml(title)}</h3>${body ? `<p class="confirm-dialog-body">${escapeHtml(body)}</p>` : ""}<div class="edit-dialog-actions"><button class="${danger ? "button-danger" : "button-primary"} confirm-dialog-confirm" type="button">${escapeHtml(confirmLabel)}</button><button class="button-ghost confirm-dialog-cancel" type="button">${escapeHtml(cancelLabel)}</button></div></div>`;
-    overlay.querySelector(".confirm-dialog-confirm").addEventListener("click", () => finish(true));
-    overlay.querySelector(".confirm-dialog-cancel").addEventListener("click", cancel);
+    overlay.addEventListener("click", (event) => { if (event.target === overlay) dismiss(); });
+    overlay.innerHTML = `<div class="edit-dialog" role="dialog" aria-modal="true" aria-label="${escapeAttribute(title)}"><h3>${escapeHtml(title)}</h3>${body ? `<p class="confirm-dialog-body">${escapeHtml(body)}</p>` : ""}<div class="edit-dialog-actions"><button class="${danger ? "button-danger" : "button-primary"} confirm-dialog-confirm" type="button">${escapeHtml(confirmLabel)}</button><button class="button-ghost confirm-dialog-cancel" type="button">${escapeHtml(cancelLabel)}</button></div></div>`;
+    const confirmButton = overlay.querySelector(".confirm-dialog-confirm");
+    const cancelButton = overlay.querySelector(".confirm-dialog-cancel");
+    confirmButton.addEventListener("click", async () => {
+      if (!runOnConfirm) return finish(true);
+      if (started) return;
+      started = running = true;
+      confirmButton.disabled = cancelButton.disabled = true;
+      confirmButton.textContent = pendingLabel;
+      const status = document.createElement("p");
+      status.className = "confirm-dialog-body";
+      status.tabIndex = 0;
+      status.setAttribute("role", "status");
+      confirmButton.parentElement.before(status);
+      status.textContent = pendingLabel;
+      status.focus();
+      try {
+        status.textContent = await runOnConfirm();
+      } catch (error) {
+        status.textContent = error.message || "The operation failed.";
+      } finally {
+        running = false;
+        status.tabIndex = -1;
+        confirmButton.remove();
+        cancelButton.disabled = false;
+        cancelButton.textContent = "Close";
+        if (overlay.isConnected) cancelButton.focus();
+      }
+    });
+    cancelButton.addEventListener("click", dismiss);
     document.addEventListener("keydown", onKeydown, true);
     document.body.appendChild(overlay);
-    overlay.querySelector(danger ? ".confirm-dialog-cancel" : ".confirm-dialog-confirm").focus();
+    overlay.querySelector(danger ? ".confirm-dialog-cancel" : ".confirm-dialog-confirm")?.focus?.();
   });
 }

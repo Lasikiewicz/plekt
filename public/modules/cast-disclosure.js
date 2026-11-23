@@ -4,7 +4,7 @@ import { tmdbProfile } from "./images.js?v=2.3.0.0.1";
 export function renderCastActor(actor = {}) {
   const avatarUrl = tmdbProfile(actor.profile_path) || "/favicon.svg";
   return `
-            <div class="cast-member-card" style="cursor: pointer;" data-person-id="${actor.id}" data-person-name="${escapeAttribute(actor.name)}">
+            <div class="cast-member-card" style="cursor: pointer;" data-person-id="${escapeAttribute(actor.id)}" data-person-name="${escapeAttribute(actor.name)}">
               <img class="cast-avatar-img" src="${escapeAttribute(avatarUrl)}" alt="${escapeAttribute(actor.name)}" loading="lazy" decoding="async" data-err="fav" />
               <span class="cast-actor-name">${escapeHtml(actor.name)}</span>
               <span class="cast-character-name">${escapeHtml(actor.character)}</span>

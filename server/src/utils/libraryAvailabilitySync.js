@@ -183,9 +183,9 @@ export async function reconcileAvailableWatchedItems(config = {}, {
     { trackDispatch: false, includeTrackers: false },
   ));
 
-  for (const provider of PROVIDERS) {
-    if (!providerIsConfigured(config, provider)) continue;
-    if (await shouldStop()) break;
+  await Promise.all(PROVIDERS.map(async (provider) => {
+    if (!providerIsConfigured(config, provider)) return;
+    if (await shouldStop()) return;
 
     const providerResult = {
       scanned: 0,
@@ -206,7 +206,7 @@ export async function reconcileAvailableWatchedItems(config = {}, {
       logger(`Scheduled Sync: ${provider} library availability scan failed: ${providerResult.error}`);
       // A failed/partial inventory is never treated as an empty library. In
       // particular, this path has no unwatch operation at all.
-      continue;
+      return;
     }
 
     const seenIds = new Set();
@@ -283,7 +283,7 @@ export async function reconcileAvailableWatchedItems(config = {}, {
     }, concurrency);
 
     logger(`Scheduled Sync: ${provider} availability checked ${providerResult.scanned} item(s), found ${providerResult.marked} watched-state repair(s).`);
-  }
+  }));
 
   return result;
 }

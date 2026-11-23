@@ -1,6 +1,6 @@
 import { state } from "./state.js?v=2.3.0.0.1";
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
-import { escapeHtml, escapeAttribute, slug, movieSlug, movieHref, showName, formatTmdbDate, tvShowTmdbHref, movieTmdbHref, platformIconUrl, isDemoMode } from "./utils.js?v=2.3.0.0.1";
+import { escapeHtml, escapeAttribute, safeHttpUrl, slug, movieSlug, movieHref, showName, formatTmdbDate, tvShowTmdbHref, movieTmdbHref, platformIconUrl, isDemoMode } from "./utils.js?v=2.3.0.0.1";
 import { tmdbImage, tmdbPoster, tmdbProfile } from "./images.js?v=2.3.0.0.1";
 import { fetchTmdbDetails } from "./tmdb.js?v=2.3.0.0.1";
 import { movieById, movieBySlugOrId, nowPlayingHref } from "./media-routing.js?v=2.3.0.0.1";
@@ -50,9 +50,23 @@ const appLinksRefreshedAt = new Map();
 // in-flight promise collapses them to one.
 const appLinksInflight = new Map();
 
+function seerrStatusStorageKey() {
+  const user = state.currentUser || {};
+  const base = user.uid || user.email || user.username || "local";
+  const active = String(user.activeUser || "").trim();
+  return `${SEERR_STATUS_CACHE_KEY}:${active ? `${base}:${active}` : base}`;
+}
+
+function appLinksStorageKey() {
+  const user = state.currentUser || {};
+  const base = user.uid || user.email || user.username || "local";
+  const active = String(user.activeUser || "").trim();
+  return `${APP_LINKS_CACHE_KEY}:${active ? `${base}:${active}` : base}`;
+}
+
 (function seedSeerrStatusCacheFromStorage() {
   try {
-    const stored = JSON.parse(localStorage.getItem(SEERR_STATUS_CACHE_KEY) || "{}");
+    const stored = JSON.parse(localStorage.getItem(seerrStatusStorageKey()) || "{}");
     for (const [key, entry] of Object.entries(stored)) {
       if (!entry || typeof entry !== "object" || state.seerrMediaStatusCache.has(key)) continue;
       // `stale` marks the entry as rendered-from-storage: it still needs a
@@ -73,7 +87,7 @@ function persistSeerrStatusCache() {
       const { loading, stale, ...data } = entry;
       snapshot[key] = data;
     }
-    localStorage.setItem(SEERR_STATUS_CACHE_KEY, JSON.stringify(snapshot));
+    localStorage.setItem(seerrStatusStorageKey(), JSON.stringify(snapshot));
   } catch { /* persisted availability is best-effort */ }
 }
 
@@ -85,7 +99,7 @@ function comparableSeerrStatus(entry) {
 
 function readAppLinksCache() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(APP_LINKS_CACHE_KEY) || "{}");
+    const parsed = JSON.parse(localStorage.getItem(appLinksStorageKey()) || "{}");
     return parsed && typeof parsed === "object" ? parsed : {};
   } catch {
     return {};
@@ -98,7 +112,7 @@ function writeAppLinksCacheEntry(cacheKey, links, partial = false) {
     cache[cacheKey] = partial ? { links, ts: Date.now(), partial: true } : { links, ts: Date.now() };
     const byRecency = Object.keys(cache).sort((a, b) => (cache[b]?.ts || 0) - (cache[a]?.ts || 0));
     for (const staleKey of byRecency.slice(AVAILABILITY_CACHE_LIMIT)) delete cache[staleKey];
-    localStorage.setItem(APP_LINKS_CACHE_KEY, JSON.stringify(cache));
+    localStorage.setItem(appLinksStorageKey(), JSON.stringify(cache));
   } catch { /* persisted availability is best-effort */ }
 }
 
@@ -140,8 +154,8 @@ export function renderTrailersSection(tmdbData) {
       <div class="horizontal-scroll-row trailer-scroll-row" style="margin-top: 0.5rem;">
         ${trailers.map((video) => `
           <div class="trailer-card">
-            <div class="trailer-thumb-container" data-video-key="${video.key}" data-video-name="${escapeAttribute(video.name)}" data-video-thumbnail="${escapeAttribute(video.thumbnail_path || "")}">
-              <img class="trailer-thumb" src="${escapeAttribute(video.thumbnail_path || (isDemoMode() ? "/favicon.svg" : `https://img.youtube.com/vi/${video.key}/mqdefault.jpg`))}" alt="${escapeAttribute(video.name)}" loading="lazy" decoding="async" data-err="fav" />
+            <div class="trailer-thumb-container" data-video-key="${escapeAttribute(video.key)}" data-video-name="${escapeAttribute(video.name)}" data-video-thumbnail="${escapeAttribute(video.thumbnail_path || "")}">
+              <img class="trailer-thumb" src="${escapeAttribute(video.thumbnail_path || (isDemoMode() ? "/favicon.svg" : `https://img.youtube.com/vi/${encodeURIComponent(String(video.key || ""))}/mqdefault.jpg`))}" alt="${escapeAttribute(video.name)}" loading="lazy" decoding="async" data-err="fav" />
               <div class="play-overlay"><svg viewBox="0 0 24 24" width="40" height="40" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
             </div>
             <span class="trailer-title" title="${escapeAttribute(video.name)}">${escapeHtml(video.name)}</span>
@@ -560,6 +574,7 @@ export function mediaAppLinksHtml(tmdbData, mediaType = "movie") {
 // available, since TMDB doesn't give us a per-provider deep link to use instead.
 function providerChipsHtml(items = [], watchLink = "") {
   if (!items.length) return "";
+  const safeWatchLink = safeHttpUrl(watchLink);
   return `
     <div class="media-provider-list media-fact-chip-row">
       ${items.map(({ name, logoPath }) => {
@@ -567,8 +582,8 @@ function providerChipsHtml(items = [], watchLink = "") {
         const inner = logoUrl
           ? `<img class="media-provider-icon media-fact-chip-icon" src="${escapeAttribute(logoUrl)}" alt="${escapeAttribute(name)}" loading="lazy" />`
           : `<span class="media-provider-name">${escapeHtml(name)}</span>`;
-        return watchLink
-          ? `<a class="media-provider-tile media-fact-chip" href="${escapeAttribute(watchLink)}" target="_blank" rel="noopener noreferrer" title="Available on ${escapeAttribute(name)}">${inner}</a>`
+        return safeWatchLink
+          ? `<a class="media-provider-tile media-fact-chip" href="${escapeAttribute(safeWatchLink)}" target="_blank" rel="noopener noreferrer" title="Available on ${escapeAttribute(name)}">${inner}</a>`
           : `<span class="media-provider-tile media-fact-chip" title="${escapeAttribute(name)}">${inner}</span>`;
       }).join("")}
     </div>

@@ -55,6 +55,7 @@ const LEASE_TTL_MS = timing("TEST_LEASE_TTL_MS", 60_000);
 const TICK_MS = timing("TEST_TICK_MS", 60_000);
 const FIRST_TICK_MS = timing("TEST_FIRST_TICK_MS", 10_000);
 const JOB_POLL_MS = timing("TEST_JOB_POLL_MS", 1_000);
+const JOB_PRUNE_INTERVAL_MS = 5 * 60_000;
 // Useful for diagnostics that need the real-time provider listeners without
 // letting an existing scheduled/backlog pass compete with the event under
 // test. The default remains the normal combined worker behavior.
@@ -88,6 +89,7 @@ export function createWorkerCoordinator({ holderId, role }) {
   let activeStartupScanPromise = null;
   let lastSettingsUpdatedAt = null;
   let startupScanGeneration = null;
+  let lastJobPruneAt = null;
   const timers = new Set();
 
   const isLeader = () => Boolean(lease && validateSchedulerLease({ holderId, generation: lease.generation }));
@@ -400,9 +402,13 @@ export function createWorkerCoordinator({ holderId, role }) {
             jobRunning = false;
           }
         }
-        pruneBackgroundJobs();
-        for (const tenant of listActiveTenants()) {
-          runWithUserContext(tenant, () => pruneBackgroundJobs());
+        const now = Date.now();
+        if (isLeader() && (lastJobPruneAt === null || now - lastJobPruneAt >= JOB_PRUNE_INTERVAL_MS)) {
+          pruneBackgroundJobs(now);
+          for (const tenant of listActiveTenants()) {
+            runWithUserContext(tenant, () => pruneBackgroundJobs(now));
+          }
+          lastJobPruneAt = now;
         }
       }
     } finally {

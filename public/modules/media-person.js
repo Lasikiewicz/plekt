@@ -4,6 +4,7 @@ import { tmdbProfile, tmdbPoster, hydratePosters } from "./images.js?v=2.3.0.0.1
 import { isWatchedHistoryAction } from "./sync.js?v=2.3.0.0.1";
 import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.3.0.0.1";
 import { movieBySlugOrId, clearMediaDetailState, mediaDetailRoot, mediaDetailLoaderHtml } from "./media-detail.js?v=2.3.0.0.1";
+import { registerMediaDetailCleanup } from "./media-detail-context.js?v=2.3.0.0.1";
 import { FILMOGRAPHY_PAGE_SIZE, resolvedTmdbCache } from "./explorer.js?v=2.3.0.0.1";
 
 let _cb = {};
@@ -11,6 +12,7 @@ const PERSON_LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000;
 let personLibrarySnapshot = null;
 let personLibrarySnapshotPromise = null;
 let personRenderToken = 0;
+let personViewAbortController = null;
 export function initMediaPerson(callbacks = {}) { _cb = callbacks; }
 function navigateTo(...args) { return _cb.navigateTo?.(...args); }
 function setMessage(...args) { return _cb.setMessage?.(...args); }
@@ -438,7 +440,7 @@ export async function loadCastMemberDetails(personId, personName = null) {
         } else {
           const href = isTv ? tvShowTmdbHref(credit.id, title) : movieTmdbHref(credit.id, title);
           return `
-            <a class="person-credit-card" href="${escapeAttribute(href)}" data-tmdb-id="${credit.id}" data-tmdb-media-type="${credit.media_type}" data-tmdb-title="${escapeAttribute(title)}">
+            <a class="person-credit-card" href="${escapeAttribute(href)}" data-tmdb-id="${escapeAttribute(credit.id)}" data-tmdb-media-type="${escapeAttribute(credit.media_type)}" data-tmdb-title="${escapeAttribute(title)}">
               <span class="person-credit-poster-wrap">
                 <img class="person-credit-poster" src="${escapeAttribute(posterUrl)}" alt="${escapeAttribute(title)}" loading="lazy" data-err="fav" />
               </span>
@@ -554,6 +556,14 @@ export async function loadCastMemberDetails(personId, personName = null) {
       }
     };
 
+    personViewAbortController?.abort();
+    personViewAbortController = new AbortController();
+    const { signal } = personViewAbortController;
+    registerMediaDetailCleanup(() => {
+      personViewAbortController?.abort();
+      personViewAbortController = null;
+    });
+
     root.addEventListener("click", (event) => {
       const mediaTypeButton = event.target.closest("[data-person-media-type]");
       if (mediaTypeButton) {
@@ -588,7 +598,7 @@ export async function loadCastMemberDetails(personId, personName = null) {
       } else if (filter === "tv-sort") {
         updateSection("tv", tvGrid, tvCount, state.personCreditsTvSort);
       }
-    });
+    }, { signal });
 
     yearFilter?.addEventListener("change", () => {
       state.personCreditsYear = yearFilter.value;

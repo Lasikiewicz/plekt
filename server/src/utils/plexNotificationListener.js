@@ -37,7 +37,7 @@ const LIBRARY_IDENTIFIER = "com.plexapp.plugins.library";
 function buildNotificationsUrl(baseUrl, token, clientIdentifier = "") {
   const url = new URL(baseUrl);
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
-  url.pathname = "/:/websockets/notifications";
+  url.pathname = `${url.pathname.replace(/\/+$/, "")}/:/websockets/notifications`;
   url.search = "";
   // Unlike the HTTP clients (which send X-Plex-Token as a header), the token must
   // stay in the URL here: the WebSocket handshake API offers no way to set custom
@@ -361,6 +361,7 @@ function activityKeyAllowed() {
 
     let ws;
     try {
+      assertSafeOutboundUrl(config.baseUrl, { label: "Plex URL" });
       ws = socketFactory(buildNotificationsUrl(config.baseUrl, config.token, config.clientIdentifier));
     } catch (error) {
       logger(`Plex notifications: failed to open socket: ${error?.message || error}`);
@@ -395,6 +396,9 @@ function activityKeyAllowed() {
   }
 
   return {
+    isConnected() {
+      return !stopped && socket?.readyState === WebSocket.OPEN;
+    },
     start() {
       if (!stopped) return;
       stopped = false;

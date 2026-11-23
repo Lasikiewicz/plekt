@@ -28,6 +28,7 @@ import { withFreshTraktConnection } from "./trackerDispatcher.js";
 import { getTrackerConnection } from "./trackerConnectionRepo.js";
 import { getTrackerAdapter, isTrackerProvider } from "./trackers/registry.js";
 import { freshSimklConnection } from "./trackers/simklConnection.js";
+import { createPerUserState } from "./perUserState.js";
 import { clearSimklPersonalRating, setSimklPersonalRating, storedSimklRatingSnapshot } from "./trackers/simklRatings.js";
 import { assertTrackerGeneration, currentTrackerGeneration, runInTrackerGeneration, trackerGenerationCurrent } from "./trackers/generation.js";
 import { getMediaConnection } from "./mediaConnectionRepo.js";
@@ -97,7 +98,7 @@ const mediaProviderAdapters = {
   },
 };
 
-let activeSyncPromise = null;
+const activeSyncByUser = createPerUserState(() => ({ promise: null }));
 
 function providerName(value) {
   const provider = String(value || "").trim().toLowerCase();
@@ -415,6 +416,8 @@ function applyRemoteObservation({ provider, media, rating, previous, config, mod
   };
 }
 
+import { getProviderLibrarySelection, LIBRARY_MONITORING_PROVIDERS, resolveItemLibraryMembership } from "./librarySelection.js";
+
 async function fetchProviderSnapshot(provider, config) {
   // Stored Simkl observations need no credentials or token refresh.
   const connection = provider === "simkl" ? getTrackerConnection(provider) : await providerConfig(config, provider);
@@ -422,6 +425,23 @@ async function fetchProviderSnapshot(provider, config) {
     const error = new Error(`${provider} is not connected for personal rating sync`);
     error.code = "not_configured";
     throw error;
+  }
+  if (LIBRARY_MONITORING_PROVIDERS.includes(provider)) {
+    const enforced = Boolean(config?.libraryMonitoring || connection?.libraryMonitoringEnforced || Array.isArray(connection?.monitoredLibraryIds));
+    if (enforced && !getProviderLibrarySelection(config, provider).hasSelectedLibraries) {
+      return [];
+    }
+    const raw = await mediaProviderAdapters[provider].snapshot(connection);
+    if (!enforced || provider === "plex" || !Array.isArray(raw)) return raw;
+    const filtered = [];
+    for (const record of raw) {
+      const decision = await resolveItemLibraryMembership(provider, config, {
+        Id: record.providerItemId || record.providerIds?.[provider] || "",
+        itemId: record.providerItemId || "",
+      }, { lane: "sync" });
+      if (decision.allowed) filtered.push(record);
+    }
+    return filtered;
   }
   return mediaProviderAdapters[provider].snapshot(connection);
 }
@@ -451,13 +471,26 @@ async function runProviderSnapshotUnfenced(provider, { config, mode, logger = ()
   if (admission.skip) return admission.skip;
   const { previousRun, previousRows, run } = admission;
   const held = previousRun?.cursor?.ratingHold;
+  const librarySelectionKey = LIBRARY_MONITORING_PROVIDERS.includes(provider)
+    && Boolean(config?.libraryMonitoring || config?.[provider]?.libraryMonitoringEnforced || Array.isArray(config?.[provider]?.monitoredLibraryIds))
+    ? (() => {
+        const sel = getProviderLibrarySelection(config, provider);
+        return `${sel.serverId || ""}:${sel.revision}:${sel.selectedIds.join(",")}`;
+      })()
+    : "";
+  const cursorWithLibraryKey = (extra = null) => {
+    const merged = { ...(librarySelectionKey ? { librarySelectionKey } : {}), ...(extra || {}) };
+    return Object.keys(merged).length ? merged : null;
+  };
+  const sameLibrarySelection = !librarySelectionKey || previousRun?.cursor?.librarySelectionKey === librarySelectionKey;
+  const baselineComparable = Boolean(previousRun?.baseline_complete) && sameLibrarySelection;
   const now = Date.now();
   let records;
   try {
     records = await fetchProviderSnapshot(provider, config);
     if (!Array.isArray(records)) throw new Error("Rating snapshot must be an array");
   } catch (error) {
-    finishPersonalRatingSyncRun(provider, { status: "failed", cursor_json: held ? { ratingHold: held } : null, last_error: safeError(error) });
+    finishPersonalRatingSyncRun(provider, { status: "failed", cursor_json: cursorWithLibraryKey(held ? { ratingHold: held } : null), last_error: safeError(error) });
     throw error;
   }
   if (isAuthoritativeRestoreActive()) {
@@ -488,12 +521,12 @@ async function runProviderSnapshotUnfenced(provider, { config, mode, logger = ()
   const missing = baseline.filter(row => !observed.has(row.media_key));
   const removalKeys = missing.map(row => row.media_key).sort();
   const approved = held && approvedHold && JSON.stringify(removalKeys) === JSON.stringify(held.keys);
-  if (!preflightErrors && previousRun?.baseline_complete && !approved && missing.length
+  if (!preflightErrors && baselineComparable && !approved && missing.length
       && (held || !records.length || (missing.length >= 2 && missing.length / baseline.length > 0.2))) {
     const hold = { keys: removalKeys, baselineCount: baseline.length, missingCount: missing.length,
       items: missing.map(row => ({ mediaKey: row.media_key, title: row.media?.title || row.media_key })) };
     finishPersonalRatingSyncRun(provider, { status: "partial", scanned_count: records.length,
-      cursor_json: { ratingHold: hold }, last_error: `${missing.length} of ${baseline.length} ratings missing; review required` });
+      cursor_json: cursorWithLibraryKey({ ratingHold: hold }), last_error: `${missing.length} of ${baseline.length} ratings missing; review required` });
     return { provider, status: "held", hold, cleared: 0, complete: false };
   }
 
@@ -551,7 +584,7 @@ async function runProviderSnapshotUnfenced(provider, { config, mode, logger = ()
   // records. Missing rows are treated as explicit clears only after a prior
   // complete generation; an interrupted/partial scan never removes a local
   // rating.
-  const canUseMissingRows = Boolean(previousRun?.baseline_complete) && processingErrors === 0;
+  const canUseMissingRows = baselineComparable && processingErrors === 0;
   if (canUseMissingRows) {
     for (const previous of previousRows) {
       if (isAuthoritativeRestoreActive()) {
@@ -600,7 +633,7 @@ async function runProviderSnapshotUnfenced(provider, { config, mode, logger = ()
     cleared_count: clearedCount,
     queued_count: queuedCount,
     baseline_complete: complete || previousRun?.baseline_complete ? 1 : 0,
-    cursor_json: complete ? null : held ? { ratingHold: held } : null,
+    cursor_json: cursorWithLibraryKey(complete ? null : held ? { ratingHold: held } : null),
     last_error: complete ? null : `${processingErrors} rating observation${processingErrors === 1 ? "" : "s"} could not be processed`,
   });
   return {
@@ -703,8 +736,9 @@ function snapshotModeFor(provider, config, explicitMode = "") {
 
 export async function runRatingSync({ providers = [], mode = "", snapshot = true, drain = true, logger = () => {}, config = null, approvedHold = null } = {}) {
   if (isAuthoritativeRestoreActive()) return { ok: true, status: "skipped", reason: "authoritative-restore-active", providers: [], queue: ratingQueueCounts() };
-  if (activeSyncPromise) return activeSyncPromise;
-  activeSyncPromise = (async () => {
+  const syncSlot = activeSyncByUser();
+  if (syncSlot.promise) return syncSlot.promise;
+  syncSlot.promise = (async () => {
     const settings = configForRating(config || await loadMediaConfig());
     if (!settings.ratingSync.enabled) {
       return { ok: true, status: "disabled", providers: [], queue: ratingQueueCounts() };
@@ -724,20 +758,20 @@ export async function runRatingSync({ providers = [], mode = "", snapshot = true
       }
     }
     const queueResult = drain ? await drainPersonalRatingQueue({ config: settings, providers: targets, logger }) : null;
-    bumpDataVersion();
+    if (queueResult?.processed || results.some((result) => result.changed > 0 || ["held", "partial", "failed", "reauth_required"].includes(result.status))) bumpDataVersion();
     writeAuditLog("rating-sync.run", { detail: { providers: targets, results: results.map(({ provider, status }) => ({ provider, status })), queue: queueResult } });
     const queue = queueResult || ratingQueueCounts();
     const status = results.some((result) => ["running", "held", "failed", "partial", "reauth_required", "not_found"].includes(result.status)) || ratingSyncHasIssues(queue)
       ? "partial"
       : "completed";
     return { ok: true, status, providers: results, queue };
-  })().finally(() => { activeSyncPromise = null; });
-  return activeSyncPromise;
+  })().finally(() => { syncSlot.promise = null; });
+  return syncSlot.promise;
 }
 
 export async function resolveRatingScanHold({ provider, runId, decision, config = null, logger = () => {} } = {}) {
   if (!["approve", "dismiss"].includes(decision)) throw Object.assign(new Error("Choose approve or dismiss"), { status: 400 });
-  if (activeSyncPromise || isAuthoritativeRestoreActive()) throw Object.assign(new Error("Rating sync or restore is active; try again"), { status: 409 });
+  if (activeSyncByUser().promise || isAuthoritativeRestoreActive()) throw Object.assign(new Error("Rating sync or restore is active; try again"), { status: 409 });
   const run = transaction(() => {
     const current = getPersonalRatingSyncRun(provider);
     if (!current?.cursor?.ratingHold || current.run_id !== runId || (current.status === "running" && Date.now() - Number(current.started_at) < RUN_STALE_MS)) {
@@ -747,11 +781,12 @@ export async function resolveRatingScanHold({ provider, runId, decision, config 
     return current;
   });
   if (decision === "dismiss") {
+    bumpDataVersion("rating-sync.hold-dismissed");
     writeAuditLog("rating-sync.hold-dismissed", { detail: { provider, runId } });
     return { ok: true, status: "dismissed", ratingsKept: true };
   }
   const settings = configForRating(config || await loadMediaConfig());
-  if (activeSyncPromise || isAuthoritativeRestoreActive() || getPersonalRatingSyncRun(provider)?.run_id !== run.run_id) {
+  if (activeSyncByUser().promise || isAuthoritativeRestoreActive() || getPersonalRatingSyncRun(provider)?.run_id !== run.run_id) {
     throw Object.assign(new Error("Held scan changed or rating sync is active; refresh before reviewing"), { status: 409 });
   }
   if (!settings.ratingSync.enabled || !directionAllows(settings.ratingSync.providers[provider], "receive")) {
@@ -793,7 +828,7 @@ export async function pushPersonalRatings({ providers = [], items = [], logger =
     }
   });
   const queue = await drainPersonalRatingQueue({ config: settings, providers: targets, logger });
-  bumpDataVersion();
+  if (queued || queue.processed) bumpDataVersion();
   writeAuditLog("rating-sync.push", { detail: { providers: targets, queued, items: canonicalItems.length } });
   return { ok: true, status: ratingSyncHasIssues(queue) ? "partial" : "completed", queued, items: canonicalItems.length, queue, counts: ratingQueueCounts() };
 }
@@ -804,6 +839,7 @@ export async function retryRatingSync({ providers = [], drain = true, logger = (
   const retried = retryPersonalRatingQueue({ provider: targets.length === 1 ? targets[0] : "" });
   const settings = configForRating(config || await loadMediaConfig());
   const queue = drain ? await drainPersonalRatingQueue({ config: settings, providers: targets, logger }) : null;
+  if (retried || queue?.processed) bumpDataVersion("rating-sync.retry");
   const resultQueue = queue || ratingQueueCounts();
   return { ok: true, status: ratingSyncHasIssues(resultQueue) ? "partial" : "completed", retried, queue: resultQueue };
 }
@@ -856,5 +892,5 @@ export async function runRatingSyncScheduler({ logger = () => {} } = {}) {
 }
 
 export function ratingSyncIsRunning() {
-  return Boolean(activeSyncPromise);
+  return Boolean(activeSyncByUser().promise);
 }

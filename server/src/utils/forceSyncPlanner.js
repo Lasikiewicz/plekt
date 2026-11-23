@@ -12,7 +12,7 @@
 
 import { canonicalTitleKey, mediaKeyFor, showTitleFrom } from "./dataRepo.js";
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
-import { normalizeProviderIds, parsePlexMediaIds } from "./parsers.js";
+import { isPlexLocalOnly, normalizeProviderIds, parsePlexMediaIds } from "./parsers.js";
 import {
   releaseDateForItem,
   releaseDateForPlexItem,
@@ -125,9 +125,21 @@ function serverInScope(scope, server) {
   return !scope.servers.length || scope.servers.includes(server);
 }
 
-function scopedLibraryIds(scope, server) {
-  const ids = scope.libraries.filter((lib) => lib.server === server).map((lib) => lib.id);
-  return ids.length ? ids : null;
+import { getProviderLibrarySelection } from "./librarySelection.js";
+
+function scopedLibraryIds(scope, server, config = null) {
+  const explicit = scope.libraries.filter((lib) => lib.server === server).map((lib) => String(lib.id));
+  const enforced = Boolean(config?.libraryMonitoring || config?.[server]?.libraryMonitoringEnforced || Array.isArray(config?.[server]?.monitoredLibraryIds));
+  if (enforced) {
+    const monitored = getProviderLibrarySelection(config, server).selectedIds;
+    if (!monitored.length) return [];
+    if (explicit.length) {
+      const allowed = new Set(monitored.map(String));
+      return explicit.filter((id) => allowed.has(id));
+    }
+    return monitored;
+  }
+  return explicit.length ? explicit : null;
 }
 
 function itemInScope(scope, media) {
@@ -298,7 +310,14 @@ export async function collectServerWatchedItems(config, { scope: rawScope, logge
         return;
       }
 
-      const libraryIds = scopedLibraryIds(scope, server);
+      const libraryIds = scopedLibraryIds(scope, server, config);
+      if (Array.isArray(libraryIds) && libraryIds.length === 0) {
+        logger(`${server}: skipped Force Sync scan (no monitored libraries selected).`);
+        itemsByServer[server] = [];
+        fingerprints[server] = { rawCount: 0, itemCount: 0, maxWatchedAt: 0 };
+        scopeErrors.push({ server, missing: [], error: `No monitored ${server} libraries are selected in Settings > Media Servers.` });
+        return;
+      }
       try {
         let rawItems = [];
         let mapped = [];
@@ -306,7 +325,7 @@ export async function collectServerWatchedItems(config, { scope: rawScope, logge
           logger("Plex: scanning library sections...");
           rawItems = await clients.fetchPlexWatchedItems(config.plex, { libraryIds, isCancelled });
           logger(`Plex: fetched ${rawItems.length} watched library items.`);
-          mapped = rawItems.map((item) => mapPlexWatchedItem(item));
+          mapped = rawItems.filter((item) => !isPlexLocalOnly(item)).map((item) => mapPlexWatchedItem(item));
         } else {
           const label = server === "emby" ? "Emby" : "Jellyfin";
           logger(`${label}: querying played items...`);
@@ -354,7 +373,11 @@ export async function collectServerFingerprintCounts(config, { scope: rawScope, 
   const servers = configuredSyncServers(config).filter((server) => serverInScope(scope, server));
   await Promise.all(
     servers.map(async (server) => {
-      const libraryIds = scopedLibraryIds(scope, server);
+      const libraryIds = scopedLibraryIds(scope, server, config);
+      if (Array.isArray(libraryIds) && libraryIds.length === 0) {
+        counts[server] = 0;
+        return;
+      }
       const countFn = {
         plex: clients.countPlexWatchedItems,
         emby: clients.countEmbyWatchedItems,
@@ -380,6 +403,10 @@ export async function collectServerFingerprintCounts(config, { scope: rawScope, 
 export function findLooseMatch(media, groups) {
   for (const group of groups) {
     if (media.type !== group.type) continue;
+    if (media.type === "episode" && (
+      Number(media.season) !== Number(group.season)
+      || Number(media.episode) !== Number(group.episode)
+    )) continue;
     if (media.imdb && group.imdb && media.imdb === group.imdb) return group;
     if (media.tmdb && group.tmdb && media.tmdb === group.tmdb) return group;
     if (media.tvdb && group.tvdb && media.tvdb === group.tvdb) return group;
@@ -609,13 +636,14 @@ export function buildForceSyncPlan({
     let decidedBy = { policy: "plembfin", evidence: "no history" };
 
     if (lastHistoryRecord) {
-      newestState = lastHistoryRecord.syncAction === "unwatched" ? "unwatched" : "watched";
+      const actionLower = String(lastHistoryRecord.syncAction || "").toLowerCase();
+      newestState = (actionLower === "unwatched" || actionLower === "unplayed") ? "unwatched" : "watched";
       newestTime = new Date(lastHistoryRecord.watchedAt).getTime();
       decidedBy = { policy: "plembfin", evidence: "Plekt history", timestamp: newestTime };
     }
 
     let serverWatchedOn = new Set();
-    let mediaObj = serverWatchedEntry ? serverWatchedEntry.media : null;
+    let mediaObj = serverWatchedEntry ? { ...serverWatchedEntry.media } : null;
 
     if (serverWatchedEntry) {
       serverWatchedOn = serverWatchedEntry.group.watchedOn;
@@ -637,22 +665,17 @@ export function buildForceSyncPlan({
     }
 
     if (!mediaObj) continue;
+    mediaObj = {
+      ...mediaObj,
+      source: "force_sync",
+      syncIntent: "historical",
+      watched_at: lastHistoryRecord?.watchedAt || mediaObj.watched_at || undefined,
+    };
 
     const matchBasis = matchBasisFor(mediaObj);
     const base = { mediaKey: key, media: mediaObj, matchBasis, decidedBy };
 
     if (newestState === "watched") {
-      if (lastHistoryRecord && lastHistoryRecord.syncAction === "unwatched") {
-        const unwatchedIds = historyRecords.filter((r) => r.syncAction === "unwatched").map((r) => r.id);
-        pushAction({
-          ...base,
-          kind: "remove_unwatched_marker",
-          risk: "additive",
-          historyRowIds: unwatchedIds,
-          reason: "A newer watched state supersedes the stored unwatched marker.",
-        });
-      }
-
       for (const target of writeTargetsFor("watched")) {
         if (!serverWatchedOn.has(target)) {
           pushAction({

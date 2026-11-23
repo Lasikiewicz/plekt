@@ -8,8 +8,9 @@ import { createTautulliClient, sanitizeTautulliError } from "../utils/tautulliCl
 import { commitTautulliImport, filterTautulliRows, normalizeReviewDecisions, prepareTautulliImport, targetDefaults } from "../utils/tautulliImport.js";
 import { createWatchHistoryBackup, watchBackupStatus } from "../utils/watchHistoryBackups.js";
 import { withInitialInboundImport } from '../utils/initialSyncStore.js';
+import { createPerUserState } from "../utils/perUserState.js";
 
-const previewJobs = new Map();
+const previewJobsByUser = createPerUserState(() => new Map());
 const PREVIEW_JOB_TTL_MS = 15 * 60 * 1000;
 const MAX_RUNNING_PREVIEW_JOBS = 1;
 
@@ -68,7 +69,7 @@ function publicPreviewJob(job) {
 }
 
 function runningPreviewJobCount() {
-  return [...previewJobs.values()].filter((job) => job.status === "running").length;
+  return [...previewJobsByUser().values()].filter((job) => job.status === "running").length;
 }
 
 function updatePreviewJobProgress(job, update) {
@@ -141,6 +142,7 @@ async function runPreviewJob(job, config, body) {
 }
 
 function startPreviewJob(config, body) {
+  const previewJobs = previewJobsByUser();
   if (runningPreviewJobCount() >= MAX_RUNNING_PREVIEW_JOBS) {
     const error = new Error("A Tautulli preview is already running. Wait for it to finish before starting another.");
     error.status = 409;
@@ -211,7 +213,7 @@ export async function handleTautulli(req, res, action = "", inboundTracked=false
     }
     if (action === "preview-status" && req.method === "GET") {
       const jobId = new URL(req.url || "/", "http://localhost").searchParams.get("jobId");
-      const job = previewJobs.get(jobId);
+      const job = previewJobsByUser().get(jobId);
       if (!job) return sendJson(res, { ok: false, error: "Tautulli preview job not found or expired" }, 404);
       return sendJson(res, { ok: true, ...publicPreviewJob(job) }, 200, { "Cache-Control": "no-store" });
     }

@@ -7,6 +7,7 @@ import path from "node:path";
 
 import {
   assertSafeOutboundUrl,
+  __setOutboundDnsLookupForTest,
   boundedFetchTimeoutMs,
   createUpstreamTimeoutError,
   fetchWithTimeout,
@@ -19,6 +20,16 @@ test("upstream timeouts map to HTTP 504 errors", () => {
   assert.equal(error.status, 504);
   assert.equal(error.code, "UPSTREAM_TIMEOUT");
   assert.match(error.message, /2500ms/);
+});
+
+test("native outbound transport reaches the DNS-pinned address", async (t) => {
+  const server = http.createServer((_req, res) => res.end("pinned"));
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  __setOutboundDnsLookupForTest(async () => [{ address: "127.0.0.1", family: 4 }]);
+  t.after(() => __setOutboundDnsLookupForTest(null));
+  const response = await fetchWithTimeout(`http://pinned-provider.test:${server.address().port}/`);
+  assert.equal(await response.text(), "pinned");
 });
 
 test("explicit outbound timeout overrides are finite and bounded", () => {

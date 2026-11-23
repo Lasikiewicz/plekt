@@ -289,7 +289,8 @@ export async function saveUploadedBackup(readable, {
     }
   }
   try {
-    await pipeline(readable, capped, fs.createWriteStream(destination));
+    await pipeline(readable, capped, fs.createWriteStream(destination, { mode: 0o600 }));
+    try { fs.chmodSync(destination, 0o600); } catch { /* non-POSIX FS */ }
   } catch (error) {
     fs.rmSync(destination, { force: true });
     throw error;

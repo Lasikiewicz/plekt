@@ -8,8 +8,9 @@ import {
 import { enqueueBackgroundJob } from "./backgroundJobs.js";
 import { buildUpNextProjection } from "./upNextService.js";
 import { getUpNextCacheSnapshot } from "./upNextCache.js";
-import { syncUpNextToProviders } from "./upNextProviderSync.js";
+import { refreshUpNextProviderFeeds, syncUpNextToProviders } from "./upNextProviderSync.js";
 import { listUpNextProviderFeedStates } from "./upNextRepository.js";
+import { createUpNextDestinationCheck, previewUpNextMirror } from "./upNextMirror.js";
 
 export const UP_NEXT_AUTO_SYNC_JOB = "up_next_sync";
 // Media-detail actions are user intent and must be delivered before older
@@ -20,6 +21,9 @@ export const UP_NEXT_PRIORITY_SYNC_JOB = "up_next_priority_sync";
 
 const FINGERPRINT_RUNTIME_KEY = "upNextAutoSyncFingerprint";
 const LAST_SYNC_RUNTIME_KEY = "upNextAutoSyncAt";
+const LAST_SYNC_STATUS_RUNTIME_KEY = "upNextAutoSyncStatus";
+const RETRY_RUNTIME_KEY = "upNextAutoSyncRetry";
+const RETRY_MIN_MS = 60_000;
 const PROVIDERS = ["plex", "emby", "jellyfin"];
 
 function text(value) {
@@ -48,6 +52,7 @@ function itemForFingerprint(item = {}) {
     media_key: text(item.media_key || item.mediaKey),
     media_type: text(item.media_type || item.mediaType),
     queue_kind: text(item.queue_kind || item.queueKind),
+    up_next_lane: text(item.up_next_lane),
     title: text(item.title),
     show_title: text(item.show_title || item.showTitle),
     episode_title: text(item.episode_title || item.episodeTitle),
@@ -95,8 +100,12 @@ function unreachableProviders(providers, feeds = []) {
 // The remembered fingerprint names the providers that were unreachable when it
 // was pushed. While one stays down the next run is "unchanged", and once its
 // feed read succeeds again the marker differs and the queue is pushed to it.
-function fingerprintWithOutages(fingerprint, unreachable = []) {
-  return unreachable.length ? `${fingerprint}|unreachable:${unreachable.join(",")}` : fingerprint;
+function fingerprintForPush(items, config, unreachable = []) {
+  const destinations = configuredUpNextProviders(config).map((provider) => {
+    const section = config[provider];
+    return [provider, section.baseUrl, section.connectionId, section.remoteUserId || section.userId];
+  });
+  return JSON.stringify([upNextQueueFingerprint(items), destinations, config.tuning?.plexHistoricalWatchedSync, config.upNextSync?.mirror, unreachable]);
 }
 
 export function upNextSyncCompleted(providers, summary = {}) {
@@ -105,8 +114,113 @@ export function upNextSyncCompleted(providers, summary = {}) {
   const pushed = new Set(Array.isArray(summary.pushedProviders) ? summary.pushedProviders : []);
   if (providers.some((provider) => !pushed.has(provider))) return false;
   return !(Array.isArray(summary.feeds) && summary.feeds.some((feed) => (
-    providers.includes(feed?.provider) && feed?.status === "failed"
+    providers.includes(feed?.provider) && ["failed", "partial", "superseded"].includes(feed?.status)
   )));
+}
+
+export async function pushCurrentUpNextQueue(config, { previewMirror = "" } = {}) {
+  const beforeDataVersion = getDataVersion();
+  if (previewMirror && PROVIDERS.includes(previewMirror)) {
+    await refreshUpNextProviderFeeds({ config, providers: [previewMirror], triggerOnRecovery: false });
+  }
+  const snapshot = await getUpNextCacheSnapshot(
+    (context) => buildUpNextProjection({ mediaConfig: config, ...context }),
+    { trigger: "manual provider sync" },
+  );
+  const items = snapshot.items;
+  if (previewMirror) return { preview: await previewUpNextMirror(config, previewMirror, snapshot) };
+  const summary = await syncUpNextToProviders({
+    desiredItems: items,
+    builtAt: snapshot.builtAt,
+    config,
+    destinationCurrent: createUpNextDestinationCheck(config),
+    isStale: () => getDataVersion() !== beforeDataVersion,
+  });
+  return { items, summary };
+}
+
+function normalizedProviderList(values = []) {
+  return [...new Set(
+    (Array.isArray(values) ? values : [])
+      .map((provider) => String(provider || "").trim().toLowerCase())
+      .filter((provider) => PROVIDERS.includes(provider)),
+  )].sort();
+}
+
+export function buildUpNextSyncStatusSummary({
+  at = Date.now(),
+  mode = "auto",
+  providers = [],
+  summary = {},
+  unreachable = [],
+  itemCount = 0,
+} = {}) {
+  const configuredProviders = normalizedProviderList(providers);
+  const pushedProviders = normalizedProviderList(summary?.pushedProviders);
+  const unreachableProvidersList = normalizedProviderList(unreachable);
+  const failedFeedProviders = normalizedProviderList(
+    (Array.isArray(summary?.feeds) ? summary.feeds : [])
+      .filter((feed) => feed?.status === "failed")
+      .map((feed) => feed?.provider),
+  );
+  const complete = upNextSyncCompleted(configuredProviders, summary);
+  const status = summary?.disabled
+    ? "disabled"
+    : summary?.ok === false
+      ? "failed"
+      : complete
+        ? "succeeded"
+        : pushedProviders.length > 0
+          ? "partial"
+          : configuredProviders.length === 0
+            ? "idle"
+            : "failed";
+  return {
+    at: Number(at) || Date.now(),
+    mode: mode === "manual" ? "manual" : "auto",
+    status,
+    itemCount: Math.max(0, Number(itemCount) || 0),
+    configuredProviders,
+    pushedProviders,
+    unreachableProviders: unreachableProvidersList,
+    failedFeedProviders,
+    ...(summary.mirrorHides?.length ? { mirrorHides: summary.mirrorHides.slice(0, 100).map(({ provider, title, reason, status, at: hideAt }) => ({
+      provider, title, reason, status, at: Number(hideAt) || Number(at) || Date.now(),
+    })) } : {}),
+  };
+}
+
+export async function recordUpNextSyncStatus(syncStatus) {
+  if (!syncStatus || typeof syncStatus !== "object") return null;
+  const previous = (await loadRuntimeState().catch(() => ({})))?.[LAST_SYNC_STATUS_RUNTIME_KEY];
+  const priorLog = Array.isArray(previous?.recentMirrorHides)
+    ? previous.recentMirrorHides
+    : (Array.isArray(previous?.mirrorHides) ? previous.mirrorHides : []);
+  const incoming = Array.isArray(syncStatus.mirrorHides) ? syncStatus.mirrorHides : [];
+  const recentMirrorHides = [...incoming, ...priorLog].slice(0, 50);
+  const stored = recentMirrorHides.length ? { ...syncStatus, recentMirrorHides } : syncStatus;
+  await setRuntimeState({ [LAST_SYNC_STATUS_RUNTIME_KEY]: stored });
+  return stored;
+}
+
+export async function readUpNextSyncStatus() {
+  const runtime = await loadRuntimeState().catch(() => ({}));
+  const stored = runtime?.[LAST_SYNC_STATUS_RUNTIME_KEY];
+  if (stored && typeof stored === "object" && Number(stored.at) > 0) return stored;
+  const legacyAt = Number(runtime?.[LAST_SYNC_RUNTIME_KEY] || 0);
+  if (legacyAt > 0) {
+    return {
+      at: legacyAt,
+      mode: "auto",
+      status: "succeeded",
+      itemCount: 0,
+      configuredProviders: [],
+      pushedProviders: [],
+      unreachableProviders: [],
+      failedFeedProviders: [],
+    };
+  }
+  return null;
 }
 
 // Queueing is intentionally lightweight and durable. The worker builds the
@@ -127,16 +241,39 @@ export async function requestUpNextAutoSync(reason = "", { priority = false } = 
   }
 }
 
-// A manual header sync has already reconciled the exact list supplied by the
-// browser. Remember it so the invalidation that follows that request does not
-// immediately enqueue an identical automatic push.
-export async function rememberUpNextSync(items = [], { at = Date.now(), unreachable = [] } = {}) {
-  const fingerprint = fingerprintWithOutages(upNextQueueFingerprint(items), unreachable);
+export async function requestDueUpNextRetry() {
+  const retry = (await loadRuntimeState())[RETRY_RUNTIME_KEY];
+  if (retry?.dueAt && retry.dueAt <= Date.now()) return requestUpNextAutoSync("Retry incomplete Up Next provider writes");
+  return null;
+}
+
+// Remember the reconciled snapshot and destination so unchanged pushes can coalesce.
+export async function rememberUpNextSync(items = [], { at = Date.now(), unreachable = [], config = null } = {}) {
+  const fingerprint = fingerprintForPush(items, config || await loadMediaConfig(), unreachable);
   await setRuntimeState({
     [FINGERPRINT_RUNTIME_KEY]: fingerprint,
     [LAST_SYNC_RUNTIME_KEY]: Number(at) || Date.now(),
+    [RETRY_RUNTIME_KEY]: null,
   });
   return fingerprint;
+}
+
+export async function recordManualUpNextSyncResult(config = {}, desiredItems = [], summary = {}) {
+  if (!summary || summary.disabled) return null;
+  const providers = configuredUpNextProviders(config);
+  const unreachable = unreachableProviders(providers, summary.feeds);
+  const syncStatus = buildUpNextSyncStatusSummary({
+    mode: "manual",
+    providers,
+    summary,
+    unreachable,
+    itemCount: Array.isArray(desiredItems) ? desiredItems.length : 0,
+  });
+  await recordUpNextSyncStatus(syncStatus);
+  if (summary.ok && upNextSyncCompleted(providers, summary)) {
+    await rememberUpNextSync(desiredItems, { at: syncStatus.at, config });
+  }
+  return syncStatus;
 }
 
 export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = async () => false } = {}) {
@@ -156,15 +293,21 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
   const build = (ctx) => buildUpNextProjection({ mediaConfig: config, limit: 100, ...ctx });
   const projection = await getUpNextCacheSnapshot(build, { trigger: "auto-sync before push" });
   const items = Array.isArray(projection?.items) ? projection.items.slice(0, 100) : [];
-  const fingerprint = fingerprintWithOutages(
-    upNextQueueFingerprint(items),
+  const fingerprint = fingerprintForPush(
+    items, config,
     unreachableProviders(providers, listUpNextProviderFeedStates()),
   );
   const runtime = await loadRuntimeState();
+  const retry = runtime[RETRY_RUNTIME_KEY];
+  const retryFingerprint = fingerprintForPush(items, config);
+  const continuing = retry?.fingerprint === retryFingerprint;
+  const priorComplete = continuing && Array.isArray(retry.completed) ? retry.completed : [];
+  const pending = providers.filter((provider) => !priorComplete.includes(provider));
 
   if (runtime[FINGERPRINT_RUNTIME_KEY] === fingerprint) {
     return { status: "unchanged", itemCount: items.length };
   }
+  if (continuing && retry.dueAt > Date.now()) return { status: "retry_pending", itemCount: items.length };
 
   if (await isCancelled() || isAuthoritativeRestoreActive()) {
     return { status: "skipped", aborted: true, reason: "cancelled" };
@@ -173,11 +316,16 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
   let pushedStale = false;
   const summary = await syncUpNextToProviders({
     desiredItems: items,
+    builtAt: projection.builtAt,
     config,
+    destinationCurrent: createUpNextDestinationCheck(config),
+    providers: pending,
     // A canonical write since the projection (a Clear progress, say) makes
     // its resume positions stale; the rerun below rebuilds from fresh state.
     isStale: () => (pushedStale = getDataVersion() !== beforeDataVersion),
   });
+  const completed = [...priorComplete, ...pending.filter((provider) => upNextSyncCompleted([provider], summary))];
+  summary.pushedProviders = [...new Set([...summary.pushedProviders, ...priorComplete])];
   const complete = upNextSyncCompleted(providers, summary);
   // A run with one provider unreachable is still remembered once every other
   // provider took the push. Otherwise nothing was ever "unchanged" during an
@@ -186,9 +334,26 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
   const unreachable = unreachableProviders(providers, summary?.feeds);
   const reachable = providers.filter((provider) => !unreachable.includes(provider));
   const settled = complete || (reachable.length > 0 && upNextSyncCompleted(reachable, summary));
+  const syncStatus = buildUpNextSyncStatusSummary({
+    mode: "auto",
+    providers,
+    summary,
+    unreachable,
+    itemCount: items.length,
+  });
+  await recordUpNextSyncStatus(syncStatus);
+  const retryAttempt = (continuing ? retry.attempt : 0) + 1;
+  await setRuntimeState({
+    [RETRY_RUNTIME_KEY]: settled || pushedStale ? null : {
+      fingerprint: retryFingerprint,
+      completed,
+      attempt: retryAttempt,
+      dueAt: Date.now() + RETRY_MIN_MS * Math.min(30, 2 ** Math.min(retryAttempt - 1, 5)),
+    },
+  });
   // Not remembered when skipped as stale, so an identical rebuilt queue is
   // still pushed rather than reported unchanged.
-  if (settled && !pushedStale) await rememberUpNextSync(items, { unreachable: complete ? [] : unreachable });
+  if (settled && !pushedStale) await rememberUpNextSync(items, { at: syncStatus.at, unreachable: complete ? [] : unreachable, config });
 
   // The push's own rail restamps (unplay, then play) bump the versions, so a
   // version change alone is not a changed queue. Rebuild the queue and request
@@ -197,8 +362,8 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
   if (rerun) {
     const afterProjection = await getUpNextCacheSnapshot(build, { trigger: "auto-sync after push" });
     const afterItems = Array.isArray(afterProjection?.items) ? afterProjection.items.slice(0, 100) : [];
-    const afterFingerprint = fingerprintWithOutages(
-      upNextQueueFingerprint(afterItems),
+    const afterFingerprint = fingerprintForPush(
+      afterItems, config,
       unreachableProviders(providers, summary?.feeds),
     );
     if (afterFingerprint === fingerprint) {
@@ -208,7 +373,7 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
       // otherwise the "projection changed" run that follows pushes the same
       // queue again and pays another build (plan/archive/up-next-build-speed/summary.md).
       if (settled && pushedStale) {
-        await rememberUpNextSync(items, { unreachable: complete ? [] : unreachable });
+        await rememberUpNextSync(items, { at: syncStatus.at, unreachable: complete ? [] : unreachable, config });
       }
     }
   }
@@ -217,6 +382,7 @@ export async function runAutomaticUpNextSync({ logger = () => {}, isCancelled = 
     itemCount: items.length,
     providers,
     summary,
+    syncStatus,
     rerun,
   };
 }

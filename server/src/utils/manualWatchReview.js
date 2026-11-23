@@ -16,6 +16,7 @@ import { getCachedShowProgress } from "./showProgressCache.js";
 import { getCachedTmdbExternalIdKind } from "./tmdbGateway.js";
 import { getCachedTvdbEpisodeKind } from "./tvdbGateway.js";
 import { createPerUserState } from "./perUserState.js";
+import { episodeTimingWatchMatch } from "./watchDates.js";
 
 const EXPLICIT_PLAYED_EVENT_KEYS = new Set([
   "itemmarkplayed",
@@ -34,6 +35,14 @@ const selectManualUnwatchRowsStmt = db.prepare(`
   FROM watch_history
   WHERE source = 'manual'
     AND sync_action IN ('unwatched', 'unplayed')
+`);
+const selectWatchedEpisodesForTimingStmt = db.prepare(`
+  SELECT title, show_title, season, episode, watched_at, sync_action
+  FROM watch_history
+  WHERE media_type = 'episode'
+    AND watched_at IS NOT NULL
+    AND COALESCE(NULLIF(LOWER(sync_action), ''), 'watched') = 'watched'
+  ORDER BY watched_at DESC
 `);
 const selectReviewByIdStmt = db.prepare("SELECT * FROM manual_watch_reviews WHERE id = ?");
 const selectReviewByMediaKeyStmt = db.prepare("SELECT * FROM manual_watch_reviews WHERE media_key = ?");
@@ -288,6 +297,10 @@ function serializableMedia(media = {}) {
     showPosterUrl: text(media.showPosterUrl || media.show_poster_url) || undefined,
     providerItemId: text(media.providerItemId || media.provider_item_id) || undefined,
     providerItems: media.providerItems || media.provider_items || undefined,
+    librarySectionId: text(media.librarySectionId || media.librarySectionID) || undefined,
+    libraryId: text(media.libraryId || media.library_id) || undefined,
+    serverId: text(media.serverId || media.server_id) || undefined,
+    libraryContext: media.libraryContext || media.library_context || undefined,
     event: text(media.event) || undefined,
     playedFlagOnly: Boolean(media.playedFlagOnly),
     showWatched: [
@@ -415,6 +428,13 @@ export function listPendingManualWatchReviews({ includeWatchContext = true } = {
     if (review.review_kind !== "manual_watch") { pending.push(review); continue; }
     if (reviewIsAlreadyWatched(review)) setManualWatchReviewStatus(review.id, "dismissed", RESOLVED_BY_LOCAL_STATE);
     else pending.push(review);
+  }
+  if (includeWatchContext && pending.some((review) => review.review_kind === "manual_watch" && review.media_type === "episode")) {
+    const watchedEpisodes = selectWatchedEpisodesForTimingStmt.all();
+    for (const review of pending) {
+      if (review.review_kind !== "manual_watch" || review.media_type !== "episode") continue;
+      review.episode_timing = episodeTimingWatchMatch(manualWatchReviewMedia(review), watchedEpisodes);
+    }
   }
   return pending;
 }

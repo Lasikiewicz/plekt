@@ -1,5 +1,5 @@
 import { getTrackerConnection } from "../trackerConnectionRepo.js";
-import { trackerIntentForDispatch, finishTrackerWriteIntent } from "../trackerWriteIntents.js";
+import { trackerIntentForDispatch, finishTrackerWriteIntent, reopenUnsentTrackerWriteIntent } from "../trackerWriteIntents.js";
 import { writeSimklWatched } from "./simkl.js";
 import { assertSimklTrigger, simklHistoryPayload, simklReviewRequired } from "./simklClient.js";
 import { runInTrackerGeneration } from "./generation.js";
@@ -15,7 +15,8 @@ export async function dispatchSimklWatchState(media, state, lane, isCancelled = 
   if (!connection || connection.status !== "connected") throw simklReviewRequired("Simkl needs a connected account");
   if (isCancelled()) return { target: "simkl", status: "cancelled", detail: "Simkl dispatch was cancelled before it started" };
   return runInTrackerGeneration("simkl", connection.id, async () => {
-    const intent = trackerIntentForDispatch("simkl", connection, media, state);
+    let intent = trackerIntentForDispatch("simkl", connection, media, state);
+    if (media.reopenUnsentTrackerWrite && state === "watched") intent = reopenUnsentTrackerWriteIntent(intent, media);
     // A deliberate, terminal skip: nothing is held for review or retried.
     if (state !== "watched") {
       if (!["settled", "cancelled"].includes(intent.status)) finishTrackerWriteIntent(intent.id, "cancelled", UNWATCH_NOT_SENT);

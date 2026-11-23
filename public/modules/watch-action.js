@@ -654,6 +654,7 @@ export async function runResyncWatchAction(action) {
     syncActiveShowWatchActionState();
   } catch (error) {
     state.savingWatchActions.delete(action);
+    syncUpNextSavingState(action, false);
     await restoreActiveShowEpisodeState(action);
     _setMessage(`Resync failed: ${error.message}`, "error");
   }

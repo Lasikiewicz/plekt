@@ -6,7 +6,18 @@ import { nextSimklDailyReset } from './simklTransport.js';
 export function createSimklBatchBudget(db, now = Date.now) {
   const key = connection => `simkl-batch-budget:${createHash('sha256').update(`${connection.clientId}:${connection.remoteUserId}`).digest('hex')}`;
   const blocked = () => Object.assign(new Error('Simkl batch quota is held until the next quota reset'), {code:'SIMKL_QUOTA_RESERVE',status:429});
+  function isHeld(connection) {
+    const row = db.prepare('SELECT data FROM settings WHERE id=?').get(key(connection));
+    if (!row) return false;
+    try {
+      const { until } = JSON.parse(row.data);
+      return !Number.isFinite(until) || until > now();
+    } catch {
+      return true;
+    }
+  }
   return {
+    isHeld,
     acquire(connection) {
       const id=key(connection),owner=randomUUID(),time=now(),until=nextSimklDailyReset(time);
       db.transaction(()=>{

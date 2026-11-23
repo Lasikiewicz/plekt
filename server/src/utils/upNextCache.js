@@ -9,7 +9,7 @@ import { sortUpNextItems } from "./upNextIdentity.js";
 
 // Bump when the projection's episode-order rules change so a persisted queue
 // built by the previous rule cannot keep showing a later-season episode.
-const CACHE_VERSION = 6;
+const CACHE_VERSION = 7;
 const UP_NEXT_TTL_MS = 2 * 60 * 1000;
 const REVALIDATE_MIN_INTERVAL_MS = 10 * 60 * 1000;
 const MAX_ITEMS = 100;
@@ -105,7 +105,13 @@ function normalizeCache(parsed) {
     // while leaving legacy/diagnostic entries untouched. Re-sort with the
     // projection's own rule: appending the movies after the episodes moved a
     // part-watched movie to the end of the rail on every cached read.
-    items: sortUpNextItems([...publicUpNextItems(mergeableItems), ...passthroughItems]).slice(0, MAX_ITEMS),
+    sort: parsed.sort,
+    partWatchedFirst: parsed.partWatchedFirst,
+    customOrder: parsed.customOrder,
+    customFallbackSort: parsed.customFallbackSort,
+    items: sortUpNextItems([...publicUpNextItems(mergeableItems), ...passthroughItems], {
+      sort: parsed.sort, partWatchedFirst: parsed.partWatchedFirst, customOrder: parsed.customOrder, customFallbackSort: parsed.customFallbackSort,
+    }).slice(0, MAX_ITEMS),
     sourceStatus: (Array.isArray(parsed?.sourceStatus) ? parsed.sourceStatus : [])
       .filter((feed) => UP_NEXT_PROVIDERS.has(String(feed?.provider || "").toLowerCase())),
   };
@@ -209,6 +215,10 @@ async function storeCache(result, fallbackSourceVersion, builtFrom = null, state
       historyVersion,
       upNextVersion,
       items: nextItems,
+      sort: projection.sort,
+      partWatchedFirst: projection.partWatchedFirst,
+      customOrder: projection.customOrder,
+      customFallbackSort: projection.customFallbackSort,
       sourceStatus: nextSourceStatus,
     };
     const cacheFile = path.join(state.directory, "up-next-cache.json");
@@ -271,7 +281,8 @@ function buildAndStore(build, state = cacheState(), label = "unattributed") {
     // generation.
     if (state.buildInFlightVersion !== requestedVersion) {
       logBuildDecision("chained", `${label}; behind ${state.buildInFlightLabel} (generation moved to ${requestedVersion})`);
-      return state.buildInFlight.then(() => buildAndStore(build, state, label));
+      const rebuild = () => buildAndStore(build, state, label);
+      return state.buildInFlight.then(rebuild, rebuild);
     }
     logBuildDecision("joined", `${label}; shares ${state.buildInFlightLabel}`);
     return state.buildInFlight;
@@ -290,13 +301,18 @@ function buildAndStore(build, state = cacheState(), label = "unattributed") {
   return state.buildInFlight;
 }
 
-// Complete an explicit queue mutation before acknowledging it to another device.
-// Provider feed refreshes remain background work; this projects canonical state.
+// Refresh the snapshot after a committed queue mutation. A failed projection
+// leaves the invalidated version in place so the next read can retry.
 export async function refreshUpNextAfterMutation(mediaConfig, reason) {
   const { invalidateHistoryDerivedCaches } = await import("./dataRepo.js");
   const { buildUpNextProjection } = await import("./upNextService.js");
-  await invalidateHistoryDerivedCaches(reason);
-  return buildAndStore((ctx) => buildUpNextProjection({ mediaConfig, ...ctx }), cacheState(), `mutation ${reason}`);
+  try {
+    await invalidateHistoryDerivedCaches(reason);
+    return await buildAndStore((ctx) => buildUpNextProjection({ mediaConfig, ...ctx }), cacheState(), `mutation ${reason}`);
+  } catch (error) {
+    console.warn(`Up Next queue changed but its refresh failed (${reason}): ${error.message}`);
+    return null;
+  }
 }
 
 function publicSnapshot(cache, stale = false, sourceStatus = cache.sourceStatus) {
@@ -325,7 +341,8 @@ function currentPublicSourceStatus() {
 // predates the latest watch history, where a rebuild must always follow.
 function queueBackgroundRebuild(build, { force = false, label = "background" } = {}, state = cacheState()) {
   if (!force && Date.now() - state.lastRevalidateAt < REVALIDATE_MIN_INTERVAL_MS) return false;
-  state.lastRevalidateAt = Date.now();
+  const queuedAt = Date.now();
+  state.lastRevalidateAt = queuedAt;
   // Start on a later timer turn rather than a promise microtask. A stale
   // dashboard response should finish before the provider-backed projection
   // can begin its synchronous cache assembly and compete with sibling APIs.
@@ -335,6 +352,7 @@ function queueBackgroundRebuild(build, { force = false, label = "background" } =
         console.log(`Up Next cache background rebuild complete: ${result.items.length} item${result.items.length === 1 ? "" : "s"}${result.changed ? ", cache updated" : ", unchanged"}.`);
       })
       .catch((error) => {
+        if (state.lastRevalidateAt === queuedAt) state.lastRevalidateAt = 0;
         console.warn(`Up Next cache background rebuild failed: ${error.message}`);
       });
   }, 0);

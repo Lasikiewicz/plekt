@@ -39,17 +39,29 @@ export function initSyncPreview({ button, panel, token, onToast = () => {}, onEx
         <details open><summary>First actions</summary><div class="sync-preview-actions">${(actions.actions || []).map((action) => `<div class="sync-preview-action"><span class="sync-preview-risk ${action.risk}">${esc(action.risk)}</span><span>${esc(action.kind.replaceAll("_", " "))}</span><span>${esc(action.media?.title || "Unknown title")}</span><small>${esc(action.target || action.reason || "")}</small></div>`).join("") || "<p>No writes are planned.</p>"}</div></details>
         <div class="sync-preview-footer"><span>Plan expires ${new Date(plan.expiresAt).toLocaleTimeString()}</span><button type="button" class="button-primary sync-preview-confirm" ${["blocked_over_limit", "blocked_scan_error"].includes(plan.status) ? "disabled" : ""}>Confirm plan</button></div>`);
       panel.querySelector(".sync-preview-close")?.addEventListener("click", () => panel.classList.add("hidden"));
-      panel.querySelector(".sync-preview-confirm")?.addEventListener("click", async () => {
-        const confirm = await fetch(`/api/force-sync/plan/${encodeURIComponent(planId)}`, { method: "POST", headers: headers() });
-        const body = await confirm.json().catch(() => ({}));
-        if (!confirm.ok) throw new Error(body.error || "Could not confirm plan");
-        panel.classList.add("hidden");
-        if (typeof onExecute === "function") {
-          void onExecute(planId);
-        } else {
-          const execute = await fetch("/api/force-sync", { method: "POST", headers: { ...headers(), "Content-Type": "application/json" }, body: JSON.stringify({ planId }) });
-          if (!execute.ok) throw new Error((await execute.json().catch(() => ({}))).error || "Could not execute plan");
-          onToast("Force Sync plan confirmed and queued.", "success");
+      const confirmButton = panel.querySelector(".sync-preview-confirm");
+      confirmButton?.addEventListener("click", async () => {
+        if (confirmButton.disabled) return;
+        const originalLabel = confirmButton.textContent;
+        confirmButton.disabled = true;
+        confirmButton.textContent = "Confirming…";
+        try {
+          const confirm = await fetch(`/api/force-sync/plan/${encodeURIComponent(planId)}`, { method: "POST", headers: headers() });
+          const body = await confirm.json().catch(() => ({}));
+          if (!confirm.ok) throw new Error(body.error || "Could not confirm plan");
+          panel.classList.add("hidden");
+          if (typeof onExecute === "function") {
+            await onExecute(planId);
+          } else {
+            const execute = await fetch("/api/force-sync", { method: "POST", headers: { ...headers(), "Content-Type": "application/json" }, body: JSON.stringify({ planId }) });
+            if (!execute.ok) throw new Error((await execute.json().catch(() => ({}))).error || "Could not execute plan");
+            onToast("Force Sync plan confirmed and queued.", "success");
+          }
+        } catch (error) {
+          onToast(error?.message || "Could not confirm plan.", "error");
+        } finally {
+          confirmButton.disabled = false;
+          confirmButton.textContent = originalLabel;
         }
       });
     } catch (error) {

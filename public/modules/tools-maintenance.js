@@ -835,8 +835,6 @@ export async function triggerRetryAllCategory(categoryName, button) {
   if (!jobsInCategory.length) { _setMessage("No issues to retry in this category", "info"); return; }
 
   const originalText = button.textContent;
-  button.disabled = true;
-  button.textContent = `Retrying ${jobsInCategory.length}...`;
 
   const categoryLabels = {
     plexMismatch: "Plex Match",
@@ -849,6 +847,8 @@ export async function triggerRetryAllCategory(categoryName, button) {
   _showConfirmModal(
     `Retry all ${jobsInCategory.length} ${categoryLabel} issues?\n\nThis will sequentially retry each item. The process may take a minute or two.`,
     async () => {
+      button.disabled = true;
+      button.textContent = `Retrying ${jobsInCategory.length}...`;
       try {
         _setMessage(`Retrying ${jobsInCategory.length} items...`, "info");
         let successCount = 0;
@@ -897,6 +897,7 @@ export async function runRepairWorkflow() {
   const button = elements.runRepairButton;
   const status = elements.repairStatus;
   if (!button || !status) return;
+  const originalText = button.textContent || "Repair History Now";
   button.disabled = true;
   button.textContent = "Repairing History...";
   setStatusPill(status, "Starting history repair...", "warning");
@@ -934,6 +935,7 @@ export async function runRepairWorkflow() {
       appendLog(`ERROR: ${err?.message || String(err)}`);
       setStatusPill(status, `Repair failed: ${err?.message || String(err)}`, "error");
       button.disabled = false;
+      button.textContent = originalText;
       throw err;
     }
   }

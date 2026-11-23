@@ -1054,6 +1054,9 @@ export function prepareInlineMediaDetail(mode = state.explorerMode || "movies") 
   // which starts another detail load and can exhaust the browser's resources.
   if (enteringInlineDetail) selectView("explorer");
   syncInlineMediaDetailHeading(mode);
+  elements.explorerPanel.hidden = false;
+  const droppedPanel = document.getElementById("explorerDroppedPanel");
+  if (droppedPanel) droppedPanel.hidden = true;
   elements.explorerPanel.innerHTML = "";
   elements.explorerPanel.scrollIntoView({ block: "start" });
   document.querySelector("#explorerBackButton")?.classList.remove("hidden");
@@ -1163,7 +1166,15 @@ export function syncTopbarControlsMenuState() {
     menu.removeAttribute("open");
   }
 }
+const mediaDetailCleanupCallbacks = new Set();
+export function registerMediaDetailCleanup(fn) {
+  if (typeof fn === "function") mediaDetailCleanupCallbacks.add(fn);
+}
 export function clearMediaDetailState() {
+  for (const cleanup of [...mediaDetailCleanupCallbacks]) {
+    mediaDetailCleanupCallbacks.delete(cleanup);
+    try { cleanup(); } catch { /* ignore */ }
+  }
   bumpMediaRenderToken();
   closeMediaInfoModal();
   state.activeShowModalKey = null;

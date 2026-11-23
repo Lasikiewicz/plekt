@@ -27,6 +27,7 @@ const chooseUpNextRemovalScope = lazyUpNext("chooseUpNextRemovalScope");
 const removeShowFromUpNext = lazyUpNext("removeShowFromUpNext");
 const removeManualShowFromUpNext = lazyUpNext("removeManualShowFromUpNext");
 const addShowToUpNext = lazyUpNext("addShowToUpNext");
+const openUpNextShowOptions = lazyUpNext("openUpNextShowOptions");
 const upNextAttentionOptions = ifLoaded("up-next", "upNextAttentionOptions", () => ({}));
 const restoreUpNextItem = lazyUpNext("restoreUpNextItem");
 const setUpNextRemovalPending = ifLoaded("up-next", "setUpNextRemovalPending");
@@ -741,7 +742,7 @@ function attachEvents() {
       : (payload.title || "this movie");
     const confirmed = await openConfirmDialog({
       title: "Clear Progress",
-      body: `Clear saved progress for "${title}" and mark it unwatched?`,
+      body: `Clear saved progress for "${title}" and mark it unwatched? This removes it from Plex, Emby, and Jellyfin Resume (unlike Remove from Up Next, which hides it on supported rails while Jellyfin Next Up may still show an episode).`,
       confirmLabel: "Clear progress",
       danger: true,
     });
@@ -825,7 +826,7 @@ function attachEvents() {
       ? await chooseUpNextRemovalScope(item)
       : (await openConfirmDialog({
         title: "Remove from Up Next",
-        body: `Remove "${title}" from Up Next in Plekt and every connected media app?`,
+        body: `Remove "${title}" from Plekt and supported media app rails? Jellyfin Next Up may still show it.`,
         confirmLabel: "Remove from Up Next",
         danger: true,
       })) && "show";
@@ -942,6 +943,15 @@ function attachEvents() {
       event.preventDefault();
       event.stopPropagation();
       openUpNextWatchPrompt(watchBtn, event);
+      return;
+    }
+
+    const upNextOptionsAction = event.target.closest("[data-up-next-show-options]");
+    if (upNextOptionsAction) {
+      event.preventDefault();
+      event.stopPropagation();
+      closePosterOverflowMenu?.();
+      Promise.resolve().then(() => openUpNextShowOptions(upNextOptionsAction)).catch((error) => setMessage(error?.message || "Could not open Up Next options.", "error"));
       return;
     }
 
@@ -1383,7 +1393,7 @@ function attachEvents() {
     }
   });
 
-  elements.syncAttention?.addEventListener("keydown", (event) => {
+  elements.syncActivityAttention?.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     const toggleShow = event.target.closest("[data-sync-attention-toggle-show]");
     if (!toggleShow) return;
@@ -1736,10 +1746,6 @@ function attachEvents() {
   window.addEventListener("resize", () => {
     syncPageTopbar();
     syncMediaActionsMenuState();
-    window.clearTimeout(state.dashboardHistoryResizeTimer);
-    state.dashboardHistoryResizeTimer = window.setTimeout(() => {
-      if (state.activeView === "dashboard") renderDashboard();
-    }, 120);
   });
 
   window.addEventListener("scroll", () => {

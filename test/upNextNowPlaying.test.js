@@ -30,8 +30,16 @@ test("Up Next shows one card per episode, keeping the part-watched one", () => {
   const nextUp = { id: "ted-next", media_type: "episode", show_title: "Ted Lasso", season: 4, episode: 4, queue_kind: "next_up" };
   const resume = { id: "ted-resume", media_type: "episode", show_title: "Ted Lasso", season: 4, episode: 4, queue_kind: "resume", progress: 40 };
   const sessions = [{ mediaType: "episode", title: "Ted Lasso - S04E04", season: 4, episode: 4 }];
-  const items = oneCardPerEpisode(nowPlayingFirst([scrubs, nextUp, resume], sessions));
+  const items = nowPlayingFirst(oneCardPerEpisode([scrubs, nextUp, resume]), sessions);
   assert.deepEqual(items.map((item) => item.id), ["ted-resume", "scrubs"]);
+});
+
+test("same-title shows keep separate cards and ambiguous playback does not promote either", () => {
+  const original = { ...scrubs, show_tmdb_id: "100" };
+  const revival = { ...scrubs, id: "scrubs-revival", show_tmdb_id: "200" };
+  const sessions = [{ mediaType: "episode", showTitle: "Scrubs", season: 1, episode: 2 }];
+  const items = nowPlayingFirst(oneCardPerEpisode([tedLasso, original, revival]), sessions);
+  assert.deepEqual(items.map((item) => item.id), ["ted", "scrubs", "scrubs-revival"]);
 });
 
 test("Up Next keeps a different episode of the same show as its own card", () => {

@@ -35,10 +35,14 @@ import {
 import { getActiveUserName, isNonAdminTenantContext, runAsAdmin } from "./userContext.js";
 
 const COOKIE_NAME = "plembfin_session";
+export function sessionCookieName() {
+  return COOKIE_NAME;
+}
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
 const AUTH_RATE_LIMIT = { max: 10, windowMs: 15 * 60_000 };
 const DUMMY_PASSWORD_HASH = `scrypt$00000000000000000000000000000000$${"00".repeat(64)}`;
+const revokedSessionLookup = adminDb.prepare("SELECT 1 FROM revoked_sessions WHERE token_hash = ?");
 
 function callerIp(req) {
   return req.ip || req.socket?.remoteAddress || "unknown";
@@ -129,7 +133,7 @@ export function verifySession(token = "") {
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
     if (!data.iat || Date.now() - data.iat > SESSION_TTL_MS) return null;
-    if (adminDb.prepare("SELECT 1 FROM revoked_sessions WHERE token_hash = ?").get(crypto.createHash("sha256").update(token).digest("hex"))) return null;
+    if (revokedSessionLookup.get(crypto.createHash("sha256").update(token).digest("hex"))) return null;
     const role = data.role === USER_ROLE ? USER_ROLE : ADMIN_ROLE;
     if (role === USER_ROLE) {
       const user = findUser(data.u, DATA_DIR);
@@ -301,17 +305,18 @@ export async function handleLogin(req, res) {
   const username = String(body.username || body.email || "").trim();
   const password = String(body.password || "");
 
-  // 1. Check root admin credentials first.
-  if (verifyRootAdminUsername(username) && verifyRootAdminPassword(password)) {
-    const adminUsername = getRootAdminUsername();
-    resetRateLimit(`login:${ip}`);
-    if (!isDemoMode()) runAsAdmin(() => writeAuditLog("login.success", { ip, detail: { username: adminUsername, role: ADMIN_ROLE } }));
-    setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY });
-    return sendJson(res, { ok: true, username: adminUsername, role: ADMIN_ROLE, activeUser: ADMIN_KEY });
-  }
-
-  // 2. When multi-user mode is on, check non-admin accounts in users.json.
-  {
+  // 1. Check root admin credentials first. Execute at most one scryptSync per
+  // login attempt so root-username probes cannot distinguish timing.
+  if (verifyRootAdminUsername(username)) {
+    if (verifyRootAdminPassword(password)) {
+      const adminUsername = getRootAdminUsername();
+      resetRateLimit(`login:${ip}`);
+      if (!isDemoMode()) runAsAdmin(() => writeAuditLog("login.success", { ip, detail: { username: adminUsername, role: ADMIN_ROLE } }));
+      setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY });
+      return sendJson(res, { ok: true, username: adminUsername, role: ADMIN_ROLE, activeUser: ADMIN_KEY });
+    }
+  } else {
+    // 2. When multi-user mode is on, check non-admin accounts in users.json.
     const user = multiUserEnabled(DATA_DIR) ? findUser(username, DATA_DIR) : null;
     const passwordMatches = verifyUserPasswordHash(password, user?.passwordHash || DUMMY_PASSWORD_HASH);
     if (user && user.role !== ADMIN_ROLE && !user.disabled && !user.stopped && passwordMatches) {
@@ -502,6 +507,9 @@ export async function handleAuthCredentials(req, res) {
   }
   if (!username) return sendJson(res, { error: "Username is required" }, 400);
   if (username.length > 128) return sendJson(res, { error: "Username must be 128 characters or fewer" }, 400);
+  if (findUser(username, DATA_DIR)) {
+    return sendJson(res, { error: "That username is already used by another account.", code: "USERNAME_CONFLICT" }, 409);
+  }
   if (newPassword && newPassword.length < 8) {
     return sendJson(res, { error: "New password must be at least 8 characters" }, 400);
   }

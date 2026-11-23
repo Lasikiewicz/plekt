@@ -396,6 +396,38 @@ timing, or dismiss actions. Leaving an item untouched defers it; repeated scans 
 create duplicate review rows or re-announce a flag that is already resolved by Plekt's
 canonical watched state.
 
+In Manual Watch review, select individual rows or all visible results to apply a
+supported decision in bulk. Any rows that cannot be processed remain pending.
+
+### Media servers: monitored libraries
+
+In **Settings → Media servers**, explicitly select the libraries Plekt should monitor on each
+connected Plex, Emby, or Jellyfin server, then save.
+
+- **Opt-in by default (fresh installs and upgrades):** Plekt starts with no libraries selected
+  and shows a persistent app-wide banner linking to **Settings → Media servers** until every
+  connected media server has at least one selected library. Existing watch history is retained
+  untouched, and selecting a library starts monitoring going forward without automatic backfill.
+- **New, renamed, and replaced libraries:** Newly created libraries remain unchecked until you
+  select them. Renaming a library preserves selection because Plekt stores native server and
+  library IDs rather than names. Replacing a server or recreating a library with a new ID
+  requires refreshing the library list and saving a new selection. If discovery fails, Plekt
+  keeps the saved selection rather than erasing choices or falling back to all libraries.
+- **Fail-closed verification:** Events and items from unselected libraries, or whose library
+  membership is unknown, ambiguous across selected and unselected roots, or denied by server
+  permissions, are skipped with bounded diagnostics and produce no new history, reviews, live
+  sessions, or outbound writes.
+- **Reviews, queued work, and non-library sources:** Pre-existing pending Manual Watch review
+  rows without stored library provenance are checked against the server API before approval or
+  dismiss; rows from unselected or unresolved libraries stay pending (`409`). Queued retries
+  recheck library membership and selection revision before dispatch. Manual watches in Plekt,
+  tracker imports, restores, watchlists, and playlists are unaffected by media-server library
+  selection, while outbound writes to Plex, Emby, and Jellyfin still target only selected
+  libraries.
+
+Plex Personal Media watches with only a local identifier are kept in Plekt history
+without catalogue matching or outbound watch sync.
+
 ### Sync Tuning: historical watched items and Plex
 
 The **Sync historical watched items to Plex** setting controls whether an import, a

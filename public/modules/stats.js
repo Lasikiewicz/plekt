@@ -503,8 +503,12 @@ export function renderStats() {
   if (elements.monthChart) renderMonthChart();
 }
 
+let statsRequestSerial = 0;
+
 export async function loadStats({ force = false } = {}) {
-  if (!state.token || state.statsLoading || (state.statsLoaded && !force)) return state.stats;
+  if (!state.token) return state.stats;
+  if (!force && (state.statsLoading || state.statsLoaded)) return state.stats;
+  const serial = ++statsRequestSerial;
   state.statsLoading = true;
 
   try {
@@ -516,13 +520,14 @@ export async function loadStats({ force = false } = {}) {
     const response = await fetch(url, { headers: authHeaders() });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(body.error || `Stats load failed with ${response.status}`);
+    if (serial !== statsRequestSerial) return state.stats;
 
     state.stats = body.stats || state.stats;
     state.statsLoaded = true;
     renderStats();
     return state.stats;
   } finally {
-    state.statsLoading = false;
+    if (serial === statsRequestSerial) state.statsLoading = false;
   }
 }
 

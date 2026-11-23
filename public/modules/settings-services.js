@@ -8,8 +8,9 @@ import { state } from "./state.js?v=2.3.0.0.1";
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
 import { openSettingsEditModal, openSettingsPickerModal, renderFieldRow, collectFieldValues, renderInlineServicePanel } from "./settings-ui.js?v=2.3.0.0.1";
 import { prepareHelpReadMore } from "./settings-shell.js?v=2.3.0.0.1";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.3.0.0.1";
+import { escapeAttribute, escapeHtml, openConfirmDialog } from "./utils.js?v=2.3.0.0.1";
 import { renderAnidbSettings } from "./anidb-settings.js?v=2.3.0.0.1";
+import { renderLibraryMonitoringPanels, renderLibrarySelectionBanner } from "./library-monitoring.js?v=2.3.0.0.1";
 import {
   plexCredentialGuide,
   embyCredentialGuide,
@@ -349,6 +350,46 @@ function renderSyncTuningFieldDisclosure(field) {
   `;
 }
 
+const UP_NEXT_MIRROR_FIELDS = [
+  { provider: "plex", key: "upNextMirrorPlex", label: "Mirror Plex Continue Watching" },
+  { provider: "emby", key: "upNextMirrorEmby", label: "Mirror Emby Continue Watching" },
+  { provider: "jellyfin", key: "upNextMirrorJellyfin", label: "Mirror Jellyfin Next Up (order only)" },
+];
+
+function settingsSessionKey() {
+  const user = state.currentUser || {};
+  return `${state.token || ""}:${user.activeUser || ""}:${user.username || user.uid || user.email || ""}`;
+}
+
+async function previewMirrorSettings(values) {
+  const mirror = {};
+  const upNextMirrorPreview = {};
+  const sessionKey = settingsSessionKey();
+  for (const { provider, key, label } of UP_NEXT_MIRROR_FIELDS) {
+    mirror[provider] = values[key] === true;
+    if (!mirror[provider] || state.savedConfig?.upNextSync?.mirror?.[provider]) continue;
+    const response = await fetch("/api/up-next/sync", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ previewMirror: provider }),
+    });
+    const preview = await response.json().catch(() => ({}));
+    if (!response.ok || !preview.complete) throw new Error(preview.error || `Refresh the ${provider} feed before previewing Mirror.`);
+    const order = preview.order.length ? preview.order.join(", ") : "No currently visible episodes can be reordered.";
+    const hides = preview.hides.map(({ title, reason }) => `${title} (${reason})`).join(", ");
+    const confirmed = await openConfirmDialog({
+      title: label,
+      body: `Order · ${order} ${provider === "jellyfin" ? "" : `Hides · ${hides || "None"}. Hidden items can return when played again.`}`,
+      confirmLabel: "Enable Mirror",
+      cancelLabel: "Keep Mirror off",
+    });
+    if (settingsSessionKey() !== sessionKey) throw new Error("The account changed. Review these settings again.");
+    mirror[provider] = confirmed;
+    if (confirmed) upNextMirrorPreview[provider] = preview.token;
+  }
+  return { mirror, upNextMirrorPreview };
+}
+
 // Renders the sync tuning fields directly into the page, one collapsed
 // disclosure per setting, and wires the form's submit handler to save them in
 // place.
@@ -363,6 +404,27 @@ export function renderSyncTuningCard() {
     ...syncTuningFieldSpecs(tuning),
     { ...PACING_FIELD, value: fastPacingEnabled },
     { ...UP_NEXT_SYNC_FIELD, value: upNextSyncEnabled },
+    { key: "upNextSort", label: "Up Next order", type: "select", value: state.savedConfig?.upNextSync?.sort || "recently_watched",
+      options: [
+        { value: "recently_watched", label: "Recently watched" },
+        { value: "newly_aired", label: "Newly aired first" },
+        { value: "oldest_unwatched", label: "Oldest unwatched first" },
+        { value: "closest_to_finishing", label: "Closest to finishing" },
+        { value: "custom", label: "Custom" },
+      ] },
+    { key: "upNextPartWatched", label: "Part watched first", type: "checkbox",
+      value: state.savedConfig?.upNextSync?.partWatchedFirst !== false },
+    { key: "upNextCustomFallback", label: "Custom order for new cards", type: "select",
+      value: state.savedConfig?.upNextSync?.customFallbackSort || "recently_watched",
+      options: [
+        { value: "recently_watched", label: "Recently watched" },
+        { value: "newly_aired", label: "Newly aired first" },
+        { value: "oldest_unwatched", label: "Oldest unwatched first" },
+        { value: "closest_to_finishing", label: "Closest to finishing" },
+      ] },
+    ...UP_NEXT_MIRROR_FIELDS.map(({ provider, key, label }) => ({
+      key, label, type: "checkbox", value: state.savedConfig?.upNextSync?.mirror?.[provider] === true,
+    })),
   ].map(renderSyncTuningFieldDisclosure).join("");
 
   if (form.dataset.bound) return;
@@ -392,9 +454,15 @@ export function renderSyncTuningCard() {
     setStatus("Saving...", "muted");
     try {
       const values = collectFieldValues(fieldsContainer);
-      await saveServiceConfig("tuning", syncTuningPayload(values));
-      await saveServiceConfig("pacing", { profile: values.fastLocalPacing ? "fast" : "standard" });
-      await saveServiceConfig("upNextSync", { enabled: Boolean(values.upNextSyncEnabled) });
+      const { mirror, upNextMirrorPreview } = await previewMirrorSettings(values);
+      await saveServiceConfig("upNextSync", {
+        enabled: Boolean(values.upNextSyncEnabled), sort: values.upNextSort, partWatchedFirst: values.upNextPartWatched,
+        customFallbackSort: values.upNextCustomFallback, mirror,
+      }, {
+        tuning: syncTuningPayload(values),
+        pacing: { profile: values.fastLocalPacing ? "fast" : "standard" },
+        upNextMirrorPreview,
+      });
       form.dataset.dirty = "false";
       setStatus("Saved.", "success");
     } catch (error) {
@@ -490,7 +558,13 @@ function renderPlexServerPicker(ui, flowId, account, servers = []) {
   });
 }
 
+let plexConnectFlow = 0;
+let jellyfinConnectFlow = 0;
+
 async function connectPlexAccount(ui) {
+  const flow = ++plexConnectFlow;
+  const sessionKey = settingsSessionKey();
+  const flowActive = () => flow === plexConnectFlow && Boolean(state.token) && settingsSessionKey() === sessionKey && Boolean(ui.dialog?.isConnected);
   const popup = window.open("about:blank", "_blank");
   if (!popup) throw new Error("Allow pop-ups for Plekt, then try again.");
   popup.document.title = "Opening Plex";
@@ -501,6 +575,10 @@ async function connectPlexAccount(ui) {
     const response = await fetch("/api/media-auth/plex/start", { method: "POST", headers: authHeaders(), body: "{}" });
     start = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(start.error || "Could not start Plex sign-in");
+    if (!flowActive()) {
+      popup.close();
+      return;
+    }
     if (start.status === "authorised" && start.resumed) popup.close();
     else popup.location.replace(start.authUrl);
   } catch (error) {
@@ -509,11 +587,14 @@ async function connectPlexAccount(ui) {
   }
 
   ui.setStatus(start.resumed ? "Resuming your completed Plex sign-in..." : "Finish signing in with Plex. This window will update automatically.", "muted");
-  while (Date.now() < Number(start.expiresAt || 0)) {
+  while (Date.now() < Number(start.expiresAt || 0) && flowActive()) {
     if (!start.resumed) await new Promise((resolve) => setTimeout(resolve, 2000));
     start.resumed = false;
+    if (!flowActive()) return;
     const response = await fetch(`/api/media-auth/plex/${encodeURIComponent(start.flowId)}/status`, { headers: authHeaders() });
     const body = await response.json().catch(() => ({}));
+    if (!flowActive()) return;
+    if (response.status === 401 || response.status === 403) return;
     if (response.status === 410 || body.status === "expired") throw new Error("Plex sign-in expired. Start again.");
     if (!response.ok) throw new Error(body.error || "Plex sign-in check failed");
     if (body.status === "authorised") {
@@ -521,14 +602,17 @@ async function connectPlexAccount(ui) {
       return;
     }
   }
-  throw new Error("Plex sign-in expired. Start again.");
+  if (flowActive()) throw new Error("Plex sign-in expired. Start again.");
 }
 
 async function disconnectPlexAccount() {
+  const sessionKey = settingsSessionKey();
   const response = await fetch("/api/media-connections/plex", { method: "DELETE", headers: authHeaders() });
   const body = await response.json().catch(() => ({}));
+  if (settingsSessionKey() !== sessionKey) return;
   if (!response.ok) throw new Error(body.error || "Plex disconnect failed");
   await reloadSettingsConfig();
+  if (settingsSessionKey() !== sessionKey) return;
   setMessage(body.guidance || "Plex account disconnected.", "success");
 }
 
@@ -540,6 +624,7 @@ function confirmInsecureCredentialSubmit(baseUrl, provider) {
 }
 
 async function loginEmbyLikeAccount(ui, provider, values = ui.collect()) {
+  const sessionKey = settingsSessionKey();
   const name = provider === "emby" ? "Emby" : "Jellyfin";
   if (!values.baseUrl) throw new Error(`Enter the ${name} server URL first.`);
   if (!values.accountUsername) throw new Error(`Enter your ${name} username.`);
@@ -551,13 +636,18 @@ async function loginEmbyLikeAccount(ui, provider, values = ui.collect()) {
     body: JSON.stringify({ baseUrl: values.baseUrl, username: values.accountUsername, password: values.accountPassword || "" }),
   });
   const body = await response.json().catch(() => ({}));
+  if (settingsSessionKey() !== sessionKey) return;
   if (!response.ok || !body.ok) throw new Error(body.error || `${name} sign-in failed`);
   await reloadSettingsConfig();
+  if (settingsSessionKey() !== sessionKey) return;
   ui.close();
   setMessage(`Connected ${name} as ${body.connection?.remoteUsername || "the verified account"}.`, "success");
 }
 
 async function connectJellyfinAccount(ui) {
+  const flow = ++jellyfinConnectFlow;
+  const sessionKey = settingsSessionKey();
+  const flowActive = () => flow === jellyfinConnectFlow && Boolean(state.token) && settingsSessionKey() === sessionKey && Boolean(ui.dialog?.isConnected);
   const values = ui.collect();
   if (!values.baseUrl) throw new Error("Enter the Jellyfin server URL first.");
   ui.setStatus("Requesting a Jellyfin Quick Connect code...", "muted");
@@ -567,6 +657,7 @@ async function connectJellyfinAccount(ui) {
     body: JSON.stringify({ baseUrl: values.baseUrl }),
   });
   const start = await response.json().catch(() => ({}));
+  if (!flowActive()) return;
   if (response.status === 409 && start.code === "quick_connect_disabled") {
     if (!values.accountUsername) {
       throw new Error("Quick Connect is disabled. Enter the fallback username and password above, then choose Connect Jellyfin again.");
@@ -576,11 +667,15 @@ async function connectJellyfinAccount(ui) {
   if (!response.ok) throw new Error(start.error || "Could not start Jellyfin Quick Connect");
   ui.setStatus(`In Jellyfin, open Settings → Quick Connect and enter ${start.code}. Waiting for approval...`, "muted");
   const fields = ui.dialog.querySelector(".settings-modal-fields");
+  fields?.querySelector(".jellyfin-quick-connect-code")?.remove();
   fields?.insertAdjacentHTML("afterbegin", `<div class="plex-account-summary jellyfin-quick-connect-code"><span>Jellyfin Quick Connect code</span><b>${escapeHtml(start.code)}</b><small>Approve this code in an already signed-in Jellyfin app.</small></div>`);
-  while (Date.now() < Number(start.expiresAt || 0)) {
+  while (Date.now() < Number(start.expiresAt || 0) && flowActive()) {
     await new Promise((resolve) => setTimeout(resolve, 2000));
+    if (!flowActive()) return;
     const check = await fetch(`/api/media-auth/jellyfin/quick-connect/${encodeURIComponent(start.flowId)}/status`, { headers: authHeaders() });
     const body = await check.json().catch(() => ({}));
+    if (!flowActive()) return;
+    if (check.status === 401 || check.status === 403) return;
     if (check.status === 410 || body.status === "expired") throw new Error("Jellyfin Quick Connect expired. Start again.");
     if (!check.ok) throw new Error(body.error || "Jellyfin Quick Connect check failed");
     if (body.status === "authorised" && body.ok) {
@@ -590,7 +685,7 @@ async function connectJellyfinAccount(ui) {
       return;
     }
   }
-  throw new Error("Jellyfin Quick Connect expired. Start again.");
+  if (flowActive()) throw new Error("Jellyfin Quick Connect expired. Start again.");
 }
 
 async function disconnectEmbyLikeAccount(provider) {
@@ -641,11 +736,11 @@ async function saveWatchlistSyncEnabled(enabled) {
   return body.config;
 }
 
-async function saveServiceConfig(section, sectionPayload) {
+async function saveServiceConfig(section, sectionPayload, extra = {}) {
   const response = await fetch("/api/config", {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ [section]: sectionPayload }),
+    body: JSON.stringify({ [section]: sectionPayload, ...extra }),
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -655,8 +750,15 @@ async function saveServiceConfig(section, sectionPayload) {
 
   const savedSectionConfig = body.config?.[section];
   const previousSectionConfig = state.savedConfig?.[section] || {};
+  const extraSavedSections = {};
+  for (const extraKey of Object.keys(extra || {})) {
+    if (body.config && Object.prototype.hasOwnProperty.call(body.config, extraKey)) {
+      extraSavedSections[extraKey] = body.config[extraKey];
+    }
+  }
   state.savedConfig = {
     ...state.savedConfig,
+    ...extraSavedSections,
     [section]: savedSectionConfig || sectionPayload,
   };
   if (!savedSectionConfig) {
@@ -822,6 +924,7 @@ export function renderMediaServerPanels() {
     }
     renderInlineServicePanel(container, options);
   }
+  renderLibraryMonitoringPanels();
 }
 
 function openServicePicker(area) {
@@ -945,6 +1048,7 @@ export function renderMetadataCards() {
 // config to the settings UI (card grids + the global Seerr flag).
 export function applyConfigToSettingsUi(config = {}) {
   state.seerrConfigured = Boolean(config.seerr?.configured);
+  renderLibrarySelectionBanner(config);
   renderMediaServerCards();
   renderMetadataCards();
   renderSeasonSourceCard();

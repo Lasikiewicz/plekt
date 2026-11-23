@@ -47,7 +47,9 @@ test("legacy schema migration is idempotent under concurrent process startup", a
     const columns = new Set(upgraded.pragma("table_info(watch_history)").map((column) => column.name));
     for (const name of ["logo_url", "backdrop_url", "sync_retry_count", "sync_next_retry_at", "watch_provenance", "sync_match_ignored_at", "episode_title", "episode_title_status", "episode_title_checked_at", "episode_title_resolution_error"]) assert.ok(columns.has(name));
     assert.equal(upgraded.prepare("SELECT id FROM watch_history WHERE id='legacy-row'").get()?.id, "legacy-row");
-    assert.deepEqual(upgraded.prepare("SELECT id FROM schema_migrations ORDER BY id").all().map((row) => row.id), Array.from({ length: 63 },(_, index) => index + 1));
+    assert.deepEqual(upgraded.prepare("SELECT id FROM schema_migrations ORDER BY id").all().map((row) => row.id), Array.from({ length: 65 },(_, index) => index + 1));
+    const posterIndexes = new Set(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='poster_cache'").all().map((row) => row.name));
+    assert.ok(posterIndexes.has("idx_poster_cache_media_variant") && posterIndexes.has("idx_poster_cache_storage_path"));
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='media_connections'").get());
     const connectionColumns = new Set(upgraded.pragma("table_info(media_connections)").map((column) => column.name));
     assert.ok(connectionColumns.has("server_credential_ciphertext"));
@@ -63,6 +65,7 @@ test("legacy schema migration is idempotent under concurrent process startup", a
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='up_next_provider_items'").get());
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='up_next_provider_feed_state'").get());
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='up_next_manual_shows'").get());
+    assert.ok(upgraded.pragma("table_info(up_next_manual_shows)").some((column) => column.name === "target_season"));
     assert.ok(upgraded.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='recommendation_exclusions'").get());
     const ratingColumns = new Set(upgraded.pragma("table_info(personal_ratings)").map((column) => column.name));
     for (const name of ["episode_tmdb_id", "episode_tvdb_id", "episode_imdb_id", "origin", "canonical_updated_at"]) assert.ok(ratingColumns.has(name));

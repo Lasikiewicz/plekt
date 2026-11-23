@@ -18,6 +18,7 @@ export { earliestTrackerWatchedAt, earliestTrackerWatchedAt as earliestTraktWatc
 import { isEmbyLikePlayed, releaseDateForItem, releaseDateForPlexItem, watchedAtForEmbyLikeItem, watchedAtForPlexItem } from "./watchDates.js";
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { appendSyncHistory, isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
+import { filterAuthorizedTargetItems, getProviderLibrarySelection, LIBRARY_MONITORING_PROVIDERS } from "./librarySelection.js";
 import { createLoopStore } from "./loopStore.js";
 import { resolveOrderWatch } from "./episodeOrderWatch.js";
 import { runWithConcurrency } from "./concurrency.js";
@@ -270,6 +271,11 @@ function dedupeMedia(items = []) {
 
 async function collectSourceItems(config, requested, source, now) {
   const sourceConfig = config[source];
+  const libraryEnforced = LIBRARY_MONITORING_PROVIDERS.includes(source)
+    && Boolean(config?.libraryMonitoring || sourceConfig?.libraryMonitoringEnforced || Array.isArray(sourceConfig?.monitoredLibraryIds));
+  if (libraryEnforced && !getProviderLibrarySelection(config, source).hasSelectedLibraries) {
+    return [];
+  }
   let rawItems = [];
   const lookup = { ...requested, type: requested.type === "movie" ? "movie" : "episode" };
 
@@ -289,6 +295,10 @@ async function collectSourceItems(config, requested, source, now) {
     rawItems = requested.type === "movie"
       ? await fetchJellyfinWatchedItems(sourceConfig)
       : await fetchJellyfinSeriesEpisodes(sourceConfig, { ...lookup, type: "episode" });
+  }
+
+  if (libraryEnforced && rawItems.length) {
+    rawItems = (await filterAuthorizedTargetItems(source, config, rawItems, { lane: "interactive" })).allowed;
   }
 
   return rawItems

@@ -57,6 +57,22 @@ test("validateConfig rejects a non-boolean Up Next sync setting", () => {
   assert.ok(errors.some((message) => message.includes("upNextSync.enabled")));
 });
 
+test("Up Next sort mode defaults to recently_watched, persists newly_aired, and rejects unknown modes", async () => {
+  const initial = await loadMediaConfig();
+  assert.equal(initial.upNextSync.sort, "recently_watched");
+  assert.equal(publicMediaConfig(initial).upNextSync.sort, "recently_watched");
+
+  await saveMediaConfig({ upNextSync: { sort: "newly_aired" } });
+  const updated = await loadMediaConfig();
+  assert.equal(updated.upNextSync.sort, "newly_aired");
+  assert.equal(publicMediaConfig(updated).upNextSync.sort, "newly_aired");
+
+  const errors = validateConfig({ upNextSync: { enabled: true, sort: "alphabetical" } });
+  assert.ok(errors.some((message) => message.includes("upNextSync.sort")));
+
+  await saveMediaConfig({ upNextSync: { sort: "recently_watched" } });
+});
+
 test("partial Now Playing saves preserve the other panel options", async () => {
   await saveMediaConfig({ nowPlaying: { allowPartWatched: false, allowUpNext: true, itemCount: 2 } });
   await saveMediaConfig({ nowPlaying: { allowUpNext: false } });

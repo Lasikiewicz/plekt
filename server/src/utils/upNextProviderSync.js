@@ -1,3 +1,4 @@
+import { getUpNextVersion } from "../db.js";
 import {
   fetchPlexContinueWatchingItems,
   fetchPlexSeriesEpisodes,
@@ -24,17 +25,23 @@ import {
   completeUpNextProviderFeed,
   failUpNextProviderFeed,
   isPlektPrimaryUpNextFeed,
+  listActiveUpNextProviderItems,
   startUpNextProviderFeed,
   withUpNextFeedSeriesIdentity,
 } from "./upNextRepository.js";
 import { getPlaystateForMediaSync } from "./dataRepo.js";
+import { createUpNextDismissalFilter } from "./upNextDismissals.js";
+import { createDroppedTitleFilter } from "./droppedTitles.js";
 import { normalizeUpNextCandidate, upNextIdentityAliases } from "./upNextIdentity.js";
 import { createLoopStore } from "./loopStore.js";
-import { recordOutboundPlayedMarks, recordOutboundProgressMarks, recordOutboundRailRefresh, recordOutboundUnplayedMarks, syncMediaProgress } from "./syncOrchestrator.js";
+import { outboundStateLeaseKey, recordOutboundJellyfinNextUpNudge, recordOutboundPlayedMarks, recordOutboundProgressMarks, recordOutboundRailRefresh, recordOutboundUnplayedMarks, syncMediaProgress } from "./syncOrchestrator.js";
+import { runWithOutboundStateLease } from "./outboundStateLease.js";
 import { clearLegacyUpNextRailSeeds, clearLegacyUpNextRailSeed } from "./upNextRailSeed.js";
 import { resolveUpNextProviderTargets, upNextLookupMedia } from "./upNextLibraryLookup.js";
 import { isUpNextRailSeedPosition, listUpNextRailSeeds } from "./upNextSeedLedger.js";
 import { plexHistoricalSyncAllowed } from "./watchSyncPolicy.js";
+import { loadRuntimeState, setRuntimeState } from "./configStore.js";
+import { applyUpNextMirrorHides, finishedMirrorShows, planUpNextMirrorHides, upNextMirrorDestination, upNextMirrorDestinationApproved } from "./upNextMirror.js";
 
 // All three media servers participate in Up Next. Jellyfin was briefly
 // excluded; see docs/decisions.md entry 20 for why that was reversed.
@@ -476,20 +483,20 @@ async function fetchAndRecordFeed(definition, { triggerOnRecovery = false } = {}
     // This feed read is part of an outbound reconciliation. The repository
     // normally schedules an automatic push when a feed changes, but allowing
     // this read to schedule another push would create a feedback loop.
-    completeUpNextProviderFeed(definition.provider, definition.feedKind, generation, rawItems, { triggerAutoSync: false, triggerOnRecovery });
+    const completion = completeUpNextProviderFeed(definition.provider, definition.feedKind, generation, rawItems, { triggerAutoSync: false, triggerOnRecovery });
     return {
       provider: definition.provider,
       feed_kind: definition.feedKind,
-      status: "succeeded",
-      item_count: items.length,
-      items,
+      status: completion.ignored ? "superseded" : "succeeded",
+      item_count: completion.ignored ? 0 : items.length,
+      items: completion.ignored ? [] : items,
     };
   } catch (error) {
-    failUpNextProviderFeed(definition.provider, definition.feedKind, generation, error);
+    const failure = failUpNextProviderFeed(definition.provider, definition.feedKind, generation, error);
     return {
       provider: definition.provider,
       feed_kind: definition.feedKind,
-      status: "failed",
+      status: failure.ignored ? "superseded" : "failed",
       item_count: 0,
       items: [],
       error: text(error?.message || error) || "Provider feed refresh failed",
@@ -500,7 +507,7 @@ async function fetchAndRecordFeed(definition, { triggerOnRecovery = false } = {}
 // Refresh provider observations without pushing to provider items.
 // This is used by the dashboard's explicit refresh action to clear stale feed
 // failures after a media server or network outage has recovered.
-export async function refreshUpNextProviderFeeds({ config = {}, providers = null } = {}) {
+export async function refreshUpNextProviderFeeds({ config = {}, providers = null, triggerOnRecovery = true } = {}) {
   const definitions = feedDefinitions(config);
   const providerFilter = providers == null
     ? null
@@ -512,7 +519,7 @@ export async function refreshUpNextProviderFeeds({ config = {}, providers = null
   ));
   // Not part of a push, so a provider found back after an outage queues the
   // push the outage skipped (the scheduler's failed-feed retry lands here).
-  return Promise.all(configuredDefinitions.map((definition) => fetchAndRecordFeed(definition, { triggerOnRecovery: true })));
+  return Promise.all(configuredDefinitions.map((definition) => fetchAndRecordFeed(definition, { triggerOnRecovery })));
 }
 
 // A provider whose resume feed, read moments earlier in this push, already
@@ -536,17 +543,19 @@ function providersAlreadyAtPosition(item, media, feeds = []) {
   return current;
 }
 
-async function propagateKnownProgress(items, config, { isStale = null, feeds = [] } = {}) {
+async function propagateKnownProgress(items, config, { isStale = null, feeds = [], destinationCurrent = null } = {}) {
   const progressItems = (Array.isArray(items) ? items : [])
     .slice(0, MAX_REQUEST_ITEMS)
     .map((item) => {
       const media = actionableProgressItem(item);
       if (!media) return null;
       const current = providersAlreadyAtPosition(item, media, feeds);
-      if (!current.size) return media;
       return {
         ...media,
-        syncTargets: media.syncTargets.filter((provider) => configuredProvider(config, provider) && !current.has(provider)),
+        queueItem: item,
+        syncTargets: media.syncTargets.filter((provider) => feeds.some((feed) => (
+          feed.provider === provider && feed.status === "succeeded"
+        )) && !current.has(provider)),
       };
     })
     .filter(Boolean);
@@ -554,26 +563,23 @@ async function propagateKnownProgress(items, config, { isStale = null, feeds = [
   // The automatic sync builds its projection seconds before this point. A
   // Clear progress in that window deleted the resume row, and writing the
   // projected position would put it straight back on every provider.
-  if (isStale?.()) {
-    return progressItems.map((media) => ({
-      id: media.media_key || media.title,
-      title: media.title,
-      status: "skipped",
-      targetStates: [],
-      details: "Canonical state changed after the queue was built",
-    }));
-  }
+  const skipped = (media, details) => ({ id: media.media_key || media.title, title: media.title, status: "skipped", targetStates: [], details });
+  if (isStale?.()) return progressItems.map((media) => skipped(media, "Canonical state changed after the queue was built"));
   const loopStore = createLoopStore();
-  return Promise.all(progressItems.map(async (media) => {
-    if (!media.syncTargets.length) {
-      return {
-        id: media.media_key || media.title,
-        title: media.title,
-        status: "skipped",
-        targetStates: [],
-        details: "Every provider already holds this resume position",
-      };
+  return Promise.all(progressItems.map(async ({ queueItem, ...media }) => {
+    // Rechecked per item at write time: a dismissal or a connection switch
+    // since the queue was built must not reach the provider.
+    if (createUpNextDismissalFilter().isDismissed(queueItem) || createDroppedTitleFilter().isDropped(queueItem)) {
+      return skipped(media, "The item was removed from the queue before the write.");
     }
+    if (destinationCurrent) {
+      const allowed = await Promise.all(media.syncTargets.map((provider) => destinationCurrent(provider).catch(() => false)));
+      if (media.syncTargets.length && !allowed.some(Boolean)) {
+        return skipped(media, "The provider connection changed before the write.");
+      }
+      media.syncTargets = media.syncTargets.filter((_, index) => allowed[index]);
+    }
+    if (!media.syncTargets.length) return skipped(media, "Every provider already holds this resume position");
     try {
       const summary = await syncMediaProgress(media, config, loopStore, { lane: "interactive" });
       return {
@@ -607,7 +613,7 @@ async function propagateKnownProgress(items, config, { isStale = null, feeds = [
 // position is always protected. The old ledger is consulted only to migrate
 // positions written by pre-refresh builds; no new synthetic position is created
 // here.
-export async function refreshProviderRail({ provider, config, targets = [] } = {}) {
+export async function refreshProviderRail({ provider, config, targets = [], unresolved = [], isStale = null, mirrorOrderIds = null, destinationCurrent = null } = {}) {
   const base = {
     provider,
     status: "skipped",
@@ -630,7 +636,7 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
   }
 
   const seedById = new Map(listUpNextRailSeeds(provider).map((seed) => [seed.providerItemId, seed]));
-  const outcomes = [];
+  const outcomes = [...unresolved];
   const candidates = [];
   const addSkipped = (title, reason) => outcomes.push({ title, status: "skipped", reason });
 
@@ -669,7 +675,7 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
     try {
       episodes = await providerSeriesEpisodes(provider, config, providerRailLookupMedia(item));
     } catch (error) {
-      addSkipped(title, `Could not verify ${provider}'s watched predecessor: ${text(error?.message || error) || "series lookup failed"}.`);
+      outcomes.push({ title, status: "failed", reason: `Could not verify ${provider}'s watched predecessor: ${text(error?.message || error) || "series lookup failed"}.` });
       continue;
     }
 
@@ -735,6 +741,11 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
   const loopStore = createLoopStore();
   // Native rails sort newest watched input first. Reverse the desired list so
   // the first Plembfin item receives the newest provider timestamp.
+  let exclusionVersion = null;
+  let dismissals;
+  let dropped;
+  const orderEpoch = Date.now();
+  let lastNativeMirrorWriteAt = 0;
   for (let index = candidates.length - 1; index >= 0; index -= 1) {
     const candidate = candidates[index];
     const predecessorMedia = providerRailMedia(provider, candidate.item, candidate.predecessor, candidate.predecessorCoordinate);
@@ -744,16 +755,40 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
       provider_item_id: candidate.providerItemId,
       predecessor_item_id: providerEpisodeId(provider, candidate.predecessor),
     };
+    if (isStale?.()) {
+      outcomes[candidate.resultIndex] = { ...result, reason: "The queue changed while preparing provider writes." };
+      continue;
+    }
+    const currentVersion = getUpNextVersion();
+    if (exclusionVersion !== currentVersion) {
+      exclusionVersion = currentVersion;
+      dismissals = createUpNextDismissalFilter();
+      dropped = createDroppedTitleFilter();
+    }
+    if (dismissals.isDismissed(candidate.item) || dropped.isDropped(candidate.item)) {
+      outcomes[candidate.resultIndex] = { ...result, status: "skipped", reason: "The item was removed from the queue before the write." };
+      continue;
+    }
     let refreshed = false;
     let predecessorUnplayed = false;
     const originalPlayedAt = providerPlayedDateIso(provider, candidate.predecessor);
+    const mirrorOrder = mirrorOrderIds?.has(candidate.providerItemId) === true;
+    // Plex scrobbles and Emby resume sessions use provider-side timestamps
+    // with second precision. A tie can keep the old order even when writes
+    // arrive in the desired sequence.
+    if (mirrorOrder && provider !== "jellyfin" && lastNativeMirrorWriteAt) {
+      const delay = 1050 - (Date.now() - lastNativeMirrorWriteAt);
+      if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    const orderDate = mirrorOrder ? new Date(orderEpoch - index * 1000).toISOString() : originalPlayedAt;
+    const leaseKey = outboundStateLeaseKey(predecessorMedia, provider);
     const refreshMedia = {
       ...predecessorMedia,
       // A native rail refresh is a historical projection of an existing
       // watched state. This makes the Plex policy explicit while still letting
       // the setting-on path perform the requested toggle.
       syncIntent: "historical",
-      watched_at: originalPlayedAt || undefined,
+      watched_at: orderDate || undefined,
       // The preceding unplay makes the following Plex scrobble intentional;
       // do not let a briefly stale metadata read collapse it as idempotent.
       forcePlayedWrite: true,
@@ -771,53 +806,102 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
       };
       continue;
     }
+    if (provider === "jellyfin" && !orderDate) {
+      outcomes[candidate.resultIndex] = {
+        ...result,
+        status: "skipped",
+        reason: "Jellyfin did not report a predecessor play date to refresh.",
+      };
+      continue;
+    }
+    let destinationChanged = false;
+    // A provider-side skip (an item outside the monitored libraries) is not a
+    // failure: report it as skipped so it does not queue retries.
+    let providerSkipped = "";
     try {
-      // The toggle's callbacks must never read as a user unwatch or a new
-      // watch, whatever canonical row the webhook resolves (defect AG).
-      await recordOutboundRailRefresh(refreshMedia, provider, loopStore);
-      await recordOutboundUnplayedMarks(refreshMedia, [provider], loopStore);
-      const unplayedOutcome = await markProviderUnplayed(provider, config, refreshMedia);
-      if (unplayedOutcome?.status !== "fulfilled") throw new Error(`${provider} did not accept the unwatched predecessor mark.`);
-      predecessorUnplayed = true;
+      const write = await runWithOutboundStateLease(leaseKey, "up-next-rail", async () => {
+        if (isStale?.() || canonicalPredecessorUnwatched(refreshMedia)
+          || createUpNextDismissalFilter().isDismissed(candidate.item) || createDroppedTitleFilter().isDropped(candidate.item)) return false;
+        const target = providerRailMedia(provider, candidate.item, candidate.targetEpisode, coordinateFrom(candidate.item));
+        if (getPlaystateForMediaSync(target)?.state === "watched") return false;
+        if (destinationCurrent && !(await destinationCurrent(provider).catch(() => false))) {
+          destinationChanged = true;
+          return false;
+        }
+        // The toggle's callbacks must never read as a user unwatch or a new
+        // watch, whatever canonical row the webhook resolves (defect AG).
+        await recordOutboundRailRefresh(refreshMedia, provider, loopStore);
+        if (provider !== "jellyfin") {
+          await recordOutboundUnplayedMarks(refreshMedia, [provider], loopStore);
+          const unplayedOutcome = await markProviderUnplayed(provider, config, refreshMedia);
+          if (unplayedOutcome?.status === "skipped") {
+            providerSkipped = unplayedOutcome.detail || `${provider} skipped the predecessor.`;
+            return false;
+          }
+          if (unplayedOutcome?.status !== "fulfilled") throw new Error(`${provider} did not accept the unwatched predecessor mark.`);
+          predecessorUnplayed = true;
 
-      await recordOutboundPlayedMarks(refreshMedia, [provider], loopStore);
-      const playedOutcome = await markProviderPlayed(provider, config, refreshMedia);
-      if (playedOutcome?.status !== "fulfilled") throw new Error(`${provider} did not accept the watched predecessor mark.`);
+          await recordOutboundPlayedMarks(refreshMedia, [provider], loopStore);
+          const playedOutcome = await markProviderPlayed(provider, config, refreshMedia);
+          if (playedOutcome?.status !== "fulfilled") throw new Error(`${provider} did not accept the watched predecessor mark.`);
+          predecessorUnplayed = false;
+        }
 
-      if (originalPlayedAt) result.original_played_at = originalPlayedAt;
-      if (provider === "plex") {
-        result.watch_date_restored = false;
-        result.watch_date_note = originalPlayedAt
-          ? "Plex has no supported historical-date setter; its server time was retained."
-          : "Plex has no supported historical-date setter.";
-      } else if (provider === "emby" && originalPlayedAt) {
-        result.watch_date_restored = true;
-      } else if (provider === "jellyfin" && originalPlayedAt) {
-        const dateRestore = await updateJellyfinUserData(
-          config.jellyfin,
-          providerEpisodeId(provider, candidate.predecessor),
-          { LastPlayedDate: originalPlayedAt },
-          { lane: "interactive" },
-        );
-        if (dateRestore?.status !== "fulfilled") throw new Error("Jellyfin did not restore the watched predecessor date.");
-        result.watch_date_restored = true;
-      }
-      if (provider === "emby") {
-        const rail = await touchEmbyResumeRail(config.emby, candidate.providerItemId, { lane: "interactive" });
-        if (rail?.status !== "fulfilled") throw new Error("Emby did not accept the native Continue Watching rail refresh.");
-        result.resume_rail_touched = true;
+        if (originalPlayedAt) result.original_played_at = originalPlayedAt;
+        if (provider === "plex") {
+          result.watch_date_restored = false;
+          result.watch_date_note = originalPlayedAt
+            ? "Plex has no supported historical-date setter; its server time was retained."
+            : "Plex has no supported historical-date setter.";
+        } else if (provider === "emby" && orderDate) {
+          result.watch_date_restored = !mirrorOrder;
+        } else if (provider === "jellyfin" && orderDate) {
+          await recordOutboundJellyfinNextUpNudge(refreshMedia, loopStore);
+          await recordOutboundPlayedMarks(refreshMedia, ["jellyfin"], loopStore);
+          const dateRestore = await updateJellyfinUserData(
+            config.jellyfin,
+            providerEpisodeId(provider, candidate.predecessor),
+            { LastPlayedDate: orderDate },
+            { lane: "interactive" },
+          );
+          if (dateRestore?.status === "skipped") {
+            providerSkipped = dateRestore.detail || "Jellyfin skipped the predecessor.";
+            return false;
+          }
+          if (dateRestore?.status !== "fulfilled") throw new Error("Jellyfin did not restore the watched predecessor date.");
+          result.watch_date_restored = !mirrorOrder;
+        }
+        if (provider === "emby") {
+          const rail = await touchEmbyResumeRail(config.emby, candidate.providerItemId, { lane: "interactive" });
+          if (rail?.status !== "fulfilled") throw new Error("Emby did not accept the native Continue Watching rail refresh.");
+          result.resume_rail_touched = true;
+        }
+        return true;
+      });
+      if (!write || write.deferred) {
+        outcomes[candidate.resultIndex] = { ...result, status: "skipped", reason: providerSkipped || (destinationChanged
+          ? `The ${provider} connection changed before the write.`
+          : "The queue or watched predecessor changed before dispatch.") };
+        continue;
       }
       refreshed = true;
+      if (mirrorOrder && provider !== "jellyfin") lastNativeMirrorWriteAt = Date.now();
       base.refreshed_count += 1;
       base.promoted_count += 1;
       result.status = "refreshed";
       result.reason = `${provider} native Up Next rail refreshed.`;
     } catch (error) {
-      if (predecessorUnplayed) {
+      if (predecessorUnplayed && !canonicalPredecessorUnwatched(refreshMedia)) {
         try {
-          await recordOutboundPlayedMarks(refreshMedia, [provider], loopStore);
-          await markProviderPlayed(provider, config, refreshMedia);
-          result.predecessor_restored_after_failure = true;
+          const restored = await runWithOutboundStateLease(leaseKey, "up-next-rail-recovery", async () => {
+            if (canonicalPredecessorUnwatched(refreshMedia)) return false;
+            const original = { ...refreshMedia, watched_at: originalPlayedAt || undefined };
+            await recordOutboundPlayedMarks(original, [provider], loopStore);
+            const outcome = await markProviderPlayed(provider, config, original);
+            if (outcome?.status !== "fulfilled") throw new Error(`${provider} did not restore the watched predecessor.`);
+            return true;
+          });
+          result.predecessor_restored_after_failure = restored === true;
         } catch (restoreError) {
           result.predecessor_restore_error = text(restoreError?.message || restoreError) || "Could not restore the watched predecessor.";
         }
@@ -827,13 +911,17 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
 
     // An unwatch that landed while the pair was in flight may have been
     // overwritten by the played write; send the canonical unwatch again.
-    if (refreshed && canonicalPredecessorUnwatched(refreshMedia)) {
+    if (provider !== "jellyfin" && refreshed && canonicalPredecessorUnwatched(refreshMedia)) {
       result.predecessor_unwatched_during_refresh = true;
       try {
-        await recordOutboundUnplayedMarks(refreshMedia, [provider], loopStore);
-        const restored = await markProviderUnplayed(provider, config, refreshMedia);
-        if (restored?.status !== "fulfilled") throw new Error(`${provider} did not accept the unwatched predecessor restore.`);
-        result.predecessor_unwatch_restored = true;
+        const restored = await runWithOutboundStateLease(leaseKey, "up-next-rail-recovery", async () => {
+          if (!canonicalPredecessorUnwatched(refreshMedia)) return false;
+          await recordOutboundUnplayedMarks(refreshMedia, [provider], loopStore);
+          const outcome = await markProviderUnplayed(provider, config, refreshMedia);
+          if (outcome?.status !== "fulfilled") throw new Error(`${provider} did not accept the unwatched predecessor restore.`);
+          return true;
+        });
+        result.predecessor_unwatch_restored = restored === true;
       } catch (error) {
         base.failed_count += 1;
         result.status = "partial";
@@ -876,7 +964,7 @@ export async function refreshProviderRail({ provider, config, targets = [] } = {
 // native APIs cannot add an arbitrary future episode, so a ready episode
 // reaches the rail by restamping its watched predecessor. The push only adds;
 // it never hides a native item because the queue lacks it (decisions entry 36).
-export async function syncUpNextToProviders({ desiredItems = [], config = {}, isStale = null } = {}) {
+export async function syncUpNextToProviders({ desiredItems = [], config = {}, isStale = null, providers = PUSH_PROVIDERS, builtAt = 0, destinationCurrent = null } = {}) {
   if (config?.upNextSync?.enabled === false) {
     return {
       ok: true,
@@ -903,7 +991,7 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
       },
     };
   }
-  const definitions = feedDefinitions(config);
+  const definitions = feedDefinitions(config).filter((entry) => providers.includes(entry.provider));
   const configuredDefinitions = definitions.filter((definition) => definition.configured);
   const skippedFeeds = definitions
     .filter((definition) => !definition.configured)
@@ -914,9 +1002,12 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
       item_count: 0,
       items: [],
     }));
+  const mirrorProviders = providers.filter((provider) => config.upNextSync?.mirror?.[provider] === true);
+  const mirrorPrior = mirrorProviders.length ? listActiveUpNextProviderItems() : [];
+  const mirrorRuntime = mirrorProviders.length ? await loadRuntimeState() : {};
   const feeds = await Promise.all(configuredDefinitions.map(fetchAndRecordFeed));
   const plan = planUpNextProviderSync({ desiredItems, feeds });
-  const progress = await propagateKnownProgress(desiredItems, config, { isStale, feeds });
+  const progress = await propagateKnownProgress(desiredItems, config, { isStale, feeds, destinationCurrent });
   const pushProviders = PUSH_PROVIDERS.filter((provider) => (
     configuredDefinitions.some((definition) => definition.provider === provider)
   ));
@@ -926,7 +1017,7 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
   // it; the next run after it recovers pushes the whole queue again.
   const unreachableProviders = new Set(pushProviders.filter((provider) => {
     const providerFeeds = feeds.filter((feed) => feed.provider === provider);
-    return providerFeeds.length > 0 && providerFeeds.every((feed) => feed.status === "failed");
+    return providerFeeds.length > 0 && !providerFeeds.some((feed) => feed.status === "succeeded");
   }));
   const reachableProviders = pushProviders.filter((provider) => !unreachableProviders.has(provider));
   // Resolve every desired item to its native id once per provider, so the
@@ -938,21 +1029,61 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
       config: config[provider],
       items: desiredItems,
       limit: MAX_REQUEST_ITEMS,
-    }).catch(() => ({ provider, resolved: [], unresolved: [] })),
+    }).catch((error) => ({ provider, resolved: [], lookupError: text(error?.message || error) || "Target lookup failed" })),
   ])));
 
   const desiredIdsByProvider = Object.fromEntries(pushProviders.map((provider) => [
     provider,
     new Set((targetsByProvider[provider]?.resolved || []).map((target) => text(target.providerItemId)).filter(Boolean)),
   ]));
+  const mirrorPlans = new Map();
+  const incompleteMirrorFeeds = new Set();
+  const finished = mirrorProviders.some((provider) => provider !== "jellyfin" && upNextMirrorDestinationApproved(config, mirrorRuntime, provider))
+    ? await finishedMirrorShows() : [];
+  const mirrorQueueVersion = getUpNextVersion();
+  const mirrorStale = () => isStale?.() || getUpNextVersion() !== mirrorQueueVersion;
+  for (const provider of mirrorProviders) {
+    if (!upNextMirrorDestinationApproved(config, mirrorRuntime, provider)) continue;
+    const providerFeeds = feeds.filter((feed) => feed.provider === provider);
+    const primary = providerFeeds.find((feed) => isPlektPrimaryUpNextFeed(provider, feed.feed_kind));
+    if (!primary || providerFeeds.some((feed) => feed.status !== "succeeded")) {
+      incompleteMirrorFeeds.add(provider);
+      continue;
+    }
+    const visible = new Set(primary.items.map((item) => item.provider_item_id));
+    const targets = targetsByProvider[provider]?.resolved || [];
+    const eligible = targets.filter((target) => requestedRailRefreshItem(target.item) && target.item.up_next_lane !== "new");
+    const eligibleIds = new Set(eligible.map((target) => target.providerItemId));
+    const ordered = eligible.filter((target) => visible.has(target.providerItemId));
+    const missing = targets.filter((target) => !visible.has(target.providerItemId));
+    const signature = JSON.stringify([upNextMirrorDestination(config, provider), eligible.map((target) => target.providerItemId)]);
+    const runtimeKey = `upNextMirrorOrder:${provider}`;
+    const orderChanged = mirrorRuntime[runtimeKey] !== signature;
+    const mirrorTargets = orderChanged
+      ? targets.filter((target) => eligibleIds.has(target.providerItemId) || !visible.has(target.providerItemId))
+      : missing;
+    mirrorPlans.set(provider, {
+      eligible, eligibleIds, ordered, orderChanged, signature, runtimeKey,
+      missing, mirrorTargets,
+      hides: planUpNextMirrorHides({
+        provider, visible: primary.items, desired: desiredItems, builtAt, finished,
+        prior: mirrorPrior.filter((item) => item.provider === provider && item.feed_kind === primary.feed_kind),
+      }),
+    });
+  }
   // Older alpha builds may have left 6% positions tracked in the ledger. They
   // are cleared when stale; no new synthetic position is created here.
   const legacyRailCleanup = await clearLegacyUpNextRailSeeds({
     config,
-    providers: reachableProviders,
+    providers: isStale?.() ? [] : reachableProviders.filter((provider) => (
+      !targetsByProvider[provider]?.lookupError
+      && !incompleteMirrorFeeds.has(provider)
+      && !targetsByProvider[provider]?.unresolved?.some((target) => target.status === "failed")
+    )),
     desiredIdsByProvider,
   });
   const providerRails = await Promise.all(pushProviders.map((provider) => (unreachableProviders.has(provider)
+    || incompleteMirrorFeeds.has(provider) || targetsByProvider[provider]?.lookupError
     ? {
       provider,
       status: "failed",
@@ -963,13 +1094,60 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
       skipped_count: 0,
       failed_count: 0,
       results: [],
-      reason: `${provider} could not be reached (every Up Next feed read failed), so its rail was not refreshed.`,
+      reason: targetsByProvider[provider]?.lookupError || `${provider} had no current Up Next feed, so its rail was not refreshed.`,
     }
     : refreshProviderRail({
       provider,
       config,
-      targets: targetsByProvider[provider]?.resolved || [],
+      targets: mirrorPlans.has(provider)
+        ? mirrorPlans.get(provider).mirrorTargets
+        : targetsByProvider[provider]?.resolved || [],
+      unresolved: targetsByProvider[provider]?.unresolved || [],
+      isStale: mirrorPlans.has(provider) ? mirrorStale : isStale,
+      mirrorOrderIds: mirrorPlans.get(provider)?.orderChanged
+        ? mirrorPlans.get(provider).eligibleIds : null,
+      destinationCurrent,
     }))));
+  const mirrorHides = [];
+  const mirrorIncompleteProviders = new Set();
+  for (const [provider, mirror] of mirrorPlans) {
+    const rail = providerRails.find((entry) => entry.provider === provider);
+    if (rail.status === "failed" || rail.status === "partial") continue;
+    if (mirrorStale()) {
+      if (mirror.orderChanged || mirror.hides.length) mirrorIncompleteProviders.add(provider);
+      continue;
+    }
+    if (mirror.orderChanged) {
+      const refreshedIds = new Set(rail.results.filter((row) => row.status === "refreshed").map((row) => row.provider_item_id));
+      const expected = mirror.eligible.map((target) => target.providerItemId).filter((id) => refreshedIds.has(id));
+      if (expected.length > 1) {
+        const primary = configuredDefinitions.find((definition) => definition.provider === provider
+          && isPlektPrimaryUpNextFeed(provider, definition.feedKind));
+        const actual = await primary.fetch().then((rows) => rows.map((row) => providerEpisodeId(provider, row))).catch(() => []);
+        const position = expected.map((id) => actual.indexOf(id));
+        if (position.some((index, offset) => index < 0 || (offset > 0 && index <= position[offset - 1]))) {
+          rail.status = "partial";
+          rail.failed_count += 1;
+          rail.reason = "The native rail did not confirm the requested Mirror order.";
+          continue;
+        }
+      }
+      if (mirrorStale()) {
+        mirrorIncompleteProviders.add(provider);
+        continue;
+      }
+      await setRuntimeState({ [mirror.runtimeKey]: mirror.signature });
+    }
+    if (mirror.hides.length) {
+      if (mirrorStale()) {
+        mirrorIncompleteProviders.add(provider);
+      } else {
+        const applied = await applyUpNextMirrorHides(provider, config, mirror.hides, mirrorStale);
+        mirrorHides.push(...applied);
+        if (applied.length < mirror.hides.length) mirrorIncompleteProviders.add(provider);
+      }
+    }
+  }
   const jellyfinRail = providerRails.find((rail) => rail.provider === "jellyfin") || {
     provider: "jellyfin",
     status: "skipped",
@@ -986,7 +1164,13 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
   // measure completeness against any more; the native rail refresh is the
   // whole push.
   const pushedProviders = pushProviders.filter((provider) => (
-    providerRails.find((entry) => entry.provider === provider)?.status !== "failed"
+    !["failed", "partial"].includes(providerRails.find((entry) => entry.provider === provider)?.status)
+    && !mirrorIncompleteProviders.has(provider)
+    && !mirrorHides.some((entry) => entry.provider === provider && entry.status === "failed")
+    && !legacyRailCleanup.some((entry) => entry.provider === provider && entry.status === "failed")
+    && !progress.some((entry) => entry.status === "error" || entry.targetStates.some((target) => (
+      target.target === provider && ["failed", "error", "rejected", "partial"].includes(target.status)
+    )))
   ));
 
   return {
@@ -1003,6 +1187,7 @@ export async function syncUpNextToProviders({ desiredItems = [], config = {}, is
     railSeeds: [],
     legacyRailCleanup,
     providerRails,
+    mirrorHides,
     retained: plan.retained.map((item) => ({
       provider: item.provider,
       feed_kind: item.feed_kind,

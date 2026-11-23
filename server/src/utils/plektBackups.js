@@ -6,8 +6,12 @@ import { FULL_BACKUPS_DIR } from "../paths.js";
 import { fullBackupJsonChunks } from "./backup.js";
 import { ENCRYPTED_BACKUP_FORMAT, FULL_BACKUP_FILE_PATTERN, FULL_BACKUP_TEMPORARY_FILE_PATTERN, fullBackupFilename, backupFileStamp } from "./backupNames.js";
 import { pushBackupToRemotes } from "./watchHistoryBackups.js";
+import { decryptCredential, encryptCredential } from "./credentialVault.js";
 
 const CONFIG_ID = "plembfinBackups";
+export function getPlektBackupConfigId() {
+  return CONFIG_ID;
+}
 const RUNTIME_ID = "plembfinBackups";
 const FILE_PATTERN = FULL_BACKUP_FILE_PATTERN;
 const TEMPORARY_FILE_PATTERN = FULL_BACKUP_TEMPORARY_FILE_PATTERN;
@@ -54,8 +58,32 @@ function safeConfig(value = {}, previous = {}) {
   };
 }
 
+function encryptBackupSecret(value) {
+  const plain = String(value || "").trim();
+  if (!plain) return "";
+  return { __encrypted: true, ...encryptCredential(plain) };
+}
+
+function decryptBackupSecret(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "object" && value.__encrypted && value.ciphertext && value.iv && value.tag) {
+    try {
+      return decryptCredential(value);
+    } catch {
+      return "";
+    }
+  }
+  return "";
+}
+
 export function loadPlektBackupConfig() {
-  return safeConfig(parseJson(selectSetting.get(CONFIG_ID)?.data, {}) || {});
+  const raw = parseJson(selectSetting.get(CONFIG_ID)?.data, {}) || {};
+  return safeConfig({
+    ...raw,
+    passphrase: decryptBackupSecret(raw.passphrase),
+    remotePassphrase: decryptBackupSecret(raw.remotePassphrase),
+  });
 }
 
 export function savePlektBackupConfig(value = {}) {
@@ -69,7 +97,12 @@ export function savePlektBackupConfig(value = {}) {
   if (config.remoteEnabled && !hasLocalPassphrase && !hasRemotePassphrase) {
     throw new Error("Remember a Plekt backup passphrase before enabling scheduled remote backups.");
   }
-  upsertSetting.run(CONFIG_ID, toJson(config), Date.now());
+  const stored = {
+    ...config,
+    passphrase: encryptBackupSecret(config.passphrase),
+    remotePassphrase: encryptBackupSecret(config.remotePassphrase),
+  };
+  upsertSetting.run(CONFIG_ID, toJson(stored), Date.now());
   return publicConfig(config);
 }
 
@@ -177,7 +210,8 @@ export function writeEncryptedPlektBackup(filePath, passphrase, { chunks = fullB
   }, null, 2);
   const payloadAt = envelope.lastIndexOf('"payload": ""') + '"payload": "'.length;
 
-  const fd = fs.openSync(filePath, "w");
+  const fd = fs.openSync(filePath, "w", 0o600);
+  try { fs.chmodSync(filePath, 0o600); } catch { /* non-POSIX FS */ }
   let sizeBytes = 0;
   let carry = Buffer.alloc(0);
   const write = (text) => {

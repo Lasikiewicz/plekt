@@ -2,124 +2,16 @@
 import { getCollection, type CollectionEntry } from "astro:content";
 import SiteLayout from "../../layouts/SiteLayout.astro";
 import DocsSidebar from "../../components/DocsSidebar.astro";
-import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 import { docsNav } from "../../data/site.js";
 
 const entries = await getCollection("docs");
 type DocEntry = CollectionEntry<"docs">;
 const getEntrySlug = (entry: DocEntry) => entry.id.replace(/\.(?:md|mdx)$/i, "");
 const docsBySlug = new Map(entries.map((entry) => [getEntrySlug(entry), entry]));
-type HeadingInfo = { level: number; text: string };
-type NavChild = { id: string; label: string; children?: NavChild[] };
-type NavItem = { slug: string; label: string; description: string; children?: NavChild[] };
-type NavSection = { label: string; items: NavItem[] };
-type SectionScreenshot = { darkSrc: string; lightSrc: string; alt: string; caption: string };
-type SearchPage = { slug: string; label: string; body: string };
-type SectionSearchEntry = NavChild & {
-  section: string;
-  body: string;
-  excerpt: string;
-  screenshot: SectionScreenshot | null;
-  headingPath: string[];
-  href: string;
-  kind: "section";
-  pageLabel: string;
-  pageSlug: string;
-};
-
-const stripSearchMarkup = (value: unknown) => String(value || "")
-  .replace(/<[^>]+>/g, " ")
-  .replace(/!\[[^\]]*\]\([^)]*\)/g, " ")
-  .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
-  .replace(/[\\*_`>#-]/g, " ")
-  .replace(/\s+/g, " ")
-  .trim();
-const headingFromLine = (line: string): HeadingInfo | null => {
-  const normalizedLine = line.trim();
-  const markdownHeading = normalizedLine.match(/^(#{2,6})\s+(.+?)\s*#*\s*$/);
-  if (markdownHeading) return { level: markdownHeading[1].length, text: markdownHeading[2] };
-  const htmlHeading = normalizedLine.match(/^<h([2-6])(?:\s+[^>]*)?>(.*?)<\/h\1>$/i);
-  if (htmlHeading) return { level: Number(htmlHeading[1]), text: htmlHeading[2] };
-  return null;
-};
-const headingSlug = (value: unknown) => stripSearchMarkup(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-const truncateSearchText = (value: unknown, limit = 420) => {
-  const text = stripSearchMarkup(value);
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit).replace(/\s+\S*$/, "")}…`;
-};
-const readAttribute = (attributes: string, name: string) => attributes.match(new RegExp(`${name}="([^"]+)"`, "i"))?.[1] || "";
-const extractSectionScreenshot = (body: unknown): SectionScreenshot | null => {
-  const match = String(body || "").match(/<ScreenshotFigure\b([\s\S]*?)\/>/i);
-  if (!match) return null;
-
-  const attributes = match[1];
-  const src = readAttribute(attributes, "src");
-  const darkSrc = readAttribute(attributes, "darkSrc") || src;
-  const lightSrc = readAttribute(attributes, "lightSrc") || src;
-  if (!darkSrc && !lightSrc) return null;
-
-  return {
-    darkSrc,
-    lightSrc,
-    alt: readAttribute(attributes, "alt") || "Plekt documentation screenshot",
-    caption: readAttribute(attributes, "caption"),
-  };
-};
-const extractSectionBody = (body: unknown, id: string) => {
-  const lines = String(body || "").split(/\r?\n/);
-  const start = lines.findIndex((line) => {
-    const heading = headingFromLine(line);
-    return heading && (headingSlug(heading.text) === id || line.includes(`id="${id}"`));
-  });
-  if (start < 0) return "";
-
-  const startHeading = headingFromLine(lines[start]);
-  const end = lines.findIndex((line, index) => {
-    if (index <= start) return false;
-    const heading = headingFromLine(line);
-    return heading && startHeading && heading.level <= startHeading.level;
-  });
-  return lines.slice(start + 1, end < 0 ? lines.length : end).join(" ");
-};
-const collectSectionEntries = (children: NavChild[], page: SearchPage, section: string, parentHeadings: string[] = []): SectionSearchEntry[] => children.flatMap((child) => {
-  const sectionBody = extractSectionBody(page.body, child.id);
-  const headingPath = [...parentHeadings, child.label];
-  return [
-    {
-      ...child,
-      section,
-      body: sectionBody,
-      excerpt: truncateSearchText(sectionBody),
-      screenshot: extractSectionScreenshot(sectionBody),
-      headingPath,
-      href: `/docs/${page.slug}/#${child.id}`,
-      kind: "section",
-      pageLabel: page.label,
-      pageSlug: page.slug,
-    },
-    ...collectSectionEntries(child.children || [], page, section, headingPath),
-  ];
-});
-const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section.items.flatMap((item) => {
-  const entry = docsBySlug.get(item.slug);
-  if (!entry) return [];
-
-  const page = {
-    ...item,
-    section: section.label,
-    body: entry.body ?? "",
-    excerpt: item.description,
-    screenshot: null,
-    headingPath: [item.label],
-    href: `/docs/${item.slug}/`,
-    kind: "guide",
-    pageLabel: item.label,
-    pageSlug: item.slug,
-  };
-
-  return [page, ...collectSectionEntries(item.children || [], page, section.label)];
-}));
+const navSlugs = new Set(docsNav.flatMap((section) => section.items.map((item) => item.slug)));
+const extraEntries = entries.filter((entry) => !navSlugs.has(getEntrySlug(entry)));
+const extraGroup = (slug: string) => slug.startsWith("settings/") ? "Settings" :
+  slug.startsWith("movies/") || slug.startsWith("tv-shows/") ? "Features" : "Guides";
 ---
 
 <SiteLayout title="Documentation" description="Practical guides for installing, connecting, using, and maintaining Plekt.">
@@ -127,77 +19,38 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
     <DocsSidebar />
     <div class="docs-main">
       <header class="docs-intro docs-home-hero">
-        <img
-          class="docs-home-logo"
-          data-theme-image
-          data-dark-src="/assets/optimized/plembfin_header_logo_dark-376.webp"
-          data-light-src="/assets/optimized/plembfin_header_logo_light-376.webp"
-          src="/assets/optimized/plembfin_header_logo_dark-376.webp"
-          alt="Plekt"
-          width="376"
-          height="61"
-        />
+        <h1>Plekt documentation</h1>
+        <p>Find practical guides to install Plekt, connect your services, and keep your watch history in sync.</p>
       </header>
 
       <section class="docs-search-results" id="docs-search-results" aria-live="polite" hidden>
         <p class="docs-search-results-status" id="docs-search-status" aria-live="polite"></p>
         <div class="docs-search-results-list article-body">
-          {docsSearchEntries.map((item) => {
-            const primaryHeading = item.headingPath[0];
-            const secondaryHeading = item.headingPath[1];
-            const tertiaryHeading = item.headingPath[2];
-            const leafIndex = item.headingPath.length - 1;
-            return (
-            <article
-              class="docs-global-search-result"
-              data-doc-search-result
-              data-search-kind={item.kind}
-              data-search-label={item.label}
-              data-search-headings={item.headingPath.join(" ")}
-              data-search-path={item.headingPath.map(headingSlug).join("|")}
-              data-search-page={item.pageSlug}
-              data-search-text={`${item.headingPath.join(" ")} ${item.pageLabel} ${item.section} ${item.body}`}
-            >
-              <p class="docs-global-search-result-source">{item.kind === "section" ? item.pageLabel : item.section}</p>
-              {primaryHeading && <h2>{leafIndex === 0 ? <a href={item.href}>{primaryHeading}</a> : primaryHeading}</h2>}
-              {secondaryHeading && <h3>{leafIndex === 1 ? <a href={item.href}>{secondaryHeading}</a> : secondaryHeading}</h3>}
-              {tertiaryHeading && <h4><a href={item.href}>{tertiaryHeading}</a></h4>}
-              {item.screenshot && (
-                <ScreenshotFigure
-                  darkSrc={item.screenshot.darkSrc}
-                  lightSrc={item.screenshot.lightSrc}
-                  alt={item.screenshot.alt}
-                  caption={item.screenshot.caption}
-                />
-              )}
-              {item.excerpt && <p>{item.excerpt}</p>}
-            </article>
-            );
-          })}
+
         </div>
         <p class="docs-search-empty" id="docs-search-empty" hidden>No documentation matches that search.</p>
       </section>
 
       <div class="docs-home-directory">
-        <a class="docs-home-feature" href="/docs/getting-started/">
-          <span class="docs-home-feature-label">PLEKT ONBOARDING</span>
-          <span class="docs-home-feature-title">Getting started</span>
-          <span class="docs-home-feature-copy">Claim your instance and work through Guided Setup to connect services and prepare your first sync.</span>
-          <span class="docs-home-feature-link">Read the getting started guide &#8594;</span>
-        </a>
         <div class="docs-home-directory-heading"><h2>Explore the documentation</h2><p>Choose a collection to find the guide you need.</p></div>
         <div class="docs-home-collections">
-          {docsNav.filter((section) => section.label !== "Start here").map((section) => (
+          {docsNav.map((section) => (
             <section class="docs-category docs-home-category" data-doc-search-category data-search-text={`${section.label} ${section.items.map((item) => `${item.label} ${item.description}`).join(" ")}`}>
-              <header class="docs-home-category-heading"><h3>{section.label}</h3></header>
+              <header class="docs-home-category-heading"><h3>{section.label}</h3><p>{section.description}</p></header>
               <div class="docs-home-guide-list">
                 {section.items.map((item) => {
                   const entry = docsBySlug.get(item.slug);
-                  return entry && <a class="docs-home-guide" href={`/docs/${item.slug}/`} data-doc-search-card data-search-text={`${item.label} ${item.description} ${entry.body}`}>
+                  return entry && <a class="docs-home-guide" href={`/docs/${item.slug}/`} data-doc-search-card data-search-text={`${item.label} ${item.description}`}>
                     <span class="docs-home-guide-copy"><strong>{item.label}</strong><span>{item.description}</span></span>
                     <span class="docs-home-guide-arrow" aria-hidden="true">&#8594;</span>
                   </a>;
                 })}
+                {extraEntries.filter((entry) => extraGroup(getEntrySlug(entry)) === section.label).map((entry) => (
+                  <a class="docs-home-guide" href={`/docs/${getEntrySlug(entry)}/`} data-doc-search-card>
+                    <span class="docs-home-guide-copy"><strong>{entry.data.title}</strong><span>{entry.data.description}</span></span>
+                    <span class="docs-home-guide-arrow" aria-hidden="true">&#8594;</span>
+                  </a>
+                ))}
               </div>
             </section>
           ))}
@@ -214,9 +67,12 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
   const categories = [...document.querySelectorAll<HTMLElement>("[data-doc-search-category]")];
   const resultsPanel = document.querySelector<HTMLElement>("#docs-search-results");
   const resultList = document.querySelector<HTMLElement>(".docs-search-results-list");
-  const resultItems = [...document.querySelectorAll<HTMLElement>("[data-doc-search-result]")];
+  type SearchItem = { kind: string; label: string; headingPath: string[]; pageSlug: string; pageLabel: string; section: string; body: string; excerpt: string; href: string };
+  let searchItems: SearchItem[] | null = null;
+  let searchRequest: Promise<SearchItem[]> | null = null;
+  let resultItems: HTMLElement[] = [];
   const emptyState = document.querySelector<HTMLElement>("#docs-search-empty");
-  const resultOrder = new Map(resultItems.map((item, index) => [item, index]));
+  const resultOrder = new Map<HTMLElement, number>();
   const normalizeSearchText = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
   const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -289,7 +145,7 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
     return score;
   };
 
-  const renderSearch = () => {
+  const renderSearch = async () => {
     if (!input) return;
     const query = normalizeSearchText(input.value);
     clearHighlights();
@@ -304,13 +160,64 @@ const docsSearchEntries = (docsNav as NavSection[]).flatMap((section) => section
 
     categories.forEach((category) => { category.hidden = true; });
     if (resultsPanel) resultsPanel.hidden = false;
+    if (status) status.textContent = "Searching documentation...";
+    if (clearButton) clearButton.hidden = false;
+    if (!searchItems) {
+      searchRequest ||= fetch("/docs/search-index.json").then((response) => {
+        if (!response.ok) throw new Error("Search index unavailable");
+        return response.json() as Promise<SearchItem[]>;
+      });
+      try {
+        searchItems = await searchRequest;
+      } catch {
+        searchRequest = null;
+        if (status && normalizeSearchText(input.value) === query) status.textContent = "Search is unavailable. Please try again.";
+        return;
+      }
+      if (normalizeSearchText(input.value) !== query) return;
+    }
+    if (!resultItems.length && resultList) {
+      resultItems = searchItems.map((item, index) => {
+        const article = document.createElement("article");
+        article.className = "docs-global-search-result";
+        article.dataset.docSearchResult = "";
+        article.dataset.searchKind = item.kind;
+        article.dataset.searchLabel = item.label;
+        article.dataset.searchHeadings = item.headingPath.join(" ");
+        article.dataset.searchPath = item.headingPath.map((heading) => heading.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")).join("|");
+        article.dataset.searchPage = item.pageSlug;
+        article.dataset.searchText = `${item.headingPath.join(" ")} ${item.pageLabel} ${item.section} ${item.body}`;
+        const source = document.createElement("p");
+        source.className = "docs-global-search-result-source";
+        source.textContent = item.kind === "section" ? item.pageLabel : item.section;
+        article.append(source);
+        item.headingPath.slice(0, 3).forEach((text, depth) => {
+          const heading = document.createElement(`h${depth + 2}`);
+          if (depth === Math.min(item.headingPath.length, 3) - 1) {
+            const link = document.createElement("a");
+            link.href = item.href;
+            link.textContent = text;
+            heading.append(link);
+          } else heading.textContent = text;
+          article.append(heading);
+        });
+        if (item.excerpt) {
+          const excerpt = document.createElement("p");
+          excerpt.textContent = item.excerpt;
+          article.append(excerpt);
+        }
+        resultOrder.set(article, index);
+        resultList.append(article);
+        return article;
+      });
+    }
+    if (resultsPanel) resultsPanel.hidden = false;
     if (clearButton) clearButton.hidden = false;
 
     const candidateItems = resultItems.filter((item) => {
       const searchableText = normalizeSearchText(item.getAttribute("data-search-text") || "");
       const headings = normalizeSearchText(item.getAttribute("data-search-headings") || "");
-      const kind = item.getAttribute("data-search-kind");
-      return kind === "guide" ? headings.includes(query) : searchableText.includes(query);
+      return searchableText.includes(query) || headings.includes(query);
     });
 
     const matchingItems = candidateItems.filter((item) => {

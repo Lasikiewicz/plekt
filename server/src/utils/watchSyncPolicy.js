@@ -66,6 +66,7 @@ const INTENT_BY_SOURCE = Object.freeze({
   // user asks for their history to be pushed there.
   force_sync: "historical",
   trakt_import: "import",
+  simkl_import: "import",
   tautulli_import: "import",
   netflix_import: "import",
 });

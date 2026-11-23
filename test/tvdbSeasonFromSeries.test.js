@@ -9,7 +9,7 @@ const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "plembfin-tvdb-season-test
 process.env.DATA_DIR = dataDir;
 
 const { db, toJson, parseJson } = await import("../server/src/db.js");
-const { getTvdbSeasonEpisodes } = await import("../server/src/utils/tvdbGateway.js");
+const { getCachedTvdbSeasonEpisodes, getTvdbSeasonEpisodes } = await import("../server/src/utils/tvdbGateway.js");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const seedSeries = db.prepare(
@@ -64,6 +64,34 @@ test("cold seasons are derived from a fresh cached series payload without any TV
     const row = db.prepare("SELECT details, updated_at_ms FROM tvdb_season_cache WHERE id = ?").get("7001_2");
     assert.equal(row.updated_at_ms, seriesAt, "the season row is never fresher than its series source");
     assert.equal(parseJson(row.details).episodes[0].name, "Derived Show S2E1");
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+const { getCachedTmdbSeason } = await import("../server/src/utils/tmdbGateway.js");
+
+test("getCachedTvdbSeasonEpisodes requires allowSeriesFallback and getCachedTmdbSeason derives uncached non-translated seasons from series_<tvdbId>", async () => {
+  const seriesAt = Date.now() - DAY_MS;
+  seedSeries.run("series_7003", "7003", "Cache Only Show", toJson(seriesPayload("7003", "Cache Only Show")), seriesAt);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => {
+    throw new Error("unexpected TVDB request");
+  };
+  try {
+    assert.equal(getCachedTvdbSeasonEpisodes({ tvdbId: "7003", seasonNumber: 2 }), null);
+    const season2 = getCachedTvdbSeasonEpisodes({ tvdbId: "7003", seasonNumber: 2, allowSeriesFallback: true });
+    assert.equal(season2?.episodes?.length, 2);
+    assert.deepEqual(season2.episodes[0], {
+      episode_number: 1,
+      name: "Cache Only Show S2E1",
+      overview: "Overview",
+      air_date: "2010-01-01",
+      still_path: "https://artworks.thetvdb.com/banners/episode/21.jpg",
+      runtime: 42,
+    });
+    const viaCachedTmdb = getCachedTmdbSeason({ tvdbId: "7003", seasonNumber: 2 });
+    assert.deepEqual(viaCachedTmdb?.episodes, season2.episodes);
   } finally {
     globalThis.fetch = originalFetch;
   }

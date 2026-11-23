@@ -10,6 +10,10 @@ const LEGACY_DB_FILE = "plembfin.db";
 
 // The database was plembfin.db before the rename. An install that has one keeps
 // using it: a second, empty database must never be created beside it.
+export function legacyDbFileName() {
+  return LEGACY_DB_FILE;
+}
+
 export function resolveDbPath(dataDir) {
   const legacyPath = path.join(dataDir, LEGACY_DB_FILE);
   return fs.existsSync(legacyPath) ? legacyPath : path.join(dataDir, DB_FILE);

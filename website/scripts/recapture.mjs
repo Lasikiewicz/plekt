@@ -389,7 +389,13 @@ async function capture(page, entry, file) {
   missingImages = [];
   artworkIssues = [];
   if (f.type === "scroll-compose") return composeScroll(page, f, file);
-  if (f.type === "viewport") { await waitForRails(page); missingImages = await loadAllImages(page); return shoot(page, file); }
+  if (f.type === "viewport") {
+    await waitForRails(page);
+    missingImages = await loadAllImages(page);
+    // Optional catalogue `hide` selectors are hidden in the captured frame only; the app is unchanged.
+    if (entry.hide?.length) await page.addStyleTag({ content: entry.hide.map((s) => `${s} { display: none !important; }`).join("\n") });
+    return shoot(page, file);
+  }
   if (f.type === "full-page") return page.screenshot({ path: file, fullPage: true });
   if (f.type === "element" || f.type === "crop") {
     const target = f.target;
@@ -462,6 +468,7 @@ for (const variant of Object.keys(catalogue.variants)) {
   if (!todo.length) continue;
   const { context, page } = await newVariantContext(variant);
   if (!buildChecked) await checkBuild(page);
+  let appliedStorage = {};
   for (const id of todo) {
     const entry = catalogue.images[id];
     const name = `${id}-${variant}.png`;
@@ -483,6 +490,17 @@ for (const variant of Object.keys(catalogue.variants)) {
       // An entry can name its own `viewport` when its published frame is not the standard size.
       await page.setViewportSize(entry.viewport || browserConfig.viewport);
       await page.goto(baseUrl + entry.route + (entry.hash ? `#${entry.hash}` : ""));
+      // Catalogue `storage`: browser-local keys this image needs (for example a card view). When they
+      // differ from the previous image in this context, set them and reload so the app renders with them.
+      const wantedStorage = entry.storage || {};
+      if (JSON.stringify(wantedStorage) !== JSON.stringify(appliedStorage)) {
+        await page.evaluate(([clear, set]) => {
+          for (const k of clear) localStorage.removeItem(k);
+          for (const [k, v] of Object.entries(set)) localStorage.setItem(k, v);
+        }, [Object.keys(appliedStorage), wantedStorage]);
+        appliedStorage = wantedStorage;
+        await page.reload();
+      }
       await settle(page);
       await runSteps(page, entry.steps);
       if (entry.steps) await settle(page);

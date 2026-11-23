@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
+import { createPerUserState } from "./perUserState.js";
 
 const MAX_ACTIVITIES = 40;
 const MAX_LINES = 500;
 const ACTIVITY_TTL_MS = 30 * 60 * 1000;
-const activities = new Map();
+const activitiesByUser = createPerUserState(() => new Map());
 
 function pruneActivities(now = Date.now()) {
+  const activities = activitiesByUser();
   for (const [id, activity] of activities) {
     if (now - activity.updatedAt > ACTIVITY_TTL_MS) activities.delete(id);
   }
@@ -29,6 +31,7 @@ function activitySnapshot(activity) {
 
 export function createMediaForceSyncActivity(meta = {}) {
   pruneActivities();
+  const activities = activitiesByUser();
   const now = Date.now();
   const activity = {
     id: randomUUID(),
@@ -47,7 +50,7 @@ export function createMediaForceSyncActivity(meta = {}) {
 }
 
 export function appendMediaForceSyncActivity(id, text, level = "info") {
-  const activity = activities.get(String(id));
+  const activity = activitiesByUser().get(String(id));
   if (!activity) return false;
   activity.lines.push({ at: Date.now(), level: String(level || "info"), text: String(text || "") });
   if (activity.lines.length > MAX_LINES) activity.lines.splice(0, activity.lines.length - MAX_LINES);
@@ -56,7 +59,7 @@ export function appendMediaForceSyncActivity(id, text, level = "info") {
 }
 
 export function requestMediaForceSyncCancellation(id) {
-  const activity = activities.get(String(id || ""));
+  const activity = activitiesByUser().get(String(id || ""));
   if (!activity) return { found: false, status: "not_found" };
   if (activity.status !== "running") return { found: true, requested: false, status: activity.status };
   if (!activity.cancellationRequested) {
@@ -67,11 +70,11 @@ export function requestMediaForceSyncCancellation(id) {
 }
 
 export function isMediaForceSyncCancellationRequested(id) {
-  return Boolean(activities.get(String(id || ""))?.cancellationRequested);
+  return Boolean(activitiesByUser().get(String(id || ""))?.cancellationRequested);
 }
 
 export function finishMediaForceSyncActivity(id, result, error = "") {
-  const activity = activities.get(String(id));
+  const activity = activitiesByUser().get(String(id));
   if (!activity) return false;
   const cancelled = Boolean(result?.cancelled);
   activity.status = error ? "error" : cancelled ? "cancelled" : "completed";
@@ -84,5 +87,5 @@ export function finishMediaForceSyncActivity(id, result, error = "") {
 
 export function getMediaForceSyncActivity(id) {
   pruneActivities();
-  return activitySnapshot(activities.get(String(id || "")));
+  return activitySnapshot(activitiesByUser().get(String(id || "")));
 }

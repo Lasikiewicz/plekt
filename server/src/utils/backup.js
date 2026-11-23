@@ -6,6 +6,7 @@ import { BACKUP_FORMAT, LEGACY_REDACTED_SECRETS_FIELD, REDACTED_SECRETS_FIELD, T
 import { scheduleShowProgressRebuild } from "./showProgressCache.js";
 import { anidbBackupCollections } from "./anidbBackup.js";
 import { initialSyncBackupCollection, quarantineInitialSyncSetting } from './initialSyncBackup.js';
+import { invalidateLibraryMembershipCache } from "./librarySelection.js";
 
 export { BACKUP_FORMAT };
 export const BACKUP_VERSION = 1;
@@ -90,6 +91,9 @@ function mergeRedactedSettings(existing, incoming) {
     const result = current && typeof current === "object" && !Array.isArray(current) ? { ...current } : {};
     for (const [key, value] of Object.entries(next)) {
       if (key === BROWSER_REDACTED_SECRETS_FIELD || key === LEGACY_REDACTED_SECRETS_FIELD) continue;
+      // Portable backups omit credentials and may target a different server;
+      // never blindly authorize libraryMonitoring IDs from a portable export.
+      if (key === "libraryMonitoring") continue;
       result[key] = merge(result[key], value);
     }
     return result;
@@ -300,7 +304,16 @@ const collections = {
   droppedTitleTrackerState: droppedTitleTrackerStateCollection(),
   droppedTitleTrackerCursors: rawCollection("dropped_title_tracker_cursors", "provider", ["connection_id","account_id","activities_json","updated_at"]),
   settings: browserSettingsCollection(),
-  runtimeState: jsonCollection("runtime_state"),
+  runtimeState: {
+    ...jsonCollection("runtime_state"),
+    browserRowToData(row) {
+      const data = parseJson(row.data, {}) || {};
+      if (!data || typeof data !== "object" || Array.isArray(data)) return data;
+      const sanitized = { ...data };
+      delete sanitized.calendarFeedToken;
+      return sanitized;
+    },
+  },
   loopKeys: simpleCollection("loop_keys", "id", (r) => ({ key: r.key || "", value: r.value || "", createdAt: r.created_at, expireAt: r.expire_at }), "INSERT OR REPLACE INTO loop_keys (id,key,value,created_at,expire_at) VALUES (@id,@key,@value,@created_at,@expire_at)", (id, d) => ({ id, key: d.key || "", value: d.value || "", created_at: toMs(d.createdAt), expire_at: toMs(d.expireAt) })),
   mediaArtwork: simpleCollection("media_artwork", "identity_key", (r) => ({ mediaType: r.media_type, title: r.title, tmdbId: r.tmdb_id, tvdbId: r.tvdb_id, imdbId: r.imdb_id, posterUrl: r.poster_url, posterSource: r.poster_source, updatedAt: r.updated_at }), "INSERT OR REPLACE INTO media_artwork (identity_key,media_type,title,tmdb_id,tvdb_id,imdb_id,poster_url,poster_source,updated_at) VALUES (@identity_key,@media_type,@title,@tmdb_id,@tvdb_id,@imdb_id,@poster_url,@poster_source,@updated_at)", (id, d) => ({ identity_key: id, media_type: d.mediaType || "tv", title: d.title || null, tmdb_id: d.tmdbId || null, tvdb_id: d.tvdbId || null, imdb_id: d.imdbId || null, poster_url: d.posterUrl || null, poster_source: d.posterSource || "manual", updated_at: toMs(d.updatedAt) ?? Date.now() })),
   seasonArtwork: seasonArtworkCollection(),
@@ -642,6 +655,7 @@ export function importCollectionBatch(name, documents, { reset = false, portable
   run();
 
   if (["settings", "tvdbMetadataCache"].includes(name)) db.prepare("DELETE FROM tvdb_metadata_cache WHERE id LIKE 'order_catalogue_v%'").run();
+  if (name === "settings") invalidateLibraryMembershipCache();
   if (["watchHistory", "playstate", "playbackProgress", "mediaArtwork", "seasonArtwork", "showSeasonSource", "settings"].includes(name)) bumpDataVersion();
   if (name === "droppedTitles") bumpUpNextVersion();
   // The show progress cache is derived from watch history and is otherwise only

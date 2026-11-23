@@ -15,7 +15,9 @@
     "build": "node scripts/build-check.js",
     "docs:check": "node scripts/docs-check.js",
     "code-index": "node scripts/generate-code-index.js",
+    "support-matrix": "node scripts/generate-support-matrix.js",
     "todo:check": "node scripts/check-todo.mjs",
+    "checks:time-gated": "node scripts/time-gated-checks.js",
     "assets:check": "node scripts/asset-versions.js",
     "assets:update": "node scripts/asset-versions.js --write",
     "demo:assets": "node scripts/build-demo-assets.js",
@@ -36,7 +38,7 @@
     "release:verify-live": "node scripts/verify-release-website.js"
   },
   "dependencies": {
-    "better-sqlite3": "^13.0.1",
+    "better-sqlite3": "^13.2.0",
     "busboy": "^1.6.0",
     "compression": "^1.8.2",
     "cookie-parser": "^1.4.7",
@@ -44,9 +46,9 @@
     "express-rate-limit": "^8.7.0",
     "fast-xml-parser": "^5.12.0",
     "morgan": "^1.12.0",
-    "rotating-file-stream": "^3.2.9",
+    "rotating-file-stream": "^4.0.0",
     "sharp": "^0.35.5",
-    "undici": "^8.12.3"
+    "undici": "^8.13.0"
   },
   "overrides": {
     "proxy-addr": "^2.0.8"

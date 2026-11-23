@@ -8,6 +8,7 @@ const repo = await import("../server/src/utils/trackerConnectionRepo.js");
 const ledger = await import("../server/src/utils/trackerWriteIntents.js");
 const { syncPendingTrackerWriteIntents } = await import("../server/src/utils/trackerIntentWorker.js");
 const { trackerIntentRequest } = await import("../server/src/utils/trackerIntentRequest.js");
+const { cancelSelectedTrackerWrites, recheckAllTrackerWrites } = await import("../server/src/utils/trackerWriteReviewActions.js");
 const { migrateLegacyTrackerIntents } = await import("../server/src/utils/trackerIntentMigration.js");
 const adapter = (await import("../server/src/utils/trackers/registry.js")).getTrackerAdapter("trakt");
 const media = (date = "2026-10-01T12:00:00.000Z") => ({ type: "movie", title: "Intent test", ids: { tmdb: "123" }, source: "plex", watched_at: date });
@@ -16,6 +17,47 @@ const get = (id) => db.prepare("SELECT * FROM tracker_write_intents WHERE id=?")
 const create = (connection, item, id, now) => ledger.createTrackerWriteIntent({ provider: "trakt", connection, media: item, action: "watched", watchRecordId: id, now });
 const reset = () => { for (const table of ["tracker_write_intents", "tracker_item_state", "tracker_play_history", "tracker_connections", "watch_history"]) db.prepare(`DELETE FROM ${table}`).run(); };
 test.beforeEach(reset);
+
+test("bulk cancellation affects only selected held writes", () => {
+  const connection = connect();
+  const selected = create(connection, media(), "selected");
+  const alsoSelected = create(connection, media(), "also-selected");
+  const unselected = create(connection, media(), "unselected");
+  const pending = create(connection, media(), "pending");
+  for (const item of [selected, alsoSelected, unselected]) ledger.finishTrackerWriteIntent(item.id, "review");
+  assert.equal(cancelSelectedTrackerWrites([selected, alsoSelected, pending].map(({ id }) => `tracker-intent-${id}`)), 2);
+  assert.equal(get(selected.id).status, "cancelled");
+  assert.equal(get(alsoSelected.id).status, "cancelled");
+  assert.equal(get(unselected.id).status, "review");
+  assert.equal(get(pending.id).status, "pending");
+});
+
+test("recheck all verifies competing Trakt writes for one local play without sending them", async (t) => {
+  const connection = repo.saveTrackerConnection({
+    provider: "trakt", remoteUserId: "offline-account", clientId: "offline-client",
+    accessToken: "offline-token", refreshToken: "offline-refresh", accessTokenExpiresAt: Date.now() + 3600000,
+  });
+  const watch = media();
+  const intents = ["first", "second"].map((logicalKey) => ledger.createTrackerWriteIntent({
+    provider: "trakt", connection, media: watch, action: "watched", watchRecordId: "same-local-watch", logicalKey,
+  }));
+  const reason = `Ambiguous provider event 9876; competing intents: ${intents.map(({ id }) => id).join(", ")}`;
+  for (const { id } of intents) ledger.finishTrackerWriteIntent(id, "review", reason);
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+  t.after(() => { globalThis.fetch = previousFetch; });
+  globalThis.fetch = async (url, options) => {
+    requests.push([new URL(url).pathname, options.method]);
+    return Response.json([{ id: 9876, watched_at: watch.watched_at,
+      movie: { title: watch.title, ids: { tmdb: 123 } } }]);
+  };
+  const result = await recheckAllTrackerWrites();
+  assert.deepEqual(result, { confirmed: 2, remaining: 0, errors: [] });
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0][0], "/sync/history/movies");
+  assert.equal(requests[0][1] || "GET", "GET");
+  assert.ok(intents.every(({ id }) => get(id).status === "settled"));
+});
 
 test("Simkl audited missing progress becomes a durable review hold, not a new preview send", async () => {
   const connection = repo.saveTrackerConnection({ provider: 'simkl', remoteUserId: 'simkl-account', accessToken: 'test', refreshToken: 'test', accessTokenExpiresAt: Date.now() + 3600000 });
@@ -35,6 +77,27 @@ test("Simkl audited missing progress becomes a durable review hold, not a new pr
   assert.ok(ledger.trackerWriteAttentionItems().some(row => row.intentId === intent.id));
   ledger.cancelTrackerWriteIntent(intent.id);
   assert.equal(get(intent.id).status, 'cancelled');
+});
+
+test("an Activity retry reopens only a Simkl write that validation stopped before any send", () => {
+  const connection = repo.saveTrackerConnection({ provider: 'simkl', remoteUserId: 'simkl-account', accessToken: 'test', refreshToken: 'test', accessTokenExpiresAt: Date.now() + 3600000 });
+  const bare = { type: 'movie', title: 'Tenet', ids: {}, source: 'plex', watched_at: media().watched_at };
+  const resolved = { ...bare, ids: { imdb: 'tt6723592', tmdb: '577922' } };
+  const unsent = ledger.createTrackerWriteIntent({ provider: 'simkl', connection, media: bare, action: 'watched', watchRecordId: 'unsent' });
+  ledger.finishTrackerWriteIntent(unsent.id, 'cancelled', 'Not sent: Simkl needs a verified media identity');
+  const reopened = ledger.reopenUnsentTrackerWriteIntent(get(unsent.id), resolved);
+  assert.equal(reopened.status, 'pending');
+  assert.equal(reopened.last_error, '');
+  assert.deepEqual(JSON.parse(reopened.media_json).ids, resolved.ids);
+  assert.ok(reopened.due_at > Date.now());
+
+  const attempted = ledger.createTrackerWriteIntent({ provider: 'simkl', connection, media: bare, action: 'watched', watchRecordId: 'attempted' });
+  db.prepare("UPDATE tracker_write_intents SET attempts=1 WHERE id=?").run(attempted.id);
+  ledger.finishTrackerWriteIntent(attempted.id, 'review', 'Not sent: Simkl needs a verified media identity');
+  assert.equal(ledger.reopenUnsentTrackerWriteIntent(get(attempted.id), resolved).status, 'review');
+  const unwatchPolicy = ledger.createTrackerWriteIntent({ provider: 'simkl', connection, media: bare, action: 'watched', watchRecordId: 'policy' });
+  ledger.finishTrackerWriteIntent(unwatchPolicy.id, 'cancelled', 'Simkl unwatches are not sent');
+  assert.equal(ledger.reopenUnsentTrackerWriteIntent(get(unwatchPolicy.id), resolved).status, 'cancelled');
 });
 
 test("catalogue rejection and another account's audit rejection keep their existing disposition", () => {
@@ -142,7 +205,7 @@ test("every ingest path that saves a watch dispatches with its record id", async
   const { readFile } = await import("node:fs/promises");
   for (const file of ["../server/src/scheduler.js", "../server/src/utils/recentWatchImport.js", "../server/src/routes/sync.js"]) {
     const source = await readFile(new URL(file, import.meta.url), "utf8");
-    const blocks = [...source.matchAll(/const (\w+) = await insertWatchRecord\([^\n]*\n(?:[^\n]*\n){0,6}?[^\n]*syncMediaPlaystate\(([^\n]*)/g)];
+    const blocks = [...source.matchAll(/const (\w+) = (?:await insertWatchRecord\([^\n]*|insertOutcome\.result;)\n(?:[^\n]*\n){0,6}?[^\n]*syncMediaPlaystate\(([^\n]*)/g)];
     assert.ok(blocks.length, file);
     for (const [block, id] of blocks) assert.match(block, new RegExp(`watchRecordId(: |\\s*=\\s*)${id}\\.id|watchRecordId = id`), block);
   }
@@ -286,7 +349,7 @@ test("unidentifiable Trakt not_found results hold the batch for review", async (
 test("one throwing tracker intent is held for review and the worker continues", async () => {
   const connection = connect();
   const broken = create(connection, { ...media(), watchRecordId: "broken" }, "broken", Date.now() - 10);
-  const next = create(connection, { ...media("2026-10-02T12:00:00.000Z"), watchRecordId: "next" }, "next", Date.now());
+  const next = create(connection, { ...media("2026-10-02T12:00:00.000Z"), source: "webhook", watchRecordId: "next" }, "next", Date.now());
   db.prepare("UPDATE tracker_write_intents SET media_json='{' WHERE id=?").run(broken.id);
   const originalFetch = globalThis.fetch;
   const requests = [];
@@ -322,6 +385,22 @@ test("30-day cleanup removes settled intents, retains permanent acknowledgements
   assert.equal(get(pending.id).status, "review");
   assert.equal(ledger.trackerWriteAttentionItems().length, 1);
   assert.equal(ledger.correlateTrackerObservation("trakt", connection, { historyId: "permanent", media: media(), watchedAt: Date.parse(media().watched_at) }).status, "known");
+});
+
+test("automatic discovery throttles pruning but still reviews expired pending writes", () => {
+  const connection = connect();
+  const now = Date.now();
+  ledger.maintainTrackerWriteIntents(now);
+  const old = now - ledger.TRACKER_INTENT_RETENTION_MS - 1000;
+  const settled = create(connection, media(), "throttled-settled", old);
+  const pending = create(connection, media(), "throttled-pending", old);
+  ledger.finishTrackerWriteIntent(settled.id, "settled");
+  db.prepare("UPDATE tracker_write_intents SET settled_at=? WHERE id=?").run(old, settled.id);
+  ledger.listDueTrackerWriteIntents(now + 1000);
+  assert.equal(get(settled.id).status, "settled");
+  assert.equal(get(pending.id).status, "review");
+  ledger.listDueTrackerWriteIntents(now + 5 * 60_000);
+  assert.equal(get(settled.id), undefined);
 });
 
 test("account replacement clears old ledger; same account refresh preserves it", () => {

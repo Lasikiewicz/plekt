@@ -31,6 +31,8 @@
     <link rel="modulepreload" href="/modules/route-modules.js?v=2.3.0.0.1" />
     <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.3.0.0.1" />
     <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.3.0.0.1" />
+    <link rel="modulepreload" href="/modules/manual-watch-review-bulk.js?v=2.3.0.0.1" />
+    <link rel="modulepreload" href="/modules/library-monitoring.js?v=2.3.0.0.1" />
     <link rel="stylesheet" href="/styles.css?v=2.3.0.0.1" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
@@ -337,6 +339,8 @@
           </div>
         </header>
 
+        <div id="librarySelectionBanner" class="library-selection-banner hidden" role="alert" aria-live="polite"></div>
+
         <section id="timeline-view" class="view-panel" data-view-panel="dashboard">
           <h1 class="sr-only">Dashboard</h1>
     <section class="glass-panel p-section live-panel">
@@ -367,6 +371,20 @@
                 <input type="checkbox" role="switch" data-up-next-sync-option="enabled" aria-labelledby="upNextSyncOptionLabel" aria-describedby="upNextSyncOptionHelp" />
                 <span class="now-playing-option-copy"><span id="upNextSyncOptionLabel">Sync Up Next to media apps</span><small id="upNextSyncOptionHelp">Keep Plex, Emby and Jellyfin's queues aligned with Plekt.</small></span>
               </label>
+              <label class="now-playing-option now-playing-option-select">
+                <span class="now-playing-option-copy"><span id="upNextSortOptionLabel">Up Next order</span><small id="upNextSortOptionHelp">Sort the queue by recent activity or air date.</small></span>
+                <select data-up-next-sort-option="sort" aria-labelledby="upNextSortOptionLabel" aria-describedby="upNextSortOptionHelp">
+                  <option value="recently_watched">Recently watched</option>
+                  <option value="newly_aired">Newly aired first</option>
+                  <option value="oldest_unwatched">Oldest unwatched first</option>
+                  <option value="closest_to_finishing">Closest to finishing</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </label>
+              <label class="now-playing-option">
+                <input type="checkbox" data-up-next-sort-option="partWatchedFirst" />
+                <span class="now-playing-option-copy"><span>Part watched first</span></span>
+              </label>
               <p class="now-playing-option-error hidden" role="alert"></p>
             </div>
             <div id="nowPlayingGrid" class="now-playing-grid" aria-live="polite"></div>
@@ -380,6 +398,7 @@
                   <svg class="up-next-sync-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                     <path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z" />
                   </svg>
+                  <span class="up-next-sync-dot" aria-hidden="true"></span>
                   <span class="up-next-sync-label" aria-hidden="true"></span>
                 </button>
                 <button id="upNextDismissedButton" class="icon-button up-next-dismissed-button hidden" type="button" aria-label="Show dismissed Up Next items" title="Show dismissed Up Next items">
@@ -733,10 +752,19 @@
 
         <section id="manual-watch-review-view" class="view-panel hidden" data-view-panel="manualWatchReview">
           <section class="glass-panel p-section manual-watch-review-page">
+            <div class="manual-watch-review-intro">
+              <p class="manual-watch-review-intro-lead">
+                A connected media app marked these items watched without a playback session, so Plekt paused syncing until you decide.
+              </p>
+              <div class="manual-watch-review-intro-legend">
+                <span><strong class="is-confirm">Confirm watched</strong> saves the watch date you choose to Plekt and syncs it to your connected apps.</span>
+                <span><strong class="is-dismiss">Dismiss</strong> keeps the item unwatched and marks it unplayed across your connected apps.</span>
+              </div>
+            </div>
             <div class="manual-watch-review-toolbar">
               <label class="compact-field explorer-search-box manual-watch-review-search-field">
                 <span>Search</span>
-                <input id="manualWatchReviewSearch" class="field" type="search" placeholder="Search shows or episodes..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
+                <input id="manualWatchReviewSearch" class="field" type="search" placeholder="Search movies, shows, or episodes..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" />
               </label>
               <div class="manual-watch-review-toolbar-status">
                 <button id="manualWatchReviewRefresh" class="button-ghost" type="button" title="Re-read Plekt's current watch state and review queue">Recheck status</button>
@@ -1154,6 +1182,7 @@
                           </summary>
                           <div id="plexServerPanel" class="tool-item-row"></div>
                         </details>
+                        <div id="plexLibraryMonitoringPanel" class="library-monitoring-section hidden"></div>
                       </div>
                     </article>
                   </div>
@@ -1199,6 +1228,7 @@
                           </summary>
                           <div id="embyServerPanel" class="tool-item-row"></div>
                         </details>
+                        <div id="embyLibraryMonitoringPanel" class="library-monitoring-section hidden"></div>
                       </div>
                     </article>
                   </div>
@@ -1244,6 +1274,7 @@
                           </summary>
                           <div id="jellyfinServerPanel" class="tool-item-row"></div>
                         </details>
+                        <div id="jellyfinLibraryMonitoringPanel" class="library-monitoring-section hidden"></div>
                       </div>
                     </article>
                   </div>

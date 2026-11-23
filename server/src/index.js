@@ -18,6 +18,7 @@ import { handleCalendarFeed, handleCalendarFeedSettings } from "./routes/calenda
 import { handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats, handleChangelog, handleClearCache, handleDebugPlexMatch, handleDiagnosticLogs, handleMaintenanceStub, handlePing, handleRefreshTmdbMetadata, handleRefreshTvdbMetadata, handleRematchTvShows, handleSyncHealth, handleSyncMatchReport, handleEpisodeTitleAudit, handleEpisodeTitleBackfill, handlePhantomWatchAudit, handlePhantomWatchRepair, handleStaleTraktImportAudit, handleStaleTraktImportRepair, handleStalePendingWatchAudit, handleStalePendingWatchRepair, handleSplitIdentityUnwatchAudit, handleSplitIdentityUnwatchRepair, handleLikelyFalseUnwatchAudit, handleLikelyFalseUnwatchRepair } from "./routes/maintenance.js";
 import { handleWipeDataPreview, handleWipeData } from "./routes/wipeData.js";
 import { handleEmbyLikeAuth, handleEmbyLikeConnection, handlePlexAuth, handlePlexConnection } from "./routes/mediaAuth.js";
+import { handleLibraryMonitoring } from "./routes/libraryMonitoring.js";
 import { handleTrackerAuth, handleTrackerConnections } from "./routes/trackerAuth.js";
 import { handleLiveUpdates } from "./routes/liveUpdates.js";
 import { handleSyncAttention } from "./routes/syncAttention.js";
@@ -194,6 +195,7 @@ async function dispatch(req, res) {
     if (path === "delete-history-record") return handleDeleteHistoryRecord(req, res);
     if (path === "sync-jobs") return handleSyncJobs(req, res);
     if (path === "sync/libraries") return handleSyncLibraries(req, res);
+    if (path === "library-monitoring" || /^library-monitoring\/(?:plex|emby|jellyfin)(?:\/libraries)?$/i.test(path)) return handleLibraryMonitoring(req, res, path);
     if (path === "sync-match-report") return handleSyncMatchReport(req, res);
     if (path === "sync-match-report/dismiss") return handleDismissSyncMatch(req, res);
     if (path === "health/sync") return handleSyncHealth(req, res);

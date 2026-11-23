@@ -111,6 +111,18 @@ export async function recordSyncHistory(media = {}, summary = {}, action = "watc
   }).catch((error) => console.error("Failed to append scheduled sync history", error));
 }
 
+const targetLinePatterns = new Map();
+
+function targetLinePattern(target = "") {
+  const key = String(target || "").toLowerCase();
+  let pattern = targetLinePatterns.get(key);
+  if (!pattern) {
+    pattern = new RegExp(`^(?:target\\s+)?${key}(?: progress)? status:`, "i");
+    targetLinePatterns.set(key, pattern);
+  }
+  return pattern;
+}
+
 export function isTargetSynced(telemetry = "", target = "", source = "") {
   const src = String(source || "").toLowerCase();
   const tgt = String(target || "").toLowerCase();
@@ -118,27 +130,33 @@ export function isTargetSynced(telemetry = "", target = "", source = "") {
   if (trackerProviderForSource(src) === tgt) return true;
 
   const text = String(telemetry || "").toLowerCase();
+  if (!text) return false;
   if (text.includes("force sync resolved status to success")) return true;
 
-  const lines = text.split("\n");
-  for (const line of lines) {
-    if (line.includes(`${tgt} status:`) || line.includes(`${tgt} progress status:`)) {
-      if (line.includes("success")) return true;
-      if (line.includes("loop")) return true;
-      // "not found" means the item simply isn't in this platform's library â€” treat as terminal
-      // so it doesn't get re-queued every minute forever. Only "error" is retryable.
-      if (line.includes("skipped")) return true;
-      return false;
-    }
-  }
+  const statusNeedle = `${tgt} status:`;
+  const progressNeedle = `${tgt} progress status:`;
+  let idx = text.indexOf(statusNeedle);
+  if (idx < 0) idx = text.indexOf(progressNeedle);
+  if (idx < 0) return false;
+  const lineStart = text.lastIndexOf("\n", idx) + 1;
+  const lineEnd = text.indexOf("\n", idx);
+  const line = lineEnd < 0 ? text.slice(lineStart) : text.slice(lineStart, lineEnd);
+  if (line.includes("success")) return true;
+  if (line.includes("loop")) return true;
+  // "not found" means the item simply isn't in this platform's library, so treat it as terminal
+  // so it doesn't get re-queued every minute forever. Only "error" is retryable.
+  if (line.includes("skipped")) return true;
   return false;
 }
 
 // Manual watch rows write "Plex status:" / "Trakt status:" without the
 // "Target " prefix, so both spellings name a target's line.
 export function targetTelemetryLine(telemetry = "", target = "") {
-  const pattern = new RegExp(`^(?:target\\s+)?${target}(?: progress)? status:`, "i");
-  return String(telemetry || "").split("\n").find((line) => pattern.test(line.trim())) || "";
+  const raw = String(telemetry || "");
+  const tgt = String(target || "").toLowerCase();
+  if (!raw || !tgt || !raw.toLowerCase().includes(`${tgt}`)) return "";
+  const pattern = targetLinePattern(tgt);
+  return raw.split("\n").find((line) => pattern.test(line.trim())) || "";
 }
 
 export function traktTelemetryLine(telemetry = "") {

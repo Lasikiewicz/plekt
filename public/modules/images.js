@@ -58,8 +58,10 @@ export function safePosterElementUrl(value) {
 }
 
 function persistentPosterCacheKey() {
-  const userKey = state.currentUser?.uid || state.currentUser?.email || "local";
-  return `${POSTER_LOOKUP_PERSISTED_CACHE_KEY}:${userKey}`;
+  const user = state.currentUser || {};
+  const userKey = user.uid || user.email || "local";
+  const active = String(user.activeUser || "").trim();
+  return `${POSTER_LOOKUP_PERSISTED_CACHE_KEY}:${active ? `${userKey}:${active}` : userKey}`;
 }
 
 function readPersistentPosterCache() {

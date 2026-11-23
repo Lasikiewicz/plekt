@@ -8,6 +8,23 @@ const dataDir = makeTempDataDir("plembfin-up-next-cache-");
 const { bumpDataVersion, bumpUpNextVersion, getDataVersion, getUpNextVersion } = await import("../server/src/db.js");
 const { getUpNextCacheSnapshot } = await import("../server/src/utils/upNextCache.js");
 
+test("a changed generation rebuilds even if its predecessor rejects", async () => {
+  let rejectBuild;
+  let signalStarted;
+  const started = new Promise((resolve) => { signalStarted = resolve; });
+  const old = getUpNextCacheSnapshot(() => new Promise((_, reject) => {
+    rejectBuild = reject;
+    signalStarted();
+  }), { refresh: true });
+  const expectedFailure = assert.rejects(old, /older build failed/);
+  await started;
+  bumpUpNextVersion();
+  const latest = getUpNextCacheSnapshot(async () => [{ id: "new-generation" }], { refresh: true });
+  rejectBuild(new Error("older build failed"));
+  await expectedFailure;
+  assert.equal((await latest).items[0].id, "new-generation");
+});
+
 test("Up Next rebuilds synchronously when watch history changes", async () => {
   let buildCount = 0;
   const initial = await getUpNextCacheSnapshot(async () => {

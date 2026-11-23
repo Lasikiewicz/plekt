@@ -235,11 +235,15 @@ Then:
 ```bash
 git checkout -B develop origin/main
 git branch -u origin/develop
+node scripts/roll-forward-todo.mjs
+npm run todo:check
 git status -sb
 ```
 
 `develop` now equals the release commit and shows as ahead of `origin/develop` by a
 fast-forward. Tell the user the previous `develop` tip hash (recoverable from the reflog).
+The rollover uses the released package version to set the next minor release and, when
+present, the next patch hotfix. It preserves unfinished entries and their post-release version.
 
 Do not merge `origin/main` into `develop`, and do not push `develop`. The old step merged
 the release commit into `develop` and pushed it straight away. That push carried the

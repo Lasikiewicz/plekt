@@ -7,7 +7,7 @@ process.env.WATCHED_PLAYED_SYNC_ENABLED = "false";
 const { db, toJson } = await import("../server/src/db.js");
 const { setShowSeasonSource } = await import("../server/src/utils/seasonSource.js");
 const { forceSyncMediaState } = await import("../server/src/utils/mediaForceSync.js");
-const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
+const { saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 const episode = (id, season, number, name) => ({ id, seriesId: 73871, season, episode: number, name });
 const catalogue = { tvdbId: 73871, fetchedAt: Date.now() + 3600000, orders: {
   official: [episode(131184, 2, 2, "Mars University"), episode(131188, 2, 6, "Brannigan, Begin Again")],
@@ -63,11 +63,14 @@ test("approving Mars University targets its Emby item rather than DVD S02E02", a
   const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
   const config = { plex: { disabled: true }, emby: { baseUrl: "https://futurama-review.test", apiKey: "test", userId: "user" } };
   await saveMediaConfig(config);
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["1"] });
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-srv", selectedIds: ["emby-lib-1"] });
   const writes = [];
   const original = globalThis.fetch;
   t.after(() => { globalThis.fetch = original; });
   globalThis.fetch = async (input, options = {}) => {
     const url = new URL(String(input));
+    if (url.pathname.endsWith("/Ancestors")) return Response.json([{ Id: "emby-lib-1", Type: "CollectionFolder", CollectionType: "tvshows" }]);
     if (url.searchParams.has("AnyProviderIdEquals")) return Response.json({ Items: [{ Id: "futurama", ProviderIds: { Tvdb: "73871" } }] });
     if (url.searchParams.get("ParentId") === "futurama") return Response.json({ Items: [
       { Id: "mars", ParentIndexNumber: 1, IndexNumber: 11, ProviderIds: { Tvdb: "131184" } },
@@ -81,7 +84,8 @@ test("approving Mars University targets its Emby item rather than DVD S02E02", a
   };
   const queued = enqueueManualWatchReview({ type: "episode", source: "plex", title: "Futurama - S02E02",
     showTitle: "Futurama", episode_title: "Mars University", season: 2, episode: 2, ids: { tvdb: "73871" },
-    watchProvenance: { episode_order: { tvdbId: "73871", dvdId: 131184, airedId: 131184, order: "dvd" } },
+    librarySectionId: "1",
+    watchProvenance: { library_id: "1", episode_order: { tvdbId: "73871", dvdId: 131184, airedId: 131184, order: "dvd" } },
   }, { sourceFingerprint: "futurama-mars-review" });
   let status = 200, body;
   await handleManualWatchReview({ method: "POST", body: { mode: "now" }, headers: { "x-api-key": AUTH.apiKey }, cookies: {},

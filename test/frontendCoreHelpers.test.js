@@ -30,7 +30,7 @@ const { state } = await import("../public/modules/state.js");
 const utils = await import("../public/modules/utils.js");
 const { nowPlayingHref } = await import("../public/modules/media-routing.js");
 const { dedupeMediaRecords, mediaRecordIdentity } = await import("../public/modules/media-records.js");
-const { isShowInUpNext, manualShowMatches, upNextShowActionHtml } = await import("../public/modules/up-next-shared.js");
+const { chooseUpNextAddOptions, isShowInUpNext, manualShowMatches, upNextShowActionHtml } = await import("../public/modules/up-next-shared.js");
 const { loadManualWatchReviewSummary, renderManualWatchReviewSummary } = await import("../public/modules/status-indicators.js");
 const { hydratePersonalMetadata } = await import("../public/modules/personal-media-metadata.js");
 const { refreshRatingSyncStatus } = await import("../public/modules/rating-sync-settings.js");
@@ -532,4 +532,86 @@ test("mobile page controls use the shared title Options menu", () => {
   assert.match(stylesSource, /\.upcoming-week-day\.is-outside \{\s+display: none;/);
   assert.doesNotMatch(stylesSource, /\.upcoming-week-day\.is-outside,\s+\.upcoming-week-day\.is-empty/);
   assert.match(stylesSource, /grid-template-areas: "search month today feed"/);
+});
+
+test("chooseUpNextAddOptions defaults to earliest unwatched and lets multi-season shows pick a season", async () => {
+  const previousDoc = globalThis.document;
+  const overlays = [];
+  const listeners = new Map();
+  const makeControl = () => ({
+    checked: false,
+    value: "",
+    handlers: {},
+    addEventListener(type, fn) { this.handlers[type] = fn; },
+    focus() {},
+  });
+  globalThis.document = {
+    addEventListener(type, fn) { listeners.set(type, fn); },
+    removeEventListener(type) { listeners.delete(type); },
+    createElement() {
+      const earliestRadio = makeControl();
+      earliestRadio.checked = true;
+      const seasonRadio = makeControl();
+      const seasonSelect = Object.assign(makeControl(), { value: "3" });
+      const confirmBtn = makeControl();
+      const cancelBtn = makeControl();
+      const overlay = {
+        className: "",
+        innerHTML: "",
+        removed: false,
+        handlers: {},
+        addEventListener(type, fn) { this.handlers[type] = fn; },
+        remove() { this.removed = true; },
+        querySelector(selector) {
+          if (selector.includes('value="earliest"')) return earliestRadio;
+          if (selector.includes('value="season"')) return seasonRadio;
+          if (selector.includes("up-next-add-season-select")) return seasonSelect;
+          if (selector.includes("confirm-dialog-confirm")) return confirmBtn;
+          if (selector.includes("confirm-dialog-cancel")) return cancelBtn;
+          return null;
+        },
+        __controls: { earliestRadio, seasonRadio, seasonSelect, confirmBtn, cancelBtn },
+      };
+      return overlay;
+    },
+    body: { appendChild(overlay) { overlays.push(overlay); } },
+    querySelector: () => null,
+    querySelectorAll: () => [],
+  };
+
+  try {
+    const showOptions = {
+      earliestUnwatched: { season: 1, episode: 4, title: "Fourth" },
+      watchedSeasons: [1, 3],
+      watchedSeasonCount: 2,
+      seasons: [
+        { season_number: 1, episode_count: 10, watched_count: 3, has_unwatched: true, next_episode: { season: 1, episode: 4, title: "Fourth" } },
+        { season_number: 2, episode_count: 10, watched_count: 0, has_unwatched: true, next_episode: { season: 2, episode: 1, title: "S2E1" } },
+        { season_number: 3, episode_count: 10, watched_count: 2, has_unwatched: true, next_episode: { season: 3, episode: 3, title: "S3E3" } },
+      ],
+    };
+
+    const firstPromise = chooseUpNextAddOptions({ title: "Multi Show" }, showOptions);
+    const firstOverlay = overlays[0];
+    assert.match(firstOverlay.innerHTML, /Earliest unwatched/);
+    assert.match(firstOverlay.innerHTML, /Starts at S01E04 — Fourth/);
+    assert.match(firstOverlay.innerHTML, /Seasons 1, 3/);
+    assert.match(firstOverlay.innerHTML, /Season 3 \(2\/10 watched\) · Next: S03E03/);
+    firstOverlay.__controls.confirmBtn.handlers.click();
+    assert.deepEqual(await firstPromise, { targetSeason: null });
+
+    const secondPromise = chooseUpNextAddOptions({ title: "Multi Show" }, showOptions);
+    const secondOverlay = overlays[1];
+    secondOverlay.__controls.seasonSelect.value = "3";
+    secondOverlay.__controls.seasonSelect.handlers.change();
+    assert.equal(secondOverlay.__controls.seasonRadio.checked, true);
+    secondOverlay.__controls.confirmBtn.handlers.click();
+    assert.deepEqual(await secondPromise, { targetSeason: 3 });
+
+    const thirdPromise = chooseUpNextAddOptions({ title: "Multi Show" }, showOptions);
+    overlays[2].__controls.cancelBtn.handlers.click();
+    assert.equal(await thirdPromise, null);
+  } finally {
+    globalThis.document = previousDoc;
+  }
 });

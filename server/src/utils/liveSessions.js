@@ -7,6 +7,7 @@ import { isUpNextSeedDeviceId } from "./embyClient.js";
 import { decodeHtmlEntities } from "./parsers.js";
 import { watchedThresholdPercent } from "./tuning.js";
 import { resolveSeriesIds } from "./seriesIdentity.js";
+import { getProviderLibrarySelection, resolveItemLibraryMembership } from "./librarySelection.js";
 
 function trimTrailingSlash(value = "") {
   return String(value).trim().replace(/\/+$/, "");
@@ -268,6 +269,8 @@ export function parsePlexSessions(xmlText = "", config = {}) {
       // Stable per item, and the piece that keeps two movies on one client from
       // sharing a session key - see sessionKey().
       mediaId: attributes.ratingKey || attributes.key || "",
+      librarySectionId: String(attributes.librarySectionID || attributes.librarySectionId || "").trim(),
+      rawType: String(attributes.type || "").trim(),
       title: plexTitle(attributes, mediaType),
       mediaType,
       offsetMs,
@@ -485,8 +488,34 @@ function plexSessionMatchesUser(session, username, accountId) {
   return Number.isFinite(sessionAccountId) && sessionAccountId === Number(accountId);
 }
 
+function sessionLibraryEnforced(config = {}, provider = "") {
+  const section = config?.[provider];
+  return Boolean(config?.libraryMonitoring || section?.libraryMonitoringEnforced || Array.isArray(section?.monitoredLibraryIds));
+}
+
+async function filterMonitoredSessions(provider, config, sessions = []) {
+  if (!sessionLibraryEnforced(config, provider)) return sessions;
+  if (!getProviderLibrarySelection(config, provider).hasSelectedLibraries) return [];
+  const allowed = [];
+  for (const session of sessions) {
+    const decision = await resolveItemLibraryMembership(provider, config, {
+      itemId: session.mediaId,
+      ratingKey: session.mediaId,
+      Id: session.mediaId,
+      librarySectionId: session.librarySectionId || session.raw?.attributes?.librarySectionID || "",
+      rawType: session.rawType || session.raw?.NowPlayingItem?.Type || session.mediaType || "",
+      serverId: session.raw?.ServerId || session.raw?.NowPlayingItem?.ServerId || "",
+    }, { lane: "interactive" });
+    if (decision.allowed) allowed.push({ ...session, libraryId: decision.libraryId });
+  }
+  return allowed;
+}
+
 export async function fetchPlexSessions(config, { allUsers = false } = {}) {
   if (!config.plex.baseUrl || !config.plex.token) return { sessions: [], ok: true };
+  if (!allUsers && sessionLibraryEnforced(config, "plex") && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+    return { sessions: [], ok: true };
+  }
   const url = new URL(`${config.plex.baseUrl}/status/sessions`);
 
   try {
@@ -495,7 +524,7 @@ export async function fetchPlexSessions(config, { allUsers = false } = {}) {
     const text = await response.text();
     const parsed = parsePlexSessions(text, config.plex);
     if (allUsers) return { sessions: parsed, ok: true };
-    if (!config.plex.username) return { sessions: parsed, ok: true };
+    if (!config.plex.username) return { sessions: await filterMonitoredSessions("plex", config, parsed), ok: true };
 
     // Memoized for 10 minutes inside resolvePlexAccountId, so the poller's own
     // cadence does not turn this into a per-poll request to Plex.
@@ -513,7 +542,7 @@ export async function fetchPlexSessions(config, { allUsers = false } = {}) {
       });
     }
 
-    return { sessions, ok: true };
+    return { sessions: await filterMonitoredSessions("plex", config, sessions), ok: true };
   } catch (error) {
     console.error("Plex live session fetch failed", { url: String(url), error: error?.message || String(error) });
     return { sessions: [], ok: false };
@@ -548,6 +577,9 @@ async function withEpisodeSeriesIds(sessions, source, providerConfig) {
 
 async function fetchEmbySessions(config) {
   if (!config.emby.baseUrl || !config.emby.apiKey) return { sessions: [], ok: true };
+  if (sessionLibraryEnforced(config, "emby") && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+    return { sessions: [], ok: true };
+  }
   const url = new URL(`${config.emby.baseUrl}/Sessions`);
   url.searchParams.set("api_key", config.emby.apiKey);
   const json = await fetchJson(url, { Accept: "application/json", "X-Emby-Token": config.emby.apiKey });
@@ -558,11 +590,15 @@ async function fetchEmbySessions(config) {
     .filter(Boolean)
     .filter((session) => !config.emby.userId || String(session.raw?.UserId || "").toLowerCase() === String(config.emby.userId).toLowerCase())
     .filter((session) => !isUpNextSeedSession(session));
-  return { sessions: await withEpisodeSeriesIds(normalized, "emby", config.emby), ok: true };
+  const monitored = await filterMonitoredSessions("emby", config, normalized);
+  return { sessions: await withEpisodeSeriesIds(monitored, "emby", config.emby), ok: true };
 }
 
 async function fetchJellyfinSessions(config) {
   if (!config.jellyfin.baseUrl || !jellyfinCredential(config.jellyfin)) return { sessions: [], ok: true };
+  if (sessionLibraryEnforced(config, "jellyfin") && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+    return { sessions: [], ok: true };
+  }
   const url = new URL(`${config.jellyfin.baseUrl}/Sessions`);
   const json = await fetchJson(url, jellyfinAuthHeaders(config.jellyfin));
   if (!json) return { sessions: [], ok: false };
@@ -572,7 +608,8 @@ async function fetchJellyfinSessions(config) {
     .filter(Boolean)
     .filter((session) => !config.jellyfin.userId || String(session.raw?.UserId || "").toLowerCase() === String(config.jellyfin.userId).toLowerCase())
     .filter((session) => !isUpNextSeedSession(session));
-  return { sessions: await withEpisodeSeriesIds(normalized, "jellyfin", config.jellyfin), ok: true };
+  const monitored = await filterMonitoredSessions("jellyfin", config, normalized);
+  return { sessions: await withEpisodeSeriesIds(monitored, "jellyfin", config.jellyfin), ok: true };
 }
 
 // Returns { sessions, failedSources }: failedSources names which of "plex"/"emby"/

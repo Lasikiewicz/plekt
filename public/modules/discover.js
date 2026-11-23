@@ -1,5 +1,5 @@
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
-import { state, elements } from "./state.js?v=2.3.0.0.1";
+import { state, elements, currentTenantCacheKey } from "./state.js?v=2.3.0.0.1";
 import { escapeHtml, formatTmdbDate } from "./utils.js?v=2.3.0.0.1";
 import { hydratePosters } from "./images.js?v=2.3.0.0.1";
 import { renderMediaCard } from "./media-card.js?v=2.3.0.0.1";
@@ -43,9 +43,13 @@ function discoverVariantKey() {
   return `${state.discoverMediaType || "all"}|${state.discoverGenreId || ""}`;
 }
 
+function discoverStorageKey() {
+  return `${DISCOVER_CACHE_KEY}:${currentTenantCacheKey()}`;
+}
+
 function readDiscoverCache() {
   try {
-    const stored = JSON.parse(localStorage.getItem(DISCOVER_CACHE_KEY) || "null");
+    const stored = JSON.parse(localStorage.getItem(discoverStorageKey()) || "null");
     return stored?.entries && typeof stored.entries === "object" && !Array.isArray(stored.entries)
       ? stored
       : { entries: {} };
@@ -81,7 +85,7 @@ function persistDiscoverCache() {
     const boundedEntries = Object.fromEntries(Object.entries(entries)
       .sort(([, a], [, b]) => Number(b?.savedAt || 0) - Number(a?.savedAt || 0))
       .slice(0, DISCOVER_CACHE_MAX_ENTRIES));
-    localStorage.setItem(DISCOVER_CACHE_KEY, JSON.stringify({ version: 1, entries: boundedEntries }));
+    localStorage.setItem(discoverStorageKey(), JSON.stringify({ version: 1, entries: boundedEntries }));
   } catch {
     // A full/private browser storage area must not make Discover fail.
   }

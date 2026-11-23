@@ -42,7 +42,7 @@ const ANALYTICS_CONFIG = {
   },
 };
 
-const { DATA_DIR, DB_PATH, PUBLIC_DIR, MEDIA_DIR, ensureDataDirs } = await import("./src/paths.js");
+const { DATA_DIR, DB_PATH, PUBLIC_DIR, MEDIA_DIR, FULL_BACKUPS_DIR, ensureDataDirs } = await import("./src/paths.js");
 if (path.basename(DB_PATH) === "plembfin.db" && fs.existsSync(path.join(DATA_DIR, "plekt.db"))) {
   console.warn(`[config] Both plembfin.db and plekt.db exist in ${DATA_DIR}. Using plembfin.db; move one of them away to choose which database is used.`);
 }
@@ -346,10 +346,16 @@ const isStreamedTenantUpload = (req) => isStreamedUpload({ path: String(req.path
 // Routes that always operate against the root install (login, logout, claim,
 // user management, and the admin's unprefixed /api/webhook). All other
 // unprefixed /api/* requests follow the active user in the session cookie.
-const ROOT_ONLY_API_RE = /^\/api\/(?:webhook|login|logout|auth\/claim|users)(?:\/|$)/i;
+const FULL_BACKUP_API_PREFIX = `/api/${path.basename(FULL_BACKUPS_DIR)}-backups`;
+const ROOT_ONLY_API_RE = /^\/api\/(?:webhook|login|logout|auth\/claim|users|watch-backups)(?:\/|$)/i;
+const isRootOnlyApiPath = (pathOnly) => (
+  ROOT_ONLY_API_RE.test(pathOnly)
+  || pathOnly.toLowerCase() === FULL_BACKUP_API_PREFIX
+  || pathOnly.toLowerCase().startsWith(`${FULL_BACKUP_API_PREFIX}/`)
+);
 const handleApiDispatch = (req, res) => {
   const pathOnly = String(req.path || req.url || "").split("?")[0];
-  const sessionTenant = ROOT_ONLY_API_RE.test(pathOnly) ? null : resolveSessionTenantContext(req);
+  const sessionTenant = isRootOnlyApiPath(pathOnly) ? null : resolveSessionTenantContext(req);
   const invoke = () => dispatch(req, res);
   const promise = sessionTenant
     ? Promise.resolve(runWithUserContext(sessionTenant, invoke))
@@ -396,7 +402,12 @@ app.use("/media", express.static(MEDIA_DIR, { maxAge: "365d", immutable: true })
 // Without this the SPA fallback below answers 200 with index.html, and the
 // image shows broken.
 app.get("/media/*name", async (req, res) => {
-  const storagePath = decodeURIComponent(req.path.slice("/media/".length));
+  let storagePath;
+  try {
+    storagePath = decodeURIComponent(req.path.slice("/media/".length));
+  } catch {
+    return res.status(400).end();
+  }
   if (!/^(?:posters|backdrops|profiles|logos)\/[\w.-]+$/.test(storagePath)) return res.status(404).end();
   const url = await restoreMissingCachedArtwork(storagePath).catch(() => null);
   if (!url) return res.status(404).end();

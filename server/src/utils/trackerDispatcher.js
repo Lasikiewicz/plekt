@@ -12,6 +12,7 @@ import { dispatchSimklWatchState } from "./trackers/simklDispatch.js";
 import { trackerBacklogSkipReason } from "./trackers/backlogGate.js";
 import { TARGET_DECISIONS } from "./watchSyncPolicy.js"; import { resolveOrderWatch } from "./episodeOrderWatch.js"; import { loadMediaConfig } from "./configStore.js";
 import { partitionTraktNotFoundBatch } from "./traktNotFoundPartition.js";
+import { settleLinkedTrackerWriteIntent } from "./trackerWriteIntents.js";
 
 export { withTraktRateLimitRetry } from "./trackers/traktWrites.js";
 export { partitionTraktNotFoundBatch } from "./traktNotFoundPartition.js";
@@ -29,7 +30,7 @@ const setTraktWatchState = (connection, media, state, options) =>
   traktAdapter.operations[state === "unwatched" ? "unwatchedWrite" : "watchedWrite"](connection, media, options);
 const { writeBatch: setTraktWatchHistoryBatch } = traktAdapter.history;
 
-let traktRefreshInFlight = null;
+const traktRefreshInFlight = new Map();
 
 function trackerShowTitle(media = {}) {
   const explicit = String(media.showTitle || media.show_title || "").trim();
@@ -169,17 +170,18 @@ export async function withFreshTraktConnection(force = false) {
   // One refresh per connection generation; its writes land only on that generation,
   // and a caller never receives a replacement account's credentials.
   const generation = connection.id;
-  if (traktRefreshInFlight?.generation !== generation) {
-    const flight = { generation };
+  let flight = traktRefreshInFlight.get(generation);
+  if (!flight) {
+    flight = { generation };
     flight.promise = runInTrackerGeneration("trakt", generation, () => refreshTraktToken(connection)
       .then((tokens) => { updateTrackerTokens("trakt", { accessToken: tokens.access_token, refreshToken: tokens.refresh_token, accessTokenExpiresAt: tokenExpiry(tokens) }); })
       .catch((error) => {
         updateTrackerConnectionStatus("trakt", { status: error.status === 400 || error.status === 401 ? "reauth_required" : "connected", lastError: error.message });
         throw error;
-      })).finally(() => { if (traktRefreshInFlight === flight) traktRefreshInFlight = null; });
-    traktRefreshInFlight = flight;
+      })).finally(() => { if (traktRefreshInFlight.get(generation) === flight) traktRefreshInFlight.delete(generation); });
+    traktRefreshInFlight.set(generation, flight);
   }
-  await traktRefreshInFlight.promise;
+  await flight.promise;
   connection = getTrackerConnection("trakt", { includeCredentials: true });
   if (connection?.id !== generation) throw new StaleTrackerConnectionError("trakt");
   return hydrateTraktAppCredentials(connection);
@@ -1286,6 +1288,7 @@ async function dispatchTrakt(media, state, lane = "sync", isCancelled = () => fa
       existing = await findExistingTraktPlay(connection, trackerMedia, retryWatchedAt);
     }
     if (existing) {
+      settleLinkedTrackerWriteIntent("trakt", connection, media, state, existing.historyId ?? existing.id ?? null);
       return {
         target: "trakt",
         status: "success",
@@ -1411,6 +1414,7 @@ export async function primeTrackerWatchStateIntents(entries = [], {
 }
 
 export async function dispatchTrackerWatchState(media, state, { lane = "sync", isCancelled = () => false } = {}) {
+  if (media.localOnly || media.source === "plex_personal_media") return [];
   media = await resolveOrderWatch(media, await loadMediaConfig(), {stateType:state});
   const requested = Array.isArray(media.syncTargets) ? new Set(media.syncTargets.map((target) => String(target).trim().toLowerCase())) : null;
   const connections = listTrackerConnections().filter(({ provider, status }) => status !== "disabled"

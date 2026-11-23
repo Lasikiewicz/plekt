@@ -2,6 +2,8 @@
 // watched date preference and the optional compare-then-confirm full sync.
 // Rendered from the connection the server returns, so a reload or another tab
 // shows the same durable state.
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.1";
+
 let request = async () => ({});
 const timers = new Map();
 const LABELS = { trakt: "Trakt", simkl: "Simkl" };
@@ -32,12 +34,6 @@ const label = (provider) => LABELS[provider] || provider;
 const count = (value) => Number(value || 0).toLocaleString();
 const items = (value) => `${count(value)} item${Number(value) === 1 ? "" : "s"}`;
 const when = (value) => (value ? new Date(value).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
-
-function escapeText(value) {
-  const span = document.createElement("span");
-  span.textContent = String(value ?? "");
-  return span.innerHTML;
-}
 
 export function initialSyncText(connection = {}) {
   const name = label(connection.provider);
@@ -106,7 +102,7 @@ export function fullSyncView(provider, connection = {}, { gated = false, setupIm
 function examples(state = {}) {
   const lists = [["trackerOnly", "Only on the tracker"], ["plektOnly", "Only in Plekt"]]
     .filter(([key]) => state.examples?.[key]?.length)
-    .map(([key, heading]) => `<small>${heading}: ${state.examples[key].map(escapeText).join(", ")}${state[key] > state.examples[key].length ? ", …" : ""}</small>`);
+    .map(([key, heading]) => `<small>${heading}: ${state.examples[key].map(escapeHtml).join(", ")}${state[key] > state.examples[key].length ? ", …" : ""}</small>`);
   return lists.join("");
 }
 
@@ -133,17 +129,17 @@ export function renderTrackerFullSync(provider, connection, options = {}) {
   // Status is a finished-event note; the date preference is an ongoing setting.
   // Keep them separate so the checkbox is not read as part of the first-check box.
   const showCompare = !options.setupImportOnly && view.compare;
-  root.innerHTML = `${options.setupImportOnly ? `<div class="setup-tracker-choice-box">${connection.importHistoryLabel ? `<label class="field-label setup-import-toggle-label"><input type="checkbox" data-setup-import-toggle="${escapeText(provider)}" ${connection.importHistorySelected !== false ? "checked" : ""} />${escapeText(connection.importHistoryLabel)}</label>` : ""}${showCompare ? `<div class="settings-actions setup-import-review-action"><button class="button-ghost sync-action-btn sync-tool-button" type="button" data-full-sync-compare>${escapeText(options.compareLabel || "Compare with Plekt")}</button></div>` : ""}</div>` : status ? `<p class="muted-copy tracker-initial-sync" role="status">${escapeText(status)}</p>` : ""}
-    <div class="setup-tracker-choice-box tracker-date-preference-box"><label class="checkbox-label tracker-date-preference"><input type="checkbox" data-tracker-date ${connection.preferEarlierWatchedDate !== false ? "checked" : ""}><span>Prefer ${escapeText(name)}'s earlier watch date when Plex, Emby or Jellyfin later report the same title</span></label></div>
-    ${!options.setupImportOnly || previewMarkup || options.completionText || view.running ? `<div class="tracker-full-sync${options.setupImportOnly ? " setup-import-preview-section" : ""}" role="group" aria-label="${escapeText(name)} ${options.setupImportOnly ? "import preview" : "full sync"}">
-      ${options.setupImportOnly ? `<b>${previewMarkup ? "Import preview" : "Import status"}</b>` : `<b>Full sync</b><p class="muted-copy" role="status" aria-live="polite">${escapeText(preview ? 'Review missing watches below. Existing watches and dates are preserved.' : view.text)}</p>`}
+  root.innerHTML = `${options.setupImportOnly ? `<div class="setup-tracker-choice-box">${connection.importHistoryLabel ? `<label class="field-label setup-import-toggle-label"><input type="checkbox" data-setup-import-toggle="${escapeAttribute(provider)}" ${connection.importHistorySelected !== false ? "checked" : ""} />${escapeHtml(connection.importHistoryLabel)}</label>` : ""}${showCompare ? `<div class="settings-actions setup-import-review-action"><button class="button-ghost sync-action-btn sync-tool-button" type="button" data-full-sync-compare>${escapeHtml(options.compareLabel || "Compare with Plekt")}</button></div>` : ""}</div>` : status ? `<p class="muted-copy tracker-initial-sync" role="status">${escapeHtml(status)}</p>` : ""}
+    <div class="setup-tracker-choice-box tracker-date-preference-box"><label class="checkbox-label tracker-date-preference"><input type="checkbox" data-tracker-date ${connection.preferEarlierWatchedDate !== false ? "checked" : ""}><span>Prefer ${escapeHtml(name)}'s earlier watch date when Plex, Emby or Jellyfin later report the same title</span></label></div>
+    ${!options.setupImportOnly || previewMarkup || options.completionText || view.running ? `<div class="tracker-full-sync${options.setupImportOnly ? " setup-import-preview-section" : ""}" role="group" aria-label="${escapeAttribute(name)} ${options.setupImportOnly ? "import preview" : "full sync"}">
+      ${options.setupImportOnly ? `<b>${previewMarkup ? "Import preview" : "Import status"}</b>` : `<b>Full sync</b><p class="muted-copy" role="status" aria-live="polite">${escapeHtml(preview ? 'Review missing watches below. Existing watches and dates are preserved.' : view.text)}</p>`}
       ${view.state && !preview ? examples(view.state) : ""}
       ${previewMarkup}
-      ${connection.fullSync?.backup?.name ? `<p class="muted-copy">Backup: ${escapeText(connection.fullSync.backup.name)}. <a href="/settings/backups">Restore backups</a></p>` : ""}
+      ${connection.fullSync?.backup?.name ? `<p class="muted-copy">Backup: ${escapeHtml(connection.fullSync.backup.name)}. <a href="/settings/backups">Restore backups</a></p>` : ""}
       <p class="message hidden" data-full-sync-message></p>
       ${view.canCancel ? `<div class="settings-actions"><button type="button" class="button-ghost sync-action-btn sync-tool-button" data-full-sync-cancel>Cancel full sync</button></div>` : ""}
       <div class="trakt-sync-progress hidden" data-full-sync-progress role="status" aria-live="polite"><div class="trakt-sync-progress-copy"><b>Comparing watched history…</b><span>Reading connected media servers. Large libraries can take a little while.</span></div><div class="trakt-sync-progress-track" role="progressbar" aria-label="Comparing watched history"><span></span></div></div>
-      ${!options.setupImportOnly && showCompare || actions || options.completionText ? `<div class="settings-actions">${options.completionText ? `<span class="muted-copy tracker-completion-status">${escapeText(options.completionText)}</span>` : ""}${!options.setupImportOnly && showCompare ? `<button class="button-ghost sync-action-btn sync-tool-button" type="button" data-full-sync-compare>${escapeText(options.compareLabel || "Compare with Plekt")}</button>` : ""}${actions}</div>` : ""}
+      ${!options.setupImportOnly && showCompare || actions || options.completionText ? `<div class="settings-actions">${options.completionText ? `<span class="muted-copy tracker-completion-status">${escapeHtml(options.completionText)}</span>` : ""}${!options.setupImportOnly && showCompare ? `<button class="button-ghost sync-action-btn sync-tool-button" type="button" data-full-sync-compare>${escapeHtml(options.compareLabel || "Compare with Plekt")}</button>` : ""}${actions}</div>` : ""}
     </div>` : ""}`;
   root.querySelector("[data-tracker-date]")?.addEventListener("change", (event) => saveDatePreference(provider, event.target, context));
   root.querySelector("[data-full-sync-compare]")?.addEventListener("click", (event) => compare(provider, event.target, context));
@@ -192,13 +188,13 @@ function renderPreview(preview, expired, selected, directions, trackerName = "tr
   const groupMarkup = groups.map((entries, index) => {
     const title = previewGroupTitle(entries[0]);
     const key = `g${index}`;
-    return `<div class="tracker-preview-group"><button type="button" class="tracker-preview-group-toggle" data-preview-group="${key}" aria-expanded="false"><span class="tracker-preview-chevron" aria-hidden="true">›</span><span>${escapeText(title)}</span><small>${escapeText(previewGroupSummary(entries, trackerName))}</small></button><div class="tracker-preview-items hidden" data-preview-items="${key}"></div></div>`;
+    return `<div class="tracker-preview-group"><button type="button" class="tracker-preview-group-toggle" data-preview-group="${key}" aria-expanded="false"><span class="tracker-preview-chevron" aria-hidden="true">›</span><span>${escapeHtml(title)}</span><small>${escapeHtml(previewGroupSummary(entries, trackerName))}</small></button><div class="tracker-preview-items hidden" data-preview-items="${key}"></div></div>`;
   }).join("");
   const summary = previewSummaryCounts(preview);
   const cost = preview.requestEstimate?.batchRequests;
-  const directionOptions = directions.map((direction) => `<option value="${direction}">${escapeText(DIRECTION_COPY[direction]?.replace("{label}", trackerName) || direction)}</option>`).join("");
-  return `<div class="tracker-full-sync-preview"><div class="tracker-preview-summary tracker-preview-summary-wide"><div class="tracker-preview-metric"><strong>${titleSplitText(summary.missingInPlekt)}</strong><span>missing from Plekt</span></div><div class="tracker-preview-metric"><strong>${titleSplitText(summary.missingOnTracker)}</strong><span>missing from ${escapeText(trackerName)}</span></div><div class="tracker-preview-metric"><strong>${count(summary.unchanged)}</strong><span>left unchanged</span></div><div class="tracker-preview-metric"><strong>${count(summary.datesPreserved)}</strong><span>dates preserved</span></div></div>
-    <p class="muted-copy tracker-preview-note">${expired ? "Preview expired. Compare again." : `Valid until ${escapeText(when(preview.expiresAt))}.`} Uses the last saved tracker check; all destinations are rechecked before applying.</p>
+  const directionOptions = directions.map((direction) => `<option value="${escapeAttribute(direction)}">${escapeHtml(DIRECTION_COPY[direction]?.replace("{label}", trackerName) || direction)}</option>`).join("");
+  return `<div class="tracker-full-sync-preview"><div class="tracker-preview-summary tracker-preview-summary-wide"><div class="tracker-preview-metric"><strong>${titleSplitText(summary.missingInPlekt)}</strong><span>missing from Plekt</span></div><div class="tracker-preview-metric"><strong>${titleSplitText(summary.missingOnTracker)}</strong><span>missing from ${escapeHtml(trackerName)}</span></div><div class="tracker-preview-metric"><strong>${count(summary.unchanged)}</strong><span>left unchanged</span></div><div class="tracker-preview-metric"><strong>${count(summary.datesPreserved)}</strong><span>dates preserved</span></div></div>
+    <p class="muted-copy tracker-preview-note">${expired ? "Preview expired. Compare again." : `Valid until ${escapeHtml(when(preview.expiresAt))}.`} Uses the last saved tracker check; all destinations are rechecked before applying.</p>
     ${cost != null || preview.requestEstimate?.pacing ? `<p class="muted-copy" data-preview-cost></p>` : ""}
     <div class="tracker-preview-toolbar"><label class="tracker-preview-direction">Direction <select class="field" data-preview-direction>${directionOptions}</select></label>
     <label class="tracker-preview-select-all"><input type="checkbox" data-preview-all ${selected.size ? "checked" : ""} ${expired || !selected.size ? "disabled" : ""}> Select all actionable items</label></div>
@@ -285,7 +281,7 @@ export function previewGroups(preview) {
 function previewItemMarkup(item, expired, selected, trackerName = "tracker") {
   const selectable = item.selectable && item.operation === "add" && !expired;
   const detail = [item.type === "episode" && item.season != null ? `S${item.season}E${item.episode}` : "", item.watchedAt ? when(item.watchedAt) : "", item.existingWatchedAt ? `Existing date: ${when(item.existingWatchedAt)}` : "", item.destinations?.length ? `Add to ${item.destinations.map(p => ({plekt:'Plekt',plex:'Plex',emby:'Emby',jellyfin:'Jellyfin'}[p] || p)).join(', ')}` : "", ...(item.notes||[]),item.reason || ""].filter(Boolean).join(" · ");
-  return `<label class="tracker-preview-item"><input type="checkbox" data-preview-item value="${escapeText(item.id)}" ${selectable ? selected.has(item.id) ? "checked" : "" : "disabled"}> <span><b>${escapeText(item.title)}</b><small>${escapeText(detail || previewMissingLabel(item, trackerName))}</small></span><span class="tracker-preview-operation">${escapeText(previewMissingLabel(item, trackerName))}</span></label>`;
+  return `<label class="tracker-preview-item"><input type="checkbox" data-preview-item value="${escapeAttribute(item.id)}" ${selectable ? selected.has(item.id) ? "checked" : "" : "disabled"}> <span><b>${escapeHtml(item.title)}</b><small>${escapeHtml(detail || previewMissingLabel(item, trackerName))}</small></span><span class="tracker-preview-operation">${escapeHtml(previewMissingLabel(item, trackerName))}</span></label>`;
 }
 
 export function selectedPacing(preview, selected, direction) {

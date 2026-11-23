@@ -1,11 +1,13 @@
 import { createLoopStore, pruneExpiredLoopKeys } from "./utils/loopStore.js";
 import { readShowNumbering } from "./utils/seasonSource.js";
 import { activeSyncOperation, appendSyncHistory, isAuthoritativeRestoreActive, loadBackgroundSyncProgress, loadMediaConfig, loadRuntimeState, setRuntimeState, SYNC_OPERATION_SCHEDULED } from "./utils/configStore.js";
+import { getProviderLibrarySelection, resolveItemLibraryMembership } from "./utils/librarySelection.js";
 import { createPlexNotificationListener } from "./utils/plexNotificationListener.js";
 import { createPlexAdaptivePoller } from "./utils/plexAdaptivePoller.js";
 import { createLiveSessionPoller } from "./utils/liveSessionPoller.js";
 import { fetchPlexContainerEpisodes, fetchPlexMetadataItem, findPlexItem, hydratePlexEpisodeMetadata, mergePlexMetadataItem, syncPlexCachedEpisodeState } from "./utils/plexClient.js";
 import { buildPlexMediaFromMetadata } from "./utils/parsers.js";
+import { storePlexPersonalWatch } from "./utils/plexPersonalWatch.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "./utils/watchProvenance.js";
 import { listActiveSessions } from "./utils/activeSessions.js";
 import { providerWatchFingerprint } from "./utils/recentWatchImport.js";
@@ -15,7 +17,7 @@ import { watchedThresholdPercent, watchImportMode } from "./utils/tuning.js";
 import { isRecentOutboundPlayedEcho, isRecentOutboundUnplayedFlagEcho, lastOutboundPlayedMarkAt, syncCanonicalPlaystate, syncMediaPlaystate } from "./utils/syncOrchestrator.js";
 import { keepOrderProvenance, plexUnwatchCheckTarget, resolveOrderMediaForPolling } from "./utils/episodeOrderWatch.js";
 import { applyUnwatchedTransition } from "./utils/watchStateTransitions.js";
-import { plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
+import { isNewerPlexNotificationWatch, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear, shouldRepairRecentPlexUnwatch } from "./utils/plexWatchstate.js";
 import { pollConnectedTrackers } from "./utils/trackerSync.js";
 import { kickSimklFullSyncRuns } from "./utils/trackers/simklFullSyncRunner.js";
 import { getTrackerConnection } from "./utils/trackerConnectionRepo.js";
@@ -33,6 +35,7 @@ import { pruneSyncPlans } from "./utils/syncPlans.js";
 import { runDbOptimizeIfDue } from "./utils/dbMaintenance.js";
 import { sendInstallCheckIfDue } from "./utils/installCheck.js";
 import { pruneWatchAuditPayloads } from "./utils/watchAudit.js";
+import { pruneSyncActivityPayloadsIfDue } from "./utils/syncActivityRetention.js";
 import { runScheduledPlaystateAliasRepair } from "./utils/playstateAliasRepair.js";
 import { pruneLiveChangesIfDue } from "./db.js";
 import {
@@ -54,7 +57,7 @@ import {
   repairEpisodeSeriesIdentity,
   clearTraktProviderOverrides,
 } from "./utils/dataRepo.js";
-import { resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem } from "./utils/watchDates.js";
+import { resolvePlexWatchDate, resolveWatchImportDate, runtimeMinutesForSourceItem, watchedAtForPlexItem } from "./utils/watchDates.js";
 import { dismissPendingManualWatchReviewsForMedia, enqueueManualWatchReview, hasPendingManualWatchReviewForMedia } from "./utils/manualWatchReview.js";
 import { brandEnv } from "./utils/brandEnv.js";
 import { createPerUserState } from "./utils/perUserState.js";
@@ -454,6 +457,7 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   await runWithTimeBudget("Database optimize", () => runDbOptimizeIfDue(), 10_000);
   await runWithTimeBudget("Install check", () => sendInstallCheckIfDue(), 15_000);
   await runWithTimeBudget("Audit payload prune", () => ({ changed: pruneWatchAuditPayloads() }), 10_000);
+  await runWithTimeBudget("Sync Activity payload prune", () => ({ changed: pruneSyncActivityPayloadsIfDue() }), 10_000);
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   // A Trakt/TMDB-only split is deliberately an escape hatch for provider
   // numbering conflicts. Re-check it infrequently in the background; when
@@ -604,6 +608,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
 
   const config = await loadMediaConfig().catch(() => null);
   if (!config?.plex?.baseUrl || !config.plex.token || config.plex.disabled) return;
+  if (!getProviderLibrarySelection(config, "plex").hasSelectedLibraries) return;
 
   const authoritativeMetadata = await fetchPlexMetadataItem(config.plex, ratingKey).catch((error) => {
     console.error(`Plex notification: metadata lookup failed for ratingKey ${ratingKey}: ${error.message}`);
@@ -611,6 +616,9 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
   });
   let metadata = mergePlexMetadataItem(authoritativeMetadata, metadataOverride);
   if (!metadata) return;
+
+  const libraryDecision = await resolveItemLibraryMembership("plex", config, metadata, { lane: "sync" });
+  if (!libraryDecision.allowed) return;
 
   metadata = await hydratePlexEpisodeMetadata(config.plex, metadata).catch((error) => {
     console.warn(`Plex notification: series identity lookup failed for ratingKey ${ratingKey}: ${error.message}`);
@@ -656,12 +664,26 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
 
   // Only movies and episodes carry a watch state we sync.
   let media = buildPlexMediaFromMetadata(metadata, { phase: Number(metadata.viewCount || 0) > 0 ? "completed" : "unplayed" });
+  if (media.localOnly) {
+    const { watchedAt } = watchedAtForPlexItem(metadata);
+    if (media.phase === "completed" && watchedAt) {
+      await storePlexPersonalWatch(media, watchedAt);
+    }
+    return;
+  }
   if (!media?.isValid || !["movie", "episode"].includes(media.type) || (media.type === "episode" && !(media = await resolveOrderMediaForPolling(media, config, (m) => console.warn(`Plex notifications: ${m}`))))) return;
 
   // Still watched or only partially watched → this isn't an unwatch event.
   const viewCount = Number(metadata.viewCount || 0);
   const viewOffset = Number(metadata.viewOffset || 0);
   if (viewCount > 0) {
+    // A historical played flag on an active rewatch must leave resume progress alone.
+    const threshold = watchedThresholdPercent();
+    const liveRows = await loadLiveTrackingCache().catch(() => []);
+    if (liveRows.some((row) => row.source_platform === "plex"
+      && String(parseLivePayload(row).mediaId).replace(/^\/library\/metadata\//, "") === String(ratingKey)
+      && row.last_progress < threshold && Date.now() - row.updated_at < 60_000)) return;
+
     const playstate = await getPlaystateForMedia(media).catch(() => null);
     const watchDate = resolvePlexNotificationWatchDate(metadata, {
       hasPlaybackEvidence: await hasRecentPlexThresholdPlayback(media),
@@ -714,7 +736,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     }
 
     const loopStore = createLoopStore();
-    const isNewerWatch = playstate?.watched_at && new Date(watchedAt).getTime() > new Date(playstate.watched_at).getTime() + 10000;
+    const isNewerWatch = isNewerPlexNotificationWatch(watchDate, playstate?.watched_at);
 
     // Plex stamps lastViewedAt when *we* mark an item played, so every outbound
     // sync makes an already-recorded watch look freshly viewed here. A view time
@@ -739,7 +761,6 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
           watchedAt,
         });
       }
-      await deletePlaybackProgress(media).catch(() => null);
       return;
     }
 
@@ -791,13 +812,12 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     // exact playstate match.
     const existingByAnyKey = await findWatchedByAnyMediaKey(media).catch(() => null);
     if (isAuthoritativeRestoreActive()) return;
-    if (existingByAnyKey && !isNewerWatch) {
+    if (existingByAnyKey && !isNewerPlexNotificationWatch(watchDate, existingByAnyKey.watched_at)) {
       console.log("Plex notifications: already recorded under a different key; repairing playstate instead of logging a new watch", {
         title: media.title,
         ratingKey,
       });
       await upsertPlaystateForMedia(media, "watched", existingByAnyKey.watched_at, { skipInvalidate: true });
-      await deletePlaybackProgress(media).catch(() => null);
       return;
     }
 
@@ -890,6 +910,7 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
       const repairLoopStore = createLoopStore();
       await syncCanonicalPlaystate({ ...media, itemId: ratingKey }, config, repairLoopStore, "watched", {
         includeTrackers: false,
+        syncIntent: "live",
       }).catch((error) => {
         console.error("Plex notifications: failed to restore watched state after transient unwatch", {
           title: media.title,
@@ -1100,6 +1121,8 @@ async function checkPlexUnwatchedFast(plexConfig) {
         if (!Number.isFinite(viewCount)) continue;
         const isWatched = viewCount > 0;
         if (!isWatched) {
+          if (plexConfig.libraryMonitoringEnforced
+            && !(await resolveItemLibraryMembership("plex", plexConfig, plexItem, { lane: "sync" })).allowed) continue;
           const plexMedia = { ...media, itemId: plexItem.ratingKey || plexItem.key || undefined };
           const config = await loadMediaConfig().catch(() => null);
           const priorPlaystate = await getPlaystateForMedia(plexMedia).catch(() => null);
@@ -1171,6 +1194,7 @@ export function startPlexAdaptivePoller() {
       },
       onLibraryItemChange: handlePlexLibraryItemChange,
       checkUnwatched: checkPlexUnwatchedFast,
+      isNotificationConnected: () => plexNotificationListener?.isConnected() ?? false,
       logger: console.log,
     });
   }

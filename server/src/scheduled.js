@@ -1,6 +1,6 @@
 import { shouldSyncResumeProgress, syncMediaProgress } from "./utils/syncOrchestrator.js";
 import { mediaIsUpNextRailSeed } from "./utils/upNextSeedLedger.js";
-import { parsePlexMediaIds } from "./utils/parsers.js";
+import { isPlexLocalOnly, parsePlexMediaIds } from "./utils/parsers.js";
 import { activeSyncOperation, clearSyncOperation, claimSyncOperation, isAuthoritativeRestoreActive, loadMediaConfig, loadRuntimeState, releaseSyncOperation, setRuntimeState, touchSyncOperation, RESTORE_KIND_BACKUP, RESTORE_KIND_FULL_SYNC, SYNC_OPERATION_FORCE, SYNC_OPERATION_SCHEDULED } from "./utils/configStore.js";
 import { createLoopStore } from "./utils/loopStore.js";
 import { watchedPlayedSyncEnabled } from "./utils/syncFlags.js";
@@ -10,6 +10,7 @@ import { isVerboseLogging } from "./utils/logVerbose.js";
 import { loadTrackerWatchedDateIndex } from "./utils/mediaForceSync.js";
 import { startUpNextProviderFeed, completeUpNextProviderFeed, failUpNextProviderFeed, listUpNextProviderFeedStates, redactUpNextProviderError, withUpNextFeedSeriesIdentity } from "./utils/upNextRepository.js";
 import { refreshUpNextProviderFeeds } from "./utils/upNextProviderSync.js";
+import { requestDueUpNextRetry } from "./utils/upNextAutoSync.js";
 import { reconcileAvailableWatchedItems } from "./utils/libraryAvailabilitySync.js";
 import { brandEnv } from "./utils/brandEnv.js";
 import { createPerUserState } from "./utils/perUserState.js";
@@ -17,6 +18,7 @@ import { runDueUnwatchedPolls } from "./utils/unwatchedStatusPoll.js";
 import { UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS } from "./utils/liveSessionCompletion.js";
 import { buildProgressTelemetry, recordSyncHistory } from "./utils/syncHistoryTelemetry.js";
 import { syncRecentlyWatchedFromPlex, syncRecentlyWatchedFromEmby, syncRecentlyWatchedFromJellyfin } from "./utils/recentWatchImport.js";
+import { getProviderLibrarySelection, resolveItemLibraryMembership } from "./utils/librarySelection.js";
 import { syncPendingManualDispatches } from "./utils/syncDispatchQueue.js";
 import {
   playstateBlocksStoredResumeProgress,
@@ -302,12 +304,32 @@ async function syncResumableMedia(media, config, loopStore, logger = console.log
   return summary.status === "success" || summary.status === "partial";
 }
 
+function providerLibraryEnforced(config = {}, provider = "") {
+  const section = config?.[provider];
+  return Boolean(config?.libraryMonitoring || section?.libraryMonitoringEnforced || Array.isArray(section?.monitoredLibraryIds));
+}
+
+async function filterMonitoredFeedItems(provider, config, items = []) {
+  if (!providerLibraryEnforced(config, provider)) return items;
+  if (!getProviderLibrarySelection(config, provider).hasSelectedLibraries) return [];
+  const allowed = [];
+  for (const item of items) {
+    const decision = await resolveItemLibraryMembership(provider, config, item, { lane: "sync" });
+    if (decision.allowed) allowed.push(item);
+  }
+  return allowed;
+}
+
 async function syncRecentlyResumableFromPlex(config, loopStore, logger = console.log) {
   if (!watchedPlayedSyncEnabled()) {
     logger("Plex resume library sync is disabled.");
     return 0;
   }
   if (!config.plex?.baseUrl || !config.plex?.token) return 0;
+  if (providerLibraryEnforced(config, "plex") && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+    logger("Plex: skipped continue watching sync (no monitored libraries selected).");
+    return 0;
+  }
 
   let syncedCount = 0;
   try {
@@ -315,7 +337,8 @@ async function syncRecentlyResumableFromPlex(config, loopStore, logger = console
     const raw = await fetchAndRecordUpNextFeed(
       "plex",
       "resume",
-      () => fetchPlexContinueWatchingItems(config.plex, { limit: 0 }),
+      async () => filterMonitoredFeedItems("plex", config, (await fetchPlexContinueWatchingItems(config.plex, { limit: 0 }))
+        .filter((item) => !isPlexLocalOnly(item))),
       logger,
       config.plex,
     );
@@ -337,6 +360,10 @@ async function syncRecentlyResumableFromEmby(config, loopStore, logger = console
     return 0;
   }
   if (!config.emby?.baseUrl || !config.emby?.apiKey || !config.emby?.userId) return 0;
+  if (providerLibraryEnforced(config, "emby") && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
+    logger("Emby: skipped continue watching sync (no monitored libraries selected).");
+    return 0;
+  }
 
   let syncedCount = 0;
   try {
@@ -345,7 +372,7 @@ async function syncRecentlyResumableFromEmby(config, loopStore, logger = console
     const raw = await fetchAndRecordUpNextFeed(
       "emby",
       "resume",
-      () => fetchEmbyResumableItems(config.emby, { limit: 0 }),
+      async () => filterMonitoredFeedItems("emby", config, await fetchEmbyResumableItems(config.emby, { limit: 0 })),
       logger,
       config.emby,
     );
@@ -367,6 +394,10 @@ async function syncRecentlyResumableFromJellyfin(config, loopStore, logger = con
     return 0;
   }
   if (!config.jellyfin?.baseUrl || !config.jellyfin?.apiKey || !config.jellyfin?.userId) return 0;
+  if (providerLibraryEnforced(config, "jellyfin") && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+    logger("Jellyfin: skipped continue watching sync (no monitored libraries selected).");
+    return 0;
+  }
 
   let syncedCount = 0;
   try {
@@ -378,7 +409,7 @@ async function syncRecentlyResumableFromJellyfin(config, loopStore, logger = con
     const raw = await fetchAndRecordUpNextFeed(
       "jellyfin",
       "resume",
-      () => fetchJellyfinResumableItems(config.jellyfin, { limit: 0 }),
+      async () => filterMonitoredFeedItems("jellyfin", config, await fetchJellyfinResumableItems(config.jellyfin, { limit: 0 })),
       logger,
       config.jellyfin,
     );
@@ -397,12 +428,13 @@ async function syncRecentlyResumableFromJellyfin(config, loopStore, logger = con
 async function syncRecentlyNextUpFromEmby(config, logger = console.log) {
   if (!watchedPlayedSyncEnabled()) return 0;
   if (!config.emby?.baseUrl || !config.emby?.apiKey || !config.emby?.userId) return 0;
+  if (providerLibraryEnforced(config, "emby") && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) return 0;
   try {
     const { fetchEmbyNextUpItems } = await import("./utils/embyClient.js");
     const raw = await fetchAndRecordUpNextFeed(
       "emby",
       "next_up",
-      () => fetchEmbyNextUpItems(config.emby, { limit: 0 }),
+      async () => filterMonitoredFeedItems("emby", config, await fetchEmbyNextUpItems(config.emby, { limit: 0 })),
       logger,
       config.emby,
     );
@@ -419,12 +451,13 @@ async function syncRecentlyNextUpFromEmby(config, logger = console.log) {
 async function syncRecentlyNextUpFromJellyfin(config, logger = console.log) {
   if (!watchedPlayedSyncEnabled()) return 0;
   if (!config.jellyfin?.baseUrl || !config.jellyfin?.apiKey || !config.jellyfin?.userId) return 0;
+  if (providerLibraryEnforced(config, "jellyfin") && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) return 0;
   try {
     const { fetchJellyfinNextUpItems } = await import("./utils/jellyfinClient.js");
     const raw = await fetchAndRecordUpNextFeed(
       "jellyfin",
       "next_up",
-      () => fetchJellyfinNextUpItems(config.jellyfin, { limit: 0 }),
+      async () => filterMonitoredFeedItems("jellyfin", config, await fetchJellyfinNextUpItems(config.jellyfin, { limit: 0 })),
       logger,
       config.jellyfin,
     );
@@ -497,6 +530,7 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
   const cadence = catchupCadence();
   const shouldRunCatchup = forceCatchup || !cadence.lastCatchupSyncAt || (Date.now() - cadence.lastCatchupSyncAt >= CATCHUP_SYNC_INTERVAL_MS);
   let upNextFailedFeedsRetried = 0;
+  await requestDueUpNextRetry().catch((error) => logger(`Scheduled Sync ERROR: Up Next push retry: ${error.message}`));
   if (!shouldRunCatchup) {
     // The normal 15-minute catch-up already polls every active provider. On
     // intervening ticks, only retry providers whose last Up Next feed failed.
@@ -515,32 +549,38 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
     // item, and shared across all three servers below.
     const trackerWatchedDateIndex = await loadTrackerWatchedDateIndex(logger, { trigger: "scheduled" }).catch(() => null);
 
-    if (plexActive) {
-      try {
-        trace("Scheduled Sync: checking Plex recently watched...");
-        plexSynced = await syncRecentlyWatchedFromPlex(config, loopStore, logger, trackerWatchedDateIndex);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Plex sync failed: ${error.message}`);
-      }
-    }
-
-    if (embyActive) {
-      try {
-        trace("Scheduled Sync: checking Emby recently watched...");
-        embySynced = await syncRecentlyWatchedFromEmby(config, loopStore, logger, trackerWatchedDateIndex);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Emby sync failed: ${error.message}`);
-      }
-    }
-
-    if (jellyfinActive) {
-      try {
-        trace("Scheduled Sync: checking Jellyfin recently watched...");
-        jellyfinSynced = await syncRecentlyWatchedFromJellyfin(config, loopStore, logger, trackerWatchedDateIndex);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Jellyfin sync failed: ${error.message}`);
-      }
-    }
+    // Run active providers side by side for recently-watched imports (each
+    // insert serializes its final identity check in an IMMEDIATE SQLite
+    // transaction so concurrent providers cannot record the same watch twice),
+    // then reconcile availability once all imports are visible, then run each
+    // provider's own resume -> Next Up chain in parallel while preserving
+    // per-provider order.
+    await Promise.all([
+      plexActive ? (async () => {
+        try {
+          trace("Scheduled Sync: checking Plex recently watched...");
+          plexSynced = await syncRecentlyWatchedFromPlex(config, loopStore, logger, trackerWatchedDateIndex);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Plex sync failed: ${error.message}`);
+        }
+      })() : Promise.resolve(),
+      embyActive ? (async () => {
+        try {
+          trace("Scheduled Sync: checking Emby recently watched...");
+          embySynced = await syncRecentlyWatchedFromEmby(config, loopStore, logger, trackerWatchedDateIndex);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Emby sync failed: ${error.message}`);
+        }
+      })() : Promise.resolve(),
+      jellyfinActive ? (async () => {
+        try {
+          trace("Scheduled Sync: checking Jellyfin recently watched...");
+          jellyfinSynced = await syncRecentlyWatchedFromJellyfin(config, loopStore, logger, trackerWatchedDateIndex);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Jellyfin sync failed: ${error.message}`);
+        }
+      })() : Promise.resolve(),
+    ]);
 
     // A bulk library refresh usually creates provider items with an unplayed
     // user flag. Watched-only history feeds cannot see those items, so run a
@@ -563,50 +603,44 @@ async function runScheduledSyncCore(logger = console.log, { forceCatchup = false
       }
     }
 
-    if (plexActive) {
-      try {
-        trace("Scheduled Sync: checking Plex continue watching...");
-        plexResumeSynced = await syncRecentlyResumableFromPlex(config, loopStore, logger);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Plex resume sync failed: ${error.message}`);
-      }
-    }
-
-    if (embyActive) {
-      try {
-        trace("Scheduled Sync: checking Emby continue watching...");
-        embyResumeSynced = await syncRecentlyResumableFromEmby(config, loopStore, logger);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Emby resume sync failed: ${error.message}`);
-      }
-    }
-
-    if (jellyfinActive) {
-      try {
-        trace("Scheduled Sync: checking Jellyfin continue watching...");
-        jellyfinResumeSynced = await syncRecentlyResumableFromJellyfin(config, loopStore, logger);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Jellyfin resume sync failed: ${error.message}`);
-      }
-    }
-
-    if (embyActive) {
-      try {
-        trace("Scheduled Sync: checking Emby next up...");
-        embyNextUpFetched = await syncRecentlyNextUpFromEmby(config, logger);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Emby next-up sync failed: ${error.message}`);
-      }
-    }
-
-    if (jellyfinActive) {
-      try {
-        trace("Scheduled Sync: checking Jellyfin Next Up...");
-        jellyfinNextUpFetched = await syncRecentlyNextUpFromJellyfin(config, logger);
-      } catch (error) {
-        logger(`Scheduled Sync ERROR: Jellyfin Next Up sync failed: ${error.message}`);
-      }
-    }
+    await Promise.all([
+      plexActive ? (async () => {
+        try {
+          trace("Scheduled Sync: checking Plex continue watching...");
+          plexResumeSynced = await syncRecentlyResumableFromPlex(config, loopStore, logger);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Plex resume sync failed: ${error.message}`);
+        }
+      })() : Promise.resolve(),
+      embyActive ? (async () => {
+        try {
+          trace("Scheduled Sync: checking Emby continue watching...");
+          embyResumeSynced = await syncRecentlyResumableFromEmby(config, loopStore, logger);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Emby resume sync failed: ${error.message}`);
+        }
+        try {
+          trace("Scheduled Sync: checking Emby next up...");
+          embyNextUpFetched = await syncRecentlyNextUpFromEmby(config, logger);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Emby next-up sync failed: ${error.message}`);
+        }
+      })() : Promise.resolve(),
+      jellyfinActive ? (async () => {
+        try {
+          trace("Scheduled Sync: checking Jellyfin continue watching...");
+          jellyfinResumeSynced = await syncRecentlyResumableFromJellyfin(config, loopStore, logger);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Jellyfin resume sync failed: ${error.message}`);
+        }
+        try {
+          trace("Scheduled Sync: checking Jellyfin Next Up...");
+          jellyfinNextUpFetched = await syncRecentlyNextUpFromJellyfin(config, logger);
+        } catch (error) {
+          logger(`Scheduled Sync ERROR: Jellyfin Next Up sync failed: ${error.message}`);
+        }
+      })() : Promise.resolve(),
+    ]);
 
   }
 

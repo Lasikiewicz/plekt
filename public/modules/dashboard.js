@@ -1,12 +1,13 @@
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
 import { state, elements } from "./state.js?v=2.3.0.0.1";
-import { escapeHtml, escapeAttribute, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, isDemoMode } from "./utils.js?v=2.3.0.0.1";
+import { escapeHtml, escapeAttribute, safeHttpUrl, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, formatRemainingDuration, isDemoMode } from "./utils.js?v=2.3.0.0.1";
 import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.3.0.0.1";
 import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.3.0.0.1";
 import { dedupeMediaRecords } from "./media-records.js?v=2.3.0.0.1";
 import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.3.0.0.1";
 import { cardArtAttribute } from "./card-art.js?v=2.3.0.0.1";
 import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.3.0.0.1";
+import { upNextCardCuesHtml } from "./up-next-shared.js?v=2.3.0.0.1";
 
 const PART_WATCHED_DASHBOARD_LIMIT = 30;
 const EXPLORER_PAGE_SIZE = 240;
@@ -257,7 +258,7 @@ export function renderHistoryCard(entry) {
       : { ...entry, cache_only_artwork: true };
 
     return `
-      <a class="history-mini-card" data-history-id="${entry.id}" href="${escapeAttribute(href)}">
+      <a class="history-mini-card" data-history-id="${escapeAttribute(entry.id)}" href="${escapeAttribute(href)}">
         <span class="history-mini-card-poster-wrapper">
           ${posterMarkup(posterEntry, "history-mini-poster")}
           ${posterOverflowMenu(entry, { showTitle, label: showTitle })}
@@ -272,7 +273,7 @@ export function renderHistoryCard(entry) {
   } else {
     const href = entry.tmdb_id ? movieTmdbHref(entry.tmdb_id, entry.title) : movieHref(entry);
     return `
-      <a class="history-mini-card" data-history-id="${entry.id}" href="${escapeAttribute(href)}">
+      <a class="history-mini-card" data-history-id="${escapeAttribute(entry.id)}" href="${escapeAttribute(href)}">
         <span class="history-mini-card-poster-wrapper">
           ${posterMarkup({ ...entry, cache_only_artwork: true }, "history-mini-poster")}
           ${posterOverflowMenu(entry)}
@@ -537,17 +538,22 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
         </div>` : "";
 
   // Up next cards show the progress bar above the "Watch now" apps.
+  const remainingText = showProgress
+    ? formatRemainingDuration(entry.position_ms ?? entry.positionMs, entry.duration_ms ?? entry.durationMs)
+    : "";
+  const progressCopyHtml = `<span class="up-next-progress-copy"><span class="part-watched-progress-text">${partProgress}% watched</span>${remainingText ? `<span class="up-next-remaining-text">· ${escapeHtml(remainingText)}</span>` : ""}</span>`;
   const progressHtml = showProgress ? `
           <div class="part-watched-progress-container${isUpNext ? " up-next-progress-container" : ""}">
             <div class="part-watched-progress-bar"><div class="part-watched-progress-fill" style="width: ${partProgress}%;"></div></div>
             ${isUpNext
               ? `<div class="up-next-progress-row">
-                  <span class="part-watched-progress-text">${partProgress}% watched</span>
+                  ${progressCopyHtml}
                   <button class="icon-button up-next-clear-button" type="button" aria-label="Clear progress" title="Clear progress" data-up-next-clear="${escapeAttribute(cardId)}">Clear</button>
                 </div>`
-              : `<span class="part-watched-progress-text">${partProgress}% watched</span>`}
+              : progressCopyHtml}
           </div>
         ` : "";
+  const cuesHtml = isUpNext ? upNextCardCuesHtml(entry) : "";
 
   return `
     ${cardOpen}
@@ -560,12 +566,14 @@ export function renderDashboardHistoryPageCard(entry, options = {}) {
           ${titleRowHtml}
           ${options.explorerSummary !== undefined ? `<p class="history-card-summary" data-overview-text>${escapeHtml(options.explorerSummary)}</p>` : isEpisode ? `<span class="history-card-episode"${!isUpNext ? ` data-episode-title-key="${escapeAttribute(dashboardEpisodeTitleKey(entry))}"` : ""} title="${escapeAttribute(epTitle)}">${escapeHtml(epTitle)}</span>` : ""}
           ${seasonEpisodeBelowName ? seasonEpisodeRow : ""}
+          ${cuesHtml}
         </div>
         ${metaHtml}
         ${isUpNext ? progressHtml : ""}
         ${watchNowFooter}
         ${isUpNext ? "" : progressHtml}
         ${partActions}
+        ${isUpNext ? entry.orderControls || "" : ""}
       </div>
     ${cardClose}
   `;
@@ -677,6 +685,7 @@ function dashboardRowHtmlWithoutPartWatchedProgress(html = "") {
   return String(html)
     .replace(/(<div class="part-watched-progress-fill" style="width:\s*)[^"]+(;"><\/div>)/g, "$1__part_progress__$2")
     .replace(/(<span class="part-watched-progress-text">)[^<]*(<\/span>)/g, "$1__part_progress_text__$2")
+    .replace(/(<span class="up-next-remaining-text">)[^<]*(<\/span>)/g, "$1__remaining_text__$2")
     .replace(/(<span class="meta-value part-watched-last-played-value">)[^<]*(<\/span>)/g, "$1__part_last_played__$2");
 }
 
@@ -735,6 +744,9 @@ function dashboardCardRenderSignature(card) {
   for (const progressText of clone.querySelectorAll(".part-watched-progress-text, .now-card-progress-text")) {
     progressText.textContent = "__progress_text__";
   }
+  for (const remainingText of clone.querySelectorAll(".up-next-remaining-text")) {
+    remainingText.textContent = "__remaining_text__";
+  }
   for (const lastPlayed of clone.querySelectorAll(".part-watched-last-played-value")) {
     lastPlayed.textContent = "__last_played__";
   }
@@ -758,9 +770,10 @@ export function reconcileDashboardCardRow(row, html) {
   if (!row) return;
   const template = document.createElement("template");
   template.innerHTML = html;
-  const nextCards = [...template.content.children].filter((node) => node.matches?.(
-    "[data-history-id], [data-collapsed-run-key], [data-part-watched-card-id], [data-up-next-card-id], [data-now-playing-card-id], .shared-media-card",
-  ));
+  const CARD_SELECTOR = "[data-history-id], [data-collapsed-run-key], [data-part-watched-card-id], [data-up-next-card-id], [data-now-playing-card-id], .shared-media-card";
+  const nextChildren = [...template.content.children];
+  const nextCards = nextChildren.filter((node) => node.matches?.(CARD_SELECTOR));
+  const nextNonCards = nextChildren.filter((node) => !node.matches?.(CARD_SELECTOR));
   const currentCards = dashboardRowCards(row);
 
   // Empty/loading/error states have no keyed cards to reconcile.
@@ -768,6 +781,14 @@ export function reconcileDashboardCardRow(row, html) {
     row.innerHTML = html;
     return;
   }
+
+  for (const child of [...row.children]) {
+    if (!child.matches?.(CARD_SELECTOR)) child.remove();
+  }
+  for (let i = 0; i < nextNonCards.length; i += 1) {
+    row.insertBefore(nextNonCards[i], row.children[i] || null);
+  }
+  const offset = nextNonCards.length;
 
   const currentByKey = new Map(currentCards.map((card) => [dashboardRowCardKey(card), card]));
   const nextKeys = new Set(nextCards.map(dashboardRowCardKey));
@@ -782,11 +803,11 @@ export function reconcileDashboardCardRow(row, html) {
         currentCard = nextCard;
         currentByKey.set(key, currentCard);
       }
-      const cardAtPosition = row.children[index];
+      const cardAtPosition = row.children[offset + index];
       if (cardAtPosition !== currentCard) row.insertBefore(currentCard, cardAtPosition || null);
       continue;
     }
-    row.insertBefore(nextCard, row.children[index] || null);
+    row.insertBefore(nextCard, row.children[offset + index] || null);
     currentByKey.set(key, nextCard);
   }
 
@@ -1042,8 +1063,9 @@ function bindPartWatchedAppBadges(root) {
         const link = Array.isArray(body.links)
           ? body.links.find((candidate) => normalizePlatformSource(candidate?.target) === target)
           : null;
-        if (!response.ok || !link?.url) throw new Error(`Could not open ${platformBadge(target)}.`);
-        popup.location.href = link.url;
+        const safeUrl = safeHttpUrl(link?.url);
+        if (!response.ok || !safeUrl) throw new Error(`Could not open ${platformBadge(target)}.`);
+        popup.location.href = safeUrl;
       } catch (error) {
         popup.close();
         _cb.setMessage?.(error.message, "error");
@@ -1069,6 +1091,12 @@ function patchPartWatchedCardProgress(node, entry) {
   if (fill) fill.style.width = `${progressPercent}%`;
   const text = node.querySelector(".part-watched-progress-text");
   if (text) text.textContent = `${progressPercent}% watched`;
+  const remainingEl = node.querySelector(".up-next-remaining-text");
+  if (remainingEl) {
+    const remainingText = formatRemainingDuration(entry.position_ms ?? entry.positionMs, entry.duration_ms ?? entry.durationMs);
+    remainingEl.textContent = remainingText ? `· ${remainingText}` : "";
+    remainingEl.classList.toggle("hidden", !remainingText);
+  }
   const lastPlayed = node.querySelector(".part-watched-last-played-value");
   if (lastPlayed) lastPlayed.textContent = entry.updated_at ? formatDate(entry.updated_at) : "";
 }

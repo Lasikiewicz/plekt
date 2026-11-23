@@ -10,7 +10,7 @@ const { AUTH } = await import("../server/src/appConfig.js");
 const { handleWebhook } = await import("../server/src/routes/sync.js");
 const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
 const { listPendingManualWatchReviews } = await import("../server/src/utils/manualWatchReview.js");
-const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
+const { saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 const { setShowSeasonSource } = await import("../server/src/utils/seasonSource.js");
 const { queryShowDetail } = await import("../server/src/utils/dataRepo.js");
 
@@ -67,12 +67,16 @@ test("Emby played flag retains verified DVD identity through manual review appro
     plex: { disabled: true },
     jellyfin: { disabled: true },
   });
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-srv", selectedIds: ["emby-tv"] });
 
   const originalFetch = globalThis.fetch;
   t.after(() => { globalThis.fetch = originalFetch; });
   globalThis.fetch = async (input, options = {}) => {
     const url = new URL(String(input));
     assert.ok(!options.method || options.method === "GET", "the regression path performs provider reads only");
+    if (url.pathname.endsWith("/Ancestors")) {
+      return Response.json([{ Id: "emby-tv", Type: "CollectionFolder", CollectionType: "tvshows" }]);
+    }
     if (url.pathname === "/Users/emby-user/Items/futurama") {
       return Response.json({ Id: "futurama", Type: "Series", ProviderIds: { Tvdb: showId } });
     }

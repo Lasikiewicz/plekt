@@ -8,7 +8,7 @@ makeTempDataDir("plembfin-manual-watch-review-");
 const { db } = await import("../server/src/db.js");
 const repo = await import("../server/src/utils/dataRepo.js");
 const { AUTH } = await import("../server/src/appConfig.js");
-const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
+const { saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
 const { applyManualUnwatch } = await import("../server/src/routes/sync.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
@@ -297,6 +297,7 @@ test("episode reviews expose the watched state of the surrounding episodes", asy
   };
   await repo.upsertPlaystateForMedia(previous, "watched", previous.watched_at, { skipInvalidate: true });
   await repo.upsertPlaystateForMedia(following, "watched", following.watched_at, { skipInvalidate: true });
+  await repo.insertWatchRecord(previous);
 
   const queued = enqueueManualWatchReview({
     title: "Review Context Show - S01E02",
@@ -319,6 +320,9 @@ test("episode reviews expose the watched state of the surrounding episodes", asy
     after: queued.review.watch_context.after.watched,
   }, { before: true, after: true });
   assert.deepEqual(manualWatchReviewWatchContext(queued.review).before, queued.review.watch_context.before);
+  const listed = listPendingManualWatchReviews().find(({ id }) => id === queued.review.id);
+  assert.equal(listed.episode_timing.watchedAt, "2026-09-01T19:01:00.000Z");
+  assert.equal(listed.episode_timing.anchorCode, "S01E01");
   setManualWatchReviewStatus(queued.review.id, "dismissed");
 });
 
@@ -529,6 +533,7 @@ test("explicit provider Mark played events can still open a review after an unwa
 });
 
 test("mark watched now updates an existing cross-key watch instead of keeping its old date", async () => {
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["1"] });
   const title = "Existing Review Show - S01E01 - Pilot";
   const showTitle = "Existing Review Show";
   const oldDate = "2026-08-01T10:00:00.000Z";
@@ -540,6 +545,7 @@ test("mark watched now updates an existing cross-key watch instead of keeping it
     episode: 1,
     source: "plex",
     itemId: "plex-review-existing",
+    librarySectionId: "1",
     releaseDate: "2026-07-01",
     ids: {},
     isValid: true,
@@ -597,24 +603,28 @@ test("mark watched now updates an existing cross-key watch instead of keeping it
   assert.equal(countPendingManualWatchReviews(), 0);
 });
 
-test("manual watch review accepts an explicit date and time", async () => {
+async function assertManualWatchReviewSavesTimestamp(mode, watchedAt) {
+  const itemId = `emby-manual-date-${mode}`;
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-srv", selectedIds: ["emby-lib-1"] });
   const queued = enqueueManualWatchReview({
-    title: "Manual Date Movie",
+    title: `Manual Date Movie ${mode}`,
     type: "movie",
     source: "emby",
-    itemId: "emby-manual-date-movie",
-    ids: { tmdb: "manual-date-movie" },
+    watchProvenance: { source: "emby", ingest_path: "emby_scheduled_library_history", item_id: itemId },
+    libraryContext: { version: 1, serverId: "emby-srv", itemId, libraryId: "emby-lib-1", resolutionStatus: "resolved" },
+    ids: { tmdb: itemId },
     releaseDate: "2026-07-01",
     isValid: true,
   }, {
     releaseDate: "2026-07-01T00:00:00.000Z",
-    sourceFingerprint: "emby|manual-date-movie|1",
+    sourceFingerprint: `emby|${itemId}|1`,
   });
   assert.equal(queued.status, "pending");
+  assert.equal(queued.review.source_item_id, null);
 
   const request = {
     method: "POST",
-    body: { mode: "custom", watched_at: "2026-08-15T18:45:00.000Z" },
+    body: { mode, watched_at: watchedAt },
     headers: { "x-api-key": AUTH.apiKey },
     cookies: {},
     get(name) { return this.headers[String(name).toLowerCase()] || ""; },
@@ -635,11 +645,18 @@ test("manual watch review accepts an explicit date and time", async () => {
 
   assert.equal(statusCode, 200);
   assert.equal(responseBody.ok, true);
-  assert.equal(responseBody.mode, "custom");
-  assert.equal(responseBody.watchedAt, "2026-08-15T18:45:00.000Z");
-  assert.equal(getManualWatchReview(queued.review.id).decision_mode, "custom");
+  assert.equal(responseBody.mode, mode);
+  assert.equal(responseBody.watchedAt, watchedAt);
+  assert.equal((await repo.getWatchRecordById(responseBody.watchRecordId)).watched_at, watchedAt);
+  assert.equal(getManualWatchReview(queued.review.id).decision_mode, mode);
   assert.equal(countPendingManualWatchReviews(), 0);
-});
+}
+
+test("manual watch review accepts an explicit date and time", () =>
+  assertManualWatchReviewSavesTimestamp("custom", "2026-08-15T18:45:00.000Z"));
+
+test("manual watch review saves the confirmed date even when the policy would compute a different date", () =>
+  assertManualWatchReviewSavesTimestamp("release_day", "2026-07-02T00:00:00.000Z"));
 
 test("dismissing a review marks it unwatched across connected media apps", async (t) => {
   const originalFetch = globalThis.fetch;
@@ -651,7 +668,18 @@ test("dismissing a review marks it unwatched across connected media apps", async
     emby: { baseUrl: "http://emby-review.test", apiKey: "emby-key", userId: "emby-user", disabled: false },
     jellyfin: { baseUrl: "http://jellyfin-review.test", apiKey: "jellyfin-key", userId: "jellyfin-user", disabled: false },
   });
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["1"] });
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-srv", selectedIds: ["emby-lib-1"] });
+  saveProviderLibraryMonitoring("jellyfin", { serverId: "jf-srv", selectedIds: ["jf-lib-1"] });
   globalThis.fetch = async (url, options = {}) => {
+    const parsedUrl = new URL(String(url));
+    if (parsedUrl.pathname.endsWith("/Ancestors")) {
+      const id = parsedUrl.hostname.includes("emby") ? "emby-lib-1" : "jf-lib-1";
+      return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ([{ Id: id, Type: "CollectionFolder", CollectionType: "movies" }]) };
+    }
+    if (parsedUrl.pathname.startsWith("/library/metadata/")) {
+      return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ({ MediaContainer: { Metadata: [{ ratingKey: "plex-dismiss-item", librarySectionID: "1" }] } }) };
+    }
     calls.push({ url: String(url), method: options.method || "GET" });
     return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ({}) };
   };
@@ -714,6 +742,9 @@ test("dismissing a review marks it unwatched across connected media apps", async
   }
 
   globalThis.fetch = async (url, options = {}) => {
+    if (new URL(String(url)).pathname === "/library/metadata/plex-failure-item") {
+      return Response.json({ MediaContainer: { Metadata: [{ ratingKey: "plex-failure-item", librarySectionID: "1" }] } });
+    }
     calls.push({ url: String(url), method: options.method || "GET" });
     return { ok: false, status: 503, headers: { get: () => "" }, json: async () => ({}) };
   };
@@ -769,6 +800,7 @@ test("dismissing an id-less episode review resolves its show from the reporting 
     emby: { disabled: true },
     jellyfin: { disabled: true },
   });
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["1"] });
   const original = { imdb: "tt0285403", tmdb: "4556", tvdb: "76156" };
   const reboot = { imdb: "tt40197357", tmdb: "295778", tvdb: "465690" };
   const episodeMedia = (ids, episode) => ({
@@ -791,7 +823,7 @@ test("dismissing an id-less episode review resolves its show from the reporting 
     const path = new URL(String(url)).pathname;
     if (path === "/library/metadata/3263") {
       if (!plexItemReadable) return { ok: false, status: 404, headers: { get: () => "" }, json: async () => ({}) };
-      return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ({ MediaContainer: { Metadata: [{ ratingKey: "3263", grandparentRatingKey: "3200" }] } }) };
+      return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ({ MediaContainer: { Metadata: [{ ratingKey: "3263", grandparentRatingKey: "3200", librarySectionID: "1" }] } }) };
     }
     if (path === "/library/metadata/3200") {
       return { ok: true, status: 200, headers: { get: () => "" }, json: async () => ({ MediaContainer: { Metadata: [{ ratingKey: "3200", Guid: [{ id: "imdb://tt0285403" }, { id: "tmdb://4556" }, { id: "tvdb://76156" }] }] } }) };
@@ -969,6 +1001,7 @@ test("approving an episode-id review writes playstate under its history row's sh
     episode: 1,
     source: "emby",
     itemId: "emby-alias-lane-101",
+    libraryContext: { version: 1, serverId: "emby-srv", itemId: "emby-alias-lane-101", libraryId: "emby-lib-1", resolutionStatus: "resolved" },
     // The episode's own IMDb id, leaked into the series slot.
     ids: { imdb: "tt8100001" },
     isValid: true,

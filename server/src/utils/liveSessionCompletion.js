@@ -15,6 +15,21 @@ import { withSeriesIdentity } from "./seriesIdentity.js";
 import { keepOrderProvenance, resolveOrderMediaForPolling } from "./episodeOrderWatch.js";
 import { undropTitleForLivePlay } from "./droppedTitles.js";
 import { buildTelemetry, buildProgressTelemetry, recordSyncHistory } from "./syncHistoryTelemetry.js";
+import { LIBRARY_MONITORING_PROVIDERS, resolveItemLibraryMembership } from "./librarySelection.js";
+
+async function liveSessionLibraryAllowed(media, config) {
+  const provider = String(media?.source || "").trim().toLowerCase();
+  if (!LIBRARY_MONITORING_PROVIDERS.includes(provider)) return true;
+  const section = config?.[provider];
+  if (!config?.libraryMonitoring && !section?.libraryMonitoringEnforced && !Array.isArray(section?.monitoredLibraryIds)) return true;
+  const decision = await resolveItemLibraryMembership(provider, config, {
+    itemId: media.itemId || "",
+    ratingKey: media.itemId || "",
+    librarySectionID: media.librarySectionId || undefined,
+    Type: media.type === "episode" ? "Episode" : "Movie",
+  }, { lane: "sync" });
+  return Boolean(decision.allowed);
+}
 
 // A failed provider feed is a connection-health signal. Retry only that
 // provider on a short cadence instead of waiting for the full catch-up window
@@ -139,6 +154,7 @@ async function processCompletedSession(row, config, loopStore) {
   if (isAuthoritativeRestoreActive()) return null;
   let media = cachedRowToMedia(row);
   if (!media.isValid || Number(media.progress || 0) < watchedThresholdPercent()) return null;
+  if (!(await liveSessionLibraryAllowed(media, config))) return null;
   // Same series resolution as webhooks and Continue Watching; without it an id-less
   // live session folds onto whichever show profile history already holds for the title.
   media = await withSeriesIdentity(media, config);
@@ -266,6 +282,7 @@ async function processStoppedSessionProgress(row, config, loopStore) {
   if (isAuthoritativeRestoreActive()) return null;
   let media = cachedRowToMedia(row);
   if (!shouldSyncResumeProgress(media)) return null;
+  if (!(await liveSessionLibraryAllowed(media, config))) return null;
   media = await withSeriesIdentity(media, config);
 
   const [existingPlaystate, existingProgress] = await Promise.all([

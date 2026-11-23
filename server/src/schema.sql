@@ -266,6 +266,7 @@ CREATE TABLE IF NOT EXISTS up_next_manual_shows (
   tvdb_id TEXT,
   imdb_id TEXT,
   poster_url TEXT,
+  target_season INTEGER,
   added_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -501,6 +502,8 @@ CREATE TABLE IF NOT EXISTS poster_cache (
   url TEXT,
   updated_at_ms INTEGER
 );
+CREATE INDEX IF NOT EXISTS idx_poster_cache_media_variant ON poster_cache(media_key, variant, updated_at_ms);
+CREATE INDEX IF NOT EXISTS idx_poster_cache_storage_path ON poster_cache(storage_path);
 
 CREATE TABLE IF NOT EXISTS tmdb_metadata_cache (
   id TEXT PRIMARY KEY,

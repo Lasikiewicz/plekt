@@ -53,6 +53,8 @@ test("provider feed generations keep the last good snapshot through partial fail
   }], { now: 1_500 });
   assert.equal(acknowledgement.changed, false);
   assert.equal(getUpNextFeedSourceVersion(), firstSourceVersion);
+  assert.equal(listActiveUpNextProviderItems()[0].observed_at, 1_000);
+  assert.equal(listActiveUpNextProviderItems()[0].last_seen_at, 1_500);
 
   const failedGeneration = startUpNextProviderFeed("emby", "next_up", { now: 2_000 });
   failUpNextProviderFeed("emby", "next_up", failedGeneration, new Error("GET /Shows/NextUp?api_key=secret-token failed"), {
@@ -122,4 +124,81 @@ test("Emby image tags become show poster paths in the provider snapshot", () => 
   assert.equal(item.show_poster_url, "/Items/emby-poster-series/Images/Primary?tag=series-tag");
   assert.equal(item.poster_url, "/Items/emby-poster-series/Images/Primary?tag=series-tag");
   assert.equal(getActiveUpNextProviderItemById("emby", "emby-poster-episode").provider_item_id, "emby-poster-episode");
+});
+
+function jellyfinFeedItem(id) {
+  return {
+    Id: id,
+    Type: "Episode",
+    Name: `Episode ${id}`,
+    SeriesName: `Generation Show ${id}`,
+    SeriesId: `${id}-series`,
+    ParentIndexNumber: 1,
+    IndexNumber: 1,
+    SeriesProviderIds: { Tmdb: `77${id.length}` },
+  };
+}
+
+function feedState(provider, feedKind) {
+  return listUpNextProviderFeedStates().find((feed) => feed.provider === provider && feed.feed_kind === feedKind);
+}
+
+test("a superseded feed generation completing late is discarded and generation 2 stays", () => {
+  const generation1 = startUpNextProviderFeed("jellyfin", "resume", { now: 10_000 });
+  const generation2 = startUpNextProviderFeed("jellyfin", "resume", { now: 10_100 });
+  assert.equal(generation2, generation1 + 1);
+
+  const second = completeUpNextProviderFeed("jellyfin", "resume", generation2, [jellyfinFeedItem("gen-two")], {
+    now: 10_200,
+    triggerAutoSync: false,
+  });
+  assert.equal(second.ignored, false);
+
+  const late = completeUpNextProviderFeed("jellyfin", "resume", generation1, [jellyfinFeedItem("gen-one-late")], {
+    now: 10_300,
+    triggerAutoSync: false,
+  });
+  assert.equal(late.ignored, true);
+  assert.equal(late.changed, false);
+
+  const ids = listActiveUpNextProviderItems()
+    .map((item) => item.provider_item_id)
+    .filter((id) => id.startsWith("gen-"));
+  assert.deepEqual(ids, ["gen-two"]);
+  const state = feedState("jellyfin", "resume");
+  assert.equal(state.active_generation, generation2);
+  assert.equal(state.current_generation, generation2);
+  assert.equal(state.status, "succeeded");
+  assert.equal(state.completed_at, 10_200);
+});
+
+test("a superseded feed generation failing late does not overwrite generation 2 or the last good snapshot", () => {
+  const generation1 = startUpNextProviderFeed("jellyfin", "next_up", { now: 20_000 });
+  const generation2 = startUpNextProviderFeed("jellyfin", "next_up", { now: 20_100 });
+  completeUpNextProviderFeed("jellyfin", "next_up", generation2, [jellyfinFeedItem("nu-two-good")], {
+    now: 20_200,
+    triggerAutoSync: false,
+  });
+
+  const late = failUpNextProviderFeed("jellyfin", "next_up", generation1, new Error("late failure of generation one"), { now: 20_300 });
+  assert.equal(late.ignored, true);
+
+  const state = feedState("jellyfin", "next_up");
+  assert.equal(state.status, "succeeded");
+  assert.equal(state.active_generation, generation2);
+  assert.equal(state.last_error, null);
+  assert.deepEqual(
+    listActiveUpNextProviderItems()
+      .map((item) => item.provider_item_id)
+      .filter((id) => id.startsWith("nu-")),
+    ["nu-two-good"],
+  );
+
+  // A generation that began after the last good snapshot and was then
+  // superseded must not leave the feed marked failed either.
+  const generation3 = startUpNextProviderFeed("jellyfin", "next_up", { now: 20_400 });
+  const generation4 = startUpNextProviderFeed("jellyfin", "next_up", { now: 20_500 });
+  assert.equal(failUpNextProviderFeed("jellyfin", "next_up", generation3, new Error("stale"), { now: 20_600 }).ignored, true);
+  assert.equal(feedState("jellyfin", "next_up").status, "running");
+  assert.equal(feedState("jellyfin", "next_up").current_generation, generation4);
 });

@@ -11,6 +11,12 @@ import { createPerUserState } from "./perUserState.js";
 import { countPlaybackProgressRows, listPlaybackProgressRowsForReplay, getPlaybackProgressForMedia } from "./dataRepo.js";
 import { plexHeldStoredResume } from "./plexWatchstate.js";
 import { isAlternateOrderEpisodeRow, plexUnwatchCheckTarget } from "./episodeOrderWatch.js";
+import { filterAuthorizedTargetItems, getProviderLibrarySelection, resolveItemLibraryMembership } from "./librarySelection.js";
+
+function unwatchLibraryEnforced(config = {}, provider = "") {
+  const section = config?.[provider];
+  return Boolean(config?.libraryMonitoring || section?.libraryMonitoringEnforced || Array.isArray(section?.monitoredLibraryIds));
+}
 
 const pendingPlexReviewPollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
 const plexResumePollState = createPerUserState(() => ({ next: 0 }), { maxEntries: 8 });
@@ -46,6 +52,8 @@ async function checkPlexResumeUnwatches(config, loopStore) {
       const item = await fetchPlexMetadataItem(config.plex, key);
       if (!item || item.type !== media.type || Number(item.viewCount || 0) !== 0
         || Number(item.viewOffset || 0) !== 0 || !plexItemMatchesProgress(item, progress)) continue;
+      if (unwatchLibraryEnforced(config, "plex")
+        && !(await resolveItemLibraryMembership("plex", config, item, { lane: "sync" })).allowed) continue;
       const plexMedia = { ...media, itemId: String(item.ratingKey || key) };
       const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(plexMedia, "plex", loopStore).catch(() => 0);
       if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) continue;
@@ -84,6 +92,8 @@ async function checkPendingPlexReviewUnwatches(config, loopStore) {
       if (!item || String(item.ratingKey) !== String(review.source_item_id)
         || item.type !== review.media_type
         || Number(item.viewCount || 0) !== 0 || Number(item.viewOffset || 0) !== 0) continue;
+      if (unwatchLibraryEnforced(config, "plex")
+        && !(await resolveItemLibraryMembership("plex", config, item, { lane: "sync" })).allowed) continue;
       const media = { ...manualWatchReviewMedia(review), source: "plex", itemId: String(item.ratingKey) };
       const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(media, "plex", loopStore).catch(() => 0);
       if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) continue;
@@ -168,6 +178,7 @@ async function clearJellyfinUnwatchedObservation(media, loopStore) {
 export async function checkPlexUnwatchedStatus(config, loopStore) {
   if (!watchedPlayedSyncEnabled()) return;
   if (!config.plex?.baseUrl || !config.plex?.token || config.plex.disabled) return;
+  if (unwatchLibraryEnforced(config, "plex") && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) return;
 
   await checkPendingPlexReviewUnwatches(config, loopStore);
   await checkPlexResumeUnwatches(config, loopStore);
@@ -227,6 +238,8 @@ export async function checkPlexUnwatchedStatus(config, loopStore) {
         }
         if (!isWatched) {
           const plexMedia = { ...media, itemId: confirmedItem.ratingKey || confirmedItem.key || undefined };
+          if (unwatchLibraryEnforced(config, "plex")
+            && !(await resolveItemLibraryMembership("plex", config, confirmedItem, { lane: "sync" })).allowed) continue;
           const ownPlayedMarkAt = await lastOutboundPlayedMarkAt(plexMedia, "plex", loopStore).catch(() => 0);
           if (ownPlayedMarkAt > 0 && Date.now() - ownPlayedMarkAt <= 10 * 60 * 1000) {
             console.log("Cron ignored Plex unplayed state after Plekt's own played mark", { title: record.title });
@@ -252,6 +265,7 @@ export async function checkPlexUnwatchedStatus(config, loopStore) {
 export async function checkEmbyUnwatchedStatus(config, loopStore) {
   if (!watchedPlayedSyncEnabled()) return;
   if (!config.emby?.baseUrl || !config.emby?.apiKey || !config.emby?.userId) return;
+  if (unwatchLibraryEnforced(config, "emby") && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) return;
 
   const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
   const embyWasConfirmedWatched = (record) => {
@@ -283,7 +297,10 @@ export async function checkEmbyUnwatchedStatus(config, loopStore) {
         watchProvenance: record.watch_provenance || null,
       };
 
-      const items = await findEmbyItems(config.emby, media);
+      const rawItems = await findEmbyItems(config.emby, media);
+      const items = unwatchLibraryEnforced(config, "emby")
+        ? (await filterAuthorizedTargetItems("emby", config, rawItems || [], { lane: "sync" })).allowed
+        : (rawItems || []);
       const item = items?.[0];
       if (item) {
         const isWatched = isEmbyLikePlayed(item);
@@ -310,6 +327,7 @@ export async function checkEmbyUnwatchedStatus(config, loopStore) {
 export async function checkJellyfinUnwatchedStatus(config, loopStore) {
   if (!watchedPlayedSyncEnabled()) return;
   if (!config.jellyfin?.baseUrl || !config.jellyfin?.apiKey || !config.jellyfin?.userId) return;
+  if (unwatchLibraryEnforced(config, "jellyfin") && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) return;
 
   const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000).toISOString();
   const jellyfinWasConfirmedWatched = (record) => {
@@ -341,7 +359,10 @@ export async function checkJellyfinUnwatchedStatus(config, loopStore) {
         watchProvenance: record.watch_provenance || null,
       };
 
-      const items = await findJellyfinItems(config.jellyfin, media);
+      const rawItems = await findJellyfinItems(config.jellyfin, media);
+      const items = unwatchLibraryEnforced(config, "jellyfin")
+        ? (await filterAuthorizedTargetItems("jellyfin", config, rawItems || [], { lane: "sync" })).allowed
+        : (rawItems || []);
       if (!items?.length) continue;
 
       // Provider/title matching can return duplicate library items. One

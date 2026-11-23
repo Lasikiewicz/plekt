@@ -25,6 +25,7 @@ test("options saves are serialized and failures only roll back the affected conf
   const upNext = target();
   const count = target();
   const sync = target();
+  const sort = target();
   const button = target();
   const errorLine = { textContent: "", classList: { toggle() {} } };
   const controls = { allowPartWatched: part, allowUpNext: upNext, itemCount: count };
@@ -33,6 +34,7 @@ test("options saves are serialized and failures only roll back the affected conf
     querySelector(selector) {
       if (selector === ".now-playing-option-error") return errorLine;
       if (selector.includes("data-up-next-sync-option")) return sync;
+      if (selector.includes('data-up-next-sort-option="sort"')) return sort;
       return controls[selector.match(/data-now-playing-option="([^"]+)"/)?.[1]];
     },
   };
@@ -56,7 +58,7 @@ test("options saves are serialized and failures only roll back the affected conf
   const previousUser = state.currentUser;
   const previousToken = state.token;
   try {
-    state.savedConfig = { nowPlaying: { allowPartWatched: true, allowUpNext: true, itemCount: 3 }, upNextSync: { enabled: true } };
+    state.savedConfig = { nowPlaying: { allowPartWatched: true, allowUpNext: true, itemCount: 3 }, upNextSync: { enabled: true, sort: "recently_watched" } };
     await import("../public/modules/now-playing-options.js?ui-test");
 
     const first = part.change(false);
@@ -101,7 +103,7 @@ test("options saves are serialized and failures only roll back the affected conf
     assert.equal(requests.length, 6);
     state.currentUser = { uid: "second" };
     state.token = "second-session";
-    state.savedConfig = { nowPlaying: { allowPartWatched: true, allowUpNext: true, itemCount: 1 }, upNextSync: { enabled: true } };
+    state.savedConfig = { nowPlaying: { allowPartWatched: true, allowUpNext: true, itemCount: 1 }, upNextSync: { enabled: true, sort: "recently_watched" } };
     const newSave = part.change(false);
     requests[5].resolve(failure);
     await oldFirst;
@@ -123,6 +125,15 @@ test("options saves are serialized and failures only roll back the affected conf
     requests[8].resolve(success("nowPlaying", { allowPartWatched: false, allowUpNext: true, itemCount: 1 }));
     await latest;
     assert.equal(errorLine.textContent, "");
+
+    const sortSave = sort.change("newly_aired");
+    await Promise.resolve();
+    assert.deepEqual(requests[9].body, { upNextSync: { sort: "newly_aired" } });
+    assert.equal(state.savedConfig.upNextSync.sort, "newly_aired");
+    requests[9].resolve(success("upNextSync", { enabled: true, sort: "newly_aired" }));
+    await sortSave;
+    assert.equal(state.savedConfig.upNextSync.sort, "newly_aired");
+    assert.equal(sort.value, "newly_aired");
   } finally {
     state.savedConfig = previousConfig;
     state.currentUser = previousUser;

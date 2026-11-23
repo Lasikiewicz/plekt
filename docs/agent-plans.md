@@ -34,7 +34,7 @@ including `plan/bugs.md` when it has no open bugs, are not listed. Completed pla
   `- [-] [Title](plan/<name>.md) - 16 October 2026, 18:42` (use `- [ ]` when the plan has not
   started, and prefix the title with `Issue #54: ` before the link when it tracks an issue), then
   the date last worked on, with the time when known, then ` (<branch>)` when the work is on a
-  branch other than `develop`, and on the second line a very brief summary (a few words). A blank
+  branch other than `develop`, and on the second line a very brief summary (a few words, never a paragraph: `npm run todo:check` rejects a summary over 160 characters and any ticked item; commit hashes, run numbers and detail belong in the plan's "Where we are" and step files, user decision 12 November 2026). A blank
   line separates entries, and each subsection is ordered by that date, newest first. Plan
   bookkeeping (moves, merges, link fixes) does not count as work on a plan. Keep each plan in the
   appropriate release and status subsection when its state changes. There is no "Waiting on"
@@ -48,10 +48,13 @@ including `plan/bugs.md` when it has no open bugs, are not listed. Completed pla
   Record the answer in the
   plan and list it in that TODO section. Defer work by assigning it to a future release, not by
   creating a Deferred category. Derive the current release from the latest
-  published changelog entry and the next expected version from the release tooling/package
-  version; if the expected version cannot be determined, ask instead of guessing.
+  published changelog entry. The next feature release increments its minor version and resets
+  the patch to zero; a hotfix increments the released patch version. After a successful Force
+  to main, `scripts/roll-forward-todo.mjs` updates these headings while retaining open work.
+  If the released version cannot be determined, ask instead of guessing.
 - **`plan/updates.md` is a generated ledger** (see "Release commands"), not a plan summary; it
-  is never listed in `todo.md`.
+  is never listed in `todo.md`. `plan/next-release-checks.md` is likewise unlisted: it is the
+  standing release gate that Force to main reads and records into (user decision, 12 November 2026).
 - **Every open item belongs to a specific plan.** Add work to its existing owner plan when one
   exists; otherwise create a focused plan for that feature or follow-up. Do not create or use a
   catch-all loose-ends plan, and do not put individual work items directly in `todo.md`.

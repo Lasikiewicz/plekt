@@ -9,12 +9,13 @@ import { getMediaConnection, resolveConnectedProviderConfig } from "./mediaConne
 import { jellyfinAuthHeaders } from "./jellyfinAuth.js";
 import { brandEnv } from "./brandEnv.js";
 import { fetchWithTimeout } from "./outbound.js";
+import { createPerUserState } from "./perUserState.js";
 
 const STATUS_TTL_MS = 10 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 10000;
 const WEBHOOK_PLUGIN_NAME = /^webhook$/i;
 
-let latest = null;
+const latestByUser = createPerUserState(() => ({ latest: null }));
 
 export function portFromUri(uri) {
   try {
@@ -111,13 +112,15 @@ export async function runWebhookPortCheck({ log = console } = {}) {
   };
   const findings = buildWebhookPortFindings({ publishedPort, jellyfinDestinations, connected });
   for (const finding of findings) log.warn?.(`[webhook-port] ${finding.message}`);
-  latest = { checkedAt: Date.now(), publishedPort, findings, readError };
-  return latest;
+  const result = { checkedAt: Date.now(), publishedPort, findings, readError };
+  latestByUser().latest = result;
+  return result;
 }
 
 // Returns the last check, re-running it once it is older than the TTL so a fixed
 // webhook clears the banner without a restart.
 export async function getWebhookPortStatus({ now = Date.now() } = {}) {
-  if (latest && now - latest.checkedAt < STATUS_TTL_MS) return latest;
+  const cached = latestByUser().latest;
+  if (cached && now - cached.checkedAt < STATUS_TTL_MS) return cached;
   return runWebhookPortCheck({ log: { warn() {} } });
 }

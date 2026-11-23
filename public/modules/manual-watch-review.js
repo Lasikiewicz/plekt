@@ -4,6 +4,12 @@ import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.3.0.0.
 import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.3.0.0.1";
 import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.3.0.0.1";
 import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.3.0.0.1";
+import {
+  bulkSelectionSummary, clearBulkReviewSelection, executeBulkSelectionAction,
+  handleBulkSelectionChange, pruneBulkReviewSelection, renderBulkReviewBar,
+  reviewSelectCheckboxHtml, runSequentialReviewBatch, syncIndeterminateCheckboxes,
+  triggerBulkSelectionWorkflow,
+} from "./manual-watch-review-bulk.js?v=2.3.0.0.1";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;
@@ -440,13 +446,10 @@ function reviewPosterHtml(review, title, options = {}) {
   return posterMarkup(reviewPosterItem(review, title, options), "manual-watch-review-poster");
 }
 
-function reviewActionButtons({ includeEpisodeTiming = true, source = "" } = {}) {
+function reviewActionButtons() {
   return `
-    <button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="detected">Mark watched at detection time</button>
-    <button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="release_day">Use release day</button>
-    ${includeEpisodeTiming ? `<button class="button-ghost" type="button" data-manual-watch-review-action="approve" data-manual-watch-review-mode="episode_timing">Use episode timing</button>` : ""}
-    <button class="button-ghost" type="button" data-manual-watch-review-custom="item">Choose date &amp; time</button>
-    <button class="button-danger" type="button" data-manual-watch-review-action="dismiss">Dismiss &amp; mark unwatched</button>
+    <button class="button-primary" type="button" data-manual-watch-review-custom="item">Confirm watched…</button>
+    <button class="button-danger" type="button" data-manual-watch-review-action="dismiss">Dismiss (mark unwatched)</button>
   `;
 }
 
@@ -715,13 +718,17 @@ function manualWatchReviewEventHtml(episode = {}) {
 }
 
 export function reviewActionScopeLabel(scope, action, source = "", seasonLabel = "the season") {
-  // Season and show actions only change the episodes waiting for review, so
-  // the labels say "reviewed" rather than implying the whole season or show.
-  const prefix = scope === "show" ? "Mark all reviewed episodes" : `Mark reviewed ${seasonLabel} episodes`;
-  if (action === "dismiss") return `${prefix} unwatched`;
-  if (action === "release_day") return `${prefix} on release day`;
-  if (action === "episode_timing") return `${prefix} with episode timing`;
-  return `${prefix} watched`;
+  // Season and show actions only change the episodes waiting for review.
+  if (scope === "show") {
+    if (action === "dismiss") return "Dismiss reviewed episodes";
+    if (action === "release_day") return "Confirm reviewed episodes on air date";
+    if (action === "episode_timing") return "Confirm reviewed episodes with episode timing";
+    return "Confirm reviewed episodes…";
+  }
+  if (action === "dismiss") return `Dismiss ${seasonLabel}`;
+  if (action === "release_day") return `Confirm ${seasonLabel} on air date`;
+  if (action === "episode_timing") return `Confirm ${seasonLabel} with episode timing`;
+  return `Confirm ${seasonLabel}…`;
 }
 
 function scopedReviewActionButtons({ scope, groupKey, seasonKey = "", source = "" } = {}) {
@@ -729,13 +736,11 @@ function scopedReviewActionButtons({ scope, groupKey, seasonKey = "", source = "
   const keyAttribute = scope === "show"
     ? `data-manual-watch-review-group-key="${escapeAttribute(groupKey)}"`
     : `data-manual-watch-review-group-key="${escapeAttribute(groupKey)}" data-manual-watch-review-season-key="${escapeAttribute(seasonKey)}"`;
-  // "Mark watched" opens the watched-date popup (detection time, release day,
-  // episode timing, now, or a picked date), like the media page's season and show buttons.
   const customAttributes = scope === "show"
     ? `data-manual-watch-review-custom="group" data-manual-watch-review-group-key="${escapeAttribute(groupKey)}"`
     : `data-manual-watch-review-custom="season" data-manual-watch-review-group-key="${escapeAttribute(groupKey)}" data-manual-watch-review-season-key="${escapeAttribute(seasonKey)}"`;
   return `
-    <button class="button-ghost" type="button" ${customAttributes}>${escapeHtml(reviewActionScopeLabel(scope, "now", source, reviewSeasonLabel(seasonKey)))}</button>
+    <button class="button-primary" type="button" ${customAttributes}>${escapeHtml(reviewActionScopeLabel(scope, "now", source, reviewSeasonLabel(seasonKey)))}</button>
     <button class="button-danger" type="button" ${actionAttribute}="dismiss" ${keyAttribute}>${escapeHtml(reviewActionScopeLabel(scope, "dismiss", source, reviewSeasonLabel(seasonKey)))}</button>
   `;
 }
@@ -744,6 +749,7 @@ function renderReviewCard(review, { eagerPoster = true } = {}) {
   const title = reviewTitle(review);
   const episodeTitle = reviewEpisodeTitle(review);
   const href = reviewMovieHref(review);
+  const releaseDay = review.release_date ? formatTmdbDate(String(review.release_date).slice(0, 10)) : "Unknown";
   return `
     <article class="manual-watch-review-card" data-manual-watch-review-id="${escapeAttribute(review.id)}">
       <div class="manual-watch-review-poster-wrap">
@@ -753,20 +759,22 @@ function renderReviewCard(review, { eagerPoster = true } = {}) {
       </div>
       <div class="manual-watch-review-main">
         <div class="manual-watch-review-heading">
-          <div>
-            <h3><a class="manual-watch-review-title-link" href="${escapeAttribute(href)}" data-manual-watch-review-link="${escapeAttribute(href)}">${escapeHtml(title)}</a></h3>
-            ${episodeTitle ? `<p class="manual-watch-review-episode">${escapeHtml(episodeTitle)}</p>` : ""}
+          <div class="manual-watch-review-heading-title">
+            ${reviewSelectCheckboxHtml({ ids: [review.id], label: `Select ${title}` })}
+            <div>
+              <h3><a class="manual-watch-review-title-link" href="${escapeAttribute(href)}" data-manual-watch-review-link="${escapeAttribute(href)}">${escapeHtml(title)}</a></h3>
+              ${episodeTitle ? `<p class="manual-watch-review-episode">${escapeHtml(episodeTitle)}</p>` : ""}
+            </div>
           </div>
           <span class="status-pill status-warning">${escapeHtml(reviewSource(review))}</span>
         </div>
         <div class="manual-watch-review-meta">
-          <span>Request: ${escapeHtml(reviewSource(review))} marked this watched</span>
-          <span>Review detected ${escapeHtml(review.updated_at ? dateLabel(new Date(review.updated_at).toISOString()) : "Not supplied")}</span>
-          <span>Release day ${escapeHtml(dateLabel(review.release_date))}</span>
+          <span>Marked watched on ${escapeHtml(reviewSource(review))}</span>
+          <span>Detected ${escapeHtml(review.updated_at ? dateLabel(new Date(review.updated_at).toISOString()) : "Not supplied")}</span>
+          <span>Released ${escapeHtml(releaseDay)}</span>
           ${review.observed_watched_at ? `<span>Source date ${escapeHtml(dateLabel(review.observed_watched_at))}</span>` : ""}
         </div>
-        <p class="manual-watch-review-copy">${escapeHtml(reviewSource(review))} marked this watched. Choose a date or mark it unwatched across connected media apps.</p>
-        <div class="manual-watch-review-actions">${reviewActionButtons({ includeEpisodeTiming: false, source: reviewSource(review) })}</div>
+        <div class="manual-watch-review-actions">${reviewActionButtons()}</div>
       </div>
     </article>
   `;
@@ -815,7 +823,7 @@ function renderReviewEpisodeContext(review) {
 
 function manualWatchReviewEpisodeActionButtons() {
   return `
-    <button class="button-primary" type="button" data-manual-watch-review-confirm>Confirm</button>
+    <button class="button-primary" type="button" data-manual-watch-review-confirm>Confirm watched…</button>
     <button class="button-danger" type="button" data-manual-watch-review-action="dismiss">Dismiss</button>
   `;
 }
@@ -852,6 +860,7 @@ function renderReviewEpisodeRow(review = null, episode = null) {
     <article class="manual-watch-review-episode-row${isPending ? " is-pending" : ""}" ${pendingAttributes} data-manual-watch-review-episode-key="${escapeAttribute(displayEpisode.key || reviewEpisodeStateKey(displayEpisode))}">
       <div class="manual-watch-review-episode-copy">
         <div class="manual-watch-review-episode-heading">
+          ${isPending ? reviewSelectCheckboxHtml({ ids: reviews.map((item) => item.id), label: `Select ${reviewEpisodeCode(displayEpisode)}` }) : ""}
           <span class="manual-watch-review-episode-code">${escapeHtml(reviewEpisodeCode(displayEpisode))}</span>
           <h4>${escapeHtml(displayTitle || "Episode")}</h4>
           <span class="manual-watch-review-episode-release">${escapeHtml(manualWatchReviewReleaseLabel(releaseDate))}</span>
@@ -1137,7 +1146,10 @@ function renderReviewShowGroup(group, query = "", { isTopmost = false } = {}) {
       <div class="manual-watch-review-show-content">
         <div class="manual-watch-review-show-header">
           <div class="manual-watch-review-show-copy">
-            <h3><a class="manual-watch-review-title-link" href="${escapeAttribute(href)}" data-manual-watch-review-link="${escapeAttribute(href)}">${escapeHtml(group.title)}</a></h3>
+            <div class="manual-watch-review-heading-title">
+              ${reviewSelectCheckboxHtml({ ids: group.reviews.map((item) => item.id), scope: "show", groupKey: group.key, label: `Select all reviewed episodes in ${group.title}` })}
+              <h3><a class="manual-watch-review-title-link" href="${escapeAttribute(href)}" data-manual-watch-review-link="${escapeAttribute(href)}">${escapeHtml(group.title)}</a></h3>
+            </div>
             <div class="manual-watch-review-meta">
               <span>${count} episode${count === 1 ? "" : "s"} waiting${group.reviews.some(r => (r.media?.watchProvenance || r.media?.watch_provenance)?.episode_order) ? " · Aired episode numbers" : ""}</span>
               <span>Marked watched on ${escapeHtml(source)}</span>
@@ -1159,6 +1171,7 @@ function renderReviewShowGroup(group, query = "", { isTopmost = false } = {}) {
               <details class="manual-watch-review-season-details" data-manual-watch-review-season-details-key="${escapeAttribute(seasonStateKey)}" data-manual-watch-review-group-key="${escapeAttribute(group.key)}" data-manual-watch-review-season-key="${escapeAttribute(season.key)}"${seasonOpen ? " open" : ""}>
                 <summary class="manual-watch-review-season-header">
                   <div class="manual-watch-review-season-heading">
+                    ${reviewSelectCheckboxHtml({ ids: season.reviews.map((item) => item.id), scope: "season", groupKey: group.key, seasonKey: season.key, label: `Select all reviewed episodes in ${season.title}` })}
                     <strong>${escapeHtml(season.title)}</strong>
                     <span>${season.episodes.length} waiting${catalogLoaded ? " · " + catalogEpisodes.length + " episode" + (catalogEpisodes.length === 1 ? "" : "s") : ""}</span>
                   </div>
@@ -1180,19 +1193,25 @@ function renderManualDatePrompt(target) {
   const isGroup = target?.kind === "group";
   const isSeason = target?.kind === "season";
   const isEpisode = target?.kind === "episode";
-  const reviews = isGroup || isSeason || isEpisode ? target.reviews : [target.review];
-  const title = isGroup || isSeason || isEpisode ? (target.title || reviewTitle(reviews[0])) : reviewTitle(target.review);
+  const isSelection = target?.kind === "selection";
+  const reviews = isGroup || isSeason || isEpisode || isSelection ? target.reviews : [target.review];
+  const title = isGroup || isSeason || isEpisode || isSelection ? (target.title || reviewTitle(reviews[0])) : reviewTitle(target.review);
   // Same layout as the media page's "Mark season watched" prompt
   // (renderWatchDatePrompt in watch-action.js); the choices map onto the
   // review approval modes.
   const episodes = reviews.every(isEpisodeReview) ? groupReviewsByEpisode(reviews) : [];
   const episodeCount = episodes.length;
-  const sub = isGroup || isSeason
-    ? `${episodeCount} episode${episodeCount === 1 ? "" : "s"}`
-    : isEpisode
-      ? `${groupSourceLabel(reviews)} · ${reviewEpisodeCode(reviews[0])}`
-    : reviewSource(target.review);
-  const them = episodeCount > 1 ? "these episodes" : episodeCount === 1 ? "this episode" : "this item";
+  const selectionSummary = isSelection ? bulkSelectionSummary(reviews) : null;
+  const sub = isSelection
+    ? `${selectionSummary.displayCount} selected item${selectionSummary.displayCount === 1 ? "" : "s"}`
+    : isGroup || isSeason
+      ? `${episodeCount} episode${episodeCount === 1 ? "" : "s"}`
+      : isEpisode
+        ? `${groupSourceLabel(reviews)} · ${reviewEpisodeCode(reviews[0])}`
+      : reviewSource(target.review);
+  const them = isSelection
+    ? (selectionSummary.displayCount > 1 ? "these selected items" : "this selected item")
+    : episodeCount > 1 ? "these episodes" : episodeCount === 1 ? "this episode" : "this item";
   const hasReleaseDate = reviews.some((review) => review.release_date || review.releaseDate);
   const today = new Date().toISOString().slice(0, 10);
   const episodesHtml = episodes.map((episode) => {
@@ -1229,18 +1248,17 @@ function renderManualDatePrompt(target) {
         <div class="watch-date-options">
           <button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="detected">
             <span class="watch-date-pick-title">At detection time</span>
-            <span class="watch-date-pick-sub">Use the time Plekt detected each watch flag</span>
+            <span class="watch-date-pick-sub">${reviews[0]?.updated_at ? escapeHtml(dateLabel(new Date(reviews[0].updated_at).toISOString())) : "Use the time Plekt detected the watch flag"}</span>
           </button>
           <button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="release_day"${hasReleaseDate ? "" : " disabled"}>
-            <span class="watch-date-pick-title">Day of release</span>
-            <span class="watch-date-pick-sub">Use each episode's air date</span>
+            <span class="watch-date-pick-title">${episodeCount ? "Air date" : "Release date"}</span>
+            <span class="watch-date-pick-sub">${hasReleaseDate ? escapeHtml(episodeCount > 1 ? "Use each episode's air date" : formatTmdbDate(String(reviews[0]?.release_date || reviews[0]?.releaseDate || "").slice(0, 10))) : "Unavailable"}</span>
           </button>
-          ${episodeCount ? `
-          <button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="episode_timing">
-            <span class="watch-date-pick-title">Same as other episodes</span>
-            <span class="watch-date-pick-sub">Date from the episodes watched around ${episodeCount === 1 ? "it" : "them"}</span>
-          </button>
-          ` : ""}
+          ${episodeCount ? (() => {
+            const t = reviews[0]?.episode_timing; const noTiming = reviews.every((r) => r.episode_timing === null);
+            const sub = noTiming ? "No other watched episodes in this season" : episodeCount === 1 && t?.watchedAt ? `${dateLabel(t.watchedAt)} (${t.direction} ${t.anchorCode})` : `Date from the episodes watched around ${episodeCount === 1 ? "it" : "them"}`;
+            return `<button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="episode_timing"${noTiming ? " disabled" : ""}><span class="watch-date-pick-title">Same as other episodes</span><span class="watch-date-pick-sub">${escapeHtml(sub)}</span></button>`;
+          })() : ""}
           <button class="watch-date-pick" type="button" data-manual-watch-review-date-choice="now">
             <span class="watch-date-pick-title">Now</span>
             <span class="watch-date-pick-sub">Today, ${escapeHtml(formatTmdbDate(today))}</span>
@@ -1365,6 +1383,9 @@ function openManualDatePrompt(target) {
 
 function submitManualWatchReviewChoice(target, mode, watchedAt = "") {
   if (!target) return;
+  if (target.kind === "selection") {
+    return handleBulkSelectionAction(target.reviews, "approve", mode, watchedAt);
+  }
   if (target.kind === "group") {
     return handleGroupAction(
       target.groupKey,
@@ -1500,7 +1521,23 @@ export function initManualWatchReview(callbacks = {}) {
 
   if (!container.dataset.bound) {
     container.dataset.bound = "true";
+    container.addEventListener("change", (event) => {
+      handleBulkSelectionChange(event, {
+        getFilteredReviews: () => filterManualWatchReviews(currentManualWatchReviews(), String(state.manualWatchReviewSearch || "").trim()),
+        onRender: renderManualWatchReviewPage,
+      });
+    });
     container.addEventListener("click", (event) => {
+      if (event.target.closest?.(".manual-watch-review-select-box")) { event.stopPropagation(); return; }
+      if (event.target.closest?.("[data-manual-watch-review-bulk-clear]:not(:disabled)")) { clearBulkReviewSelection(); renderManualWatchReviewPage(); return; }
+      const bulkButton = event.target.closest?.("[data-manual-watch-review-bulk-action]");
+      if (bulkButton && !bulkButton.disabled) {
+        triggerBulkSelectionWorkflow(bulkButton.dataset.manualWatchReviewBulkAction || "approve", {
+          getAllReviews: currentManualWatchReviews, openConfirmDialog: _openConfirmDialog,
+          runSelectionAction: handleBulkSelectionAction, setMessage: _cb.setMessage,
+        }).catch((error) => reportManualWatchReviewFailure(error));
+        return;
+      }
       const link = event.target.closest?.("[data-manual-watch-review-link]");
       if (link && !(event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) && event.button === 0) {
         const href = link.dataset.manualWatchReviewLink;
@@ -1689,6 +1726,7 @@ export function renderManualWatchReviewPage() {
 
   const query = String(state.manualWatchReviewSearch || "").trim();
   const reviews = Array.isArray(state.manualWatchReviews) ? state.manualWatchReviews : [];
+  pruneBulkReviewSelection(reviews);
   const filtered = filterManualWatchReviews(reviews, query);
   const displayCount = manualWatchReviewDisplayCount(reviews);
   const filteredDisplayCount = manualWatchReviewDisplayCount(filtered);
@@ -1704,13 +1742,15 @@ export function renderManualWatchReviewPage() {
       orderedGroups.map((group) => group.key),
     );
     const topGroupKey = filteredOrderedGroups[0]?.key || "";
-    container.innerHTML = filteredOrderedGroups
+    const bulkBar = renderBulkReviewBar({ visibleReviews: filtered, allReviews: reviews });
+    container.innerHTML = bulkBar + filteredOrderedGroups
       .map((group) => group.kind === "show"
         ? renderReviewShowGroup(group, query, { isTopmost: group.key === topGroupKey })
         : group.kind === "mismatch"
           ? (group.reviews[0].review_kind === "episode_order_conflict" ? renderEpisodeOrderConflict(group.reviews[0]) : renderSourceMismatchCard(group.reviews[0]))
           : renderReviewCard(group.reviews[0], { eagerPoster: group.key === topGroupKey }))
       .join("");
+    syncIndeterminateCheckboxes(container);
     bindRenderedReviewDetails(container);
     hydratePosters(container, { allowNetwork: true });
   }
@@ -1745,6 +1785,7 @@ export async function loadManualWatchReview({ summaryOnly = false, refresh = fal
     manualWatchReviewShowMetadata.clear();
     pendingManualWatchReviewActions.clear();
     suppressedManualWatchReviewIds.clear();
+    clearBulkReviewSelection();
     state.manualWatchReviewLoaded = false;
     manualWatchReviewGroupOrder = [];
     renderManualWatchReviewSummary();
@@ -2022,181 +2063,94 @@ async function handleReviewAction(id, action, mode, card, watchedAt = "") {
   }
 }
 
-async function handleEpisodeAction(reviews, action, mode, card, watchedAt = "") {
+async function runScopedReviewBatch(reviews, { action, mode, element, watchedAt = "", optimisticText, scope, affectedMedia, seasonKey = "", sourceApps, failPrefix, successMessage }) {
   const records = Array.isArray(reviews) ? reviews : [];
   if (!records.length) return;
-  const buttons = [...(card?.querySelectorAll("button") || [])];
+  const buttons = [...(element?.querySelectorAll("button") || [])];
   buttons.forEach((button) => { button.disabled = true; });
-  setReviewBusy(card, true);
-  const optimistic = action === "defer" ? [] : optimisticallyRemoveReviews(records);
-  if (optimistic.length) {
-    renderManualWatchReviewPage();
-    _cb.setMessage?.("Episode removed from review; syncing in the background.", "muted");
-  }
-  let completed = 0;
-  let failure = null;
+  setReviewBusy(element, true);
+  let result;
   try {
-    for (const review of records) {
-      try {
-        await postReviewAction(review.id, action, mode, watchedAt);
-        if (action !== "defer") completeOptimisticReview(review.id);
-        completed += 1;
-      } catch (error) {
-        failure = error;
-        break;
-      }
-    }
+    result = await runSequentialReviewBatch(records, {
+      action,
+      mode,
+      watchedAt,
+      continueOnError: false,
+      postAction: postReviewAction,
+      onOptimisticRemove: (items) => {
+        const removed = optimisticallyRemoveReviews(items);
+        if (removed.length) {
+          renderManualWatchReviewPage();
+          _cb.setMessage?.(optimisticText(removed.length), "muted");
+        }
+        return removed;
+      },
+      onItemComplete: completeOptimisticReview,
+      onRestoreFailed: (unresolved) => { restoreOptimisticReviews(unresolved); renderManualWatchReviewPage(); },
+    });
   } finally {
-    setReviewBusy(card, false);
+    setReviewBusy(element, false);
     buttons.forEach((button) => { button.disabled = false; });
   }
-  if (failure) {
-    const unresolved = records.slice(completed);
-    if (optimistic.length) {
-      restoreOptimisticReviews(unresolved);
-      renderManualWatchReviewPage();
-    }
-    const failedReview = unresolved[0] || records[0];
-    throw wrapManualWatchReviewFailure(
-      `${completed} of ${records.length} provider records updated. ${failure.message}`,
-      {
-        reviews: unresolved.length ? unresolved : records,
-        action,
-        mode,
-        watchedAt,
-        scope: "episode",
-        affectedMedia: failedReview ? reviewTitle(failedReview) : "the selected episode",
-        progress: `${completed} of ${records.length} provider records updated.`,
-      },
-      failure,
-    );
+  if (result.failed.length) {
+    const failure = result.failed[0].error;
+    const unresolved = result.unresolved.length ? result.unresolved : records;
+    throw wrapManualWatchReviewFailure(`${result.completed} of ${records.length} ${failPrefix}. ${failure.message}`, {
+      reviews: unresolved, action, mode, watchedAt, scope,
+      ...(seasonKey ? { seasonKey } : {}),
+      affectedMedia: typeof affectedMedia === "function" ? affectedMedia(unresolved[0] || records[0]) : affectedMedia,
+      ...(sourceApps ? { sourceApps } : {}),
+      progress: `${result.completed} of ${records.length} ${failPrefix}.`,
+    }, failure);
   }
-  _cb.setMessage?.(
-    action === "dismiss"
-      ? "Episode dismissed and marked unwatched across connected media apps."
-      : `Episode watch decision saved (${policyLabel(mode)}); sync queued.`,
-    "success",
-  );
+  _cb.setMessage?.(successMessage, "success");
+}
+
+async function handleEpisodeAction(reviews, action, mode, card, watchedAt = "") {
+  return runScopedReviewBatch(reviews, {
+    action, mode, element: card, watchedAt, scope: "episode", failPrefix: "provider records updated",
+    optimisticText: () => "Episode removed from review; syncing in the background.",
+    affectedMedia: (item) => (item ? reviewTitle(item) : "the selected episode"),
+    successMessage: action === "dismiss" ? "Episode dismissed and marked unwatched across connected media apps." : `Episode watch decision saved (${policyLabel(mode)}); sync queued.`,
+  });
 }
 
 async function handleGroupAction(groupKey, action, mode, groupElement, watchedAt = "") {
   const reviews = currentManualWatchReviews().filter((review) => isEpisodeReview(review) && reviewGroupKey(review) === groupKey);
   if (!reviews.length) return;
   const episodeCount = groupReviewsByEpisode(reviews).length;
-  const buttons = [...(groupElement?.querySelectorAll("button") || [])];
-  buttons.forEach((button) => { button.disabled = true; });
-  setReviewBusy(groupElement, true);
-  const optimistic = action === "defer" ? [] : optimisticallyRemoveReviews(reviews);
-  if (optimistic.length) {
-    renderManualWatchReviewPage();
-    _cb.setMessage?.(`${optimistic.length} review${optimistic.length === 1 ? "" : "s"} removed; syncing in the background.`, "muted");
-  }
-  let completed = 0;
-  let failure = null;
-  try {
-    // Keep these calls sequential: each approval updates local history and
-    // queues outbound sync, so a large show should not fan out all at once.
-    for (const review of reviews) {
-      try {
-        await postReviewAction(review.id, action, mode, watchedAt);
-        if (action !== "defer") completeOptimisticReview(review.id);
-        completed += 1;
-      } catch (error) {
-        failure = error;
-        break;
-      }
-    }
-  } finally {
-    setReviewBusy(groupElement, false);
-    buttons.forEach((button) => { button.disabled = false; });
-  }
-  if (failure) {
-    const unresolved = reviews.slice(completed);
-    if (optimistic.length) {
-      restoreOptimisticReviews(unresolved);
-      renderManualWatchReviewPage();
-    }
-    throw wrapManualWatchReviewFailure(
-      `${completed} of ${reviews.length} episode${reviews.length === 1 ? "" : "s"} updated. ${failure.message}`,
-      {
-        reviews: unresolved.length ? unresolved : reviews,
-        action,
-        mode,
-        watchedAt,
-        scope: "show",
-        affectedMedia: `${reviewShowTitle(reviews[0])} · ${episodeCount} episode${episodeCount === 1 ? "" : "s"}`,
-        sourceApps: groupSourceLabel(reviews),
-        progress: `${completed} of ${reviews.length} episode${reviews.length === 1 ? "" : "s"} updated.`,
-      },
-      failure,
-    );
-  }
-  _cb.setMessage?.(
-    action === "dismiss"
-      ? `${episodeCount} episode${episodeCount === 1 ? "" : "s"} dismissed and marked unwatched across connected media apps.`
-      : `${episodeCount} episode${episodeCount === 1 ? "" : "s"} marked watched (${policyLabel(mode)}); sync queued.`,
-    "success",
-  );
+  const plural = episodeCount === 1 ? "" : "s";
+  return runScopedReviewBatch(reviews, {
+    action, mode, element: groupElement, watchedAt, scope: "show", sourceApps: groupSourceLabel(reviews),
+    failPrefix: `episode${reviews.length === 1 ? "" : "s"} updated`,
+    optimisticText: (n) => `${n} review${n === 1 ? "" : "s"} removed; syncing in the background.`,
+    affectedMedia: `${reviewShowTitle(reviews[0])} · ${episodeCount} episode${plural}`,
+    successMessage: action === "dismiss" ? `${episodeCount} episode${plural} dismissed and marked unwatched across connected media apps.` : `${episodeCount} episode${plural} marked watched (${policyLabel(mode)}); sync queued.`,
+  });
 }
 
 async function handleSeasonAction(groupKey, seasonKey, action, mode, seasonElement, watchedAt = "") {
   const reviews = seasonReviewsForGroup(groupKey, seasonKey);
   if (!reviews.length) return;
   const episodeCount = groupReviewsByEpisode(reviews).length;
-  const buttons = [...(seasonElement?.querySelectorAll("button") || [])];
-  buttons.forEach((button) => { button.disabled = true; });
-  setReviewBusy(seasonElement, true);
-  const optimistic = action === "defer" ? [] : optimisticallyRemoveReviews(reviews);
-  if (optimistic.length) {
-    renderManualWatchReviewPage();
-    _cb.setMessage?.(`${optimistic.length} review${optimistic.length === 1 ? "" : "s"} removed; syncing in the background.`, "muted");
-  }
-  let completed = 0;
-  let failure = null;
-  try {
-    for (const review of reviews) {
-      try {
-        await postReviewAction(review.id, action, mode, watchedAt);
-        if (action !== "defer") completeOptimisticReview(review.id);
-        completed += 1;
-      } catch (error) {
-        failure = error;
-        break;
-      }
-    }
-  } finally {
-    setReviewBusy(seasonElement, false);
-    buttons.forEach((button) => { button.disabled = false; });
-  }
-  if (failure) {
-    const unresolved = reviews.slice(completed);
-    if (optimistic.length) {
-      restoreOptimisticReviews(unresolved);
-      renderManualWatchReviewPage();
-    }
-    throw wrapManualWatchReviewFailure(
-      `${completed} of ${reviews.length} episode${reviews.length === 1 ? "" : "s"} in ${reviewSeasonLabel(seasonKey)} updated. ${failure.message}`,
-      {
-        reviews: unresolved.length ? unresolved : reviews,
-        action,
-        mode,
-        watchedAt,
-        scope: "season",
-        seasonKey,
-        affectedMedia: `${reviewShowTitle(reviews[0])} · ${reviewSeasonLabel(seasonKey)}`,
-        sourceApps: groupSourceLabel(reviews),
-        progress: `${completed} of ${reviews.length} episode${reviews.length === 1 ? "" : "s"} in ${reviewSeasonLabel(seasonKey)} updated.`,
-      },
-      failure,
-    );
-  }
-  const source = groupSourceLabel(reviews);
-  _cb.setMessage?.(
-    action === "dismiss"
-      ? `${episodeCount} episode${episodeCount === 1 ? "" : "s"} in ${reviewSeasonLabel(seasonKey)} dismissed and marked unwatched across connected media apps.`
-      : `${episodeCount} episode${episodeCount === 1 ? "" : "s"} in ${reviewSeasonLabel(seasonKey)} marked watched (${policyLabel(mode)}); sync queued.`,
-    "success",
-  );
+  const plural = episodeCount === 1 ? "" : "s";
+  const label = reviewSeasonLabel(seasonKey);
+  return runScopedReviewBatch(reviews, {
+    action, mode, element: seasonElement, watchedAt, scope: "season", seasonKey, sourceApps: groupSourceLabel(reviews),
+    failPrefix: `episode${reviews.length === 1 ? "" : "s"} in ${label} updated`,
+    optimisticText: (n) => `${n} review${n === 1 ? "" : "s"} removed; syncing in the background.`,
+    affectedMedia: `${reviewShowTitle(reviews[0])} · ${label}`,
+    successMessage: action === "dismiss" ? `${episodeCount} episode${plural} in ${label} dismissed and marked unwatched across connected media apps.` : `${episodeCount} episode${plural} in ${label} marked watched (${policyLabel(mode)}); sync queued.`,
+  });
+}
+
+async function handleBulkSelectionAction(reviews, action, mode, watchedAt = "", itemDecisions = null) {
+  return executeBulkSelectionAction(reviews, {
+    action, mode, watchedAt, itemDecisions, postAction: postReviewAction,
+    optimisticallyRemove: optimisticallyRemoveReviews, completeOptimistic: completeOptimisticReview,
+    restoreOptimistic: restoreOptimisticReviews, onRender: renderManualWatchReviewPage,
+    setMessage: _cb.setMessage, policyLabel,
+  });
 }
 
 export function startManualWatchReviewPolling() {

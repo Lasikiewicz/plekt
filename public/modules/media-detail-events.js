@@ -1,5 +1,5 @@
 import { HIDE_EPISODE_SPOILERS_KEY, state } from "./state.js?v=2.3.0.0.1";
-import { escapeAttribute, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource, storageSet } from "./utils.js?v=2.3.0.0.1";
+import { escapeAttribute, safeCssBackgroundUrl, formatDate, showTitleFrom, showName, slug, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, tvShowTmdbHref, tvShowTvdbHref, normalizePlatformSource, storageSet } from "./utils.js?v=2.3.0.0.1";
 import { isCachedStorageImageUrl, proxiedArtworkUrl, rememberPosterLookup } from "./images.js?v=2.3.0.0.1";
 import { triggerRetrySync, loadSyncJobs, loadSyncHistory, showAvailIssuePopup, isWatchedHistoryAction } from "./sync.js?v=2.3.0.0.1";
 import { movieBySlugOrId } from "./media-routing.js?v=2.3.0.0.1";
@@ -1161,7 +1161,8 @@ export function attachMediaDetailEvents() {
           const posterImg = container.querySelector(".immersive-poster-img");
           if (posterImg) posterImg.src = poster_url;
           const backdrop = container.querySelector(".modal-backdrop-image");
-          if (backdrop) backdrop.style.backgroundImage = `url('${poster_url}')`;
+          const safePosterBackdrop = safeCssBackgroundUrl(poster_url);
+          if (backdrop) backdrop.style.backgroundImage = safePosterBackdrop ? `url('${safePosterBackdrop}')` : "";
           if (showIdentity) {
             // Show artwork is shared through the canonical show record. Do not
             // seed the episode id cache here: that would make this show poster
@@ -1219,7 +1220,8 @@ export function attachMediaDetailEvents() {
         if (backdrop_url !== undefined) {
           editImageBtn.dataset.backdropUrl = backdrop_url;
           const backdrop = container.querySelector(".modal-backdrop-image");
-          if (backdrop) backdrop.style.backgroundImage = `url('${backdrop_url}')`;
+          const safeBackdrop = safeCssBackgroundUrl(backdrop_url);
+          if (backdrop) backdrop.style.backgroundImage = safeBackdrop ? `url('${safeBackdrop}')` : "";
         }
         if (youtube_url !== undefined) {
           editImageBtn.dataset.youtubeUrl = youtube_url;

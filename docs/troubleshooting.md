@@ -28,6 +28,20 @@ See [now-playing.md](now-playing.md) for full diagnosis steps.
 
 ## "A watched event didn't record"
 
+For Plex, Emby, or Jellyfin, confirm the item's library is selected in
+[Settings → Media servers](settings.md#media-servers-monitored-libraries). Check Sync Activity
+and the server logs for library skip diagnostics:
+- **No monitored libraries selected** (`not_configured`): save at least one library for that
+  server; fresh installs and upgrades start with an empty selection.
+- **Server identity changed** (`server_mismatch`): the connected server was replaced or its
+  identity changed; refresh libraries and save a new selection.
+- **Library is not selected** (`unselected`): the item belongs to a library that is unchecked
+  (new or recreated libraries remain unselected until opted in).
+- **Library membership unresolved, ambiguous, or permission denied** (`unresolved`, `ambiguous`,
+  `permissions_denied`): Plekt could not prove a single selected root via the server API; verify
+  the account has access to the library and retry. Pre-existing pending Manual Watch reviews from
+  unselected or unresolved libraries remain pending until the library is selected.
+
 - Confirm the webhook reached Plekt with the correct `?token=` secret. The server
   logs every incoming webhook attempt and whether auth passed.
 - Check `media.phase` was `completed` - a Plex `media.stop` below the watched

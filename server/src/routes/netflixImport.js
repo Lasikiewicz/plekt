@@ -5,8 +5,9 @@ import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { commitNetflixImport, netflixPreviewSummary, parseNetflixCsv, prepareNetflixImport, reviewNetflixPreview, saveNetflixPreview } from "../utils/netflixImport.js";
 import { createWatchHistoryBackup } from "../utils/watchHistoryBackups.js";
 import { withInitialInboundImport } from '../utils/initialSyncStore.js';
+import { createPerUserState } from "../utils/perUserState.js";
 
-const jobs = new Map();
+const jobsByUser = createPerUserState(() => new Map());
 // The full personal-information export logs every session and every profile.
 const MAX_CSV_BYTES = 12_000_000;
 const JOB_TTL_MS = 30 * 60 * 1000;
@@ -26,6 +27,7 @@ export async function handleNetflixImport(req, res, action = "", inboundTracked=
   if (req.method === "OPTIONS") return sendOptions(res);
   if (!(await requireAdmin(req, res))) return;
   try {
+    const jobs = jobsByUser();
     if(action==='import'&&req.method==='POST'&&!inboundTracked)return await withInitialInboundImport('netflix',()=>handleNetflixImport(req,res,action,true));
     if (action === "preview-start" && req.method === "POST") {
       const body = await readJson(req);

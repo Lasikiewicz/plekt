@@ -1,5 +1,5 @@
 import { state, elements } from "./state.js?v=2.3.0.0.1";
-import { escapeHtml, escapeAttribute, formatDate, formatTmdbDate, isDemoMode } from "./utils.js?v=2.3.0.0.1";
+import { escapeHtml, escapeAttribute, safeHttpUrl, safeCssBackgroundUrl, formatDate, formatTmdbDate, isDemoMode } from "./utils.js?v=2.3.0.0.1";
 import { posterUrlFor, tmdbImage, tmdbPoster, bestTmdbLogo, proxiedArtworkUrl, hydratePosters } from "./images.js?v=2.3.0.0.1";
 import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml } from "./sync.js?v=2.3.0.0.1";
 import { fetchTmdbDetails, anidbDisplayTitle, anidbAttributionHtml } from "./tmdb.js?v=2.3.0.0.1";
@@ -281,8 +281,9 @@ function _renderWatchedMovieContent(root, movie, {
   const trashIcon = `<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3h11V2h-11v1z"/></svg>`;
   const youtubeIcon = `<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.58v-.075c.001-.194.01-1.108.082-2.06l.008-.105.009-.104c.05-.572.124-1.14.235-1.558a2.007 2.007 0 0 1 1.415-1.42c1.16-.312 5.569-.334 6.18-.335h.142z"/><path d="M6.168 10.302l3.24-1.62-3.24-1.62v3.24z"/></svg>`;
 
-  const ytWatchBtn = movie.youtube_url
-    ? `<a class="action-pill" href="${escapeAttribute(movie.youtube_url)}" target="_blank" rel="noopener noreferrer">
+  const safeYoutubeUrl = safeHttpUrl(movie.youtube_url);
+  const ytWatchBtn = safeYoutubeUrl
+    ? `<a class="action-pill" href="${escapeAttribute(safeYoutubeUrl)}" target="_blank" rel="noopener noreferrer">
         ${youtubeIcon}
         <span>Trailer</span>
        </a>`
@@ -331,8 +332,9 @@ function _renderWatchedMovieContent(root, movie, {
     `)}
   `);
 
+  const safeBackdropUrl = safeCssBackgroundUrl(backdropUrl || posterUrl || localPoster);
   root.innerHTML = `
-      <div class="modal-backdrop-image" style="background-image: url('${escapeAttribute(backdropUrl || posterUrl || localPoster)}');"></div>
+      <div class="modal-backdrop-image"${safeBackdropUrl ? ` style="background-image: url('${escapeAttribute(safeBackdropUrl)}');"` : ""}></div>
       <div class="immersive-container media-detail-page${loading ? " is-loading-metadata" : ""}">
         ${mediaSyncNoticeHtml([movie], "this movie")}
         <header class="immersive-header">
@@ -401,8 +403,9 @@ export function patchMovieWatchedState(movie) {
   const trashIcon = `<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/><path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3h11V2h-11v1z"/></svg>`;
   const youtubeIcon = `<svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true"><path d="M8.051 1.999h.089c.822.003 4.987.033 6.11.335a2.01 2.01 0 0 1 1.415 1.42c.101.38.172.883.22 1.402l.01.104.022.26.008.104c.065.914.073 1.77.074 1.957v.075c-.001.194-.01 1.108-.082 2.06l-.008.105-.009.104c-.05.572-.124 1.14-.235 1.558a2.007 2.007 0 0 1-1.415 1.42c-1.16.312-5.569.334-6.18.335h-.142c-.309 0-1.587-.006-2.927-.052l-.17-.006-.087-.004-.171-.007-.171-.007c-1.11-.049-2.167-.128-2.654-.26a2.007 2.007 0 0 1-1.415-1.419c-.111-.417-.185-.986-.235-1.558L.09 9.82l-.008-.104A31.4 31.4 0 0 1 0 7.58v-.075c.001-.194.01-1.108.082-2.06l.008-.105.009-.104c.05-.572.124-1.14.235-1.558a2.007 2.007 0 0 1 1.415-1.42c1.16-.312 5.569-.334 6.18-.335h.142z"/><path d="M6.168 10.302l3.24-1.62-3.24-1.62v3.24z"/></svg>`;
 
-  const ytWatchBtn = movie.youtube_url
-    ? `<a class="action-pill" href="${escapeAttribute(movie.youtube_url)}" target="_blank" rel="noopener noreferrer">
+  const safeYoutubeUrl = safeHttpUrl(movie.youtube_url);
+  const ytWatchBtn = safeYoutubeUrl
+    ? `<a class="action-pill" href="${escapeAttribute(safeYoutubeUrl)}" target="_blank" rel="noopener noreferrer">
         ${youtubeIcon}
         <span>Trailer</span>
        </a>`
@@ -600,8 +603,9 @@ export async function openMovieImmersiveModalByTmdbId(tmdbId) {
     })}
   `)}`);
 
+  const safeUnwatchedBackdropUrl = safeCssBackgroundUrl(backdropUrl || posterUrl);
   const buildUnwatchedHtml = (tvRecommendations = []) => `
-    <div class="modal-backdrop-image" style="background-image: url('${escapeAttribute(backdropUrl || posterUrl)}');"></div>
+    <div class="modal-backdrop-image"${safeUnwatchedBackdropUrl ? ` style="background-image: url('${escapeAttribute(safeUnwatchedBackdropUrl)}');"` : ""}></div>
     <div class="immersive-container media-detail-page">
       ${mediaSyncNoticeHtml([{ media_type: "movie", title: movieTitle, tmdb_id: tmdbId }], "this movie")}
       <header class="immersive-header">
@@ -655,8 +659,8 @@ export async function openMovieImmersiveModalByTmdbId(tmdbId) {
   // Fetch TV recommendations non-blocking and patch the page when ready.
   recommendedTvShowsForMovie(movieTitle, tmdbData).then((tvRecommendations) => {
     if (!tvRecommendations.length) return;
-    // Only patch if still on this page.
-    if (String(state.activeMovieTmdbId) !== String(tmdbId)) return;
+    // Only patch if this render is still active (e.g. user hasn't navigated away or marked the movie watched).
+    if (currentMediaRenderToken() !== renderToken || String(state.activeMovieTmdbId) !== String(tmdbId)) return;
     root.innerHTML = buildUnwatchedHtml(tvRecommendations);
     hydratePosters(root);
     hydrateMediaAppLinks(root);

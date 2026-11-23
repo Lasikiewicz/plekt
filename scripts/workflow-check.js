@@ -145,6 +145,28 @@ const KNOWN_SECURITY_ALERTS = {
     note: 'known: develop pins patched Astro 7.4.1; GitHub still reports the default-branch alert until the lockfile reaches main',
     remedy: () => lockPackagePatched('website/package-lock.json', 'astro', '7.3.3'),
   },
+  'dependabot:36': {
+    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
+      a.dependency?.package?.name === 'astro' &&
+      a.dependency?.manifest_path === 'website/package-lock.json' &&
+      a.security_advisory?.ghsa_id === 'GHSA-r3h5-4585-7x3w' &&
+      a.security_advisory?.severity === 'medium' &&
+      a.security_vulnerability?.vulnerable_version_range === '>= 5.14.3, <= 7.4.6' &&
+      a.security_vulnerability?.first_patched_version?.identifier === '7.4.7',
+    note: 'known: develop pins patched Astro 7.4.13 and the website uses no @astrojs/node adapter; GitHub still reports the default-branch alert until the lockfile reaches main',
+    remedy: () => lockPackagePatched('website/package-lock.json', 'astro', '7.4.7'),
+  },
+  'dependabot:37': {
+    matches: a => a.dependency?.package?.ecosystem === 'npm' &&
+      a.dependency?.package?.name === 'astro' &&
+      a.dependency?.manifest_path === 'website/package-lock.json' &&
+      a.security_advisory?.ghsa_id === 'GHSA-mh32-jxcr-mh9f' &&
+      a.security_advisory?.severity === 'low' &&
+      a.security_vulnerability?.vulnerable_version_range === '<= 7.4.4' &&
+      a.security_vulnerability?.first_patched_version?.identifier === '7.4.5',
+    note: 'known: develop pins patched Astro 7.4.13; GitHub still reports the default-branch alert until the lockfile reaches main',
+    remedy: () => lockPackagePatched('website/package-lock.json', 'astro', '7.4.5'),
+  },
 };
 export function knownSecurityAlertNote(kind, alert) {
   const entry = KNOWN_SECURITY_ALERTS[`${kind}:${alert.number}`];

@@ -1,6 +1,6 @@
 // Pending manual dispatch queue, Trakt retry checks and active target lookup (split from scheduled.js).
 import { syncMediaPlaystate, syncMediaUnplayedPlaystate } from "./syncOrchestrator.js";
-import { isAuthoritativeRestoreActive } from "./configStore.js";
+import { isAuthoritativeRestoreActive, loadMediaConfig } from "./configStore.js";
 import { getTrackerConnection } from "./trackerConnectionRepo.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { provenanceTelemetryLines } from "./watchProvenance.js";
@@ -13,6 +13,7 @@ import { trackerRetryRecordIds } from "./trackerWriteIntents.js";
 import { trackerProviderIds } from "./trackers/registry.js";
 import { acquirePendingDispatch } from "./pendingDispatchGuard.js";
 import { createPerUserState } from "./perUserState.js";
+import { authorizeQueuedLibraryWatch } from "./queuedLibraryMonitoring.js";
 
 // Automatic re-dispatch backoff for records whose sync targets keep failing.
 // Attempt N waits SYNC_RETRY_BACKOFF_MS[N-1] (last entry repeats) before the
@@ -76,21 +77,23 @@ function samePendingDispatchSnapshot(snapshot, current) {
     && Number(current.updated_at || 0) === Number(snapshot.updated_at || 0);
 }
 const pendingRowNow = db.prepare("SELECT sync_action,watched_at,updated_at FROM watch_history WHERE id=?");
-// Per user data folder: one user's sweep must not make another user's return 0.
+// Per user data folder: one user's sweep or cache must not evict another user's.
 const pendingManualDispatchSweepState = createPerUserState(() => ({ inFlight: false }));
-let retryCandidateCache = { key: "", rows: [] };
+const retryCandidateCacheState = createPerUserState(() => ({ key: "", rows: [], historyRows: null }));
 const dispatchGroupCache = new WeakMap();
 
 function pendingRetryCandidates(rows, activeTargets, includeTrakt, intentRetryIds, traktConnection) {
+  const cache = retryCandidateCacheState();
   const key = [
     getDataVersion(),
     activeTargets.join(","),
     includeTrakt ? `${traktConnection?.id || ""}:${traktConnection?.remoteUserId || ""}` : "no-trakt",
     [...intentRetryIds].sort().join(","),
   ].join("|");
-  if (retryCandidateCache.key !== key || retryCandidateCache.historyRows !== rows) {
+  if (cache.key !== key || cache.historyRows !== rows) {
     const candidates = [];
     for (const row of rows) {
+      if (row.source === "plex_personal_media") continue;
       const action = String(row.sync_action || "watched").toLowerCase();
       if (!["watched", "unwatched", "unplayed"].includes(action)) continue;
       const source = dispatchSourceForPendingRow(row, action);
@@ -100,13 +103,17 @@ function pendingRetryCandidates(rows, activeTargets, includeTrakt, intentRetryId
         needsSync = !activeTargets.every((target) => isTargetSynced(telemetry, target, source));
       }
       if (!needsSync && includeTrakt) {
-        needsSync = traktNeedsRetry(telemetry, source) || intentRetryIds.has(String(row.id));
+        needsSync = intentRetryIds.has(String(row.id))
+          || (telemetry.includes("error") && traktNeedsRetry(telemetry, source))
+          || (telemetry.includes("Error") && traktNeedsRetry(telemetry, source));
       }
       if (needsSync) candidates.push(row);
     }
-    retryCandidateCache = { key, rows: candidates, historyRows: rows };
+    cache.key = key;
+    cache.rows = candidates;
+    cache.historyRows = rows;
   }
-  return retryCandidateCache.rows;
+  return cache.rows;
 }
 
 function cachedDispatchGroups(candidateRows, contextRows) {
@@ -134,6 +141,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       return 0;
     }
   let syncedCount = await syncPendingTrackerWriteIntents(logger);
+  let heldForLibrary = false;
   try {
     // History is already cached in memory. Inspect the complete canonical set
     // so older imports are repaired too; the outbound batch limit below still
@@ -149,6 +157,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
     const now = Date.now();
     const toRetry = pendingRetryCandidates(rows, activeTargets, includeTrakt, intentRetryIds, traktConnection)
       .filter((row) => syncRetryEligible(row, now));
+    if (!toRetry.length) return syncedCount;
 
     // A bulk historical import (e.g. the onboarding Trakt reconcile) can queue
     // thousands of rows needing outbound dispatch at once, and this batch is
@@ -183,6 +192,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       const isUnwatched = action === "unwatched" || action === "unplayed";
       const dispatchSource = dispatchSourceForPendingRow(row, action);
       const media = {
+        watchRecordId: String(row.id),
         title: row.title,
         type: row.media_type,
         source: dispatchSource,
@@ -221,6 +231,15 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
         if (!isUnwatched) media.traktRetryHistoryCheck = true;
       }
       if (targetsStillNeeded.length) media.syncTargets = targetsStillNeeded;
+      const isLibraryCurrent = await authorizeQueuedLibraryWatch(media, config);
+      if (!isLibraryCurrent) {
+        if (stillCurrent()) {
+          await updateWatchSyncRetry(id, row.sync_retry_count, Date.now() + syncRetryDelayMs(2), { skipInvalidate: true });
+          heldForLibrary = true;
+        }
+        continue;
+      }
+      const dispatchConfig = config.libraryMonitoring ? await loadMediaConfig() : config;
 
       logger(`Background Queue: retrying/dispatching sync for ${media.title} (${id})...`);
       if (isAuthoritativeRestoreActive()) return;
@@ -228,14 +247,15 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
       // A snapshot and its playstate promotion must stay together even when
       // another process handles a newer manual action at the same time.
       const promoted = db.transaction(() => {
-        if (!stillCurrent()) return false;
+        if (!stillCurrent() || !isLibraryCurrent()) return false;
         upsertPlaystateForMediaSync(stateMedia, isUnwatched ? "unwatched" : "watched", row.watched_at);
         return true;
       }).immediate();
-      if (!promoted || !stillCurrent()) continue;
+      if (!promoted || !stillCurrent() || !isLibraryCurrent()) continue;
+      const shouldDefer = () => !stillCurrent() || !isLibraryCurrent();
       const summary = await (isUnwatched
-        ? syncMediaUnplayedPlaystate(media, config, loopStore, { shouldDefer: () => !stillCurrent() })
-        : syncMediaPlaystate(media, config, loopStore, { shouldDefer: () => !stillCurrent() })).catch((error) => ({
+        ? syncMediaUnplayedPlaystate(media, dispatchConfig, loopStore, { shouldDefer })
+        : syncMediaPlaystate(media, dispatchConfig, loopStore, { shouldDefer })).catch((error) => ({
         skipped: false,
         status: "error",
         details: `Outbound sync failed: ${error.message || String(error)}`,
@@ -306,7 +326,7 @@ export async function syncPendingManualDispatches(config, loopStore, logger = co
   } catch (error) {
     logger(`Pending Queue dispatcher failed: ${error.message}`);
   }
-  if (syncedCount) await invalidateHistoryDerivedCaches("syncPendingManualDispatches").catch(() => null);
+  if (syncedCount || heldForLibrary) await invalidateHistoryDerivedCaches("syncPendingManualDispatches").catch(() => null);
   return syncedCount;
   } finally {
     sweep.inFlight = false;

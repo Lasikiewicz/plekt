@@ -11,7 +11,7 @@ const trackerConnectionRepo = await import("../server/src/utils/trackerConnectio
 const { dispatchTrackerWatchState } = await import("../server/src/utils/trackerDispatcher.js");
 const { pollConnectedTrackers, partitionPendingTraktUnwatches, TRAKT_UNWATCH_CONFIRMATION_MS } = await import("../server/src/utils/trackerSync.js");
 const { trackerMediaKey } = await import("../server/src/utils/traktClient.js");
-const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
+const { saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 const { syncCanonicalPlaystate } = await import("../server/src/utils/syncOrchestrator.js");
 
@@ -583,6 +583,7 @@ test("a newer watched LAN write finishes after an older poll paused while cleari
     jellyfin: { disabled: true, authMode: "manual" },
   };
   await saveMediaConfig(config);
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-order-srv", selectedIds: ["emby-lib-1"] });
 
   let signalProgressStarted;
   let releaseProgress;
@@ -611,6 +612,9 @@ test("a newer watched LAN write finishes after an older poll paused while cleari
     }
     if (requestUrl.hostname !== "emby-ordering.example.test") {
       throw new Error(`Unexpected request during LAN ordering test: ${method} ${requestUrl}`);
+    }
+    if (requestUrl.pathname.endsWith("/Ancestors")) {
+      return Response.json([{ Id: "emby-lib-1", Type: "CollectionFolder", CollectionType: "tvshows" }]);
     }
     if (requestUrl.pathname === "/Users/test-user/Items") {
       if (requestUrl.searchParams.get("IncludeItemTypes") === "Series") {
@@ -712,6 +716,7 @@ test("an expired stolen lease fences its previous owner before the unplayed muta
     jellyfin: { disabled: true, authMode: "manual" },
   };
   await saveMediaConfig(config);
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-order-srv", selectedIds: ["emby-lib-1"] });
 
   let signalProgressStarted;
   let releaseProgress;
@@ -842,6 +847,7 @@ test("movie aliases share one target lease when only one payload has a release y
     jellyfin: { disabled: true, authMode: "manual" },
   };
   await saveMediaConfig(config);
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-order-srv", selectedIds: ["emby-lib-1"] });
 
   let signalProgressStarted;
   let releaseProgress;

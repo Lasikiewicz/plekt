@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { makeTempDataDir } from "./helpers.js";
 
 makeTempDataDir("plekt-rating-safety-");
-const { db } = await import("../server/src/db.js");
+const { db, getDataVersion } = await import("../server/src/db.js");
 const repo = await import("../server/src/utils/personalRatingRepository.js");
 const sync = await import("../server/src/utils/personalRatingSync.js");
 const { normalizePersonalRatingMedia } = await import("../server/src/utils/personalRatingIdentity.js");
@@ -38,6 +38,15 @@ function seed(count = 7) {
 }
 const run = () => sync.runRatingSync({ providers: ["emby"], config, drain: false });
 const remaining = () => db.prepare("SELECT COUNT(*) AS n FROM personal_ratings").get().n;
+
+test("an unchanged completed rating scan leaves the Up Next history version alone", async () => {
+  seed(1);
+  respond({ Items: [item(1)], TotalRecordCount: 1 });
+  const version = getDataVersion();
+  const result = await run();
+  assert.equal(result.providers[0].changed, 0);
+  assert.equal(getDataVersion(), version);
+});
 
 test("an empty provider scan holds even a single existing rating for review", async () => {
   seed(1); respond({ Items: [], TotalRecordCount: 0 });

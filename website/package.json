@@ -32,7 +32,7 @@
     "check:release-parity": "node scripts/check-release-parity.mjs"
   },
   "engines": {
-    "node": ">=22.22.0"
+    "node": ">=22.23.4"
   },
   "dependencies": {
     "@astrojs/check": "^0.9.4",
@@ -40,7 +40,7 @@
     "@astrojs/sitemap": "^3.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource-variable/outfit": "^5.3.0",
-    "astro": "^7.3.2",
+    "astro": "^7.4.13",
     "typescript": "^5.8.3"
   },
   "devDependencies": {

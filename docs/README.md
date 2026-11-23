@@ -41,6 +41,7 @@ behavior, configuration, operations, and integration contracts.
 | [emby.md](emby.md) | Emby client, webhook parsing, and catch-up polling. |
 | [jellyfin.md](jellyfin.md) | Jellyfin client, webhook plugin, and catch-up polling. |
 | [metadata.md](metadata.md) | TMDB, TVDB, Fanart, OMDb, and YouTube data ownership, keys, caches, and TTLs. |
+| [support-matrix.md](support-matrix.md) | What syncs with each provider: item types, direction, how changes arrive and how you sign in. Tracker rows are generated (`npm run support-matrix`). |
 
 ### Pages & features
 

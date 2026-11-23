@@ -1213,8 +1213,10 @@ bootstrapTokenFromUrl();
 
 
 function persistentDashboardHistoryCacheKey() {
-  const userKey = state.currentUser?.uid || state.currentUser?.email || "local";
-  return `${DASHBOARD_HISTORY_CACHE_KEY}:${userKey}`;
+  const user = state.currentUser || {};
+  const userKey = user.uid || user.email || "local";
+  const active = String(user.activeUser || "").trim();
+  return `${DASHBOARD_HISTORY_CACHE_KEY}:${active ? `${userKey}:${active}` : userKey}`;
 }
 
 function readPersistentDashboardHistory() {
@@ -1691,6 +1693,19 @@ function handleRoutingNow(path) {
     state.mediaDetailInline = false;
     clearMediaDetailState();
     if (pathname !== "/about") history.replaceState(history.state, "", "/about");
+  } else if (isDemoMode() && (
+    pathname === "/setup"
+    || pathname === "/sync"
+    || pathname === "/logs"
+    || pathname === "/sync-activity"
+    || pathname === "/manual-watch-review"
+  )) {
+    // The demo deliberately has no onboarding, sync, backup, or provider-
+    // management flow. Settings remain browseable but read-only.
+    state.activeView = "dashboard";
+    state.mediaDetailInline = false;
+    clearMediaDetailState();
+    history.replaceState(history.state, "", "/");
   } else if (pathname === "/sync-activity") {
     state.activeView = "syncActivity";
     state.mediaDetailInline = false;
@@ -1712,19 +1727,6 @@ function handleRoutingNow(path) {
       query = searchParams.get("q") || searchParams.get("query") || "";
     }
     triggerSearchPage(query);
-  } else if (isDemoMode() && (
-    pathname === "/setup"
-    || pathname === "/sync"
-    || pathname === "/logs"
-    || pathname === "/sync-activity"
-    || pathname === "/manual-watch-review"
-  )) {
-    // The demo deliberately has no onboarding, sync, backup, or provider-
-    // management flow. Settings remain browseable but read-only.
-    state.activeView = "dashboard";
-    state.mediaDetailInline = false;
-    clearMediaDetailState();
-    history.replaceState(history.state, "", "/");
   } else if (pathname === "/setup") {
     state.activeView = "setup";
     state.mediaDetailInline = false;
@@ -3031,12 +3033,18 @@ async function unlockWithToken(password, email = elements.adminEmail?.value) {
     handleRouting(fullPath);
     applyActiveView();
   }
+  if (!isDemoMode()) {
+    startAppLiveUpdates();
+    scheduleDeferredStartupWork(startDeferredStatusWork);
+  }
   startHistoryPolling();
   setMessage("Dashboard unlocked.", "success");
 }
 
 async function lockDashboard() {
   stopHistoryPolling();
+  stopLiveUpdates();
+  deferredStatusToken = "";
   resetUpNext();
   resetDiscover();
   resetPersonalMedia();
@@ -3295,6 +3303,59 @@ function renderActiveViewAfterWatch() {
   }
 }
 
+function startAppLiveUpdates() {
+  if (!state.token || isDemoMode()) return;
+  startLiveUpdates({
+    authHeaders,
+    isAuthenticated: () => Boolean(state.token),
+    onResume: () => {
+      if (state.token) queueLiveHistoryRefresh({ immediate: true, fullRefresh: true });
+    },
+    onHistoryVersion: (version, { changes = [], reconnect = false } = {}) => {
+      const upNextRelevantChange = changes.length === 0 || changes.some((change) => ["watch_history", "playstate", "playback_progress"].includes(
+        String(change.sourceTable || change.source_table || "").toLowerCase(),
+      ));
+      if (upNextRelevantChange && state.activeView === "dashboard") {
+        // The broader history refresh waits for an active sync to go
+        // idle, but the local Up Next rail is derived from the same
+        // canonical write that just produced this event. Refresh it
+        // independently so provider delivery cannot leave the browser
+        // showing a stale rail for the duration of a long sync.
+        loadUpNext({ fromSse: true }).catch((error) => logDebug(`Live Up Next history refresh failed: ${error.message}`));
+      }
+      // A reconnect (tab shown again, wake from sleep) reports that data
+      // changed while this tab was not listening, without saying what.
+      // Reload every visible list instead of dropping the empty change set.
+      queueLiveHistoryRefresh({ changes, fullRefresh: reconnect });
+      if (state.activeView === "syncActivity") queueSyncActivityRefresh();
+    },
+    onUpNextVersion: (version, { initial = false } = {}) => {
+      const normalized = Number(version);
+      if (!Number.isFinite(normalized)) return;
+      const previous = Number(state.upNextVersion || 0);
+      state.upNextVersion = normalized;
+      // The deferred dashboard load handles the first snapshot. Only a
+      // later queue change refreshes even when paired with history.
+      if (!initial && previous !== normalized && state.activeView === "dashboard") {
+        loadUpNext({ fromSse: true }).catch((error) => logDebug(`Live Up Next refresh failed: ${error.message}`));
+      }
+    },
+    onDiscoverVersion: (version, { initial = false } = {}) => {
+      const previous = Number(state.discoverVersion || 0);
+      state.discoverVersion = Number(version) || 0;
+      if (initial || previous !== state.discoverVersion) {
+        state.discoverLoadedAt = 0;
+        if (state.activeView === "discover") {
+          loadDiscover({ fromSse: true }).catch((error) => logDebug(`Live Discover refresh failed: ${error.message}`));
+        }
+      }
+    },
+    onSyncProgress: renderSyncProgress,
+    onSyncAttention: handleSyncAttentionUpdate,
+    onError: (error) => logDebug(`Live update connection interrupted: ${error.message}`),
+  });
+}
+
 // Compact status summaries (sidebar badges and Manual Watch review count) need
 // a signed-in token. Sign-in and the first idle slot arrive in either order,
 // so both call this; it runs once per token. Full status pages stay route-scoped.
@@ -3383,76 +3444,13 @@ function initialize() {
     state.token = token || "";
     if (user && token) {
       if (!isDemoMode()) {
-        startLiveUpdates({
-          authHeaders,
-          onResume: () => {
-            if (state.token) queueLiveHistoryRefresh({ immediate: true, fullRefresh: true });
-          },
-          onHistoryVersion: (version, { changes = [], reconnect = false } = {}) => {
-            const upNextRelevantChange = changes.length === 0 || changes.some((change) => ["watch_history", "playstate", "playback_progress"].includes(
-              String(change.sourceTable || change.source_table || "").toLowerCase(),
-            ));
-            if (upNextRelevantChange && state.activeView === "dashboard") {
-              // The broader history refresh waits for an active sync to go
-              // idle, but the local Up Next rail is derived from the same
-              // canonical write that just produced this event. Refresh it
-              // independently so provider delivery cannot leave the browser
-              // showing a stale rail for the duration of a long sync.
-              loadUpNext({ fromSse: true }).catch((error) => logDebug(`Live Up Next history refresh failed: ${error.message}`));
-            }
-            // A reconnect (tab shown again, wake from sleep) reports that data
-            // changed while this tab was not listening, without saying what.
-            // Reload every visible list instead of dropping the empty change set.
-            queueLiveHistoryRefresh({ changes, fullRefresh: reconnect });
-            if (state.activeView === "syncActivity") queueSyncActivityRefresh();
-          },
-          onUpNextVersion: (version, { initial = false } = {}) => {
-            const normalized = Number(version);
-            if (!Number.isFinite(normalized)) return;
-            const previous = Number(state.upNextVersion || 0);
-            state.upNextVersion = normalized;
-            // The deferred dashboard load handles the first snapshot. Only a
-            // later queue change refreshes even when paired with history.
-            if (!initial && previous !== normalized && state.activeView === "dashboard") {
-              loadUpNext({ fromSse: true }).catch((error) => logDebug(`Live Up Next refresh failed: ${error.message}`));
-            }
-          },
-          onDiscoverVersion: (version, { initial = false } = {}) => {
-            const previous = Number(state.discoverVersion || 0);
-            state.discoverVersion = Number(version) || 0;
-            if (initial || previous !== state.discoverVersion) {
-              state.discoverLoadedAt = 0;
-              if (state.activeView === "discover") {
-                loadDiscover({ fromSse: true }).catch((error) => logDebug(`Live Discover refresh failed: ${error.message}`));
-              }
-            }
-          },
-          onSyncProgress: renderSyncProgress,
-          onSyncAttention: handleSyncAttentionUpdate,
-          onError: (error) => logDebug(`Live update connection interrupted: ${error.message}`),
-        });
+        startAppLiveUpdates();
         // Runs once per token, whichever of sign-in and the post-paint idle pass comes first.
         scheduleDeferredStartupWork(startDeferredStatusWork);
       }
       for (const [key, value] of state.posterLookupCache.entries()) {
         if (!value) state.posterLookupCache.delete(key);
       }
-      try {
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && key.startsWith("plembfin:posterLookupCache:v2")) {
-            const raw = localStorage.getItem(key);
-            if (raw) {
-              const parsed = JSON.parse(raw);
-              if (Array.isArray(parsed)) {
-                const cleaned = parsed.filter(item => item.url);
-                localStorage.setItem(key, JSON.stringify(cleaned));
-              }
-            }
-          }
-        }
-      } catch (e) { }
-
     }
     if (user && token && !state.configLoaded) {
       const fullPath = window.location.pathname + window.location.search + window.location.hash;

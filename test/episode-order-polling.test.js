@@ -36,13 +36,14 @@ test.after(() => db.close());
 test("review approval preserves identity, serializes concurrent decisions, and blocks lost proof", async () => {
   seed();
   const { AUTH } = await import("../server/src/appConfig.js");
-  const { saveMediaConfig } = await import("../server/src/utils/configStore.js");
+  const { saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
   const { enqueueManualWatchReview, getManualWatchReview } = await import("../server/src/utils/manualWatchReview.js");
   const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
   await saveMediaConfig({});
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["1"] });
   const identity = { tvdbId: TVDB_ID, dvdId: 7187957, airedId: 7187957, order: "alternate" };
   const media = { type: "episode", source: "plex", title: "Disenchantment - S01E11", showTitle: "Disenchantment", season: 1, episode: 11,
-    ids: { tvdb: TVDB_ID }, watchProvenance: { episode_order: identity } };
+    ids: { tvdb: TVDB_ID }, librarySectionId: "1", watchProvenance: { library_id: "1", episode_order: identity } };
   const approve = async id => {
     let status = 200, body;
     await handleManualWatchReview({ method: "POST", body: { mode: "now" }, headers: { "x-api-key": AUTH.apiKey }, cookies: {},

@@ -21,6 +21,8 @@ import {
 import { listActiveUpNextProviderItems } from "./upNextRepository.js";
 import { normalizeUpNextCandidate, upNextIdentityAliases } from "./upNextIdentity.js";
 import { runWithOutboundStateLease } from "./outboundStateLease.js";
+import { createPerUserState } from "./perUserState.js";
+import { getUserContext, runWithUserContext } from "./userContext.js";
 import { resumeProgressBlockedByPlaystate } from "./resumeAuthority.js";
 import {
   PLEX_ALREADY_MATCHING_DETAIL,
@@ -33,6 +35,7 @@ import { compoundEpisodeForMedia } from "./compoundEpisode.js";
 import { brandEnv } from "./brandEnv.js";
 import { resolveOrderWatch } from "./episodeOrderWatch.js";
 import { isTrackerProvider, trackerProviderForSource } from "./trackers/registry.js";
+import { getProviderLibrarySelection } from "./librarySelection.js";
 
 const LOOP_CACHE_TTL_SECONDS = 60;
 const LOOP_WINDOW_MS = 15_000;
@@ -52,77 +55,85 @@ const DISPATCH_PROGRESS_IDLE_MS = 2_000;
 const DISPATCH_PROGRESS_HEARTBEAT_MS = 15_000;
 const DISPATCH_PROGRESS_INSTANCE_ID = brandEnv("INSTANCE_ID")
   || `${process.env.ROLE || "process"}:${process.pid}:${Date.now()}`;
-let dispatchBurstTotal = 0;
-let dispatchBurstCompleted = 0;
-let dispatchBurstActive = false;
-let dispatchBurstOwnerId = "";
-let dispatchBurstExpiresAt = 0;
-let dispatchBurstSequence = 0;
-let dispatchReservationSequence = 0;
-const dispatchProgressItems = new Map();
-const dispatchReservations = new Map();
-let dispatchIdleTimer = null;
-let dispatchHeartbeatTimer = null;
+const dispatchBurstByUser = createPerUserState(() => ({
+  total: 0,
+  completed: 0,
+  active: false,
+  ownerId: "",
+  expiresAt: 0,
+  sequence: 0,
+  reservationSequence: 0,
+  progressItems: new Map(),
+  reservations: new Map(),
+  idleTimer: null,
+  heartbeatTimer: null,
+}));
 
 function resetLocalDispatchBurst(ownerId) {
-  if (ownerId && ownerId !== dispatchBurstOwnerId) return;
-  if (dispatchIdleTimer) clearTimeout(dispatchIdleTimer);
-  if (dispatchHeartbeatTimer) clearInterval(dispatchHeartbeatTimer);
-  dispatchIdleTimer = null;
-  dispatchHeartbeatTimer = null;
-  dispatchBurstActive = false;
-  dispatchBurstTotal = 0;
-  dispatchBurstCompleted = 0;
-  dispatchBurstOwnerId = "";
-  dispatchBurstExpiresAt = 0;
-  dispatchProgressItems.clear();
-  dispatchReservations.clear();
+  const burst = dispatchBurstByUser();
+  if (ownerId && ownerId !== burst.ownerId) return;
+  if (burst.idleTimer) clearTimeout(burst.idleTimer);
+  if (burst.heartbeatTimer) clearInterval(burst.heartbeatTimer);
+  burst.idleTimer = null;
+  burst.heartbeatTimer = null;
+  burst.active = false;
+  burst.total = 0;
+  burst.completed = 0;
+  burst.ownerId = "";
+  burst.expiresAt = 0;
+  burst.progressItems.clear();
+  burst.reservations.clear();
 }
 
 function reportDispatchProgress({ start = false } = {}) {
+  const burst = dispatchBurstByUser();
   const now = Date.now();
-  const ownerId = dispatchBurstOwnerId;
-  if (!dispatchBurstActive || !ownerId) return;
+  const ownerId = burst.ownerId;
+  if (!burst.active || !ownerId) return;
   const currentItemLabel = currentDispatchLabel();
   const update = start
-    ? startBackgroundSyncProgressOwner({ ownerId, total: dispatchBurstTotal, completed: dispatchBurstCompleted, currentItemLabel, now })
-    : updateBackgroundSyncProgressOwner({ ownerId, total: dispatchBurstTotal, completed: dispatchBurstCompleted, currentItemLabel, now });
+    ? startBackgroundSyncProgressOwner({ ownerId, total: burst.total, completed: burst.completed, currentItemLabel, now })
+    : updateBackgroundSyncProgressOwner({ ownerId, total: burst.total, completed: burst.completed, currentItemLabel, now });
   update
     .then((result) => {
-      // A hard owner lease is never extended by heartbeats. Once SQLite has
-      // expired this generation, stop its local timer too so it cannot
-      // resurrect a leaked burst; a later dispatch opens a fresh generation.
       if (!start && !result.updated) resetLocalDispatchBurst(ownerId);
     })
     .catch(() => null);
 }
 
 function startDispatchHeartbeat() {
-  if (dispatchHeartbeatTimer) return;
-  dispatchHeartbeatTimer = setInterval(() => {
-    if (dispatchBurstActive) reportDispatchProgress();
+  const burst = dispatchBurstByUser();
+  if (burst.heartbeatTimer) return;
+  const userCtx = getUserContext();
+  burst.heartbeatTimer = setInterval(() => {
+    const tick = () => {
+      if (dispatchBurstByUser().active) reportDispatchProgress();
+    };
+    if (userCtx) runWithUserContext(userCtx, tick);
+    else tick();
   }, DISPATCH_PROGRESS_HEARTBEAT_MS);
-  dispatchHeartbeatTimer.unref?.();
+  burst.heartbeatTimer.unref?.();
 }
 
 function openDispatchBurstIfIdle() {
-  if (dispatchBurstActive && dispatchBurstExpiresAt <= Date.now()) {
-    const expiredOwnerId = dispatchBurstOwnerId;
+  const burst = dispatchBurstByUser();
+  if (burst.active && burst.expiresAt <= Date.now()) {
+    const expiredOwnerId = burst.ownerId;
     resetLocalDispatchBurst(expiredOwnerId);
     releaseBackgroundSyncProgressOwner({ ownerId: expiredOwnerId }).catch(() => null);
   }
-  if (dispatchIdleTimer) {
-    clearTimeout(dispatchIdleTimer);
-    dispatchIdleTimer = null;
+  if (burst.idleTimer) {
+    clearTimeout(burst.idleTimer);
+    burst.idleTimer = null;
   }
   let started = false;
-  if (!dispatchBurstActive) {
-    dispatchBurstActive = true;
-    dispatchBurstTotal = 0;
-    dispatchBurstCompleted = 0;
-    dispatchBurstSequence += 1;
-    dispatchBurstOwnerId = `${DISPATCH_PROGRESS_INSTANCE_ID}:dispatch:${Date.now()}:${dispatchBurstSequence}`;
-    dispatchBurstExpiresAt = Date.now() + BACKGROUND_SYNC_PROGRESS_MAX_OWNER_MS;
+  if (!burst.active) {
+    burst.active = true;
+    burst.total = 0;
+    burst.completed = 0;
+    burst.sequence += 1;
+    burst.ownerId = `${DISPATCH_PROGRESS_INSTANCE_ID}:dispatch:${Date.now()}:${burst.sequence}`;
+    burst.expiresAt = Date.now() + BACKGROUND_SYNC_PROGRESS_MAX_OWNER_MS;
     startDispatchHeartbeat();
     started = true;
   }
@@ -175,11 +186,12 @@ function dispatchMediaLabel(media = {}) {
 }
 
 function currentDispatchLabel() {
+  const burst = dispatchBurstByUser();
   const candidates = [];
-  for (const item of dispatchProgressItems.values()) {
+  for (const item of burst.progressItems.values()) {
     if (item.active > 0 && item.label) candidates.push(item);
   }
-  for (const reservation of dispatchReservations.values()) {
+  for (const reservation of burst.reservations.values()) {
     for (const item of reservation.activeItems || []) {
       if (item.label) candidates.push(item);
     }
@@ -189,19 +201,20 @@ function currentDispatchLabel() {
 }
 
 function beginDispatchTracking(media = {}) {
+  const burst = dispatchBurstByUser();
   const started = openDispatchBurstIfIdle();
   const progressKey = dispatchProgressKey(media);
-  let item = dispatchProgressItems.get(progressKey);
+  let item = burst.progressItems.get(progressKey);
   if (!item) {
     item = { active: 0, completed: false, label: dispatchMediaLabel(media), sequence: 0 };
-    dispatchProgressItems.set(progressKey, item);
-    dispatchBurstTotal += 1;
+    burst.progressItems.set(progressKey, item);
+    burst.total += 1;
   }
   if (!item.label) item.label = dispatchMediaLabel(media);
-  item.sequence = ++dispatchReservationSequence;
+  item.sequence = ++burst.reservationSequence;
   item.active += 1;
   reportDispatchProgress({ start: started });
-  return { ownerId: dispatchBurstOwnerId, progressKey };
+  return { ownerId: burst.ownerId, progressKey };
 }
 
 // For a caller that already knows how many items it is about to dispatch
@@ -213,6 +226,7 @@ function beginDispatchTracking(media = {}) {
 // batch's own syncMediaPlaystate/syncMediaUnplayedPlaystate calls so those
 // items aren't counted a second time when they individually start.
 export function reserveDispatchBatch(size, { progressKeys = [] } = {}) {
+  const burst = dispatchBurstByUser();
   const normalizedProgressKeys = (Array.isArray(progressKeys) ? progressKeys : [])
     .map((key) => String(key || "").trim())
     .filter(Boolean);
@@ -221,13 +235,13 @@ export function reserveDispatchBatch(size, { progressKeys = [] } = {}) {
     || Math.max(0, Math.floor(Number(size) || 0));
   if (!(reservedSize > 0)) return null;
   const started = openDispatchBurstIfIdle();
-  dispatchBurstTotal += reservedSize;
-  dispatchReservationSequence += 1;
+  burst.total += reservedSize;
+  burst.reservationSequence += 1;
   const reservation = {
-    ownerId: dispatchBurstOwnerId,
-    reservationId: `${dispatchBurstOwnerId}:reservation:${dispatchReservationSequence}`,
+    ownerId: burst.ownerId,
+    reservationId: `${burst.ownerId}:reservation:${burst.reservationSequence}`,
   };
-  dispatchReservations.set(reservation.reservationId, {
+  burst.reservations.set(reservation.reservationId, {
     total: reservedSize,
     completed: 0,
     activeItems: [],
@@ -240,14 +254,15 @@ export function reserveDispatchBatch(size, { progressKeys = [] } = {}) {
 }
 
 export function markReservedDispatchStarted(tracking, media = {}) {
+  const burst = dispatchBurstByUser();
   const ownerId = tracking?.ownerId;
-  if (!dispatchBurstActive || !ownerId || ownerId !== dispatchBurstOwnerId) return;
-  const reservation = dispatchReservations.get(tracking?.reservationId);
+  if (!burst.active || !ownerId || ownerId !== burst.ownerId) return;
+  const reservation = burst.reservations.get(tracking?.reservationId);
   if (!reservation) return;
   reservation.activeItems.push({
     progressKey: dispatchProgressKey(media),
     label: dispatchMediaLabel(media),
-    sequence: ++dispatchReservationSequence,
+    sequence: ++burst.reservationSequence,
   });
   reportDispatchProgress();
 }
@@ -259,32 +274,39 @@ export function markReservedDispatchStarted(tracking, media = {}) {
 // that reserved slot must still be marked complete or the indicator gets
 // stuck short of its total and the burst never closes.
 function scheduleDispatchIdleIfComplete() {
-  if (dispatchBurstCompleted < dispatchBurstTotal || dispatchIdleTimer) return;
-  const completedOwnerId = dispatchBurstOwnerId;
-  dispatchIdleTimer = setTimeout(() => {
-    if (completedOwnerId !== dispatchBurstOwnerId) return;
-    resetLocalDispatchBurst(completedOwnerId);
-    releaseBackgroundSyncProgressOwner({ ownerId: completedOwnerId }).catch(() => null);
+  const burst = dispatchBurstByUser();
+  if (burst.completed < burst.total || burst.idleTimer) return;
+  const completedOwnerId = burst.ownerId;
+  const userCtx = getUserContext();
+  burst.idleTimer = setTimeout(() => {
+    const finish = () => {
+      if (completedOwnerId !== dispatchBurstByUser().ownerId) return;
+      resetLocalDispatchBurst(completedOwnerId);
+      releaseBackgroundSyncProgressOwner({ ownerId: completedOwnerId }).catch(() => null);
+    };
+    if (userCtx) runWithUserContext(userCtx, finish);
+    else finish();
   }, DISPATCH_PROGRESS_IDLE_MS);
 }
 
-export function completeDispatchTracking(tracking = dispatchBurstOwnerId, media = null) {
+export function completeDispatchTracking(tracking = dispatchBurstByUser().ownerId, media = null) {
+  const burst = dispatchBurstByUser();
   const ownerId = typeof tracking === "object" ? tracking?.ownerId : tracking;
-  if (!dispatchBurstActive || !ownerId || ownerId !== dispatchBurstOwnerId) return;
+  if (!burst.active || !ownerId || ownerId !== burst.ownerId) return;
   if (tracking && typeof tracking === "object" && tracking.progressKey) {
-    const item = dispatchProgressItems.get(tracking.progressKey);
+    const item = burst.progressItems.get(tracking.progressKey);
     if (!item || item.active <= 0) return;
     item.active -= 1;
     if (item.active === 0 && !item.completed) {
       item.completed = true;
-      dispatchBurstCompleted = Math.min(dispatchBurstTotal, dispatchBurstCompleted + 1);
+      burst.completed = Math.min(burst.total, burst.completed + 1);
     }
     reportDispatchProgress();
     scheduleDispatchIdleIfComplete();
     return;
   }
   if (tracking && typeof tracking === "object") {
-    const reservation = dispatchReservations.get(tracking.reservationId);
+    const reservation = burst.reservations.get(tracking.reservationId);
     if (!reservation || reservation.completed >= reservation.total) return;
     const progressKey = media ? dispatchProgressKey(media) : "";
     const activeIndex = reservation.activeItems?.findIndex((item) => !progressKey || item.progressKey === progressKey) ?? -1;
@@ -298,17 +320,17 @@ export function completeDispatchTracking(tracking = dispatchBurstOwnerId, media 
       if (pending === 1) {
         reservation.pendingByKey.delete(completedKey);
         reservation.completed += 1;
-        dispatchBurstCompleted = Math.min(dispatchBurstTotal, dispatchBurstCompleted + 1);
+        burst.completed = Math.min(burst.total, burst.completed + 1);
       }
-      if (reservation.completed >= reservation.total) dispatchReservations.delete(tracking.reservationId);
+      if (reservation.completed >= reservation.total) burst.reservations.delete(tracking.reservationId);
       reportDispatchProgress();
       scheduleDispatchIdleIfComplete();
       return;
     }
     reservation.completed += 1;
-    if (reservation.completed >= reservation.total) dispatchReservations.delete(tracking.reservationId);
+    if (reservation.completed >= reservation.total) burst.reservations.delete(tracking.reservationId);
   }
-  dispatchBurstCompleted = Math.min(dispatchBurstTotal, dispatchBurstCompleted + 1);
+  burst.completed = Math.min(burst.total, burst.completed + 1);
   reportDispatchProgress();
   scheduleDispatchIdleIfComplete();
 }
@@ -318,14 +340,15 @@ export function completeDispatchTracking(tracking = dispatchBurstOwnerId, media 
 // one finally block. Reservation-scoped accounting prevents one overlapping
 // batch from prematurely completing another batch in the same local burst.
 export function finishDispatchTracking(tracking) {
+  const burst = dispatchBurstByUser();
   const ownerId = tracking?.ownerId;
-  if (!dispatchBurstActive || !ownerId || ownerId !== dispatchBurstOwnerId) return;
-  const reservation = dispatchReservations.get(tracking.reservationId);
+  if (!burst.active || !ownerId || ownerId !== burst.ownerId) return;
+  const reservation = burst.reservations.get(tracking.reservationId);
   if (!reservation) return;
   const remaining = Math.max(0, reservation.total - reservation.completed);
-  dispatchReservations.delete(tracking.reservationId);
+  burst.reservations.delete(tracking.reservationId);
   if (remaining > 0) {
-    dispatchBurstCompleted = Math.min(dispatchBurstTotal, dispatchBurstCompleted + remaining);
+    burst.completed = Math.min(burst.total, burst.completed + remaining);
     reportDispatchProgress();
   }
   scheduleDispatchIdleIfComplete();
@@ -376,8 +399,14 @@ export function getTargetsForSource(source = "manual", config = {}, stateType = 
 // dispatch readiness only matters for targetsForMedia's callers below.
 function isServerConfigured(config, server) {
   const section = config?.[server] || {};
-  if (server === "plex") return Boolean(section.baseUrl && section.token);
-  return Boolean(section.baseUrl && section.apiKey && section.userId);
+  const hasCreds = server === "plex"
+    ? Boolean(section.baseUrl && section.token)
+    : Boolean(section.baseUrl && section.apiKey && section.userId);
+  if (!hasCreds) return false;
+  if (config?.libraryMonitoring || section.libraryMonitoringEnforced || Array.isArray(section.monitoredLibraryIds)) {
+    return getProviderLibrarySelection(config, server).hasSelectedLibraries;
+  }
+  return true;
 }
 
 function targetsForMedia(media, config, stateType) {
@@ -487,7 +516,7 @@ export function outboundStateLeaseIdentity(media = {}) {
   return titleKey ? `${type}:title:${titleKey}` : `${type}:unknown`;
 }
 
-function outboundStateLeaseKey(media, target) {
+export function outboundStateLeaseKey(media, target) {
   return `played-state:${String(target || "unknown").toLowerCase()}:${outboundStateLeaseIdentity(media)}`;
 }
 
@@ -1180,6 +1209,9 @@ export async function syncMediaPlaystate(media, config, kv, {
   includeTrackers = true,
   shouldDefer = null,
 } = {}) {
+  if (media?.localOnly || media?.source === "plex_personal_media") {
+    return { skipped: true, status: "skipped", details: "Plex Personal Media is stored only in Plekt.", targetStates: [], results: [] };
+  }
   const isRestore = restoreSource(media);
   if (!isRestore && !watchedPlayedSyncEnabled()) {
     console.log("Sync playstate skipped: watched/played syncing is disabled");
@@ -1359,6 +1391,9 @@ export async function syncMediaUnplayedPlaystate(media, config, kv, {
   includeTrackers = true,
   shouldDefer = null,
 } = {}) {
+  if (media?.localOnly || media?.source === "plex_personal_media") {
+    return { skipped: true, status: "skipped", details: "Plex Personal Media is stored only in Plekt.", targetStates: [], results: [] };
+  }
   const isRestore = restoreSource(media);
   if (!isRestore && !watchedPlayedSyncEnabled()) {
     return { skipped: true, status: "skipped", details: "Watched/played syncing is disabled.", targetStates: [], results: [] };

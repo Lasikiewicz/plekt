@@ -11,6 +11,7 @@ const { insertWatchRecordSync } = await import("../server/src/utils/dataRepo.js"
 const { saveCanonicalPoster } = await import("../server/src/utils/mediaArtwork.js");
 const { recordUpNextRailSeeds } = await import("../server/src/utils/upNextSeedLedger.js");
 const { removeManualUpNextShow, upsertManualUpNextShow } = await import("../server/src/utils/upNextManual.js");
+const { getUpNextShowOptions } = await import("../server/src/utils/upNextShowOptions.js");
 const { withUpNextFeedSeriesIdentity } = await import("../server/src/utils/upNextRepository.js");
 
 function seedCachedPoster(fileName) {
@@ -1270,6 +1271,61 @@ function seedShowMetadata({ tmdbId, tvdbId, title, seasonNumber, episodes, addit
   }
 }
 
+test("closest to finishing counts released unwatched episodes in the queued season", async () => {
+  const today = "2026-09-01T12:00:00.000Z";
+  const episodes = (dates) => dates.map((aired, index) => ({ number: index + 1, aired }));
+  seedShowMetadata({ tmdbId: "88071", tvdbId: "98071", title: "Long current season", seasonNumber: 1,
+    episodes: episodes(["2026-08-01", "2026-08-02", "2026-08-03"]) });
+  seedShowMetadata({ tmdbId: "88072", tvdbId: "98072", title: "Short current season", seasonNumber: 1,
+    episodes: episodes(["2026-08-01", "2026-08-02", "2026-10-01"]),
+    additionalSeasons: [{ seasonNumber: 2, episodes: episodes(["2026-08-05", "2026-08-06"]) }] });
+  const shows = [
+    { title: "Long current season", tmdb_id: "88071", tvdb_id: "98071", latest_watched_at: "2026-08-31" },
+    { title: "Short current season", tmdb_id: "88072", tvdb_id: "98072", latest_watched_at: "2026-08-30" },
+  ];
+  const providerItems = shows.map((show) => ({
+    provider: "jellyfin", feed_kind: "next_up", provider_item_id: show.tmdb_id, media_type: "episode",
+    show_title: show.title, title: show.title, season: 1, episode: 2,
+    show_ids: { tmdb: show.tmdb_id, tvdb: show.tvdb_id }, air_date: "2026-08-02",
+  }));
+  const playstateRows = shows.map((show) => ({
+    state: "watched", media_type: "episode", title: show.title, show_title: show.title, season: 1, episode: 1,
+    show_tmdb_id: show.tmdb_id, show_tvdb_id: show.tvdb_id,
+  }));
+  const { items } = await buildUpNextProjection({
+    now: Date.parse(today), shows, playstateRows, providerItems, progressRows: [], localFallback: false,
+    mediaConfig: { upNextSync: { sort: "closest_to_finishing" } }, limit: 1,
+  });
+  assert.deepEqual(items.map((item) => [item.show_title, item.season_remaining]), [["Short current season", 1]]);
+});
+
+test("a latest released override skips watched, future, and specials and applies its placement", async () => {
+  const title = "Latest released override";
+  const tvdb_id = "98073";
+  const tmdb_id = "88073";
+  seedShowMetadata({ tmdbId: tmdb_id, tvdbId: tvdb_id, title, seasonNumber: 1,
+    episodes: [
+      { number: 1, aired: "2026-07-01" },
+      { number: 2, aired: "2026-07-08" },
+      { number: 3, aired: "2026-07-15" },
+      { number: 4, aired: "2026-07-22" },
+      { number: 5, aired: "2026-10-01" },
+    ],
+    additionalSeasons: [{ seasonNumber: 0, episodes: [{ number: 1, aired: "2026-08-01" }] }],
+  });
+  const playstateRows = [1, 4].map((episode) => ({
+    media_type: "episode", title, show_title: title, season: 1, episode,
+    show_tmdb_id: tmdb_id, show_tvdb_id: tvdb_id, state: "watched",
+  }));
+  const { items } = await buildUpNextProjection({
+    now: Date.parse("2026-09-01T12:00:00Z"), playstateRows, providerItems: [], progressRows: [],
+    shows: [{ title, tmdb_id, tvdb_id, episode_count: 2, latest_watched_at: "2026-07-22" }],
+    mediaConfig: { upNextSync: { showOverrides: [{ tvdb_id, episodeChoice: "latest_released", placement: "top" }] } },
+    resolveProviderItems: async () => ({ plex: ["episode-three"] }),
+  });
+  assert.deepEqual(items.map((item) => [item.season, item.episode, item.queue_placement]), [[1, 3, "top"]]);
+});
+
 test("completed shows leave Up Next while a never-watched manually queued show remains", async () => {
   insertWatchRecordSync({
     title: "Completed Queue Show - S01E01",
@@ -1343,6 +1399,38 @@ test("completed shows leave Up Next while a never-watched manually queued show r
   });
   assert.equal(neverWatched.items.find((item) => item.show_title === "Never Watched Queue Show")?.episode, 1);
   removeManualUpNextShow({ tmdb_id: "88011" });
+});
+
+test("a manually queued unwatched show resolves S01E01 through local fallback despite episode_count 0", async () => {
+  seedShowMetadata({
+    tmdbId: "88019",
+    tvdbId: "88019",
+    title: "Manual Unwatched Show",
+    seasonNumber: 1,
+    episodes: [
+      { number: 1, name: "Pilot", aired: "2026-08-01" },
+      { number: 2, name: "Two", aired: "2026-08-08" },
+    ],
+  });
+  upsertManualUpNextShow({ title: "Manual Unwatched Show", tmdb_id: "88019", tvdb_id: "88019" }, {
+    now: Date.parse("2026-09-10T12:00:00.000Z"),
+  });
+  try {
+    const projection = await buildUpNextProjection({
+      now: Date.parse("2026-09-10T12:00:00.000Z"),
+      shows: [{ id: "tmdb:88019", title: "Manual Unwatched Show", tmdb_id: "88019", tvdb_id: "88019", episode_count: 0 }],
+      progressRows: [],
+      playstateRows: [],
+      providerItems: [],
+      resolveProviderItems: async () => ({ plex: ["manual-unwatched-s01e01"] }),
+    });
+    const card = projection.items.find((item) => item.show_title === "Manual Unwatched Show");
+    assert.equal(card?.season, 1);
+    assert.equal(card?.episode, 1);
+    assert.deepEqual(card?.provider_items, { plex: ["manual-unwatched-s01e01"] });
+  } finally {
+    removeManualUpNextShow({ tmdb_id: "88019" });
+  }
 });
 
 test("a manually queued show with only explicit unwatches stays out of Up Next", async () => {
@@ -2522,3 +2610,430 @@ test("a same-title show's watch does not vouch by title for a show with conflict
   assert.deepEqual(ids, ["au-five"]);
   assert.equal(projection.items[0].show_latest_watched_at, "2025-05-10T00:00:00.000Z");
 });
+
+test("manual Up Next defaults to earliest unwatched item and honors an explicit target_season", async () => {
+  seedShowMetadata({
+    tmdbId: "88055",
+    tvdbId: "88055",
+    title: "Multi Season Manual",
+    seasonNumber: 1,
+    episodes: [
+      { number: 1, name: "Pilot", aired: "2026-06-01" },
+      { number: 2, name: "Second", aired: "2026-06-08" },
+    ],
+    additionalSeasons: [
+      {
+        seasonNumber: 2,
+        episodes: [{ number: 1, name: "Two One", aired: "2026-07-01" }],
+      },
+      {
+        seasonNumber: 3,
+        episodes: [
+          { number: 1, name: "Three One", aired: "2026-08-01" },
+          { number: 2, name: "Three Two", aired: "2026-08-08" },
+        ],
+      },
+    ],
+  });
+  insertWatchRecordSync({
+    title: "Multi Season Manual - S01E01",
+    show_title: "Multi Season Manual",
+    media_type: "episode",
+    season: 1,
+    episode: 1,
+    tmdb_id: "88055",
+    tvdb_id: "88055",
+    watched_at: "2026-06-02T11:00:00.000Z",
+    source: "manual",
+  });
+  insertWatchRecordSync({
+    title: "Multi Season Manual - S03E01",
+    show_title: "Multi Season Manual",
+    media_type: "episode",
+    season: 3,
+    episode: 1,
+    tmdb_id: "88055",
+    tvdb_id: "88055",
+    watched_at: "2026-08-02T11:00:00.000Z",
+    source: "manual",
+  });
+
+  const options = await getUpNextShowOptions({
+    title: "Multi Season Manual",
+    tmdbId: "88055",
+    tvdbId: "88055",
+    now: Date.parse("2026-09-10T12:00:00.000Z"),
+  });
+  assert.equal(options.watchedSeasonCount, 2);
+  assert.deepEqual(options.watchedSeasons, [1, 3]);
+  assert.deepEqual(options.earliestUnwatched, { season: 1, episode: 2, title: "Second" });
+  assert.equal(options.seasons[2].next_episode?.episode, 2);
+
+  const shows = [{
+    id: "tmdb:88055",
+    title: "Multi Season Manual",
+    tmdb_id: "88055",
+    tvdb_id: "88055",
+    episode_count: 2,
+    latest_watched_at: "2026-08-02T11:00:00.000Z",
+  }];
+
+  try {
+    // Default (target_season: null): resolves earliest unwatched episode (S01E02), not S03E02.
+    upsertManualUpNextShow({ title: "Multi Season Manual", tmdb_id: "88055", tvdb_id: "88055", target_season: null });
+    const earliest = await buildUpNextProjection({
+      now: Date.parse("2026-09-10T12:00:00.000Z"),
+      shows,
+      progressRows: [],
+      playstateRows: [],
+      providerItems: [],
+      resolveProviderItems: async (candidate) => ({ plex: [`multi-s${candidate.season}e${candidate.episode}`] }),
+    });
+    const earliestCard = earliest.items.find((item) => item.show_title === "Multi Season Manual");
+    assert.equal(earliestCard?.season, 1);
+    assert.equal(earliestCard?.episode, 2);
+
+    // Explicit target_season: 3 -> resolves S03E02.
+    upsertManualUpNextShow({ title: "Multi Season Manual", tmdb_id: "88055", tvdb_id: "88055", target_season: 3 });
+    const seasonThree = await buildUpNextProjection({
+      now: Date.parse("2026-09-10T12:00:00.000Z"),
+      shows,
+      progressRows: [],
+      playstateRows: [],
+      providerItems: [],
+      resolveProviderItems: async (candidate) => ({ plex: [`multi-s${candidate.season}e${candidate.episode}`] }),
+    });
+    const seasonThreeCard = seasonThree.items.find((item) => item.show_title === "Multi Season Manual");
+    assert.equal(seasonThreeCard?.season, 3);
+    assert.equal(seasonThreeCard?.episode, 2);
+  } finally {
+    removeManualUpNextShow({ tmdb_id: "88055" });
+  }
+});
+
+test("manual earliest-unwatched scan skips more than three fully watched seasons", async () => {
+  seedShowMetadata({
+    tmdbId: "88056",
+    tvdbId: "88056",
+    title: "Five Season Manual",
+    seasonNumber: 1,
+    episodes: [{ number: 1, name: "S1", aired: "2026-01-01" }],
+    additionalSeasons: [
+      { seasonNumber: 2, episodes: [{ number: 1, name: "S2", aired: "2026-02-01" }] },
+      { seasonNumber: 3, episodes: [{ number: 1, name: "S3", aired: "2026-03-01" }] },
+      { seasonNumber: 4, episodes: [{ number: 1, name: "S4", aired: "2026-04-01" }] },
+      { seasonNumber: 5, episodes: [{ number: 1, name: "S5 Next", aired: "2026-05-01" }] },
+    ],
+  });
+  for (const season of [1, 2, 3, 4]) {
+    insertWatchRecordSync({
+      title: `Five Season Manual - S0${season}E01`,
+      show_title: "Five Season Manual",
+      media_type: "episode",
+      season,
+      episode: 1,
+      tmdb_id: "88056",
+      tvdb_id: "88056",
+      watched_at: `2026-0${season}-02T11:00:00.000Z`,
+      source: "manual",
+    });
+  }
+  upsertManualUpNextShow({ title: "Five Season Manual", tmdb_id: "88056", tvdb_id: "88056" });
+  try {
+    const projection = await buildUpNextProjection({
+      now: Date.parse("2026-09-10T12:00:00.000Z"),
+      shows: [{ id: "tmdb:88056", title: "Five Season Manual", tmdb_id: "88056", tvdb_id: "88056", episode_count: 4 }],
+      progressRows: [],
+      playstateRows: [],
+      providerItems: [],
+      resolveProviderItems: async () => ({ plex: ["five-season-s5e1"] }),
+    });
+    const card = projection.items.find((item) => item.show_title === "Five Season Manual");
+    assert.equal(card?.season, 5);
+    assert.equal(card?.episode, 1);
+  } finally {
+    removeManualUpNextShow({ tmdb_id: "88056" });
+  }
+});
+
+test("manual Up Next skips missing early episodes via provider inventory and honors DVD episode order", async () => {
+  const tmdbId = "88057";
+  const tvdbId = "88057";
+  const title = "Alternate Order Manual";
+  const seriesId = Number(tvdbId);
+  db.prepare(`
+    INSERT INTO tvdb_metadata_cache (id, tvdb_id, title, details, updated_at_ms)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET details = excluded.details, updated_at_ms = excluded.updated_at_ms
+  `).run(`order_catalogue_v4_${tvdbId}`, tvdbId, title, JSON.stringify({
+    tvdbId: seriesId,
+    fetchedAt: Date.now(),
+    labels: { official: "Aired Order", dvd: "DVD Volumes" },
+    orders: {
+      official: [
+        { id: 101, seriesId, season: 1, episode: 1, name: "Pilot", air_date: "1999-03-28" },
+        { id: 201, seriesId, season: 2, episode: 1, name: "DVD S01 finale", air_date: "1999-09-26" },
+        { id: 202, seriesId, season: 2, episode: 2, name: "DVD S02 opener", air_date: "1999-11-21" },
+        { id: 203, seriesId, season: 2, episode: 3, name: "DVD S02 later", air_date: "2000-02-06" },
+      ],
+      dvd: [
+        { id: 101, seriesId, season: 1, episode: 1, name: "Pilot", air_date: "1999-03-28" },
+        { id: 201, seriesId, season: 1, episode: 2, name: "DVD S01 finale", air_date: "1999-09-26" },
+        { id: 202, seriesId, season: 2, episode: 1, name: "DVD S02 opener", air_date: "1999-11-21" },
+        { id: 203, seriesId, season: 2, episode: 2, name: "DVD S02 later", air_date: "2000-02-06" },
+      ],
+      absolute: [],
+    },
+  }), Date.now());
+  db.prepare(`
+    INSERT INTO settings (id, data) VALUES (?, ?)
+    ON CONFLICT(id) DO UPDATE SET data = excluded.data
+  `).run(`episode-order:v1:${tvdbId}`, JSON.stringify({ order: "dvd", mappings: [] }));
+
+  insertWatchRecordSync({
+    title: `${title} - S01E01`,
+    show_title: title,
+    episode_title: "Pilot",
+    media_type: "episode",
+    season: 1,
+    episode: 1,
+    tmdb_id: tmdbId,
+    tvdb_id: tvdbId,
+    watched_at: "2026-06-01T10:00:00.000Z",
+    source: "manual",
+    watch_provenance: { episode_order: { tvdbId, dvdId: 101, airedId: 101, order: "dvd" } },
+  });
+  insertWatchRecordSync({
+    title: `${title} - S02E03`,
+    show_title: title,
+    episode_title: "DVD S02 later",
+    media_type: "episode",
+    season: 2,
+    episode: 3,
+    tmdb_id: tmdbId,
+    tvdb_id: tvdbId,
+    watched_at: "2026-06-02T10:00:00.000Z",
+    source: "manual",
+    watch_provenance: { episode_order: { tvdbId, dvdId: 203, airedId: 203, order: "dvd" } },
+  });
+
+  const options = await getUpNextShowOptions({
+    title,
+    tmdbId,
+    tvdbId,
+    now: Date.parse("2026-09-10T12:00:00.000Z"),
+  });
+  assert.deepEqual(options.watchedSeasons, [1, 2]);
+  assert.deepEqual(options.earliestUnwatched, { season: 1, episode: 2, title: "DVD S01 finale" });
+  assert.deepEqual(options.seasons[1], {
+    season_number: 2,
+    episode_count: 2,
+    watched_count: 1,
+    has_unwatched: true,
+    next_episode: { season: 2, episode: 1, title: "DVD S02 opener" },
+  });
+
+  const shows = [{
+    id: `tmdb:${tmdbId}`,
+    title,
+    tmdb_id: tmdbId,
+    tvdb_id: tvdbId,
+    episode_count: 2,
+    latest_watched_at: "2026-06-02T10:00:00.000Z",
+  }];
+
+  try {
+    upsertManualUpNextShow({ title, tmdb_id: tmdbId, tvdb_id: tvdbId, target_season: null });
+    // DVD S01E02 (Aired S02E01) is missing from libraries; inventory holds DVD S02E01 (Aired S02E02).
+    const skippedMissing = await buildUpNextProjection({
+      now: Date.parse("2026-09-10T12:00:00.000Z"),
+      shows,
+      progressRows: [],
+      playstateRows: [],
+      providerItems: [],
+      resolveProviderItems: async (candidate) => (candidate.season === 2 && candidate.episode === 2 ? { plex: ["alt-s2e2"] } : {}),
+      resolveProviderEpisodes: async () => [{
+        source: "plex",
+        provider: "plex",
+        provider_items: { plex: ["alt-s2e2"] },
+        media_type: "episode",
+        title: `${title} - S02E02`,
+        show_title: title,
+        episode_title: "DVD S02 opener",
+        season: 2,
+        episode: 2,
+        air_date: "1999-11-21",
+      }],
+    });
+    const skippedCard = skippedMissing.items.find((item) => item.show_title === title);
+    assert.equal(skippedCard?.season, 2);
+    assert.equal(skippedCard?.episode, 2);
+    assert.equal(skippedCard?.display_season, 2);
+    assert.equal(skippedCard?.display_episode, 1);
+
+    // Explicit target_season: 2 starts at DVD Season 2 (Aired S02E02) without querying DVD S01E02.
+    upsertManualUpNextShow({ title, tmdb_id: tmdbId, tvdb_id: tvdbId, target_season: 2 });
+    const asked = [];
+    const targetTwo = await buildUpNextProjection({
+      now: Date.parse("2026-09-10T12:00:00.000Z"),
+      shows,
+      progressRows: [],
+      playstateRows: [],
+      providerItems: [],
+      resolveProviderItems: async (candidate) => {
+        asked.push(`${candidate.season}:${candidate.episode}`);
+        return candidate.season === 2 && candidate.episode === 2 ? { plex: ["alt-s2e2"] } : {};
+      },
+      resolveProviderEpisodes: async () => [],
+    });
+    const targetTwoCard = targetTwo.items.find((item) => item.show_title === title);
+    assert.deepEqual(asked, ["2:2"]);
+    assert.equal(targetTwoCard?.display_season, 2);
+    assert.equal(targetTwoCard?.display_episode, 1);
+  } finally {
+    removeManualUpNextShow({ tmdb_id: tmdbId });
+  }
+});
+
+test("an uncached intermediate season blocks jumping to a later season and recovers from cached TVDB series data", async () => {
+  const tmdbId = "88058";
+  const tvdbId = "88058";
+  const title = "Intermediate Season Gap";
+  // Season 2 is listed in TMDB metadata with 6 episodes, but tvdb_season_cache
+  // only holds Seasons 1 and 3 (the live Daryl Dixon state before 427464_2 warmed).
+  db.prepare(`
+    INSERT INTO tmdb_metadata_cache (id, tmdb_id, media_type, title, details, schema_version, updated_at_ms)
+    VALUES (?, ?, 'tv', ?, ?, 1, ?)
+    ON CONFLICT(id) DO UPDATE SET details = excluded.details
+  `).run(`tv_${tmdbId}`, tmdbId, title, JSON.stringify({
+    id: Number(tmdbId),
+    name: title,
+    external_ids: { tvdb_id: tvdbId },
+    seasons: [
+      { season_number: 1, episode_count: 1 },
+      { season_number: 2, episode_count: 6 },
+      { season_number: 3, episode_count: 1 },
+    ],
+  }), Date.now());
+  db.prepare(`
+    INSERT INTO tvdb_season_cache (id, tvdb_id, season_number, details, updated_at_ms)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET details = excluded.details
+  `).run(`${tvdbId}_1`, tvdbId, 1, JSON.stringify({ episodes: [{ number: 1, name: "S1 Finale", aired: "2023-09-10" }] }), Date.now());
+  db.prepare(`
+    INSERT INTO tvdb_season_cache (id, tvdb_id, season_number, details, updated_at_ms)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET details = excluded.details
+  `).run(`${tvdbId}_3`, tvdbId, 3, JSON.stringify({ episodes: [{ number: 1, name: "S3 Opener", aired: "2025-09-07" }] }), Date.now());
+
+  insertWatchRecordSync({
+    title: `${title} - S01E01`,
+    show_title: title,
+    episode_title: "S1 Finale",
+    media_type: "episode",
+    season: 1,
+    episode: 1,
+    tmdb_id: tmdbId,
+    tvdb_id: tvdbId,
+    watched_at: "2024-04-07T12:11:00.000Z",
+    source: "trakt_import",
+  });
+
+  const shows = [{
+    id: `tmdb:${tmdbId}`,
+    title,
+    tmdb_id: tmdbId,
+    tvdb_id: tvdbId,
+    episode_count: 1,
+    latest_watched_at: "2024-04-07T12:11:00.000Z",
+  }];
+
+  // Without Season 2 in tvdb_season_cache or series_<tvdbId>, Up Next must NOT
+  // leap over Season 2 to S03E01 via local fallback, inventory, or provider Next Up.
+  const blocked = await buildUpNextProjection({
+    now: Date.parse("2026-11-13T12:00:00.000Z"),
+    shows,
+    progressRows: [],
+    playstateRows: [],
+    providerItems: [{
+      provider: "jellyfin",
+      feed_kind: "next_up",
+      provider_item_id: "jf-gap-s03e01",
+      media_type: "episode",
+      title: `${title} - S03E01`,
+      show_title: title,
+      season: 3,
+      episode: 1,
+      show_ids: { tmdb: tmdbId, tvdb: tvdbId },
+      air_date: "2025-09-07",
+    }],
+    resolveProviderItems: async (candidate) => ({ plex: [`gap-s${candidate.season}e${candidate.episode}`] }),
+    resolveProviderEpisodes: async () => [{
+      source: "plex",
+      provider: "plex",
+      provider_items: { plex: ["gap-inv-s03e01"] },
+      media_type: "episode",
+      title: `${title} - S03E01`,
+      show_title: title,
+      season: 3,
+      episode: 1,
+      air_date: "2025-09-07",
+    }],
+  });
+  assert.equal(blocked.items.find((item) => item.show_title === title), undefined);
+
+  // If provider inventory/feed holds S02E01 (the uncached intermediate season
+  // itself), that season IS allowed instead of skipping ahead.
+  const inventoryS2 = await buildUpNextProjection({
+    now: Date.parse("2026-11-13T12:00:00.000Z"),
+    shows,
+    progressRows: [],
+    playstateRows: [],
+    providerItems: [],
+    resolveProviderEpisodes: async () => [{
+      source: "plex",
+      provider: "plex",
+      provider_items: { plex: ["gap-inv-s02e01"] },
+      media_type: "episode",
+      title: `${title} - S02E01`,
+      show_title: title,
+      season: 2,
+      episode: 1,
+      air_date: "2024-09-29",
+    }],
+  });
+  const s2FromInv = inventoryS2.items.find((item) => item.show_title === title);
+  assert.equal(s2FromInv?.season, 2);
+  assert.equal(s2FromInv?.episode, 1);
+
+  // Once series_<tvdbId> is cached in tvdb_metadata_cache (even with 427464_2
+  // still absent from tvdb_season_cache), cache-only Up Next resolves S02E01.
+  db.prepare(`
+    INSERT INTO tvdb_metadata_cache (id, tvdb_id, title, details, updated_at_ms)
+    VALUES (?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET details = excluded.details, updated_at_ms = excluded.updated_at_ms
+  `).run(`series_${tvdbId}`, tvdbId, title, JSON.stringify({
+    id: Number(tvdbId),
+    name: title,
+    episodes: [
+      { seasonNumber: 1, number: 1, name: "S1 Finale", aired: "2023-09-10" },
+      { seasonNumber: 2, number: 1, name: "S2 Opener", aired: "2024-09-29" },
+      { seasonNumber: 3, number: 1, name: "S3 Opener", aired: "2025-09-07" },
+    ],
+  }), Date.now());
+
+  const fromSeriesCache = await buildUpNextProjection({
+    now: Date.parse("2026-11-13T12:00:00.000Z"),
+    shows,
+    progressRows: [],
+    playstateRows: [],
+    providerItems: [],
+    resolveProviderItems: async (candidate) => ({ plex: [`gap-s${candidate.season}e${candidate.episode}`] }),
+  });
+  const s2Card = fromSeriesCache.items.find((item) => item.show_title === title);
+  assert.equal(s2Card?.season, 2);
+  assert.equal(s2Card?.episode, 1);
+  assert.equal(s2Card?.episode_title, "S2 Opener");
+});
+
+

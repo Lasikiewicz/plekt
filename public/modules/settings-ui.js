@@ -3,7 +3,7 @@
 // Test / Cancel / Save footer. Consumers describe fields declaratively; secret
 // fields are never prefilled - a "Configured" placeholder stands in for the
 // stored credential (redacted-config semantics).
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.1";
+import { escapeHtml, escapeAttribute, trapDialogKey } from "./utils.js?v=2.3.0.0.1";
 
 const CONFIGURED_PLACEHOLDER = "Configured - enter a new key to replace it";
 
@@ -173,6 +173,7 @@ export function openSettingsEditModal({
   optionalFieldsLabel = "",
 } = {}) {
   closeSettingsModals();
+  const opener = document.activeElement;
 
   // The account-connect leading action (e.g. "Connect Plex account") reads as
   // a step in the form, not a footer action - it renders directly under the
@@ -229,12 +230,11 @@ export function openSettingsEditModal({
   const deleteButton = overlay.querySelector(".settings-modal-delete");
   const leadingButton = overlay.querySelector(".settings-modal-leading-action");
 
-  const onKeydown = (event) => {
-    if (event.key === "Escape") close();
-  };
+  const onKeydown = (event) => trapDialogKey(event, overlay, close);
   function close() {
-    document.removeEventListener("keydown", onKeydown);
+    document.removeEventListener("keydown", onKeydown, true);
     overlay.remove();
+    if (opener && opener.isConnected !== false) opener.focus?.();
   }
   overlay._settingsClose = close;
   const setStatus = (text, tone = "muted") => {
@@ -263,7 +263,7 @@ export function openSettingsEditModal({
   overlay.addEventListener("click", (event) => { if (event.target === overlay) close(); });
   overlay.querySelector(".settings-modal-close").addEventListener("click", close);
   overlay.querySelector(".settings-modal-cancel").addEventListener("click", close);
-  document.addEventListener("keydown", onKeydown);
+  document.addEventListener("keydown", onKeydown, true);
 
   if (enabledKey) {
     dialog.querySelector(`[data-modal-field="${enabledKey}"]`)?.addEventListener("change", syncEnabledState);
@@ -465,6 +465,7 @@ export function renderInlineServicePanel(container, {
       await onSave(collectValues(dialog), ui);
     } catch (error) {
       setStatus(error?.message || "Save failed.", "error");
+    } finally {
       setBusy(false);
     }
   });
@@ -488,6 +489,7 @@ export function renderInlineServicePanel(container, {
       await leadingAction.onClick(ui);
     } catch (error) {
       setStatus(error?.message || "Action failed.", "error");
+    } finally {
       setBusy(false);
     }
   });
@@ -498,6 +500,7 @@ export function renderInlineServicePanel(container, {
       await onDelete(ui);
     } catch (error) {
       setStatus(error?.message || "Delete failed.", "error");
+    } finally {
       setBusy(false);
     }
   });
@@ -509,6 +512,7 @@ export function renderInlineServicePanel(container, {
 // the picker and calls onPick(id).
 export function openSettingsPickerModal({ title = "Add", intro = "", items = [], onPick } = {}) {
   closeSettingsModals();
+  const opener = document.activeElement;
   const overlay = document.createElement("div");
   overlay.className = "edit-dialog-overlay settings-modal-overlay";
   overlay.innerHTML = `
@@ -535,10 +539,11 @@ export function openSettingsPickerModal({ title = "Add", intro = "", items = [],
       </footer>
     </div>
   `;
-  const onKeydown = (event) => { if (event.key === "Escape") close(); };
+  const onKeydown = (event) => trapDialogKey(event, overlay, close);
   const close = () => {
-    document.removeEventListener("keydown", onKeydown);
+    document.removeEventListener("keydown", onKeydown, true);
     overlay.remove();
+    if (opener && opener.isConnected !== false) opener.focus?.();
   };
   overlay._settingsClose = close;
   overlay.addEventListener("click", (event) => { if (event.target === overlay) close(); });
@@ -550,7 +555,7 @@ export function openSettingsPickerModal({ title = "Add", intro = "", items = [],
       onPick?.(button.dataset.pickerId);
     });
   });
-  document.addEventListener("keydown", onKeydown);
+  document.addEventListener("keydown", onKeydown, true);
   document.body.appendChild(overlay);
   overlay.querySelector("[data-picker-id], .settings-modal-close")?.focus({ preventScroll: true });
 }

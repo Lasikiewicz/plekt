@@ -1,5 +1,6 @@
 import { requireAdmin } from "../utils/auth.js";
 import { cancelTrackerWriteIntent, trackerWriteAttentionItems } from "../utils/trackerWriteIntents.js";
+import { cancelSelectedTrackerWrites, recheckAllTrackerWrites } from "../utils/trackerWriteReviewActions.js";
 import { simklObservationAttentionItems, dismissSimklObservation } from "../utils/trackers/simklObservations.js";
 import { readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
@@ -633,6 +634,15 @@ export async function handleSyncAttention(req, res) {
 
   if (req.method !== "POST") return methodNotAllowed(res);
   const body = await readJson(req).catch(() => ({}));
+  const requestedAction = String(body.action || "skip").trim().toLowerCase();
+  if (requestedAction === "cancel-tracker-writes" || requestedAction === "recheck-tracker-writes") {
+    const ids = Array.isArray(body.ids) ? body.ids.filter((id) => typeof id === "string" && id.startsWith("tracker-intent-")) : [];
+    const cancel = requestedAction === "cancel-tracker-writes";
+    if (cancel && !ids.length) return sendJson(res, { error: "Select at least one tracker write." }, 400);
+    const result = cancel ? { cancelled: cancelSelectedTrackerWrites(ids) } : await recheckAllTrackerWrites();
+    if (cancel && result.cancelled) writeAuditLog("sync.attention.tracker-writes-cancelled", { detail: { count: result.cancelled } });
+    return sendJson(res, { ok: true, ...result });
+  }
   const id = String(body.id || body.attentionId || "").trim();
   if (!id || id.length > 240) return sendJson(res, { error: "A valid sync attention id is required." }, 400);
 
@@ -640,7 +650,6 @@ export async function handleSyncAttention(req, res) {
   const item = before.attention.find((candidate) => candidate.id === id);
   if (!item) return sendJson(res, { error: "That sync issue is no longer outstanding." }, 404);
 
-  const requestedAction = String(body.action || "skip").trim().toLowerCase();
   if (!["skip", "skip-item", "skip-items", "repair"].includes(requestedAction)) {
     return sendJson(res, { error: "Unsupported sync attention action." }, 400);
   }

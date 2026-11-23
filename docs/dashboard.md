@@ -68,13 +68,22 @@ so nothing shows twice. A cog beside the heading opens the panel options: **Show
 items**, **Show Up Next items** (both on by default), and the number of items (1 to
 3). **Sync Up Next to media apps** controls the same queue-sync setting as
 Settings, keeping Plex and Emby's Continue Watching and Jellyfin's Next Up aligned
-with Plekt. Each option has a short explanation. The popup stays within the viewport
-and scrolls when space is limited, without being clipped by dashboard panels.
-Every change saves at once, for the whole server.
+with Plekt. **Up Next order** offers **Recently watched** (default), **Newly aired first**,
+**Oldest unwatched first**, **Closest to finishing**, and **Custom**. Closest to finishing
+counts released, unwatched episodes in the queued episode's season. Custom order is saved per
+account. Drag a card using its reorder controls or move it with the arrow buttons. **Part watched
+first** is on by default and can be changed separately. Each option has a short
+explanation. The popup stays within the viewport and scrolls when space is limited, without being
+clipped by dashboard panels. Every change saves at once, for the whole server.
 
 ### Up Next
 
 The dashboard's Up Next section is a single mixed queue of movies and TV episodes.
+Cards surface context pills where applicable (**Rewatch** and **New episode** when a rewatch
+lane splits from newly aired episodes, and **Pinned** for manually added shows), and resume
+cards show remaining playback time beside the watched percentage when a duration is known.
+The Up Next header sync button also displays the latest auto or manual sync outcome (status dot,
+relative timestamp, and per-app details in its tooltip).
 
 Dropped titles are excluded from the queue and its provider push payloads. A completed live
 play dated after the drop restores the title; played flags, imports, history backfills and
@@ -118,7 +127,8 @@ season/episode coordinate exists in a connected media-server library; local hist
 alone do not create a Watch now card. Resume cards always come first and are ordered newest-first
 by the parsed authoritative progress-update time, so the last part-watched item stays at the front
 even when a timestamp is stored as date text. Next-up cards then prioritize the show whose episode
-was watched most recently, with show/season/episode order as the deterministic tie-breaker. A matching
+was watched most recently (or newest episode air date first when **Newly aired first** is
+chosen), with show/season/episode order as the deterministic tie-breaker. A matching
 resume and next-up observation becomes one resume card. An episode listed in a provider's
 Continue Watching or Resume rail with no playback position (Plex lists the next episode there
 with no offset) is a `next_up` card, not a 0% resume; any real position keeps it a resume. The builder is bounded to the most
@@ -243,7 +253,7 @@ watched through an early online release. A failed or partial provider feed keeps
 compact source-status message; future episodes remain in the Upcoming view.
 
 The Up Next header action is an authoritative push from Plekt to Plex, Emby, and Jellyfin. It
-sends the full loaded Plekt snapshot (up to the API's 100-item bound) and works entirely
+sends the current server-side Plekt snapshot (up to the API's 100-item bound) and works entirely
 through each provider's own native rail. The target mapping is Plex Continue Watching, Emby
 Continue Watching (the Resume API), and Jellyfin Next Up. For each ready episode, Plekt
 verifies that the target is unwatched, released, and follows a fully watched earlier run, then
@@ -258,19 +268,25 @@ history or queue state changes, instead of building a separate projection. Withi
 the watched and unwatched passes share row-state results, and both local queue passes share
 show-detail reads from the same episode snapshot.
 
-The push also forwards known positive resume checkpoints. It only ever adds to the native rails:
-an entry the app lists but Plekt's queue does not is reported as left in place and is never
-hidden, whether the push is automatic or started from the header (`docs/decisions.md` entry 36).
+The default push forwards known positive resume checkpoints and leaves app-only items in place.
+Turn on **Mirror** for each app in **Settings → Sync → Sync Tuning** to preview the visible
+ready episodes it would reorder and any Plex or Emby items it would hide. Mirror restamps
+eligible visible episodes when their order changes. The app keeps its own ordering of genuine
+resume items. Plex and Emby can hide previously observed items that Plekt dismissed, dropped,
+finished or superseded. The first 30 minutes are protected. Playing a hidden item can bring it
+back. Jellyfin Mirror is order only. The sync control lists the latest hide outcomes.
 Jellyfin Continue Watching is read only to protect genuine part-watched progress; it is not the
 Jellyfin queue being reconciled. It never adds a card, but when it lists an episode that already
 has a resume card it gives that card its Jellyfin item, so Watch now can open the exact episode
-there. Removing an item from an app's rail happens only as the direct
-result of your own Clear progress or Remove from up next action on that card.
+there. Clear progress and Remove from Up Next can also remove items from supported app rails.
 
-A provider whose every Up Next feed read failed in the same push is treated as unreachable: its
-rail is not refreshed and its result reports that it could not be reached, so an outage does not
-turn each automatic push into a search for every queued item. Known resume checkpoints are still
-attempted. An automatic push that reached every other provider counts as done for that queue, so
+Use **Up Next options** on a show's page or card menu to select **Latest released**, **Pin to top**
+or **Push to bottom**. Placement applies within the part-watched group when that group is enabled.
+Latest released reaches a media app rail when the existing watched-predecessor checks pass.
+
+A provider with no successful Up Next feed read in the same push receives neither rail nor
+resume writes. An automatic push that reached every other provider can settle while that
+provider is unreachable, so
 the push does not repeat while the provider stays down; the first feed read that succeeds again
 queues a push, which refreshes the recovered provider's whole rail.
 
@@ -508,7 +524,9 @@ the expanded group. Only the newest event for each movie or episode gets that bu
 older duplicate results are audit-only. `POST /api/sync-history/retry`
 reconstructs the media identity from the activity record (including a fresh Plex
 metadata lookup when a native rating key is available) and retries only the failed
-destinations. The retried row is updated in place - a target that now succeeds
+destinations (Plex, Emby, Jellyfin, Trakt, and Simkl). A Simkl write that was never sent
+because its identity or date was missing is reopened with the resolved IDs and joins the
+next Simkl batch; a write that was ever attempted stays held for review. The retried row is updated in place - a target that now succeeds
 shows success, a target with nowhere to dispatch to (no server configured for it) shows
 skipped rather than a stale error, and a target that wasn't retried keeps its prior
 result. A resolved item therefore drops out of the failed count instead of leaving the

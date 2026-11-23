@@ -1,7 +1,13 @@
 # Plex Integration
 
+Opt-in Up Next Mirror can reorder eligible visible Continue Watching episodes and hide
+previously observed items that Plekt actively excludes. The settings preview lists the
+proposed changes. A hidden item can return when played again. See [Up Next](dashboard.md#up-next).
+
 How Plekt talks to Plex: three inbound channels (webhook, WebSocket, polling) and
 one outbound client. Read [architecture.md](architecture.md) first for the big picture.
+What syncs with Plex, in which direction and how you sign in, is in the
+[support matrix](support-matrix.md#plex).
 
 ## Files
 
@@ -61,6 +67,13 @@ active: completing account setup removes the stored manual token, while saving m
 setup switches Plex back to manual mode. Test the connection with
 Open the Plex card under **Settings → Media Servers** and select **Test**
 (`POST /api/test-connection`).
+
+Choose which Plex libraries Plekt monitors in
+[Settings → Media servers](settings.md#media-servers-monitored-libraries). Plex "Personal Media"
+or "Other Videos" sections report type `movie`, so Plekt lists them explicitly and leaves every
+library unselected until saved. Even when a Personal Media section is selected, GUID-less local
+items are recorded as local-only Plekt history without TMDB/IMDb/TVDB title guessing or outbound
+sync.
 
 ## Auth style
 
@@ -170,6 +183,11 @@ concurrent handlers, queueing the rest. Show and season containers fan out at mo
 episode handlers at a time, and repeated same-state notifications are coalesced for one
 minute. A notification burst therefore cannot multiply into a provider and database storm
 while the current state is being verified.
+
+During a tracked rewatch below the watched threshold, a Plex notification carrying the
+item's existing played flag leaves the resume position intact. For an already-watched
+item, a library notification can record a rewatch only with playback evidence and a
+newer Plex view timestamp. The manual-watch date setting applies to new watched marks.
 Config reloads invalidate pending connection attempts, so a settings restart cannot
 open a second socket. Briefly successful connections retain reconnect backoff; it
 resets after a connection has remained open for at least 30 seconds.
@@ -227,14 +245,20 @@ Plex.
 
 ## Inbound channel 3: scheduler polling
 
-The adaptive poller (`server/src/utils/plexAdaptivePoller.js`, every 5 seconds while active
-and 30 seconds when idle) is what catches a manual Mark as watched from the API or a client
-that sends no socket frame. Each poll reads the 10 newest items from the history head and
-10 per library section sorted by `lastViewedAt`, and passes every item newer than its last
-seen time to `onLibraryItemChange`. A manual mark never appears in Plex's history, only in
-the section sort, and the cursor moves past everything it read, so the window must be larger
-than the biggest burst of marks between two polls: with a window of 2, marking three
-episodes within a couple of seconds lost the oldest one for good.
+The adaptive poller (`server/src/utils/plexAdaptivePoller.js`) catches a manual Mark as
+watched from the API or a client that sends no socket frame. It polls every 60 seconds
+while the notification socket is connected. When disconnected, it polls every 5 seconds
+while active and every 30 seconds when idle. If all watched queries fail, retries back
+off from 5 to 60 seconds. Each poll reads playback history and library sections in
+pages of 10, stopping when it reaches the last seen time or the end of the results.
+Manual marks appear in the section's `lastViewedAt` results. The section list is cached for
+an hour, but a saved library selection (a new monitoring revision) reloads it on the next
+poll, so a library added and selected while the server runs is polled at once. If a later page fails,
+the poller retries without advancing its cursor past the unread marks. A settings save
+restarts the poller but keeps its cursor while the connection still points at the same Plex
+server (its server ID, or its URL for a manual setup without one), so a mark made just before
+the restart is still handled. Only a switch to a different server, or a fresh start of Plekt,
+reseeds the cursor from the newest watch without handling it.
 
 Full watched-library scans used by Force Sync and restore page each selected section
 in containers of 200 items. A failed section/page rejects the scan; Force Sync records

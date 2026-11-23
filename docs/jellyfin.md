@@ -1,9 +1,14 @@
 # Jellyfin Integration
 
+Opt-in Up Next Mirror can reorder eligible visible Next Up episodes. It updates the watched
+predecessor's play date while preserving watched state, play count and resume position.
+See [Up Next](dashboard.md#up-next).
+
 How Plekt talks to Jellyfin: webhooks in, API calls out, plus scheduled catch-up
 polling. Jellyfin's integration is structurally the same as Emby's (Jellyfin is an Emby
 fork and keeps most of the API surface) with a few differences noted below. Read
-[architecture.md](architecture.md) first for the big picture.
+[architecture.md](architecture.md) first for the big picture. What syncs with Jellyfin, in
+which direction and how you sign in, is in the [support matrix](support-matrix.md#jellyfin).
 
 ## Files
 
@@ -23,7 +28,13 @@ The Plekt Jellyfin server plugin lives in its own repository at
 watched or unwatched events straight to Plekt's webhook address, so it does not use the
 Jellyfin Webhook plugin. All work on the plugin is done from the plekt project; its files are
 outside this repo and are not covered by the checks here. See the plugin README for build and
-configuration details.
+configuration details. Starting with plugin v0.1.0.11, payloads include an optional versioned
+`LibraryContext` object (resolved from Jellyfin's `ILibraryManager.GetCollectionFolders` with
+short-lived caching and invalidation on library changes) and `ServerId` so Plekt can verify
+monitored-library membership without an extra API call. Library selection stays centralized in
+Plekt; older plugin builds and the Jellyfin Webhook plugin fall back to Jellyfin's
+`/Items/{id}/Ancestors` API with identical enforcement, and older Plekt builds ignore the extra
+fields.
 
 ## Configuration
 
@@ -46,6 +57,8 @@ account/Quick Connect access tokens are both retained and sent through Jellyfin'
 modern `Authorization: MediaBrowser ... Token="..."` header. Browser-facing artwork
 URLs use Jellyfin's supported `ApiKey=` query parameter because they cannot attach the
 header; server-side requests do not send both authentication forms.
+
+Choose the Jellyfin libraries Plekt should monitor in [Settings → Media servers](settings.md#media-servers-monitored-libraries).
 
 ## Watchlist note
 

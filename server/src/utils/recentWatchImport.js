@@ -1,7 +1,8 @@
 // Recently watched catch-up import from Plex, Emby and Jellyfin, with Plex user matching (split from scheduled.js).
 import { watchImportMode } from "./tuning.js";
 import { isRecentOutboundJellyfinNextUpNudge, syncMediaPlaystate } from "./syncOrchestrator.js";
-import { parsePlexMediaIds } from "./parsers.js";
+import { buildPlexMediaFromMetadata, isPlexLocalOnly, parsePlexMediaIds } from "./parsers.js";
+import { storePlexPersonalWatch } from "./plexPersonalWatch.js";
 import { resolvePlexAccountId } from "./plexClient.js";
 import { fetchPlexWithRefresh } from "./plexFetch.js";
 import { ensurePlexServerOwnership } from "./plexTokenManager.js";
@@ -13,12 +14,14 @@ import { releaseDateForSourceItem, resolvePlexWatchDate, resolveWatchImportDate,
 import { remoteEpisodeImportError } from "./episodeImportGuard.js";
 import { buildWatchProvenance } from "./watchProvenance.js";
 import { earliestTrackerWatchedAt } from "./mediaForceSync.js";
-import { findWatchedByAnyMediaKey, getCachedHistory, getPlaystateForMedia, insertWatchRecord, invalidateHistoryDerivedCaches, mediaToWatchRecord, updateWatchTelemetry, upsertPlaystateForMedia } from "./dataRepo.js";
+import { findWatchedByAnyMediaKey, getCachedHistory, getPlaystateForMedia, invalidateHistoryDerivedCaches, mediaToWatchRecord, updateWatchTelemetry, upsertPlaystateForMedia } from "./dataRepo.js";
+import { insertRecentWatchIfMissing } from "./recentWatchImportInsert.js";
 import { librarySeriesItemId, withSeriesIdentity } from "./seriesIdentity.js";
 import { enqueueManualWatchReview } from "./manualWatchReview.js";
 import { addTimingHistoryRow, recordSyncHistory } from "./syncHistoryTelemetry.js";
 import { checkIncomingEpisodeSourceMismatch } from "./sourceMismatch.js";
 import { keepOrderProvenance, resolveOrderMediaForPolling } from "./episodeOrderWatch.js";
+import { getProviderLibrarySelection, resolveItemLibraryMembership } from "./librarySelection.js";
 
 // A library-history endpoint exposes the server's current played snapshot; it
 // does not prove another viewing occurred. A canonical Plembfin playstate can
@@ -174,6 +177,12 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
     return 0;
   }
   if (!config.plex?.baseUrl || !config.plex?.token) return 0;
+  const plexLibraryEnforced = Boolean(config.libraryMonitoring || config.plex?.libraryMonitoringEnforced || Array.isArray(config.plex?.monitoredLibraryIds));
+  const plexSelection = getProviderLibrarySelection(config, "plex");
+  if (plexLibraryEnforced && !plexSelection.hasSelectedLibraries) {
+    logger("Plex: skipped recently watched sync (no monitored libraries selected).");
+    return 0;
+  }
 
   const baseUrl = config.plex.baseUrl.replace(/\/+$/, "");
   const username = configuredPlexUsername(config);
@@ -214,7 +223,8 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
       if (sectionsRes.ok) {
         const sectionsData = await sectionsRes.json();
         const directories = (sectionsData?.MediaContainer?.Directory || [])
-          .filter((dir) => (dir.type === "movie" || dir.type === "show") && dir.key != null);
+          .filter((dir) => (dir.type === "movie" || dir.type === "show") && dir.key != null)
+          .filter((dir) => !plexLibraryEnforced || plexSelection.selectedIdSet.has(String(dir.key)));
         // Bound the per-tick sweep: this runs every minute inside a 50s budget,
         // and each section costs a serial round trip to Plex. Very large installs
         // still converge â€” the history endpoint above covers recent activity.
@@ -278,6 +288,10 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
       const { item, accountScoped, kind } = candidate;
       if (!item || typeof item !== "object") continue;
       try {
+      if (plexLibraryEnforced) {
+        const decision = await resolveItemLibraryMembership("plex", config, item, { lane: "sync" });
+        if (!decision.allowed) continue;
+      }
       if (!plexHistoryItemMatchesConfiguredUser(item, { username, accountId: targetAccountId, accountScoped, tokenScoped: tokenScoped && kind === "section" })) continue;
       if (item.type !== "movie" && item.type !== "episode") continue;
       if (kind === "section" && Number(item.viewCount || 0) <= 0) continue;
@@ -317,6 +331,10 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
     for (const { item, watchedAt, watchDate } of orderedItems) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
       try {
+      if (isPlexLocalOnly(item)) {
+        if (await storePlexPersonalWatch(buildPlexMediaFromMetadata(item, { phase: "completed" }), watchedAt)) syncedCount++;
+        continue;
+      }
       let media = {
         title: item.title,
         type: item.type,
@@ -433,7 +451,34 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
           `Details: Watch event fetched from Plex library history; queueing sync.`,
         ].join("\n");
 
-        const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+        const insertOutcome = insertRecentWatchIfMissing(media, watchRecord, {
+          watchlistConfig: config,
+          shouldSkip: ({ existing: currentExisting, playstate: currentPlaystate }) => {
+            if (isAuthoritativeRestoreActive()) return "restore_active";
+            const decision = libraryHistoryDecision({ existing: currentExisting, playstate: currentPlaystate });
+            if (decision !== "import") return decision;
+            const currentRestoreAt = Number(loadWatchBackupRuntime().lastRestoreAt || 0);
+            return currentRestoreAt && new Date(media.watched_at).getTime() <= currentRestoreAt ? "pre_restore" : "";
+          },
+        });
+        if (!insertOutcome.inserted) {
+          if (insertOutcome.reason === "restore_active") return syncedCount;
+          if (insertOutcome.reason === "pre_restore") {
+            logger(`Plex: skipped pre-restore item (played ${media.watched_at}): ${media.title}`);
+            continue;
+          }
+          if (insertOutcome.reason === "skip_recent_unwatch") {
+            logger(`Plex: ignored stale watched row immediately after unwatch: ${media.title}`);
+            continue;
+          }
+          if (insertOutcome.existing && insertOutcome.playstate?.state !== "watched") {
+            logger(`Plex: repaired playstate for an already-recorded watch: ${media.title}`);
+            if (isAuthoritativeRestoreActive()) return syncedCount;
+            await upsertPlaystateForMedia(media, "watched", insertOutcome.existing.watched_at, { skipInvalidate: true });
+          }
+          continue;
+        }
+        const result = insertOutcome.result;
         historyChanged = true;
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
@@ -483,6 +528,12 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
     return 0;
   }
   if (!config.emby?.baseUrl || !config.emby?.apiKey || !config.emby?.userId) return 0;
+  const embyLibraryEnforced = Boolean(config.libraryMonitoring || config.emby?.libraryMonitoringEnforced || Array.isArray(config.emby?.monitoredLibraryIds));
+  const embySelection = getProviderLibrarySelection(config, "emby");
+  if (embyLibraryEnforced && !embySelection.hasSelectedLibraries) {
+    logger("Emby: skipped recently watched sync (no monitored libraries selected).");
+    return 0;
+  }
   let syncedCount = 0;
   let historyChanged = false;
   const skippedMalformed = [];
@@ -491,7 +542,10 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
   try {
     const { fetchEmbyWatchedItems } = await import("./embyClient.js");
     const { normalizeProviderIds } = await import("./parsers.js");
-    const raw = await fetchEmbyWatchedItems(config.emby, { limit: SCHEDULED_RECENT_WATCH_LIMIT });
+    const raw = await fetchEmbyWatchedItems(config.emby, {
+      limit: SCHEDULED_RECENT_WATCH_LIMIT,
+      ...(embyLibraryEnforced ? { libraryIds: embySelection.selectedIds } : {}),
+    });
     for (const item of raw) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
       try {
@@ -604,7 +658,23 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
           `Details: Watch event fetched from Emby library history; queueing sync.`,
         ].join("\n");
 
-        const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+        const insertOutcome = insertRecentWatchIfMissing(media, watchRecord, {
+          watchlistConfig: config,
+          shouldSkip: ({ existing: currentExisting, playstate: currentPlaystate }) => {
+            if (isAuthoritativeRestoreActive()) return "restore_active";
+            const decision = libraryHistoryDecision({ existing: currentExisting, playstate: currentPlaystate });
+            if (decision !== "import") return decision;
+            const currentRestoreAt = Number(loadWatchBackupRuntime().lastRestoreAt || 0);
+            return currentRestoreAt && new Date(media.watched_at).getTime() <= currentRestoreAt ? "pre_restore" : "";
+          },
+        });
+        if (!insertOutcome.inserted) {
+          if (insertOutcome.reason === "restore_active") return syncedCount;
+          if (insertOutcome.reason === "pre_restore") logger(`Emby: skipped pre-restore item (played ${media.watched_at}): ${media.title}`);
+          else if (insertOutcome.reason === "skip_recent_unwatch") logger(`Emby: ignored stale watched row immediately after unwatch: ${media.title}`);
+          continue;
+        }
+        const result = insertOutcome.result;
         historyChanged = true;
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });
@@ -653,6 +723,12 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
     return 0;
   }
   if (!config.jellyfin?.baseUrl || !config.jellyfin?.apiKey || !config.jellyfin?.userId) return 0;
+  const jellyfinLibraryEnforced = Boolean(config.libraryMonitoring || config.jellyfin?.libraryMonitoringEnforced || Array.isArray(config.jellyfin?.monitoredLibraryIds));
+  const jellyfinSelection = getProviderLibrarySelection(config, "jellyfin");
+  if (jellyfinLibraryEnforced && !jellyfinSelection.hasSelectedLibraries) {
+    logger("Jellyfin: skipped recently watched sync (no monitored libraries selected).");
+    return 0;
+  }
   let syncedCount = 0;
   let historyChanged = false;
   const skippedMalformed = [];
@@ -661,7 +737,10 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
   try {
     const { fetchJellyfinWatchedItems } = await import("./jellyfinClient.js");
     const { normalizeProviderIds } = await import("./parsers.js");
-    const raw = await fetchJellyfinWatchedItems(config.jellyfin, { limit: SCHEDULED_RECENT_WATCH_LIMIT });
+    const raw = await fetchJellyfinWatchedItems(config.jellyfin, {
+      limit: SCHEDULED_RECENT_WATCH_LIMIT,
+      ...(jellyfinLibraryEnforced ? { libraryIds: jellyfinSelection.selectedIds } : {}),
+    });
     for (const item of raw) {
       if (isAuthoritativeRestoreActive()) return syncedCount;
       try {
@@ -778,7 +857,23 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
           `Details: Watch event fetched from Jellyfin library history; queueing sync.`,
         ].join("\n");
 
-        const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
+        const insertOutcome = insertRecentWatchIfMissing(media, watchRecord, {
+          watchlistConfig: config,
+          shouldSkip: ({ existing: currentExisting, playstate: currentPlaystate }) => {
+            if (isAuthoritativeRestoreActive()) return "restore_active";
+            const decision = libraryHistoryDecision({ existing: currentExisting, playstate: currentPlaystate });
+            if (decision !== "import") return decision;
+            const currentRestoreAt = Number(loadWatchBackupRuntime().lastRestoreAt || 0);
+            return currentRestoreAt && new Date(media.watched_at).getTime() <= currentRestoreAt ? "pre_restore" : "";
+          },
+        });
+        if (!insertOutcome.inserted) {
+          if (insertOutcome.reason === "restore_active") return syncedCount;
+          if (insertOutcome.reason === "pre_restore") logger(`Jellyfin: skipped pre-restore item (played ${media.watched_at}): ${media.title}`);
+          else if (insertOutcome.reason === "skip_recent_unwatch") logger(`Jellyfin: ignored stale watched row immediately after unwatch: ${media.title}`);
+          continue;
+        }
+        const result = insertOutcome.result;
         historyChanged = true;
         if (isAuthoritativeRestoreActive()) return syncedCount;
         await upsertPlaystateForMedia(media, "watched", result.record.watched_at, { skipInvalidate: true });

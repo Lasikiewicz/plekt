@@ -5,7 +5,7 @@ makeTempDataDir('plekt-preview-apply-');
 process.env.PLEKT_DISABLE_METADATA_PREFETCH='1';
 const {db}=await import('../server/src/db.js');
 const repo=await import('../server/src/utils/trackerConnectionRepo.js');
-const {saveMediaConfig}=await import('../server/src/utils/configStore.js');
+const {saveMediaConfig,saveProviderLibraryMonitoring}=await import('../server/src/utils/configStore.js');
 const {compareTrackerWithPlekt,startTrackerFullSync}=await import('../server/src/utils/trackers/fullSync.js');
 const {listWatchBackups,verifyWatchBackup}=await import('../server/src/utils/watchHistoryBackups.js');
 
@@ -72,6 +72,7 @@ test('missing preview and unknown selections fail before provider calls',async()
 test('approved import propagates only to the listed missing LAN destination after backup',async()=>{
   for(const table of ['tracker_connections','tracker_write_intents','tracker_item_state','watch_history','playstate'])db.prepare(`DELETE FROM ${table}`).run();
   await saveMediaConfig({plex:{disabled:true},emby:{disabled:false,baseUrl:'https://emby.test',apiKey:'fake',userId:'u'},jellyfin:{disabled:true}});
+  saveProviderLibraryMonitoring('emby',{serverId:'emby-srv',selectedIds:['emby-lib-1']});
   repo.saveTrackerConnection({provider:'trakt',clientId:'offline',remoteUserId:'offline-import',accessToken:'fake',refreshToken:'fake',accessTokenExpiresAt:Date.now()+3600_000,baselineComplete:true});
   const date='2020-01-01T00:00:00.000Z';
   const previous=globalThis.fetch,writes=[];
@@ -82,6 +83,7 @@ test('approved import propagates only to the listed missing LAN destination afte
       return Response.json(u.pathname==='/sync/watched/movies'?[{last_watched_at:date,movie:{title:'Import movie',year:2020,ids:{tmdb:3}}}]:[],{headers:{'x-pagination-page-count':'1'}});
     }
     assert.equal(u.hostname,'emby.test');
+    if(u.pathname.endsWith('/Ancestors'))return Response.json([{Id:'emby-lib-1',Type:'CollectionFolder',CollectionType:'movies'}]);
     if(init.method==='POST') {
       assert.equal(u.pathname,'/Users/u/PlayedItems/e3');assert.ok(listWatchBackups().length);
       writes.push(u.pathname);return new Response();

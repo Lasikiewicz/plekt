@@ -633,6 +633,7 @@ export const docsNav = [
         ],
       },
       { slug: "sync-plex-with-trakt", label: "Sync Plex with Trakt", description: "Set up two-way Plex and Trakt watch-history sync." },
+      { slug: "import-netflix-viewing-history", label: "Import Netflix viewing history", description: "Preview and import selected Netflix viewing activity into Plekt." },
       { slug: "move-friends-from-plex-to-emby-or-jellyfin", label: "Move friends' Plex history to Emby or Jellyfin", description: "Import each Tautulli user's history into a separate Plekt user and matching media-server account." },
       { slug: "moving-to-port-5056", label: "Move to port 5056", description: "Change the instance port and update dependent services." },
       {
@@ -727,6 +728,7 @@ export const docsSidebarNav = [
     children: [
       { slug: "getting-started", label: "Getting started" },
       { slug: "sync-plex-with-trakt", label: "Sync Plex with Trakt" },
+      { slug: "import-netflix-viewing-history", label: "Import Netflix viewing history" },
       { slug: "move-friends-from-plex-to-emby-or-jellyfin", label: "Move friends' Plex history to Emby or Jellyfin" },
       { slug: "upgrading-from-plembfin", label: "Upgrading from Plembfin" },
       { slug: "moving-to-port-5056", label: "Moving to port 5056" },
@@ -777,6 +779,7 @@ export const docsPageNav = [
   { slug: "appearance", label: "Appearance menu" },
   { slug: "integrations", label: "Integrations" },
   { slug: "sync-plex-with-trakt", label: "Sync Plex with Trakt" },
+  { slug: "import-netflix-viewing-history", label: "Import Netflix viewing history" },
   { slug: "move-friends-from-plex-to-emby-or-jellyfin", label: "Move friends' Plex history to Emby or Jellyfin" },
   { slug: "settings", label: "Settings" },
   { slug: "settings/general", label: "General" },

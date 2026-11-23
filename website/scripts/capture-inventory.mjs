@@ -98,6 +98,21 @@ for (const absolutePath of walkFiles(docsRoot).filter((file) => file.endsWith(".
   }
 }
 
+// Site pages (the homepage and other Astro pages) also show captures; count them as references
+// so a page-only image is not reported as unreferenced and dropped from the release pipeline.
+const pagesRoot = path.join(websiteRoot, "src", "pages");
+for (const absolutePath of walkFiles(pagesRoot).filter((file) => file.endsWith(".astro"))) {
+  const text = fs.readFileSync(absolutePath, "utf8");
+  const slug = path.relative(pagesRoot, absolutePath).replaceAll(path.sep, "/").replace(/\.astro$/, "").replace(/(^|\/)index$/, "") || "index";
+  const references = [...text.matchAll(/\/assets\/((?:app-captures|icons)\/[^\s"')>]+\.(?:gif|jpeg|jpg|png|webp|svg))/gi)]
+    .map((match) => `public/assets/${match[1]}`);
+  for (const asset of new Set(references)) {
+    const pages = assetReferences.get(asset) || [];
+    pages.push(slug);
+    assetReferences.set(asset, pages);
+  }
+}
+
 const assets = walkFiles(assetsRoot)
   .filter((file) => imageExtensions.has(path.extname(file).toLowerCase()))
   .filter((file) => !websiteRelative(file).startsWith("public/assets/optimized/"))

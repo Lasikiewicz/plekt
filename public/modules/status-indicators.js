@@ -1,8 +1,15 @@
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
 import { state, elements } from "./state.js?v=2.3.0.0.1";
 import { startInitialSyncUi, stopInitialSyncUi, loadInitialSyncSummary } from "./initial-sync.js?v=2.3.0.0.1";
+import { renderLibrarySelectionBanner, resetLibraryMonitoringCache } from "./library-monitoring.js?v=2.3.0.0.1";
 
 const REVIEW_POLL_MS = 30000;
+
+if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+  document.addEventListener("plembfin:config-changed", () => {
+    renderLibrarySelectionBanner(state.savedConfig);
+  });
+}
 
 let reviewPollTimer = null;
 let reviewSummaryPromise = null;
@@ -189,6 +196,7 @@ export async function loadSyncAttentionSummary() {
 }
 
 export function startStatusSummaryPolling() {
+  renderLibrarySelectionBanner(state.savedConfig);
   if (reviewPollTimer) return;
   startInitialSyncUi().catch(() => null);
   reviewPollTimer = window.setInterval(() => {
@@ -202,4 +210,6 @@ export function stopStatusSummaryPolling() {
   if (reviewPollTimer) window.clearInterval(reviewPollTimer);
   reviewPollTimer = null;
   stopInitialSyncUi();
+  resetLibraryMonitoringCache();
+  renderLibrarySelectionBanner({});
 }

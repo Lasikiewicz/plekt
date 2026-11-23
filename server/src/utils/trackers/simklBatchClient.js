@@ -215,6 +215,17 @@ async function readback(connection, preSendCursor, titles, { request, trigger })
   const cursor = activities.data?.all;
   if (!observedTime(cursor)) throw invalid();
   if (Date.parse(cursor) < Date.parse(preSendCursor)) throw simklReviewRequired("Simkl batch activity cursor moved backwards; review required");
+  const watched = await readWatchedTitles(connection, titles, request);
+  return {
+    titles: watched.titles,
+    activities: activities.data,
+    cursor,
+    quota: mergeQuota(activities.metadata, watched.metadata),
+    trigger,
+  };
+}
+
+async function readWatchedTitles(connection, titles, request) {
   const watched = await requestWithMetadata(request, connection, "/sync/watched", {
     body: titles.map(({ type, ids }) => ({ type, ids })),
     query: { extended: "episodes" },
@@ -229,10 +240,7 @@ async function readback(connection, preSendCursor, titles, { request, trigger })
   });
   return {
     titles: titles.map((title, index) => ({ ...title, row: rows[index] })),
-    activities: activities.data,
-    cursor,
-    quota: mergeQuota(activities.metadata, watched.metadata),
-    trigger,
+    metadata: watched.metadata,
   };
 }
 
@@ -257,6 +265,29 @@ function confirmedWatchedAt(row, item) {
   if (seasons.length !== 1 || !Array.isArray(seasons[0].episodes)) return null;
   const episodes = seasons[0].episodes.filter((episode) => episode?.number === item.media.episode);
   return episodes.length === 1 && episodes[0].watched === true ? observedTime(episodes[0].last_watched_at) : null;
+}
+
+export async function recheckSimklWatchedDates(connection, media) {
+  const entries = media.slice(0, MAX_BATCH).flatMap((record) => {
+    try {
+      const item = identity(record);
+      return item.type === "show" ? [] : [{ item }];
+    } catch (error) {
+      if (error.code !== "TRACKER_REVIEW_REQUIRED") throw error;
+      return [];
+    }
+  });
+  if (!entries.length) return [];
+  const watched = await readWatchedTitles(connection, watchedTitles(entries), (scope, path, options) =>
+    simklRequest(scope, path, { ...options, allowUnknownQuota: true }));
+  return entries.flatMap(({ item }) => {
+    const title = watched.titles.find((row) => row.type === (item.type === "movie" ? "movie" : "show") && sameIdentity(row, item));
+    const timestamp = title ? confirmedWatchedAt(title.row, item) : null;
+    // Simkl can return dates at second precision. A different recorded second
+    // is evidence of a different play, even when the title is already watched.
+    if (timestamp == null || Math.floor(timestamp / 1000) !== Math.floor(item.watchedTime / 1000)) return [];
+    return [item.media];
+  });
 }
 
 /**
@@ -315,15 +346,7 @@ export async function sendSimklWatchedBatch(connection, media, {
     notFound = readNotFoundEntries(posted.data, entries);
   } catch (error) {
     const reason = error.parseReason || error.message || "unknown";
-    try {
-      const fs = await import("node:fs");
-      const path = await import("node:path");
-      const file = path.join("plan/active/external-tracker-connections/checks", `simkl-batch-unreadable-${Date.now()}.json`);
-      fs.writeFileSync(file, JSON.stringify({ reason, entries: entries.length, data: posted.data }, null, 1));
-      console.warn(`[simkl-batch] unreadable /sync/history response for ${entries.length} item(s): ${reason} saved ${file}; confirming via watched readback`);
-    } catch {
-      console.warn(`[simkl-batch] unreadable /sync/history response for ${entries.length} item(s): ${reason}; confirming via watched readback: ${JSON.stringify(posted.data).slice(0, 12000)}`);
-    }
+    console.warn(`[simkl-batch] unreadable /sync/history response for ${entries.length} item(s): ${reason}; confirming via watched readback`);
   }
   const outcomes = entries.map(({ item, category }, index) => {
     const missing = notFound.includes(entries[index]);

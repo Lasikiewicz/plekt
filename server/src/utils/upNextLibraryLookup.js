@@ -14,10 +14,38 @@ import {
   findJellyfinItems,
 } from "./jellyfinClient.js";
 import { runWithConcurrency } from "./concurrency.js";
-import { db } from "../db.js";
+import { bumpUpNextVersion, db, parseJson, toJson } from "../db.js";
 import { orderCoordinate as canonicalOrderCoordinate, resolveOrderUpNextItem, orderRevision as upNextOrderRevision } from "./episodeOrderUpNext.js";
+import { createPerUserState } from "./perUserState.js";
 
 const PROVIDERS = ["plex", "emby", "jellyfin"];
+const LIBRARY_CHANGES_KEY = "upNextLibraryChanges";
+const readLibraryChanges = db.prepare("SELECT data FROM settings WHERE id = ?");
+const saveLibraryChanges = db.prepare(`INSERT INTO settings (id, data, updated_at) VALUES (?, ?, ?)
+  ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`);
+
+function changedTitles() {
+  return parseJson(readLibraryChanges.get(LIBRARY_CHANGES_KEY)?.data, {}) || {};
+}
+
+export function noteUpNextLibraryAddition(provider, title) {
+  const name = text(title).toLowerCase();
+  if (!name || !PROVIDERS.includes(provider)) return;
+  const now = outageNow();
+  const key = `${provider}:${name}`;
+  const changed = db.transaction(() => {
+    const entries = changedTitles();
+    if (now - Number(entries[key] || 0) < 1000) return false;
+    delete entries[key];
+    entries[key] = now;
+    saveLibraryChanges.run(LIBRARY_CHANGES_KEY, toJson(Object.fromEntries(Object.entries(entries).slice(-250))), now);
+    bumpUpNextVersion();
+    return true;
+  }).immediate();
+  if (changed) import("./upNextAutoSync.js")
+    .then(({ requestUpNextAutoSync }) => requestUpNextAutoSync("Provider library title added"))
+    .catch(() => {});
+}
 // A resolved library item is stable: the same episode keeps its ratingKey/Id
 // until the library is rebuilt. A miss is more volatile - it is usually an
 // episode that has not been downloaded yet - so it is retried sooner. It was 15
@@ -54,18 +82,27 @@ const PROVIDER_OUTAGE_BACKOFF_MS = 60 * 1000;
 // top-up asks again; only a key never answered stays unanswered.
 const REMEMBERED_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const REMEMBERED_PRUNE_INTERVAL_MS = 60 * 60 * 1000;
-let lastRememberedPrune = 0;
-
-const lookupCache = new Map();
-const episodeInventoryCache = new Map();
-const providerOutages = new Map();
+const lookupStateByUser = createPerUserState(() => ({
+  lookupCache: new Map(),
+  episodeInventoryCache: new Map(),
+  providerOutages: new Map(),
+  runtimeCache: new Map(),
+  topUpRunning: null,
+  lastRememberedPrune: 0,
+}));
 let outageNow = () => Date.now();
 
+function providerAccountScope(provider, config) {
+  const section = config?.[provider] || {};
+  return text(section.remoteUserId || section.userId || section.connectionId).toLowerCase();
+}
+
 function outageKey(provider, config) {
-  return `${provider}:${text(config?.[provider]?.baseUrl).toLowerCase()}`;
+  return `${provider}:${text(config?.[provider]?.baseUrl).toLowerCase()}:${providerAccountScope(provider, config)}`;
 }
 
 function providerInOutage(provider, config) {
+  const { providerOutages } = lookupStateByUser();
   const key = outageKey(provider, config);
   const until = providerOutages.get(key);
   if (!until) return false;
@@ -75,11 +112,11 @@ function providerInOutage(provider, config) {
 }
 
 function recordProviderOutage(provider, config) {
-  providerOutages.set(outageKey(provider, config), outageNow() + PROVIDER_OUTAGE_BACKOFF_MS);
+  lookupStateByUser().providerOutages.set(outageKey(provider, config), outageNow() + PROVIDER_OUTAGE_BACKOFF_MS);
 }
 
 function clearProviderOutage(provider, config) {
-  providerOutages.delete(outageKey(provider, config));
+  lookupStateByUser().providerOutages.delete(outageKey(provider, config));
 }
 
 export function __setUpNextLibraryLookupNow(fn) {
@@ -188,9 +225,8 @@ export async function resolveUpNextProviderItemId(provider, config, item) {
 // search result, so it arrives with no runtime. Fetch it for playlist and
 // native-rail diagnostics that need the provider's confirmed item metadata.
 // Cached for the process lifetime: an episode's runtime does not change.
-const runtimeCache = new Map();
-
 async function providerRuntimeMs(provider, config, providerItemId) {
+  const { runtimeCache } = lookupStateByUser();
   const key = `${provider}:${text(config?.baseUrl).toLowerCase()}:${providerItemId}`;
   if (runtimeCache.has(key)) return runtimeCache.get(key);
   let runtimeMs = 0;
@@ -235,6 +271,7 @@ export async function resolveUpNextProviderTargets({
     const attempt = async () => resolveUpNextProviderItemId(provider, config, item);
     let target = null;
     let failure = "";
+    let lookupFailed = false;
     for (let tries = 0; tries < 2; tries += 1) {
       try {
         target = await attempt();
@@ -242,14 +279,16 @@ export async function resolveUpNextProviderTargets({
         failure = target.reason || "Provider item was not resolved.";
         // A clean "not in this library" answer is final; only retry the
         // transient case, which is what a timeout looks like here.
-        if (!/timed out|timeout|failed|reset|refused/i.test(failure)) break;
+        lookupFailed = /timed out|timeout|failed|reset|refused/i.test(failure);
+        if (!lookupFailed) break;
       } catch (error) {
+        lookupFailed = true;
         failure = text(error?.message || error) || "Provider item lookup failed.";
         if (!/timed out|timeout|fetch failed|reset|refused/i.test(failure)) break;
       }
     }
     if (!target?.providerItemId) {
-      outcomes[index] = { title: text(item?.title || item?.show_title || "Untitled"), reason: failure || "Provider item was not resolved." };
+      outcomes[index] = { title: text(item?.title || item?.show_title || "Untitled"), status: lookupFailed ? "failed" : "skipped", reason: failure || "Provider item was not resolved." };
       return;
     }
     let runtimeMs = Math.max(
@@ -285,13 +324,14 @@ export function configuredProvider(config, provider) {
 
 function cacheKey(provider, config, media) {
   const base = text(config?.[provider]?.baseUrl).toLowerCase();
+  const account = providerAccountScope(provider, config);
   const ids = [media.show_imdb_id, media.show_tmdb_id, media.show_tvdb_id]
     .map((value) => text(value).toLowerCase())
     .join("|");
   const title = text(media.show_title || media.title).toLowerCase();
   const season = media.season == null ? "" : media.season;
   const episode = media.episode == null ? "" : media.episode;
-  return `${provider}:${base}:${ids}:${title}:s${season}e${episode}${upNextOrderRevision(media) ? `:order:${upNextOrderRevision(media)}` : ""}`;
+  return `${provider}:${base}:${account}:${ids}:${title}:s${season}e${episode}${upNextOrderRevision(media) ? `:order:${upNextOrderRevision(media)}` : ""}`;
 }
 
 function entryExpired(entry) {
@@ -300,6 +340,7 @@ function entryExpired(entry) {
 }
 
 function storeInMemory(key, entry) {
+  const { lookupCache } = lookupStateByUser();
   if (!lookupCache.has(key) && lookupCache.size >= MAX_CACHE_ENTRIES) {
     const oldest = lookupCache.keys().next().value;
     if (oldest !== undefined) lookupCache.delete(oldest);
@@ -311,7 +352,7 @@ function storeInMemory(key, entry) {
 // `stale` set once it is past its TTL. A stale memory entry is checked against
 // the saved answer, which another process may have refreshed since.
 function readCache(key) {
-  let entry = lookupCache.get(key) || null;
+  let entry = lookupStateByUser().lookupCache.get(key) || null;
   if (!entry || entryExpired(entry)) {
     const saved = rememberedEntry(key);
     if (saved && (!entry || saved.at > entry.at)) {
@@ -330,6 +371,7 @@ function writeCache(key, providerItemId) {
 // An empty provider_item_id is a saved "not in this library" answer.
 function rememberAnswer(key, provider, providerItemId) {
   const now = outageNow();
+  const slot = lookupStateByUser();
   try {
     db.prepare(`
       INSERT INTO up_next_library_items (lookup_key, provider, provider_item_id, resolved_at)
@@ -338,8 +380,8 @@ function rememberAnswer(key, provider, providerItemId) {
         provider_item_id = excluded.provider_item_id,
         resolved_at = excluded.resolved_at
     `).run(key, provider, text(providerItemId), now);
-    if (now - lastRememberedPrune >= REMEMBERED_PRUNE_INTERVAL_MS) {
-      lastRememberedPrune = now;
+    if (now - slot.lastRememberedPrune >= REMEMBERED_PRUNE_INTERVAL_MS) {
+      slot.lastRememberedPrune = now;
       db.prepare("DELETE FROM up_next_library_items WHERE resolved_at < ?").run(now - REMEMBERED_TTL_MS);
     }
   } catch (error) {
@@ -365,10 +407,11 @@ function rememberedAnswer(key) {
 // Clears this process's memory only (what a restart loses); the saved answers
 // in up_next_library_items stay.
 export function clearUpNextLibraryLookupCache() {
-  lookupCache.clear();
-  episodeInventoryCache.clear();
-  runtimeCache.clear();
-  providerOutages.clear();
+  const slot = lookupStateByUser();
+  slot.lookupCache.clear();
+  slot.episodeInventoryCache.clear();
+  slot.runtimeCache.clear();
+  slot.providerOutages.clear();
 }
 
 export function providerEpisodeId(provider, episode = {}) {
@@ -400,7 +443,7 @@ export function providerSeriesEpisodes(provider, config, media) {
 
 function providerInventoryKey(provider, config, show = {}) {
   const ids = [show.imdb_id, show.tmdb_id, show.tvdb_id].map((value) => text(value).toLowerCase()).join("|");
-  return `${provider}:${text(config?.[provider]?.baseUrl).toLowerCase()}:${ids}:${text(show.title).toLowerCase()}${upNextOrderRevision(show) ? `:order:${upNextOrderRevision(show)}` : ""}`;
+  return `${provider}:${text(config?.[provider]?.baseUrl).toLowerCase()}:${providerAccountScope(provider, config)}:${ids}:${text(show.title).toLowerCase()}${upNextOrderRevision(show) ? `:order:${upNextOrderRevision(show)}` : ""}`;
 }
 
 // A new episode can exist in a configured media-server library before the
@@ -412,9 +455,10 @@ function providerInventoryKey(provider, config, show = {}) {
 //
 // `stats`, when given, counts cache hits and live fetches for the build's
 // summary log line.
-export function createUpNextLibraryEpisodeLookup(config = {}, { stats = null } = {}) {
+export function createUpNextLibraryEpisodeLookup(config = {}, { stats = null, refresh = false } = {}) {
   const providers = PROVIDERS.filter((provider) => configuredProvider(config, provider));
   if (!providers.length) return null;
+  const changes = changedTitles();
 
   return async function resolveProviderEpisodes(show = {}) {
     const media = upNextLookupMedia({
@@ -427,10 +471,12 @@ export function createUpNextLibraryEpisodeLookup(config = {}, { stats = null } =
     });
     if (!media.title || !media.show_title) return [];
 
+    const { episodeInventoryCache } = lookupStateByUser();
     const results = await Promise.all(providers.map(async (provider) => {
       const key = providerInventoryKey(provider, config, show);
       const cached = episodeInventoryCache.get(key);
-      if (cached && outageNow() - cached.at < EPISODE_INVENTORY_TTL_MS) {
+      const changedAt = Number(changes[`${provider}:${text(show.title).toLowerCase()}`] || 0);
+      if (!refresh && cached && cached.at >= changedAt && outageNow() - cached.at < EPISODE_INVENTORY_TTL_MS) {
         if (stats) stats.inventoryCached = (stats.inventoryCached || 0) + 1;
         return cached.episodes;
       }
@@ -504,9 +550,10 @@ export function createUpNextLibraryEpisodeLookup(config = {}, { stats = null } =
 // those answered from an expired answer, so the caller can hand them to
 // topUpUpNextLibraryLookups. `recheck` (the top-up) asks the library again for
 // an expired answer instead of using it.
-export function createUpNextLibraryLookup(config = {}, { stats = null, deferred = null, recheck = false } = {}) {
+export function createUpNextLibraryLookup(config = {}, { stats = null, deferred = null, recheck = false, refreshMisses = false } = {}) {
   const providers = PROVIDERS.filter((provider) => configuredProvider(config, provider));
   if (!providers.length) return null;
+  const changes = changedTitles();
   let budget = MAX_LOOKUPS_PER_BUILD;
 
   return async function resolveProviderItems(candidate, { detailed = false, only = null } = {}) {
@@ -519,7 +566,9 @@ export function createUpNextLibraryLookup(config = {}, { stats = null, deferred 
     const unanswered = [];
     for (const provider of asked) {
       const key = cacheKey(provider, config, media);
-      const cached = readCache(key);
+      const entry = readCache(key);
+      const changedAt = Number(changes[`${provider}:${text(media.show_title || media.title).toLowerCase()}`] || 0);
+      const cached = entry && !entry.providerItemId && (refreshMisses || entry.at < changedAt) ? null : entry;
       if (cached && !cached.stale) {
         if (stats) stats.itemCached = (stats.itemCached || 0) + 1;
         if (cached.providerItemId) providerItems[provider] = [cached.providerItemId];
@@ -584,13 +633,13 @@ export function createUpNextLibraryLookup(config = {}, { stats = null, deferred 
 // One top-up at a time; a build that arrives while one runs adds nothing,
 // because its skipped lookups are the ones already being asked.
 const TOP_UP_BATCH_PAUSE_MS = 2000;
-let topUpRunning = null;
 
 export function topUpUpNextLibraryLookups(config = {}, deferred = [], {
   pauseMs = TOP_UP_BATCH_PAUSE_MS,
   log = (message) => console.log(message),
 } = {}) {
-  if (topUpRunning || !Array.isArray(deferred) || !deferred.length) return topUpRunning;
+  const slot = lookupStateByUser();
+  if (slot.topUpRunning || !Array.isArray(deferred) || !deferred.length) return slot.topUpRunning;
   const pending = new Map();
   for (const entry of deferred) {
     const media = upNextLookupMedia(entry?.candidate);
@@ -599,7 +648,7 @@ export function topUpUpNextLibraryLookups(config = {}, deferred = [], {
     if (!pending.has(key)) pending.set(key, entry);
   }
   if (!pending.size) return null;
-  topUpRunning = (async () => {
+  slot.topUpRunning = (async () => {
     const startedAt = Date.now();
     const stats = {};
     const entries = [...pending.values()];
@@ -619,8 +668,8 @@ export function topUpUpNextLibraryLookups(config = {}, deferred = [], {
       const n = (value) => Number(value) || 0;
       log(`Up Next lookup top-up: ${entries.length} skipped lookups in ${((Date.now() - startedAt) / 1000).toFixed(1)}s; `
         + `${n(stats.itemLive)} live, ${n(stats.itemCached)} already cached.`);
-      topUpRunning = null;
+      slot.topUpRunning = null;
     }
   })();
-  return topUpRunning;
+  return slot.topUpRunning;
 }

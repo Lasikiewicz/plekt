@@ -1,6 +1,41 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import "./domStubs.js";
+const { handleSyncActivityRetryClick } = await import("../public/modules/sync-attention-cards.js");
+
+test("retry explains the failed destination and dispatches only after confirmation", async () => {
+  const button = { disabled: false, dataset: {
+    syncActivityRetry: "42",
+    retryInfo: JSON.stringify({ title: "Black Sails", action: "Marked Unwatched", failures: [["Trakt", "HTTP 503"]] }),
+  } };
+  const event = { target: { closest: () => button } };
+  const calls = [];
+  for (const confirmed of [false, true]) {
+    assert.equal(handleSyncActivityRetryClick(event, {
+      openConfirmDialog: async ({ body, confirmLabel, cancelLabel, runOnConfirm, pendingLabel }) => {
+        assert.match(body, /Black Sails.*Marked Unwatched/);
+        assert.match(body, /only for Trakt/);
+        assert.match(body, /HTTP 503/);
+        assert.equal(confirmLabel, "Retry now");
+        assert.equal(cancelLabel, "Not now");
+        assert.match(pendingLabel, /Retrying/);
+        if (confirmed) {
+          const result = await runOnConfirm();
+          assert.match(result, /Retry result/);
+          assert.match(result, /Trakt: Connection timed out/);
+        }
+        return confirmed;
+      },
+      retrySyncActivity: async (id) => {
+        calls.push(id);
+        return { status: "error", targetStates: [{ target: "trakt", status: "error", detail: "Connection timed out" }] };
+      },
+    }), true);
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(button.disabled, false);
+    assert.deepEqual(calls, confirmed ? ["42"] : []);
+  }
+});
 
 const {
   hasRetryableActivityTarget,
@@ -41,6 +76,19 @@ test("a real Trakt failure remains visible when another target has no match", ()
   const failedMarkup = targetResults(entry, { failedOnly: true });
   assert.match(failedMarkup, /Trakt/);
   assert.doesNotMatch(failedMarkup, /Plex/);
+});
+
+test("a Simkl-only failure is retryable, matching the server's retry targets", () => {
+  const entry = {
+    status: "partial",
+    targetStates: [
+      { target: "emby", status: "success" },
+      { target: "simkl", status: "error", detail: "Simkl needs a verified media identity" },
+      { target: "trakt", status: "skipped", detail: "Trakt needs a Trakt, IMDb, TMDB, or TVDB ID for this item" },
+    ],
+  };
+  assert.equal(isRetryableActivity(entry), true);
+  assert.equal(hasRetryableActivityTarget({ status: "error", targetStates: [{ target: "unknown", status: "error" }] }), false);
 });
 
 test("Trakt not_found episode failures offer a show-match repair", () => {

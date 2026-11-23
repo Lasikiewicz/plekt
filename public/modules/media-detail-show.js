@@ -1,5 +1,5 @@
 import { state, elements } from "./state.js?v=2.3.0.0.1";
-import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.3.0.0.1";
+import { escapeHtml, escapeAttribute, sanitizeTitle, safeImageUrl, safeCssBackgroundUrl, slug, showTitleFrom, episodeTitle, formatDate, formatTmdbDate, formatLongAiringDate, formatEpisodeAirtime, toDateInputValue, showEpisodeKey, episodeCode, seasonLabel, formatSeasonTitle, sourceBadgeHtml, platformSourceValues, normalizePlatformSource, actualWatchHistory, tvShowTmdbHref, tvShowTvdbHref, isDemoMode } from "./utils.js?v=2.3.0.0.1";
 import { posterUrlFor, tmdbImage, tmdbPoster, episodeStillUrl, bestTmdbLogo, proxiedArtworkUrl, hydratePosters, isLocalArtworkUrl } from "./images.js?v=2.3.0.0.1";
 import { isWatchedHistoryAction, isMediaSyncing, mediaSyncNoticeHtml, renderSyncStatusDot } from "./sync.js?v=2.3.0.0.1";
 import { mergeShowDetail, loadShowDetail, seasonsFromShowRecord, representativeEpisode, tmdbLookupIdsFromShow, syncInlineMediaDetailHeading, cachedShowDetail, rememberShowDetail, cachedShowDetailMiss, rememberShowDetailMiss } from "./explorer.js?v=2.3.0.0.1";
@@ -161,41 +161,34 @@ export function scrollSeasonAccordionIntoView(seasonNum, { duration = SCROLL_ANI
 }
 
 // Desktop: an open season's episode box sits beside its card, level with the
-// card's top edge. It is positioned absolutely (styles.css), so it doesn't take
-// up row height and the other season cards stay where they are. The list is
-// made tall enough to hold it. Mobile keeps the stacked layout and clears these.
+// card's top edge. Batch geometry reads before style writes, then measure
+// wrapped detail heights after widths are applied so layout doesn't thrash.
 export function positionSeasonDetails(root = document) {
   const isDesktop = window.matchMedia?.("(min-width: 761px)").matches;
-  root.querySelectorAll?.(".season-accordion-list").forEach((list) => {
-    const listRect = list.getBoundingClientRect();
-    // Some window widths scale the app shell with CSS zoom: rects come back in
-    // zoomed pixels, but left/top/width apply in the list's own pixels.
-    const zoom = list.currentCSSZoom || 1;
-    // A 1px border draws as whole screen pixels (at least one); the joining
-    // lines in styles.css use this width so they meet the borders exactly.
-    const screenScale = zoom * (window.devicePixelRatio || 1);
-    list.style.setProperty("--season-hairline", `${Math.max(1, Math.floor(screenScale + 1e-6)) / screenScale}px`);
-    const gap = parseFloat(getComputedStyle(list).columnGap) || 0;
-    let listHeight = 0;
-    list.querySelectorAll("[data-season-detail]").forEach((detail) => {
+  const dpr = window.devicePixelRatio || 1;
+  const lists = [...(root.querySelectorAll?.(".season-accordion-list") || [])];
+  const plans = lists.map((list) => {
+    const listRect = list.getBoundingClientRect(), zoom = list.currentCSSZoom || 1, gap = parseFloat(getComputedStyle(list).columnGap) || 0;
+    const screenScale = zoom * dpr, hairline = `${Math.max(1, Math.floor(screenScale + 1e-6)) / screenScale}px`;
+    const items = [...list.querySelectorAll("[data-season-detail]")].map((detail) => {
       const card = list.querySelector(`[data-season-accordion="${detail.dataset.seasonDetail}"]`)?.closest(".season-accordion");
-      if (!isDesktop || !card) {
-        detail.style.left = "";
-        detail.style.top = "";
-        detail.style.width = "";
-        detail.style.removeProperty("--season-card-h");
-        return;
-      }
-      detail.style.setProperty("--season-card-h", `${card.offsetHeight}px`);
-      const cardRect = card.getBoundingClientRect();
-      const left = (cardRect.right - listRect.left) / zoom + gap;
-      const top = (cardRect.top - listRect.top) / zoom;
-      detail.style.left = `${left}px`;
-      detail.style.top = `${top}px`;
-      detail.style.width = `${Math.max(0, listRect.width / zoom - left)}px`;
-      listHeight = Math.max(listHeight, top + detail.offsetHeight);
+      if (!isDesktop || !card) return { detail, clear: true };
+      const cardRect = card.getBoundingClientRect(), left = (cardRect.right - listRect.left) / zoom + gap;
+      return { detail, clear: false, cardH: card.offsetHeight, left, top: (cardRect.top - listRect.top) / zoom, width: Math.max(0, listRect.width / zoom - left) };
     });
-    list.style.minHeight = isDesktop && listHeight ? `${listHeight}px` : "";
+    return { list, hairline, items };
+  });
+  for (const { list, hairline, items } of plans) {
+    list.style.setProperty("--season-hairline", hairline);
+    for (const item of items) {
+      if (item.clear) { item.detail.style.left = item.detail.style.top = item.detail.style.width = ""; item.detail.style.removeProperty("--season-card-h"); continue; }
+      item.detail.style.setProperty("--season-card-h", `${item.cardH}px`);
+      item.detail.style.left = `${item.left}px`; item.detail.style.top = `${item.top}px`; item.detail.style.width = `${item.width}px`;
+    }
+  }
+  const heights = plans.map(({ items }) => items.reduce((max, item) => item.clear ? max : Math.max(max, item.top + item.detail.offsetHeight), 0));
+  plans.forEach(({ list }, index) => {
+    list.style.minHeight = isDesktop && heights[index] ? `${heights[index]}px` : "";
     watchSeasonCardSizes(list, () => positionSeasonDetails(document));
   });
 }
@@ -562,6 +555,7 @@ export async function openShowImmersiveModalByTmdbId(tmdbId) {
     // history remains visible and the user can use Fix Match to repair the
     // identity that caused the lookup to fail.
     const localSeed = await localSeedPromise.catch(() => null);
+    if (currentMediaRenderToken() !== renderToken) return;
     let fallbackShow = localSeed || state.showsRaw.find((show) => String(show.tmdb_id || "") === String(tmdbId));
     if (!fallbackShow) {
       const matchingRows = (state.history || []).filter((row) => (
@@ -584,6 +578,7 @@ export async function openShowImmersiveModalByTmdbId(tmdbId) {
 
     if (fallbackShow) {
       const detailedShow = await localDetailPromise.catch(() => null) || await loadShowDetail(fallbackShow).catch(() => null);
+      if (currentMediaRenderToken() !== renderToken) return;
       const localShow = detailedShow || fallbackShow;
       const localShowKey = slug(localShow.title);
       state.activeShowModalKey = localShowKey;
@@ -765,6 +760,7 @@ export async function openShowImmersiveModalByTvdbId(tvdbId) {
   if (currentMediaRenderToken() !== renderToken) return;
   if (!tmdbData) {
     const localShow = await localDetailPromise.catch(() => null);
+    if (currentMediaRenderToken() !== renderToken) return;
     if (localShow) {
       state.activeShowModalKey = slug(localShow.title);
       state.activeShowModalTitle = localShow.title;
@@ -1215,7 +1211,7 @@ function episodeThumbMarkup(episode, hideSpoilers = false) {
   const stillUrl = isLocalArtworkUrl(episode.stillUrl) ? episode.stillUrl : (isDemoMode() ? "" : safeImageUrl(episode.stillUrl));
   const posterUrl = isLocalArtworkUrl(episode.posterUrl)
     ? episode.posterUrl
-    : (isDemoMode() ? "" : safeImageUrl(episode.posterUrl) || episode.posterUrl || "");
+    : (isDemoMode() ? "" : safeImageUrl(episode.posterUrl));
   const url = stillUrl || posterUrl;
   if (!url) return `<span class="episode-thumb poster-fallback" aria-hidden="true"></span>`;
   const onerrorAttr = stillUrl && posterUrl && stillUrl !== posterUrl
@@ -1948,8 +1944,9 @@ export function renderShowModalContent(show, {
     `)}
   `);
 
+  const safeBackdropUrl = safeCssBackgroundUrl(backdropUrl || posterUrl || "");
   const modalMarkup = `
-      <div class="modal-backdrop-image" style="background-image: url('${escapeAttribute(backdropUrl || posterUrl || "")}');"></div>
+      <div class="modal-backdrop-image"${safeBackdropUrl ? ` style="background-image: url('${escapeAttribute(safeBackdropUrl)}');"` : ""}></div>
       <div class="immersive-container media-detail-page media-detail-show-page">
         ${mediaSyncNoticeHtml(syncingEpisodeRows.map((episode) => episode.watched || episode), "this show")}
 
@@ -2909,6 +2906,7 @@ export async function renderImmersiveShowModal(showKey, activeSeasonNum = null, 
     if (titleGuess) {
       state.activeShowTmdbId = null;
       const tmdbData = await fetchTmdbDetails("tv", null, titleGuess);
+      if (currentMediaRenderToken() !== renderToken) return;
       if (tmdbData?.id) {
         await openShowImmersiveModalByTmdbId(tmdbData.id);
         return;

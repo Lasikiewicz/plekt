@@ -5,7 +5,7 @@ import { fakeProvider } from "./playlistFakes.js";
 
 makeTempDataDir("plembfin-playlist-rules-");
 
-const { db } = await import("../server/src/db.js");
+const { db, getDataVersion } = await import("../server/src/db.js");
 const { genreKey } = await import("../server/src/utils/playlistRuleCatalogue.js");
 const {
   applyPlaylistRuleResult, checkDuePlaylistRules, checkPlaylistRule, confirmPlaylistRuleHold, discardPlaylistRuleHold,
@@ -109,6 +109,16 @@ test("library movies: union over apps, genre any and all, years, recently added,
   assert.deepEqual(await check({ order: "title" }, ["plex"]), ["Alpha", "Bravo"]);
   // A Plembfin-only playlist draws from every connected app (decision 50).
   assert.deepEqual(await check({ order: "title" }, []), ["Alpha", "Bravo", "Charlie"]);
+});
+
+test("an unchanged playlist check leaves the Up Next history version alone", async () => {
+  const id = createRuleList({ rule: { order: "title" }, targets: ["plex"] });
+  const deps = libraryDeps({ plex: { status: "ok", items: [catItem("plex", 500)] } });
+  await checkPlaylistRule(id, { config, deps });
+  const version = getDataVersion();
+  const checked = await checkPlaylistRule(id, { config, deps });
+  assert.equal(checked.status, "unchanged");
+  assert.equal(getDataVersion(), version);
 });
 
 test("a library title its app has not matched to any id is left out until it is", async () => {

@@ -59,7 +59,9 @@ const metaGetByTmdbIdStmt = db.prepare("SELECT * FROM tmdb_metadata_cache WHERE 
 // cache-only lookup for that identity as well. JSON1 is already required by
 // the metadata-column migration in db.js.
 const metaGetByTvdbIdStmt = db.prepare(
-  "SELECT * FROM tmdb_metadata_cache WHERE media_type = 'tv' AND json_valid(details) AND json_extract(details, '$.external_ids.tvdb_id') = ? ORDER BY updated_at_ms DESC LIMIT 1",
+  // The CASE expression must match idx_tmdb_metadata_cache_tv_tvdb_id in
+  // sharedMetadataStore.js exactly, or the lookup scans every TV row's JSON.
+  "SELECT * FROM tmdb_metadata_cache WHERE media_type = 'tv' AND (CASE WHEN json_valid(details) THEN json_extract(details, '$.external_ids.tvdb_id') END) = ? ORDER BY updated_at_ms DESC, rowid ASC LIMIT 1",
 );
 // `status`, `poster_path` and the backdrop/poster URLs are mirrored out of the
 // details blob into their own columns so grid and card paths can read the two
@@ -1694,11 +1696,12 @@ export function getCachedTmdbSeason({ tmdbId = "", tvdbId: requestedTvdbId = "",
   // Up Next is the only caller and resolves its result to media server items,
   // so it follows the numbering the show's stored rows use. That is the
   // season source unless Fix Match set a translated per-show choice.
-  if (readShowNumbering(tvdbId).rowNumbering === "tmdb") {
+  const numbering = readShowNumbering(tvdbId);
+  if (numbering.rowNumbering === "tmdb") {
     const tmdbSeason = getCachedTmdbSeasonEpisodes({ tmdbId: id || String(metadata?.id || ""), seasonNumber: number });
     if (tmdbSeason?.episodes?.length) return tmdbSeason;
   }
-  return getCachedTvdbSeasonEpisodes({ tvdbId, seasonNumber: number });
+  return getCachedTvdbSeasonEpisodes({ tvdbId, seasonNumber: number, allowSeriesFallback: !numbering.translate });
 }
 
 export async function getTmdbPerson(personId, { lane = "enrichment" } = {}) {

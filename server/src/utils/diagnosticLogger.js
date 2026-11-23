@@ -32,11 +32,12 @@ const originalLog = console.log;
 const originalError = console.error;
 const originalWarn = console.warn;
 
-function redactSecrets(value = "") {
+export function redactSecrets(value = "") {
   let text = String(value || "");
-  text = text.replace(/([?&](?:token|api[_-]?key|secret|password|authorization|cookie)=)[^&\s'"]+/gi, "$1[redacted]");
-  text = text.replace(/\b(authorization|cookie|x-api-key|x-plex-token|api[_-]?key|token|password|secret)(['"]?\s*[:=]\s*['"]?)[^,'"\s}]+/gi, "$1$2[redacted]");
-  return text.replace(/\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi, "Bearer [redacted]");
+  text = text.replace(/([?&](?:token|api[_-]?key|secret|password|passphrase|authorization|cookie)=)[^&\s'"]+/gi, "$1[redacted]");
+  text = text.replace(/\b(Bearer|Basic)\s+[A-Za-z0-9._~+/-]+=*/gi, "$1 [redacted]");
+  text = text.replace(/\b(authorization|cookie|x-api-key|x-plex-token|api[_-]?key|access[_-]?token|refresh[_-]?token|secret[_-]?access[_-]?key|app[_-]?secret|client[_-]?secret|passphrase|token|password|secret)(['"]?\s*[:=]\s*['"]?)[^,'"\s}]+/gi, "$1$2[redacted]");
+  return text;
 }
 
 function rotateIfNeeded() {

@@ -1510,7 +1510,7 @@ export function openEditImageDialog(_container, id, currentPosterUrl, tmdbData, 
         const title = item.title || item.name || "Unknown";
         const year = (item.release_date || item.first_air_date || "").slice(0, 4);
         return `
-          <button class="fix-match-result" type="button" data-tmdb-id="${item.id}" data-title="${escapeAttribute(title)}">
+          <button class="fix-match-result" type="button" data-tmdb-id="${escapeAttribute(item.id)}" data-title="${escapeAttribute(title)}">
             <img src="${escapeAttribute(poster)}" alt="" data-err="fav" />
             <span>${escapeHtml(title)}${year ? ` <small>(${escapeHtml(year)})</small>` : ""}</span>
           </button>

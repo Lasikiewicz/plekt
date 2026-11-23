@@ -1,4 +1,4 @@
-import { readEpisodeOrder, episodeOrderRevision } from "./episodeOrder.js";
+import { readEpisodeOrder, episodeOrderRevision, orderLinks } from "./episodeOrder.js";
 import { getCachedTvdbOrderCatalogue, getTvdbOrderCatalogue } from "./tvdbOrderGateway.js";
 import { matchEpisodeOrderTarget } from "./episodeOrderTargets.js";
 import { fetchPlexSeriesEpisodes } from "./plexClient.js";
@@ -10,6 +10,43 @@ const idOf = item => String(item.show_tvdb_id || item.tvdb_id || item.ids?.tvdb 
 function airedCatalogue(id) {
   return id && readEpisodeOrder(id).order !== "official" ? getCachedTvdbOrderCatalogue(id) : null;
 }
+export function orderDisplayMap(tvdbId, catalogueOverride = null) {
+  const id = String(tvdbId || "").trim();
+  if (!id) return null;
+  const saved = readEpisodeOrder(id);
+  if (saved.order === "official") return null;
+  const catalogue = catalogueOverride || getCachedTvdbOrderCatalogue(id);
+  const displayList = catalogue?.orders?.[saved.order];
+  const officialList = catalogue?.orders?.official;
+  if (!Array.isArray(displayList) || !displayList.length || !Array.isArray(officialList)) return null;
+  const links = orderLinks(catalogue, saved, saved.order);
+  const airedById = new Map(officialList.map((ep) => [ep.id, ep]));
+  const linkByDvdId = new Map(links.map((link) => [link.dvdId, airedById.get(link.airedId)]));
+  const displayByAiredKey = new Map();
+  const seasons = new Map();
+  for (const ep of displayList) {
+    if (!(ep.season > 0) || !(ep.episode > 0)) continue;
+    const aired = linkByDvdId.get(ep.id);
+    if (!aired || !(aired.season > 0) || !(aired.episode > 0)) continue;
+    displayByAiredKey.set(`${aired.season}:${aired.episode}`, { season: ep.season, episode: ep.episode });
+    if (!seasons.has(ep.season)) seasons.set(ep.season, []);
+    seasons.get(ep.season).push({
+      season_number: aired.season,
+      episode_number: aired.episode,
+      display_season: ep.season,
+      display_episode: ep.episode,
+      name: ep.name || aired.name || "",
+      air_date: aired.air_date || ep.air_date || "",
+    });
+  }
+  const orderedSeasons = [...seasons.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([seasonNumber, episodes]) => ({
+      season_number: seasonNumber,
+      episodes: episodes.sort((a, b) => a.display_episode - b.display_episode),
+    }));
+  return { order: saved.order, displayByAiredKey, seasons: orderedSeasons };
+}
 export function orderDetails(options) {
   const details = cachedDetails(options);
   const catalogue = airedCatalogue(options.ids?.tvdbId || details?.external_ids?.tvdb_id);
@@ -18,6 +55,28 @@ export function orderDetails(options) {
 export function orderSeason(options) {
   const catalogue = airedCatalogue(options.tvdbId);
   return catalogue ? { episodes: catalogue.orders.official.filter(e => e.season === Number(options.seasonNumber)).map(e => ({ ...e, season_number: e.season, episode_number: e.episode })) } : cachedSeason(options);
+}
+export function createUpNextMetadataCache() {
+  const detailsMap = new Map(), seasonMap = new Map(), displayMap = new Map();
+  return {
+    orderDetails(options = {}) {
+      const key = `${options.mediaType || ""}|${options.tmdbId || ""}|${options.ids?.tvdbId || ""}|${options.ids?.imdbId || ""}|${options.title || ""}`;
+      if (!detailsMap.has(key)) detailsMap.set(key, orderDetails(options));
+      return detailsMap.get(key);
+    },
+    orderSeason(options = {}) {
+      const key = `${options.tmdbId || ""}|${options.tvdbId || ""}|${options.seasonNumber ?? ""}`;
+      if (!seasonMap.has(key)) seasonMap.set(key, orderSeason(options));
+      return seasonMap.get(key);
+    },
+    orderDisplayMap(tvdbId, catalogueOverride = null) {
+      if (catalogueOverride) return orderDisplayMap(tvdbId, catalogueOverride);
+      const key = String(tvdbId || "").trim();
+      if (!key) return null;
+      if (!displayMap.has(key)) displayMap.set(key, orderDisplayMap(key));
+      return displayMap.get(key);
+    },
+  };
 }
 export function orderRevision(item) {
   const id = idOf(item), saved = readEpisodeOrder(id);

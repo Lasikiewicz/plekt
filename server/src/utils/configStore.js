@@ -1,5 +1,5 @@
-import { adminDb, db, parseJson, toJson } from "../db.js";
-import { assertSafeOutboundUrl, normalizeHttpUrl, configureOutboundGovernor } from "./outbound.js";
+import { adminDb, bumpUpNextVersion, db, parseJson, toJson } from "../db.js";
+import { assertSafeOutboundUrl, normalizeHttpUrl, configureOutboundGovernor, sameServerUrl } from "./outbound.js";
 import { applyTuningConfig, normalizePlexHistoricalWatchedSync, normalizeTuningSection, normalizeWatchImportMode, plexHistoricalWatchedSyncDefault, tuningClamps, tuningEnvDefaults, watchImportModeDefault, WATCH_IMPORT_MODES } from "./tuning.js";
 import { normalizeSyncRoles, validateSyncRolesSection, normalizeAuthority } from "./syncRoles.js";
 import { getMediaConnection, resolveConnectedProviderConfig } from "./mediaConnectionRepo.js";
@@ -9,7 +9,15 @@ import { brandEnv } from "./brandEnv.js";
 import { normalizeSeasonSource } from "./seasonSource.js";
 import { retainedRestoreFailure } from "./restoreFailureNotice.js";
 import { isNonAdminTenantContext } from "./userContext.js";
+import { createPerUserState } from "./perUserState.js";
 import { readSharedProviderKeysRow, writeSharedProviderKeysRow } from "./sharedMetadataStore.js";
+import {
+  attachProviderLibraryMonitoring,
+  invalidateLibraryMembershipCache,
+  normalizeLibraryMonitoringProvider,
+  normalizeLibraryMonitoringSection,
+  publicLibraryMonitoringConfig,
+} from "./librarySelection.js";
 const SETTINGS_ID = "mediaConfig";
 const RUNTIME_ID = "main";
 export const SHARED_PROVIDER_KEY_SECTIONS = Object.freeze(["tmdb", "fanart", "tvdb", "youtube", "omdb"]);
@@ -45,7 +53,8 @@ export const DEFAULT_WATCHLIST_SYNC = Object.freeze({
 // Up Next provider sync predates this setting, so keep it enabled when the
 // section is absent from an existing installation. Users can opt out without
 // changing Plembfin's local Up Next view.
-export const DEFAULT_UP_NEXT_SYNC = Object.freeze({ enabled: true });
+export const UP_NEXT_SORT_MODES = Object.freeze(["recently_watched", "newly_aired", "oldest_unwatched", "closest_to_finishing", "custom"]);
+export const DEFAULT_UP_NEXT_SYNC = Object.freeze({ enabled: true, sort: "recently_watched", partWatchedFirst: true });
 // Dashboard Now Playing / Up Next panel: whether Up Next fills the panel while
 // idle, whether it trails live sessions, and the total number of cards shown.
 export const DEFAULT_NOW_PLAYING = Object.freeze({ allowPartWatched: true, allowUpNext: true, itemCount: 3 });
@@ -144,9 +153,27 @@ export function normalizeWatchlistSyncSection(section = {}) {
 }
 
 export function normalizeUpNextSyncSection(section = {}) {
-  const rawEnabled = section && typeof section === "object" ? section.enabled : undefined;
+  const raw = section && typeof section === "object" ? section : {};
+  const rawEnabled = raw.enabled;
+  const rawSort = String(raw.sort || "").trim();
   return {
     enabled: rawEnabled === undefined ? DEFAULT_UP_NEXT_SYNC.enabled : rawEnabled === true,
+    sort: UP_NEXT_SORT_MODES.includes(rawSort) ? rawSort : DEFAULT_UP_NEXT_SYNC.sort,
+    partWatchedFirst: raw.partWatchedFirst === undefined ? DEFAULT_UP_NEXT_SYNC.partWatchedFirst : raw.partWatchedFirst === true,
+    customOrder: [...new Set((Array.isArray(raw.customOrder) ? raw.customOrder : [])
+      .filter((key) => typeof key === "string" && key.length <= 250))].slice(0, 500),
+    customFallbackSort: UP_NEXT_SORT_MODES.includes(raw.customFallbackSort) && raw.customFallbackSort !== "custom"
+      ? raw.customFallbackSort : DEFAULT_UP_NEXT_SYNC.sort,
+    showOverrides: (Array.isArray(raw.showOverrides) ? raw.showOverrides : []).slice(0, 500)
+      .filter((row) => row && [row.tmdb_id, row.tvdb_id, row.imdb_id].some((id) => String(id ?? "").trim()))
+      .map((row) => ({
+        tmdb_id: String(row.tmdb_id || "").trim().slice(0, 40),
+        tvdb_id: String(row.tvdb_id || "").trim().slice(0, 40),
+        imdb_id: String(row.imdb_id || "").trim().slice(0, 40),
+        episodeChoice: row.episodeChoice === "latest_released" ? "latest_released" : "next_in_order",
+        placement: ["top", "bottom"].includes(row.placement) ? row.placement : "normal",
+      })),
+    mirror: Object.fromEntries(["plex", "emby", "jellyfin"].map((provider) => [provider, raw.mirror?.[provider] === true])),
   };
 }
 
@@ -208,6 +235,7 @@ function envMediaConfig() {
     watchlistSync: normalizeWatchlistSyncSection({}),
     upNextSync: normalizeUpNextSyncSection({}),
     nowPlaying: normalizeNowPlayingSection({}),
+    libraryMonitoring: normalizeLibraryMonitoringSection({}),
   });
 }
 
@@ -269,6 +297,7 @@ export function mergeEnvDefaults(stored = {}) {
   merged.watchlistSync = normalized.watchlistSync;
   merged.upNextSync = normalized.upNextSync;
   merged.nowPlaying = normalized.nowPlaying;
+  merged.libraryMonitoring = normalized.libraryMonitoring;
 
   for (const section of ["plex", "emby", "jellyfin"]) {
     if (hasConfiguredFields(normalized[section])) {
@@ -352,16 +381,28 @@ export function normalizeStoredConfig(stored = {}) {
     watchlistSync: normalizeWatchlistSyncSection(stored.watchlistSync || {}),
     upNextSync: normalizeUpNextSyncSection(stored.upNextSync || {}),
     nowPlaying: normalizeNowPlayingSection(stored.nowPlaying || {}),
+    libraryMonitoring: normalizeLibraryMonitoringSection(stored.libraryMonitoring || {}),
     metadata: { seasonSource: normalizeSeasonSource(stored.metadata?.seasonSource), anidbEnabled: stored.metadata?.anidbEnabled === true },
   };
 }
 
-const selectSettingsStmt = db.prepare("SELECT data FROM settings WHERE id = ?");
+const selectSettingsStmt = db.prepare("SELECT data, updated_at FROM settings WHERE id = ?");
 const upsertSettingsStmt = db.prepare(
   `INSERT INTO settings (id, data, updated_at) VALUES (?, ?, ?)
    ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
 );
 const selectAdminSettingsStmt = adminDb.prepare("SELECT data, updated_at FROM settings WHERE id = ?");
+const SHARED_KEY_ENV_NAMES = ["TMDB_API_KEY", "TMDB_KEY", "FANART_API_KEY", "TVDB_API_KEY", "YOUTUBE_API_KEY", "YOUTUBE_DATA_API_KEY", "OMDB_API_KEY"];
+const ADMIN_CONFIG_ENV_NAMES = [
+  "OUTBOUND_PACING_PROFILE",
+  "PLEX_ENABLED", "PLEX_SERVER_URL", "PLEX_BASE_URL", "PLEX_URL", "PLEX_TOKEN", "PLEX_API_KEY", "PLEX_USERNAME",
+  "EMBY_ENABLED", "EMBY_SERVER_URL", "EMBY_BASE_URL", "EMBY_URL", "EMBY_API_KEY", "EMBY_USER_ID",
+  "JELLYFIN_ENABLED", "JELLYFIN_SERVER_URL", "JELLYFIN_BASE_URL", "JELLYFIN_URL", "JELLYFIN_API_KEY", "JELLYFIN_USER_ID",
+  ...SHARED_KEY_ENV_NAMES,
+];
+const envSig = (names) => names.map((name) => process.env[name] ?? "").join("\0");
+let sharedKeysCache = null;
+const mediaConfigCache = createPerUserState(() => ({ key: "", base: null }));
 
 function extractProviderKeySections(source = {}) {
   const normalized = normalizeStoredConfig(source);
@@ -381,14 +422,25 @@ function extractProviderKeySections(source = {}) {
 // and downgrades to single-user both keep working), then fall back to env vars.
 export function loadSharedProviderKeys() {
   const adminRow = selectAdminSettingsStmt.get(SETTINGS_ID);
+  const adminUpdatedAt = Number(adminRow?.updated_at || 0);
+  const sharedRow = readSharedProviderKeysRow();
+  const sharedUpdatedAt = Number(sharedRow?.updatedAt || 0);
+  const sharedKeySig = SHARED_PROVIDER_KEY_SECTIONS.map((s) => String(sharedRow?.data?.[s]?.apiKey || "")).join("\0");
+  const keyEnv = envSig(SHARED_KEY_ENV_NAMES);
+  if (
+    sharedKeysCache
+    && sharedKeysCache.adminUpdatedAt === adminUpdatedAt
+    && sharedKeysCache.adminData === (adminRow?.data ?? null)
+    && sharedKeysCache.sharedUpdatedAt === sharedUpdatedAt
+    && sharedKeysCache.sharedKeySig === sharedKeySig
+    && sharedKeysCache.keyEnv === keyEnv
+  ) {
+    return Object.fromEntries(SHARED_PROVIDER_KEY_SECTIONS.map((s) => [s, { apiKey: sharedKeysCache.resolved[s].apiKey }]));
+  }
+
   const adminParsed = parseJson(adminRow?.data, {}) || {};
   const adminKeys = extractProviderKeySections(adminParsed);
-  const adminUpdatedAt = Number(adminRow?.updated_at || 0);
-
-  const sharedRow = readSharedProviderKeysRow();
   const sharedKeys = sharedRow ? extractProviderKeySections(sharedRow.data) : null;
-  const sharedUpdatedAt = Number(sharedRow?.updatedAt || 0);
-
   const envDefaults = extractProviderKeySections(envMediaConfig());
   const useShared = Boolean(sharedKeys && sharedUpdatedAt >= adminUpdatedAt && (sharedUpdatedAt > 0 || !adminRow));
   const primary = useShared ? sharedKeys : adminKeys;
@@ -403,27 +455,51 @@ export function loadSharedProviderKeys() {
     const apiKey = String(primary?.[section]?.apiKey || secondary?.[section]?.apiKey || envDefaults[section]?.apiKey || "").trim();
     resolved[section] = { apiKey };
   }
-  return resolved;
+  const latestShared = !useShared && adminRow && adminUpdatedAt > sharedUpdatedAt ? readSharedProviderKeysRow() : sharedRow;
+  sharedKeysCache = {
+    adminUpdatedAt,
+    adminData: adminRow?.data ?? null,
+    sharedUpdatedAt: Number(latestShared?.updatedAt || 0),
+    sharedKeySig: SHARED_PROVIDER_KEY_SECTIONS.map((s) => String(latestShared?.data?.[s]?.apiKey || "")).join("\0"),
+    keyEnv,
+    resolved,
+  };
+  return Object.fromEntries(SHARED_PROVIDER_KEY_SECTIONS.map((s) => [s, { apiKey: resolved[s].apiKey }]));
 }
 
 export function saveSharedProviderKeys(config = {}, updatedAt = Date.now()) {
   const keys = extractProviderKeySections(config);
   writeSharedProviderKeysRow(keys, updatedAt);
+  sharedKeysCache = null;
   return keys;
 }
 
 export async function loadMediaConfig({ resolveConnections = true } = {}) {
   const row = selectSettingsStmt.get(SETTINGS_ID);
-  const stored = parseJson(row?.data, {}) || {};
   const nonAdminTenant = isNonAdminTenantContext();
-  // Non-admin tenants never inherit the admin's PLEX_*/EMBY_*/JELLYFIN_* env
-  // credentials, but they do share the install-wide metadata provider API keys.
-  const merged = nonAdminTenant ? normalizeStoredConfig(stored) : mergeEnvDefaults(stored);
   const sharedKeys = loadSharedProviderKeys();
-  for (const section of SHARED_PROVIDER_KEY_SECTIONS) {
-    merged[section] = { ...merged[section], apiKey: sharedKeys[section].apiKey };
+  const sharedSig = SHARED_PROVIDER_KEY_SECTIONS.map((s) => sharedKeys[s].apiKey).join("\0");
+  const publicUrlEnv = String(brandEnv("PUBLIC_URL") || "").trim();
+  const envSignature = nonAdminTenant
+    ? publicUrlEnv
+    : `${publicUrlEnv}\0${envSig(ADMIN_CONFIG_ENV_NAMES)}\0${JSON.stringify(tuningEnvDefaults())}`;
+  const cacheKey = `${nonAdminTenant ? 1 : 0}|${Number(row?.updated_at || 0)}|${row?.data ?? ""}|${sharedSig}|${envSignature}`;
+  const cached = mediaConfigCache();
+  let merged;
+  if (cached.base && cached.key === cacheKey) {
+    merged = structuredClone(cached.base);
+  } else {
+    const stored = parseJson(row?.data, {}) || {};
+    // Non-admin tenants never inherit the admin's PLEX_*/EMBY_*/JELLYFIN_* env
+    // credentials, but they do share the install-wide metadata provider API keys.
+    merged = nonAdminTenant ? normalizeStoredConfig(stored) : mergeEnvDefaults(stored);
+    for (const section of SHARED_PROVIDER_KEY_SECTIONS) {
+      merged[section] = { ...merged[section], apiKey: sharedKeys[section].apiKey };
+    }
+    merged.publicBaseUrl = normalizePublicBaseUrl(envValue("PLEKT_PUBLIC_URL", "PLEMBFIN_PUBLIC_URL") || merged.publicBaseUrl);
+    cached.key = cacheKey;
+    cached.base = structuredClone(merged);
   }
-  merged.publicBaseUrl = normalizePublicBaseUrl(envValue("PLEKT_PUBLIC_URL", "PLEMBFIN_PUBLIC_URL") || merged.publicBaseUrl);
   if (resolveConnections) {
     const plexConnection = getMediaConnection("plex");
     if (merged.plex.authMode === "account" && ["plex_jwt", "plex_managed_jwt"].includes(plexConnection?.authKind)) {
@@ -437,9 +513,11 @@ export async function loadMediaConfig({ resolveConnections = true } = {}) {
       merged[provider] = resolveConnectedProviderConfig(provider, merged[provider]);
     }
   }
-  applyTuningConfig(merged.tuning);
-  configureOutboundGovernor(merged.pacing.profile);
-  return merged;
+  if (!nonAdminTenant) {
+    applyTuningConfig(merged.tuning);
+    configureOutboundGovernor(merged.pacing.profile);
+  }
+  return attachProviderLibraryMonitoring(merged);
 }
 
 // The browser-facing config shape. Secrets (tokens/API keys) are never included -
@@ -452,6 +530,29 @@ export function publicMediaConfig(config = {}) {
   const plexConn = getMediaConnection("plex");
   const embyConn = getMediaConnection("emby");
   const jellyfinConn = getMediaConnection("jellyfin");
+  const effectiveForMonitoring = {
+    ...normalized,
+    plex: {
+      ...normalized.plex,
+      baseUrl: normalized.plex.baseUrl || plexConn?.baseUrl || "",
+      token: normalized.plex.token || (plexConn && plexConn.status !== "disabled" ? "configured" : ""),
+      serverId: config?.plex?.serverId || plexConn?.serverId || "",
+    },
+    emby: {
+      ...normalized.emby,
+      baseUrl: normalized.emby.baseUrl || embyConn?.baseUrl || "",
+      apiKey: normalized.emby.apiKey || (embyConn && embyConn.status !== "disabled" ? "configured" : ""),
+      userId: normalized.emby.userId || embyConn?.remoteUserId || "",
+      serverId: config?.emby?.serverId || embyConn?.serverId || "",
+    },
+    jellyfin: {
+      ...normalized.jellyfin,
+      baseUrl: normalized.jellyfin.baseUrl || jellyfinConn?.baseUrl || "",
+      apiKey: normalized.jellyfin.apiKey || (jellyfinConn && jellyfinConn.status !== "disabled" ? "configured" : ""),
+      userId: normalized.jellyfin.userId || jellyfinConn?.remoteUserId || "",
+      serverId: config?.jellyfin?.serverId || jellyfinConn?.serverId || "",
+    },
+  };
   return {
     mediaAuthEnabled: mediaAccountAuthEnabled(),
     publicBaseUrl: normalized.publicBaseUrl,
@@ -509,6 +610,7 @@ export function publicMediaConfig(config = {}) {
     watchlistSync: normalizeWatchlistSyncSection(normalized.watchlistSync),
     upNextSync: normalizeUpNextSyncSection(normalized.upNextSync),
     nowPlaying: normalizeNowPlayingSection(normalized.nowPlaying),
+    libraryMonitoring: publicLibraryMonitoringConfig(effectiveForMonitoring),
     metadata: normalized.metadata,
   };
 }
@@ -553,11 +655,19 @@ function publicTuningConfig(storedTuning = {}) {
 // are kept from the stored config when the incoming value is blank or missing -
 // the browser never receives secrets (publicMediaConfig), so a settings save with
 // an empty key field means "keep the saved credential", not "clear it".
-function mergeSection(existing = {}, incoming, secretFields = []) {
+function mergeSection(existing = {}, incoming, secretFields = [], { urlField = "" } = {}) {
   if (!incoming) return existing;
   const merged = { ...existing, ...incoming };
+  const urlChanged = Boolean(
+    urlField
+    && String(existing[urlField] || "").trim()
+    && String(incoming[urlField] || "").trim()
+    && !sameServerUrl(existing[urlField], incoming[urlField]),
+  );
   for (const field of secretFields) {
-    if (!String(incoming[field] ?? "").trim()) merged[field] = existing[field];
+    if (!String(incoming[field] ?? "").trim()) {
+      merged[field] = urlChanged ? "" : existing[field];
+    }
   }
   return merged;
 }
@@ -607,11 +717,11 @@ export async function mergeIncomingConfig(config = {}) {
   const existing = await loadMediaConfig({ resolveConnections: false }).catch(() => normalizeStoredConfig({}));
   return normalizeStoredConfig({
     publicBaseUrl: config.publicBaseUrl ?? existing.publicBaseUrl,
-    plex: { ...mergeSection(existing.plex, config.plex, ["token"]), ...(String(config.plex?.token || "").trim() ? { legacyFallbackDisabled: false } : {}) },
-    emby: { ...mergeSection(existing.emby, config.emby, ["apiKey"]), ...(String(config.emby?.apiKey || "").trim() ? { legacyFallbackDisabled: false } : {}) },
-    jellyfin: { ...mergeSection(existing.jellyfin, config.jellyfin, ["apiKey"]), ...(String(config.jellyfin?.apiKey || "").trim() ? { legacyFallbackDisabled: false } : {}) },
-    seerr: mergeSection(existing.seerr, config.seerr, ["apiKey"]),
-    tautulli: mergeSection(existing.tautulli, config.tautulli, ["apiKey"]),
+    plex: { ...mergeSection(existing.plex, config.plex, ["token"], { urlField: "baseUrl" }), ...(String(config.plex?.token || "").trim() ? { legacyFallbackDisabled: false } : {}) },
+    emby: { ...mergeSection(existing.emby, config.emby, ["apiKey"], { urlField: "baseUrl" }), ...(String(config.emby?.apiKey || "").trim() ? { legacyFallbackDisabled: false } : {}) },
+    jellyfin: { ...mergeSection(existing.jellyfin, config.jellyfin, ["apiKey"], { urlField: "baseUrl" }), ...(String(config.jellyfin?.apiKey || "").trim() ? { legacyFallbackDisabled: false } : {}) },
+    seerr: mergeSection(existing.seerr, config.seerr, ["apiKey"], { urlField: "baseUrl" }),
+    tautulli: mergeSection(existing.tautulli, config.tautulli, ["apiKey"], { urlField: "baseUrl" }),
     tmdb: mergeSection(existing.tmdb, config.tmdb, ["apiKey"]),
     fanart: mergeSection(existing.fanart, config.fanart, ["apiKey"]),
     tvdb: mergeSection(existing.tvdb, config.tvdb, ["apiKey"]),
@@ -625,12 +735,39 @@ export async function mergeIncomingConfig(config = {}) {
     watchlistSync: mergeWatchlistSyncSection(existing.watchlistSync, config.watchlistSync),
     upNextSync: mergeSection(existing.upNextSync, config.upNextSync, []),
     nowPlaying: mergeSection(existing.nowPlaying, config.nowPlaying, []),
+    libraryMonitoring: (() => {
+      const nextMonitoring = normalizeLibraryMonitoringSection(existing.libraryMonitoring);
+      for (const provider of ["plex", "emby", "jellyfin"]) {
+        const prevUrl = String(existing[provider]?.baseUrl || "").trim();
+        const nextUrl = String(config[provider]?.baseUrl || "").trim();
+        if (prevUrl && nextUrl && !sameServerUrl(prevUrl, nextUrl)) {
+          nextMonitoring[provider] = normalizeLibraryMonitoringProvider({
+            serverId: "",
+            serverName: "",
+            revision: nextMonitoring[provider].revision + 1,
+            selectedIds: [],
+            selectedLibraries: [],
+            updatedAt: Date.now(),
+          });
+        }
+      }
+      return nextMonitoring;
+    })(),
     metadata: mergeSection(existing.metadata, config.metadata, []),
   });
 }
 
 export async function saveMediaConfig(config) {
   const normalized = await mergeIncomingConfig(config);
+  const before = config.upNextSync
+    ? normalizeUpNextSyncSection(parseJson(selectSettingsStmt.get(SETTINGS_ID)?.data, {})?.upNextSync)
+    : normalized.upNextSync;
+  const refreshUpNext = before.sort !== normalized.upNextSync.sort || before.enabled !== normalized.upNextSync.enabled
+    || before.partWatchedFirst !== normalized.upNextSync.partWatchedFirst
+    || before.customFallbackSort !== normalized.upNextSync.customFallbackSort
+    || JSON.stringify(before.showOverrides) !== JSON.stringify(normalized.upNextSync.showOverrides)
+    || JSON.stringify(before.mirror) !== JSON.stringify(normalized.upNextSync.mirror)
+    || JSON.stringify(before.customOrder) !== JSON.stringify(normalized.upNextSync.customOrder);
   const now = Date.now();
   if (isNonAdminTenantContext()) {
     // Non-admin tenants never persist or overwrite install-wide metadata API
@@ -641,12 +778,44 @@ export async function saveMediaConfig(config) {
       tenantStored[section] = { apiKey: "" };
     }
     upsertSettingsStmt.run(SETTINGS_ID, toJson(tenantStored), now);
-    applyTuningConfig(tenantStored.tuning);
-    return;
+  } else {
+    upsertSettingsStmt.run(SETTINGS_ID, toJson(normalized), now);
+    saveSharedProviderKeys(normalized, now);
+    applyTuningConfig(normalized.tuning);
   }
-  upsertSettingsStmt.run(SETTINGS_ID, toJson(normalized), now);
-  saveSharedProviderKeys(normalized, now);
-  applyTuningConfig(normalized.tuning);
+  if (refreshUpNext) {
+    bumpUpNextVersion();
+    await import("./upNextAutoSync.js")
+      .then(({ requestUpNextAutoSync }) => requestUpNextAutoSync("Up Next settings changed"))
+      .catch((error) => console.warn(`[up-next] Could not request settings sync: ${error.message}`));
+  }
+}
+
+export function saveUpNextShowOverride(show) {
+  const keys = ["tmdb_id", "tvdb_id", "imdb_id"];
+  const next = normalizeUpNextSyncSection({ showOverrides: [show] }).showOverrides[0];
+  if (!next) return null;
+  const section = db.transaction(() => {
+    const stored = parseJson(selectSettingsStmt.get(SETTINGS_ID)?.data, {}) || {};
+    const upNextSync = normalizeUpNextSyncSection(stored.upNextSync);
+    const matches = (entry) => {
+      const shared = keys.filter((key) => entry[key] && next[key]);
+      return shared.length && shared.every((key) => entry[key] === next[key]);
+    };
+    const current = upNextSync.showOverrides.find(matches);
+    const showOverrides = upNextSync.showOverrides.filter((entry) => !matches(entry));
+    if (next.episodeChoice !== "next_in_order" || next.placement !== "normal") {
+      const identity = Object.fromEntries(keys.map((key) => [key, next[key] || current?.[key] || ""]));
+      showOverrides.unshift({ ...next, ...identity });
+    }
+    const updated = { ...upNextSync, showOverrides: showOverrides.slice(0, 500) };
+    upsertSettingsStmt.run(SETTINGS_ID, toJson({ ...stored, upNextSync: updated }), Date.now());
+    bumpUpNextVersion();
+    return updated;
+  }).immediate();
+  import("./upNextAutoSync.js").then(({ requestUpNextAutoSync }) => requestUpNextAutoSync("Up Next show override changed", { priority: true }))
+    .catch((error) => console.warn(`[up-next] Could not request show override sync: ${error.message}`));
+  return section;
 }
 
 export function disableStoredLegacyCredential(provider, connectionId = "", { authMode = "account", activate = false } = {}) {
@@ -663,6 +832,40 @@ export function disableStoredLegacyCredential(provider, connectionId = "", { aut
     }
     upsertSettingsStmt.run(SETTINGS_ID, toJson({ ...stored, [provider]: section }), Date.now());
   }).immediate();
+}
+
+export function getStoredLibraryMonitoringRevision(provider) {
+  const stored = parseJson(selectSettingsStmt.get(SETTINGS_ID)?.data, {});
+  return normalizeLibraryMonitoringProvider(stored?.libraryMonitoring?.[provider]).revision;
+}
+
+export function saveProviderLibraryMonitoring(provider, selection = {}, { expectedRevision } = {}) {
+  const normalizedProvider = String(provider || "").trim().toLowerCase();
+  if (!["plex", "emby", "jellyfin"].includes(normalizedProvider)) {
+    throw new Error("Unsupported media provider");
+  }
+  const saved = db.transaction(() => {
+    const stored = parseJson(selectSettingsStmt.get(SETTINGS_ID)?.data, {}) || {};
+    const monitoring = normalizeLibraryMonitoringSection(stored.libraryMonitoring);
+    const current = monitoring[normalizedProvider];
+    if (expectedRevision !== undefined && expectedRevision !== current.revision) {
+      throw Object.assign(new Error("Library monitoring settings changed in another session. Refresh and try again."), {
+        status: 409,
+        code: "LIBRARY_SELECTION_CONFLICT",
+        currentRevision: current.revision,
+      });
+    }
+    const next = normalizeLibraryMonitoringProvider({
+      ...selection,
+      revision: Math.max(current.revision + 1, Number(selection?.revision) || 0),
+      updatedAt: Number(selection?.updatedAt) || Date.now(),
+    });
+    monitoring[normalizedProvider] = next;
+    upsertSettingsStmt.run(SETTINGS_ID, toJson({ ...stored, libraryMonitoring: monitoring }), Date.now());
+    return next;
+  }).immediate();
+  invalidateLibraryMembershipCache({ provider: normalizedProvider });
+  return saved;
 }
 
 export function validateConfig(config = {}) {
@@ -771,6 +974,12 @@ export function validateConfig(config = {}) {
   }
   if (config.upNextSync && config.upNextSync.enabled !== undefined && typeof config.upNextSync.enabled !== "boolean") {
     errors.push("upNextSync.enabled must be boolean");
+  }
+  if (config.upNextSync?.sort !== undefined && !UP_NEXT_SORT_MODES.includes(String(config.upNextSync.sort).trim())) {
+    errors.push(`upNextSync.sort must be one of ${UP_NEXT_SORT_MODES.join(", ")}`);
+  }
+  if (config.upNextSync?.partWatchedFirst !== undefined && typeof config.upNextSync.partWatchedFirst !== "boolean") {
+    errors.push("upNextSync.partWatchedFirst must be boolean");
   }
   if (config.nowPlaying) {
     for (const key of ["allowPartWatched", "allowUpNext"]) {

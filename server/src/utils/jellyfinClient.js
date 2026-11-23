@@ -6,6 +6,12 @@ import { jellyfinAuthHeaders, jellyfinCredential } from "./jellyfinAuth.js";
 import { canonicalPlayedDateIso } from "./watchSyncPolicy.js";
 import { traceLog } from "./logVerbose.js";
 import { ratingSnapshotPage } from "./ratingSnapshotSafety.js";
+import {
+  filterAuthorizedTargetItems,
+  getProviderLibrarySelection,
+  registerLibrarySelectionInvalidator,
+  resolveItemLibraryMembership,
+} from "./librarySelection.js";
 function trimTrailingSlash(value = "") {
   return String(value).replace(/\/+$/, "");
 }
@@ -84,28 +90,52 @@ function nativeJellyfinItems(media = {}) {
   return nativeProviderItemIds(media, "jellyfin").map((Id) => ({ Id }));
 }
 
-async function findJellyfinItemsForMutation(config, media = {}) {
-  const direct = nativeJellyfinItems(media);
-  if (direct.length) return direct;
-  const cache = media?.restoreLookupCache;
-  const items = cache && typeof cache.resolve === "function"
-    ? await cache.resolve(
-      restoreLookupKey("jellyfin", config, media),
-      media,
-      () => findJellyfinItems(config, media),
-    )
-    : await findJellyfinItems(config, media);
-  if (items?.length || media.type !== "episode" || media.__identityRetry) return items || [];
+function jellyfinLibraryEnforced(config = {}) {
+  return Boolean(config?.libraryMonitoringEnforced || Array.isArray(config?.monitoredLibraryIds));
+}
 
-  // A cached series episode list can predate an item added or reindexed in
-  // Jellyfin. Refresh once on an exact episode miss before reporting not_found.
-  traceLog("Jellyfin episode lookup missed; refreshing the cached series index", {
-    title: media.title,
-    season: media.season,
-    episode: media.episode,
-  });
-  invalidateJellyfinSeriesIdentity(config, media);
-  return findJellyfinItemsForMutation(config, { ...media, __identityRetry: true });
+function effectiveJellyfinLibraryIds(config = {}, requestedLibraryIds = null) {
+  if (!jellyfinLibraryEnforced(config)) return requestedLibraryIds;
+  const monitored = getProviderLibrarySelection(config, "jellyfin").selectedIds;
+  if (!monitored.length) return [];
+  if (Array.isArray(requestedLibraryIds)) {
+    if (!requestedLibraryIds.length) return [];
+    const allowed = new Set(monitored.map(String));
+    return requestedLibraryIds.map(String).filter((id) => allowed.has(id));
+  }
+  return monitored;
+}
+
+async function findJellyfinItemsForMutation(config, media = {}) {
+  if (jellyfinLibraryEnforced(config) && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+    return [];
+  }
+  const direct = nativeJellyfinItems(media);
+  let items = direct;
+  if (!items.length) {
+    const cache = media?.restoreLookupCache;
+    items = cache && typeof cache.resolve === "function"
+      ? await cache.resolve(
+        restoreLookupKey("jellyfin", config, media),
+        media,
+        () => findJellyfinItems(config, media),
+      )
+      : await findJellyfinItems(config, media);
+    if (!items?.length && media.type === "episode" && !media.__identityRetry) {
+      // A cached series episode list can predate an item added or reindexed in
+      // Jellyfin. Refresh once on an exact episode miss before reporting not_found.
+      traceLog("Jellyfin episode lookup missed; refreshing the cached series index", {
+        title: media.title,
+        season: media.season,
+        episode: media.episode,
+      });
+      invalidateJellyfinSeriesIdentity(config, media);
+      items = await findJellyfinItemsForMutation(config, { ...media, __identityRetry: true });
+    }
+  }
+  if (!items?.length || !jellyfinLibraryEnforced(config)) return items || [];
+  const { allowed } = await filterAuthorizedTargetItems("jellyfin", config, items, { lane: media?.lane || "sync" });
+  return allowed;
 }
 
 function noMatchingLibraryItem(platform, media = {}) {
@@ -349,6 +379,12 @@ export function __resetJellyfinSeriesCache() {
   jellyfinCacheNow = () => Date.now();
 }
 
+registerLibrarySelectionInvalidator(({ provider }) => {
+  if (!provider || provider === "jellyfin") {
+    jellyfinSeriesCache.clear();
+  }
+});
+
 export function __setJellyfinSeriesCacheNow(fn) {
   jellyfinCacheNow = typeof fn === "function" ? fn : () => Date.now();
 }
@@ -487,7 +523,11 @@ export async function findJellyfinItems(config, media) {
 
 export async function markJellyfinPlayed(config, media) {
   try {
-    requireJellyfinConfig(config); media = await prepareEpisodeOrderTarget(media,"jellyfin",config,"watched");
+    requireJellyfinConfig(config);
+    if (jellyfinLibraryEnforced(config) && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+      return { platform: "jellyfin", status: "skipped", detail: "No monitored Jellyfin libraries selected" };
+    }
+    media = await prepareEpisodeOrderTarget(media,"jellyfin",config,"watched");
 
     const items = await findJellyfinItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -549,7 +589,11 @@ export async function markJellyfinPlayed(config, media) {
 
 export async function markJellyfinUnplayed(config, media) {
   try {
-    requireJellyfinConfig(config); media = await prepareEpisodeOrderTarget(media,"jellyfin",config,"unwatched");
+    requireJellyfinConfig(config);
+    if (jellyfinLibraryEnforced(config) && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+      return { platform: "jellyfin", status: "skipped", detail: "No monitored Jellyfin libraries selected" };
+    }
+    media = await prepareEpisodeOrderTarget(media,"jellyfin",config,"unwatched");
 
     const items = await findJellyfinItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -594,6 +638,9 @@ export async function markJellyfinUnplayed(config, media) {
 export async function setJellyfinProgress(config, media) {
   try {
     requireJellyfinConfig(config);
+    if (jellyfinLibraryEnforced(config) && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+      return { platform: "jellyfin", status: "skipped", detail: "No monitored Jellyfin libraries selected" };
+    }
 
     const items = await findJellyfinItemsForMutation(config, media);
     if (!items || items.length === 0) {
@@ -655,6 +702,14 @@ export async function updateJellyfinUserData(config, itemId, userData = {}, { la
   if (!userData || typeof userData !== "object" || Array.isArray(userData) || !Object.keys(userData).length) {
     return { platform: "jellyfin", status: "skipped", detail: "No Jellyfin user data fields supplied", itemId: id };
   }
+  // Same library gate as the other by-id writers: the Up Next rail's date-only
+  // update must not reach an item outside the monitored libraries.
+  if (jellyfinLibraryEnforced(config)) {
+    const decision = await resolveItemLibraryMembership("jellyfin", config, { Id: id }, { lane });
+    if (!decision.allowed) {
+      return { platform: "jellyfin", status: "skipped", detail: decision.reason || "Jellyfin item is outside monitored libraries", itemId: id };
+    }
+  }
 
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${encodeURIComponent(config.userId)}/Items/${encodeURIComponent(id)}/UserData`);
   const response = await fetchWithTimeout(url, {
@@ -708,6 +763,12 @@ export async function fetchJellyfinSeriesEpisodes(config, media) {
 export async function markJellyfinUnplayedById(config, itemId, { lane = "sync" } = {}) {
   requireJellyfinConfig(config);
   if (!itemId) return { platform: "jellyfin", status: "not_found" };
+  if (jellyfinLibraryEnforced(config)) {
+    const decision = await resolveItemLibraryMembership("jellyfin", config, { Id: itemId }, { lane });
+    if (!decision.allowed) {
+      return { platform: "jellyfin", status: "skipped", detail: decision.reason || "Jellyfin item is outside monitored libraries" };
+    }
+  }
 
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${config.userId}/PlayedItems/${itemId}`);
   const response = await fetchWithTimeout(url, {
@@ -729,6 +790,13 @@ export async function markJellyfinUnplayedById(config, itemId, { lane = "sync" }
 export async function hideJellyfinFromResume(config, itemId, { lane = "interactive" } = {}) {
   requireJellyfinConfig(config);
   if (!itemId) return { platform: "jellyfin", status: "not_found" };
+  if (jellyfinLibraryEnforced(config)) {
+    if (!getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+      return { platform: "jellyfin", status: "skipped", detail: "No monitored Jellyfin libraries selected" };
+    }
+    const decision = await resolveItemLibraryMembership("jellyfin", config, { Id: String(itemId) }, { lane });
+    if (!decision.allowed) return { platform: "jellyfin", status: "not_found", itemId: String(itemId) };
+  }
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${encodeURIComponent(config.userId)}/Items/${encodeURIComponent(itemId)}`);
   const response = await fetchWithTimeout(url, { headers: authHeaders(config), lane });
   if (response.status === 404) return { platform: "jellyfin", status: "not_found", itemId: String(itemId) };
@@ -765,10 +833,12 @@ function buildJellyfinWatchedItemsUrl(config, { limit = 0, parentId = "" } = {})
 // inside the outbound timeout; a single unpaged request timed out on big libraries.
 export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds, isCancelled } = {}) {
   requireJellyfinConfig(config);
-  const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
+  const scopedIds = effectiveJellyfinLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   const items = [];
   for (const parentId of parents) {
-    items.push(...await fetchPagedFeed(
+    const page = await fetchPagedFeed(
       config,
       (start, pageSize) => {
         const url = buildJellyfinWatchedItemsUrl(config, { parentId, limit });
@@ -778,7 +848,8 @@ export async function fetchJellyfinWatchedItems(config, { limit = 0, libraryIds,
       },
       limit,
       { pageSize: 500, isCancelled, completeScan: true },
-    ));
+    );
+    items.push(...(parentId ? page.map((item) => ({ ...item, __queryLibraryId: String(parentId) })) : page));
   }
   return items;
 }
@@ -802,7 +873,9 @@ function buildJellyfinLibraryItemsUrl(config, { parentId = "" } = {}) {
 // Jellyfin even when Plembfin already knows that the same episode was watched.
 export async function fetchJellyfinLibraryItems(config, { limit = 0, libraryIds } = {}) {
   requireJellyfinConfig(config);
-  const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
+  const scopedIds = effectiveJellyfinLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   const items = [];
   for (const parentId of parents) {
     items.push(...await fetchPagedFeed(
@@ -820,25 +893,36 @@ export async function fetchJellyfinLibraryItems(config, { limit = 0, libraryIds 
   return items;
 }
 
-// User-visible libraries (views) with their stable ids, for sync scope selection.
+// User-visible video-capable libraries (views) with their stable ids.
+// Includes movies, tvshows, homevideos, musicvideos, and mixed libraries.
 export async function listJellyfinLibraries(config) {
   requireJellyfinConfig(config);
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const url = new URL(`${baseUrl}/Users/${config.userId}/Views`);
   const data = await fetchJson(url, config);
+  const excluded = new Set(["music", "books", "audiobooks", "photos", "playlists", "livetv", "boxsets", "folders", "trailers"]);
   return (data?.Items || [])
-    .filter((item) => ["movies", "tvshows"].includes(String(item.CollectionType || "").toLowerCase()))
-    .map((item) => ({
-      id: String(item.Id),
-      name: String(item.Name || item.Id),
-      type: String(item.CollectionType || "").toLowerCase() === "movies" ? "movie" : "show",
-    }));
+    .filter((item) => {
+      const col = String(item.CollectionType || "").trim().toLowerCase();
+      return Boolean(item?.Id) && (!col || !excluded.has(col));
+    })
+    .map((item) => {
+      const col = String(item.CollectionType || "").trim().toLowerCase();
+      return {
+        id: String(item.Id),
+        name: String(item.Name || item.Id),
+        type: col === "movies" ? "movie" : col === "tvshows" ? "show" : (col || "mixed"),
+        collectionType: col,
+      };
+    });
 }
 
 // Cheap watched-item count via TotalRecordCount, for plan staleness checks.
 export async function countJellyfinWatchedItems(config, { libraryIds } = {}) {
   requireJellyfinConfig(config);
-  const parents = Array.isArray(libraryIds) && libraryIds.length ? libraryIds : [""];
+  const scopedIds = effectiveJellyfinLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return 0;
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   let total = 0;
   for (const parentId of parents) {
     const url = buildJellyfinWatchedItemsUrl(config, { limit: 1, parentId });
@@ -850,6 +934,8 @@ export async function countJellyfinWatchedItems(config, { libraryIds } = {}) {
 
 export async function fetchJellyfinResumableItems(config, { limit = 0 } = {}) {
   requireJellyfinConfig(config);
+  const enforced = jellyfinLibraryEnforced(config);
+  if (enforced && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
   // The Resume endpoint is what Jellyfin's own Continue Watching reads. The
   // generic Items?Filters=IsResumable query hides a merged episode's
@@ -877,23 +963,28 @@ export async function fetchJellyfinResumableItems(config, { limit = 0 } = {}) {
     url.searchParams.set("Limit", String(pageSize));
     return url;
   };
+  const filterIfEnforced = async (items) => (
+    enforced ? (await filterAuthorizedTargetItems("jellyfin", config, items, { lane: "sync" })).allowed : items
+  );
   try {
     const native = await fetchPagedFeed(config, buildResumeUrl, limit);
-    if (native.length) return native;
+    if (native.length) return filterIfEnforced(native);
     // Emby's Resume endpoint can answer an empty 200 while IsResumable lists
     // real part-watches (docs/decisions.md); do not trust an empty answer.
-    return await fetchPagedFeed(config, buildLegacyResumeUrl, limit);
+    return filterIfEnforced(await fetchPagedFeed(config, buildLegacyResumeUrl, limit));
   } catch (error) {
     // Only a missing route falls back; a real failure stays visible.
     if (Number(error?.status) !== 404) throw error;
-    return fetchPagedFeed(config, buildLegacyResumeUrl, limit);
+    return filterIfEnforced(await fetchPagedFeed(config, buildLegacyResumeUrl, limit));
   }
 }
 
 export async function fetchJellyfinNextUpItems(config, { limit = 0 } = {}) {
   requireJellyfinConfig(config);
+  const enforced = jellyfinLibraryEnforced(config);
+  if (enforced && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
-  return fetchPagedFeed(config, (start, pageSize) => {
+  const items = await fetchPagedFeed(config, (start, pageSize) => {
     const url = new URL(`${baseUrl}/Shows/NextUp`);
     url.searchParams.set("UserId", config.userId);
     url.searchParams.set("Fields", "ProviderIds,MediaSources");
@@ -903,6 +994,7 @@ export async function fetchJellyfinNextUpItems(config, { limit = 0 } = {}) {
     url.searchParams.set("Limit", String(pageSize));
     return url;
   }, limit);
+  return enforced ? (await filterAuthorizedTargetItems("jellyfin", config, items, { lane: "sync" })).allowed : items;
 }
 
 // Runtime for an item whose native id is already known; see the Emby twin.
@@ -930,15 +1022,15 @@ function jellyfinProviderIds(item = {}) {
   };
 }
 
-function jellyfinRatingRecord(item = {}) {
+function jellyfinRatingRecord(item = {}, fallbackSeriesIds = null) {
   const type = String(item.Type || item.type || "").toLowerCase();
   const isEpisode = type === "episode";
   const isShow = type === "series";
   const providerIds = jellyfinProviderIds(item);
   const seriesIds = isEpisode ? {
-    imdb: item.SeriesProviderIds?.Imdb || item.SeriesProviderIds?.imdb || "",
-    tmdb: item.SeriesProviderIds?.Tmdb || item.SeriesProviderIds?.tmdb || "",
-    tvdb: item.SeriesProviderIds?.Tvdb || item.SeriesProviderIds?.tvdb || "",
+    imdb: item.SeriesProviderIds?.Imdb || item.SeriesProviderIds?.imdb || fallbackSeriesIds?.imdb || "",
+    tmdb: item.SeriesProviderIds?.Tmdb || item.SeriesProviderIds?.tmdb || fallbackSeriesIds?.tmdb || "",
+    tvdb: item.SeriesProviderIds?.Tvdb || item.SeriesProviderIds?.tvdb || fallbackSeriesIds?.tvdb || "",
   } : providerIds;
   return {
     media: {
@@ -966,51 +1058,88 @@ function jellyfinRatingRecord(item = {}) {
   };
 }
 
-export async function fetchJellyfinPersonalRatingSnapshot(config) {
+export async function fetchJellyfinPersonalRatingSnapshot(config, { libraryIds } = {}) {
   requireJellyfinConfig(config);
+  const scopedIds = effectiveJellyfinLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
+  const parents = Array.isArray(scopedIds) && scopedIds.length ? scopedIds : [""];
   const records = [];
+  const ratedEpisodes = [];
+  const seriesIdsById = new Map();
+  const seenItemIds = new Set();
   const pageSize = 200;
-  for (let start = 0; start <= 10_000_000; start += pageSize) {
-    const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${config.userId}/Items`);
-    url.searchParams.set("Recursive", "true");
-    url.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
-    url.searchParams.set("Fields", "ProviderIds");
-    url.searchParams.set("EnableUserData", "true");
-    url.searchParams.set("StartIndex", String(start));
-    url.searchParams.set("Limit", String(pageSize));
-    const response = await fetchWithTimeout(url, { headers: authHeaders(config), lane: "sync" });
-    if (!response.ok) {
-      const error = new Error(`Jellyfin rating scan failed with status ${response.status}`);
-      error.status = response.status;
-      throw error;
+  for (const parentId of parents) {
+    let completed = false;
+    for (let start = 0; start <= 10_000_000; start += pageSize) {
+      const url = new URL(`${trimTrailingSlash(config.baseUrl)}/Users/${config.userId}/Items`);
+      url.searchParams.set("Recursive", "true");
+      url.searchParams.set("IncludeItemTypes", "Movie,Series,Episode");
+      url.searchParams.set("Fields", "ProviderIds");
+      url.searchParams.set("EnableUserData", "true");
+      if (parentId) url.searchParams.set("ParentId", String(parentId));
+      url.searchParams.set("StartIndex", String(start));
+      url.searchParams.set("Limit", String(pageSize));
+      const response = await fetchWithTimeout(url, { headers: authHeaders(config), lane: "sync" });
+      if (!response.ok) {
+        const error = new Error(`Jellyfin rating scan failed with status ${response.status}`);
+        error.status = response.status;
+        throw error;
+      }
+      const data = await response.json();
+      const page = ratingSnapshotPage(data, start, pageSize, "Jellyfin");
+      for (const item of page) {
+        const id = String(item.Id || "");
+        const type = String(item.Type || item.type || "").toLowerCase();
+        if (type === "series" && id) seriesIdsById.set(id, jellyfinProviderIds(item));
+        if (id && seenItemIds.has(id)) continue;
+        if (id) seenItemIds.add(id);
+        const rating = Number(item.UserData?.Rating);
+        if (!Number.isFinite(rating) || rating < 1 || rating > 10) continue;
+        const rounded = Math.round(rating);
+        if (!Number.isInteger(rounded) || rounded < 1 || rounded > 10) continue;
+        if (type === "episode") {
+          ratedEpisodes.push({ item, rating: rounded });
+        } else {
+          const record = jellyfinRatingRecord(item);
+          record.rating = rounded;
+          records.push(record);
+        }
+      }
+      const total = Number(data?.TotalRecordCount || 0);
+      if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) {
+        completed = true;
+        break;
+      }
     }
-    const data = await response.json();
-    const page = ratingSnapshotPage(data, start, pageSize, "Jellyfin");
-    for (const item of page) {
-      const rating = Number(item.UserData?.Rating);
-      if (!Number.isFinite(rating) || rating < 1 || rating > 10) continue;
-      const record = jellyfinRatingRecord(item);
-      record.rating = Math.round(rating);
-      if (Number.isInteger(record.rating) && record.rating >= 1 && record.rating <= 10) records.push(record);
-    }
-    const total = Number(data?.TotalRecordCount || 0);
-    if (!page.length || page.length < pageSize || (total > 0 && start + page.length >= total)) return records;
+    if (!completed) throw new Error("Jellyfin rating snapshot exceeded the pagination safety limit");
   }
-  throw new Error("Jellyfin rating snapshot exceeded the pagination safety limit");
+  for (const { item, rating } of ratedEpisodes) {
+    const record = jellyfinRatingRecord(item, seriesIdsById.get(String(item.SeriesId || "")) || null);
+    record.rating = rating;
+    records.push(record);
+  }
+  return records;
 }
 
 async function writeJellyfinPersonalRating(config, media, rating, { lane = "sync" } = {}) {
   requireJellyfinConfig(config);
+  if (jellyfinLibraryEnforced(config) && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
+    return { platform: "jellyfin", status: "skipped", detail: "No monitored Jellyfin libraries selected" };
+  }
+  const type = media.media_type || media.mediaType || media.type;
+  const hasEpisodeCoordsInTitle = /(?:\s*-\s*|\s+)S\d+E\d+/i.test(String(media.title || ""));
   const lookup = {
     ...media,
-    type: media.media_type || media.mediaType || media.type,
+    lane,
+    type,
+    ...(type === "episode" && media.show_title && !hasEpisodeCoordsInTitle ? { title: media.show_title } : {}),
     ids: {
       tmdb: media.show_tmdb_id || media.tmdb_id,
       tvdb: media.show_tvdb_id || media.tvdb_id,
       imdb: media.show_imdb_id || media.imdb_id,
     },
   };
-  const items = await findJellyfinItems(config, lookup);
+  const items = await findJellyfinItemsForMutation(config, lookup);
   if (!items?.length) return { platform: "jellyfin", status: "not_found" };
   let lastHttpStatus = 200;
   for (const item of items) {

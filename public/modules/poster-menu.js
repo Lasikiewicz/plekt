@@ -426,6 +426,15 @@ function buildDropdown(button) {
     const itemTitle = d.posterMenuUpNextTitle || d.posterMenuTitle || "Untitled";
     const showTitle = d.posterMenuUpNextShowTitle || (isEpisode ? d.posterMenuTitle : "");
     const providerItems = d.posterMenuUpNextProviderItems || "{}";
+    if (isEpisode && (d.posterMenuUpNextTmdbId || d.posterMenuUpNextTvdbId || d.posterMenuUpNextImdbId)) {
+      dropdown.appendChild(menuItem("", "Up Next options", {
+        upNextShowOptions: "1",
+        upNextShowTitle: showTitle,
+        upNextShowTmdbId: d.posterMenuUpNextTmdbId || "",
+        upNextShowTvdbId: d.posterMenuUpNextTvdbId || "",
+        upNextShowImdbId: d.posterMenuUpNextImdbId || "",
+      }));
+    }
     dropdown.appendChild(menuItem("", "Mark watched", {
       upNextMenuWatch: d.posterMenuUpNextWatch || d.posterMenuId || "",
       upNextMediaType: mediaType,

@@ -757,6 +757,8 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | Fix Match per-show TVDB/TMDB season and episode numbers, its preview confirmation and the Trakt second confirmation | `modules/show-season-source.js` |
 | Per-show episode order selection (Aired or any TVDB alternate order) and reviewed links to aired episodes on the show detail page | `modules/episode-order.js`; TV show rendering and its menu entry in `modules/media-detail-show.js` |
 | Episode-order history conflict review | `modules/episode-order-conflict.js`, loaded by `modules/manual-watch-review.js` |
+| Manual Watch review multi-select, inline watch date editing, per-item confirmation dialog, and shared sequential batch runner | `modules/manual-watch-review-bulk.js`, loaded by `modules/manual-watch-review.js` |
+| Explicit per-server library monitoring checklist (`Settings > Media Servers`) and persistent zero-library warning banner | `modules/library-monitoring.js`, loaded by `modules/settings-services.js` |
 | Season Posters tab in Edit Images (season list, per-season options) | `modules/season-posters-panel.js` |
 | Manual watched/unwatched actions | `modules/watch-action.js` |
 | Shared calendar/time picker (used by edit dialogs and mark-watched prompts) | `modules/calendar-picker.js` |

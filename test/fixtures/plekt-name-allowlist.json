@@ -3759,6 +3759,15 @@
         ]
       ]
     },
+    "public/modules/library-monitoring.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "document.dispatchEvent(new CustomEvent(\"plembfin:config-changed\"));",
+          1
+        ]
+      ]
+    },
     "public/modules/onboarding.js": {
       "reason": "internal",
       "lines": [
@@ -3969,6 +3978,15 @@
         ],
         [
           "if (platform.key === \"plembfin\") return platformIconMarkup(\"plembfin\", className, \"sync-activity-icon-set\");",
+          1
+        ]
+      ]
+    },
+    "public/modules/status-indicators.js": {
+      "reason": "internal",
+      "lines": [
+        [
+          "document.addEventListener(\"plembfin:config-changed\", () => {",
           1
         ]
       ]
@@ -6082,7 +6100,7 @@
       "reason": "internal",
       "lines": [
         [
-          "return crypto.pbkdf2Sync(String(value), \"plembfin-tvdb-token-cache-v1\", 100000, 32, \"sha256\").toString(\"hex\");",
+          "const fingerprint = crypto.pbkdf2Sync(key, \"plembfin-tvdb-token-cache-v1\", 100000, 32, \"sha256\").toString(\"hex\");",
           1
         ],
         [
@@ -8551,6 +8569,14 @@
         ],
         [
           "\"waitFor\": \"#local-plembfin-restore[open]\"",
+          1
+        ],
+        [
+          "\"plembfin:dashboard-compact:tv\": \"1\",",
+          1
+        ],
+        [
+          "\"plembfin:dashboard-compact:movie\": \"1\"",
           1
         ]
       ]
@@ -11085,6 +11111,10 @@
     "website/src/pages/index.astro": {
       "reason": "website",
       "lines": [
+        [
+          "{ title: \"Upgrade from Plembfin\", href: \"/docs/upgrading-from-plembfin/\" },",
+          1
+        ],
         [
           "data-dark-src=\"/assets/optimized/plembfin_header_logo_dark-376.webp\"",
           1

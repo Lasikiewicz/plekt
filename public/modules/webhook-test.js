@@ -178,8 +178,13 @@ function renderBody(view, { busy = "", error = "", provider = "emby" } = {}) {
   return `${html}${errorLine}`;
 }
 
+let activeWebhookTestClose = null;
+
 function openWebhookTestDialog(provider) {
   const name = providerLabel(provider);
+  if (typeof activeWebhookTestClose === "function") {
+    void activeWebhookTestClose({ cancelRemote: false });
+  }
   document.querySelector(".webhook-test-overlay")?.remove();
   const overlay = document.createElement("div");
   overlay.className = "edit-dialog-overlay settings-modal-overlay webhook-test-overlay";
@@ -213,15 +218,17 @@ function openWebhookTestDialog(provider) {
     clearInterval(tickTimer);
     pollTimer = tickTimer = null;
   };
-  const close = async () => {
+  const close = async ({ cancelRemote = true } = {}) => {
     stopTimers();
     overlay.remove();
     document.removeEventListener("keydown", onKey);
+    if (activeWebhookTestClose === close) activeWebhookTestClose = null;
     // Closing mid-test, on a result screen (passed, removed or timed out) or with the item still marked ends the session, same as Cancel, so reopening starts from the instructions.
-    if (view.status === "waiting" || view.status === "passed" || view.status === "timeout") {
+    if (cancelRemote && (view.status === "waiting" || view.status === "passed" || view.status === "timeout")) {
       await testApi("cancel", "POST").catch(() => null);
     }
   };
+  activeWebhookTestClose = close;
   const onKey = (event) => { if (event.key === "Escape") close(); };
   document.addEventListener("keydown", onKey);
 
@@ -235,6 +242,7 @@ function openWebhookTestDialog(provider) {
         try { apply(await testApi("status")); } catch (err) { render(err.message); }
       }, POLL_MS);
       tickTimer = setInterval(() => {
+        if (!overlay.isConnected) return stopTimers();
         const clock = body.querySelector("[data-webhook-test-clock]");
         if (clock && view.expiresAt) clock.textContent = formatClock(view.expiresAt - Date.now());
       }, TICK_MS);

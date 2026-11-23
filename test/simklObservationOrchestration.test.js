@@ -21,7 +21,7 @@ const { db } = await import("../server/src/db.js");
 const repo = await import("../server/src/utils/trackerConnectionRepo.js");
 const inbox = await import("../server/src/utils/trackers/simklObservations.js");
 const { syncSimklObservations } = await import("../server/src/utils/trackers/simklSync.js");
-const { saveMediaConfig, loadMediaConfig } = await import("../server/src/utils/configStore.js");
+const { saveMediaConfig, saveProviderLibraryMonitoring, loadMediaConfig } = await import("../server/src/utils/configStore.js");
 const { applyWatchedTransition } = await import("../server/src/utils/watchStateTransitions.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 const { setPlaystateForMediaIdentitySync } = await import("../server/src/utils/dataRepo.js");
@@ -56,6 +56,8 @@ test.beforeEach(async () => {
     emby: { disabled: false, baseUrl: "http://emby.invalid", apiKey: "test", userId: "test" },
     jellyfin: { disabled: false, baseUrl: "http://jellyfin.invalid", apiKey: "test", userId: "test" },
   });
+  saveProviderLibraryMonitoring("emby", { serverId: "emby-srv", selectedIds: ["emby-lib"] });
+  saveProviderLibraryMonitoring("jellyfin", { serverId: "jf-srv", selectedIds: ["jf-lib"] });
   connection = repo.saveTrackerConnection({ provider: "simkl", clientId: "test", remoteUserId: "isolated", accessToken: "test", refreshToken: "test", initialSyncMode: "import", accessTokenExpiresAt: Date.now() + 3600000 });
   inbox.persistSimklObservations(connection, { watched: [{ media, watchedAt: Date.parse(watchedAt), timestampProvenance: "observed" }], ratings: [], review: [], activities: { all: cursor }, cursor, complete: true, absenceReconciliation: false });
 });

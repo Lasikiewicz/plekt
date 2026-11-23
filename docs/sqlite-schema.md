@@ -10,6 +10,11 @@ until a later pass, and concurrent writes can grow the WAL again after a checkpo
 
 ## Table list
 
+The tenant media configuration stores Custom Up Next order, its fallback, and per-show
+overrides. Missing fields in older settings use default ordering and episode choice. Feed
+items retain their first observed timestamp across consecutive observations of the same
+identity. Mirror uses it to protect newly seen items.
+
 | Table | Purpose | Written by | Read by |
 | --- | --- | --- | --- |
 | `revoked_sessions` | Install-wide SHA-256 hashes of logged-out cookies with their original expiry; shared across tenant contexts and processes | logout (also prunes expired rows) | session verification |
@@ -27,6 +32,7 @@ until a later pass, and concurrent writes can grow the WAL again after a checkpo
 | `playstate` | Per-item watched/unwatched state for sync targets | sync orchestrator | sync orchestrator |
 | `manual_watch_reviews` | Provider watched flags awaiting an administrator date decision, plus source mismatch notices with separate dismiss handling | scheduled library sync, incoming episode mismatch checks, Manual Watch review page | Manual Watch review page |
 | `sync_history` | Permanent log of sync dispatch results, with `activity_group_key` for grouped movie/show activity and `activity_item_key` for latest-result selection per movie/episode | sync outcome changes | sync-history and sync-activity endpoints |
+
 | `runtime_state` | Single-row JSON blob - last cron time, force-sync state/log, `nowPlayingRefresh` signal | scheduler, force-sync, webhooks | dashboard polling |
 | `restore_reports` | A completed authoritative restore's full result and log, keyed by run id | restore job | restore status view, on request |
 | `cache_versions` | Monotone cross-process cache generations (`history` for canonical watch state, `progress` for resume positions, `discover` for changed TMDB feed snapshots, `up_next` for changed dashboard queue snapshots) | SQLite triggers and explicit invalidation | every web/worker process |
@@ -68,8 +74,8 @@ until a later pass, and concurrent writes can grow the WAL again after a checkpo
 | `personal_list_held_changes` | App-side mass removals or deletions held for confirmation | playlist pull engine | confirm/discard of held changes |
 | `loop_keys` | Loop-detection KV with TTL; expired rows deleted each tick by `pruneExpiredLoopKeys` | sync orchestrator | sync orchestrator |
 | `watch_audit_events` | Audit trail of source events and watch changes; source-event payloads older than 90 days are cleared each tick (summary columns kept), and routine source-event payloads are trimmed at write | webhook ingest (`routes/sync.js`) and watch transitions | audit views, debug details |
-| `poster_cache` | Cached artwork metadata (binaries in `data/media/`) | poster handler | poster resolution |
-| `tmdb_metadata_cache` | Movie details (pure TMDB) or TV show details (TVDB structure + TMDB extras merged), key `${mediaType}_${tmdbId}` (or `tv_tvdb_${tvdbId}` if no TMDB match). `status`, `original_language` (read by the Language choice of automatic playlists), poster and backdrop paths are also mirrored into their own columns, written on every cache write and backfilled from the stored blob on upgrade, so the TV Shows grid can read them without parsing a details blob that averages 64KB for a TV entry. The stored document keeps streaming availability only for the regions the detail page reads (GB and US) and drops the unread release-dates block, which is about 40% of the cache | tmdb-details handler | detail pages, prefetch |
+| `poster_cache` | Cached artwork metadata (binaries in `data/media/`). Indexed on `(media_key, variant, updated_at_ms)` and `(storage_path)` by migration 64, because every poster read looks a row up by one of them | poster handler | poster resolution |
+| `tmdb_metadata_cache` | Movie details (pure TMDB) or TV show details (TVDB structure + TMDB extras merged), key `${mediaType}_${tmdbId}` (or `tv_tvdb_${tvdbId}` if no TMDB match). `status`, `original_language` (read by the Language choice of automatic playlists), poster and backdrop paths are also mirrored into their own columns, written on every cache write and backfilled from the stored blob on upgrade, so the TV Shows grid can read them without parsing a details blob that averages 64KB for a TV entry. The stored document keeps streaming availability only for the regions the detail page reads (GB and US) and drops the unread release-dates block, which is about 40% of the cache. The table lives in `shared-metadata.db`; its TVDB id lookup uses the expression index `idx_tmdb_metadata_cache_tv_tvdb_id` (created when the shared database opens), and the query text in `tmdbGateway.js` must match that expression exactly | tmdb-details handler | detail pages, prefetch |
 | `tmdb_search_cache` | TMDB search results and versioned Discover feed snapshots | tmdb-search/discover handlers | TMDB search and Discover |
 | `recommendation_exclusions` | Movies and TV shows excluded from the personalized Discover recommendation rail | Discover card action | Discover recommendation filtering |
 | `tmdb_season_cache` | TMDB season episode lists, read only for shows whose season source is TMDB (`getTmdbSeasonEpisodes` in `tmdbGateway.js`); TVDB seasons stay in `tvdb_season_cache` | `getTmdbSeason`, `getCachedTmdbSeason` | 2 days |
@@ -83,6 +89,11 @@ until a later pass, and concurrent writes can grow the WAL again after a checkpo
 | `audit_log` | Security-relevant event log (login, credential change, rotation) | `writeAuditLog()` in `db.js` | ops/debugging only |
 | `diagnostic_log` | Captured console output, bounded ring buffer of 20,000 rows | `diagnosticLogger.js` | Settings → Logs panel |
 | `schema_migrations` | Ordered migration ledger (`id`, `applied_at`) | `db.js` at startup | startup only |
+
+Sync Activity retains rows and operational metadata. The scheduler removes recognized raw
+request and response body fields from debug JSON after 90 days, in per-user batches; malformed
+JSON and rows without a known creation time are left intact. Old raw-body searches and debug
+exports will no longer include trimmed fields. IDs, retry history, and dismissal decisions remain.
 
 ## Cache versions and derived caches
 

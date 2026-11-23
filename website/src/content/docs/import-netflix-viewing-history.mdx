@@ -1,0 +1,43 @@
+---
+title: Import your Netflix viewing history
+seoTitle: "Import Your Netflix Viewing History into Plex, Jellyfin, Emby or Trakt"
+description: Download your Netflix viewing activity CSV, import it into Plekt, review the matches, and send it to Trakt, Simkl or your media servers.
+category: Guides
+order: 4.2
+sourceVersion: "2.3.0"
+sourcePaths:
+  - public/modules/netflix-import.js
+  - server/src/routes/netflixImport.js
+  - server/src/utils/netflixImport.js
+  - server/src/utils/netflixCsv.js
+screenshots: []
+---
+
+Bring selected Netflix watches into your Plekt history with their original dates. The import previews matches before making changes and creates a local watch-history backup before importing.
+
+## Download your viewing activity
+
+1. On a computer, sign in to Netflix and open **Account > Security & privacy > Download your personal information**.
+2. Request the download. Netflix emails a link when the ZIP is ready; this can take a few days.
+3. Extract the ZIP and find `CONTENT_INTERACTION/ViewingActivity.csv`.
+
+## Preview the import in Plekt
+
+1. Sign in as the Plekt user whose history you are importing. Open [Settings > Connections > One Time Imports](/docs/settings/connections/#one-time-imports) and expand **Netflix**.
+2. Choose the extracted CSV file. If it contains multiple profiles, select the profiles to import.
+3. Select **Preview import** and wait for matching to finish.
+
+## Review matches and import
+
+Review the preview's suggested titles and episodes. Choose matches for ambiguous rows or skip rows you cannot identify. This review happens in the Netflix import preview; it is separate from [Manual Watch review](/docs/manual-watch-review/). Select **Import matched history** and confirm when the preview is ready.
+
+## Where the history goes
+
+Plekt adds the selected watches to the current user's local history and queues outbound sync to eligible connected Plex, Jellyfin, Emby, Trakt and Simkl destinations. Delivery depends on your connections and sync settings; inspect [Sync Activity](/docs/sync-tools/) for results.
+
+## Limits
+
+- Upload the extracted CSV, not the ZIP; the CSV limit is 12 MB.
+- For the personal-information export, activity for a profile, title and day must total at least five minutes. Other profiles and shorter activity are excluded.
+- Titles or episodes without enough information to match may need your choice or must be skipped. Existing imported watches can be skipped as duplicates.
+- The export records viewing history, not Netflix ratings or a live Netflix connection. Destination availability and matching affect what can be delivered.

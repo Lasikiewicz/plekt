@@ -1,4 +1,6 @@
-import { isSameOriginBrowserRequest, requireAdmin } from "../utils/auth.js";
+import crypto from "node:crypto";
+import { isSameOriginBrowserRequest, requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
+import { createPerUserState } from "../utils/perUserState.js";
 import { writeAuditLog } from "../db.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { readJson } from "../utils/requestBody.js";
@@ -14,6 +16,16 @@ import { handleSimklAuth } from "./simklAuth.js";
 import { compareTrackerWithPlekt, getTrackerFullSync, startTrackerFullSync, trackerFullSyncDirections } from "../utils/trackers/fullSync.js";
 import { isTrackerAuthProvider } from "../utils/trackers/authProviders.js";
 import { cancelSimklFullSync, kickSimklFullSyncRuns } from "../utils/trackers/simklFullSyncRunner.js";
+
+const flowOwnerByUser = createPerUserState(() => new Map());
+function trackerSessionFingerprint(req) {
+  const principal = resolveAdminPrincipal(req);
+  if (!principal) return "";
+  return crypto
+    .createHash("sha256")
+    .update(`${principal.username || ""}:${principal.role || ""}:${principal.activeUser || "admin"}`)
+    .digest("base64url");
+}
 
 const fullSyncError = (res, error) => {
   if (!error.code) throw error;
@@ -80,6 +92,8 @@ export async function handleTrackerAuth(req, res, path) {
       expiresAt: Date.now() + Number(device.expires_in || 600) * 1000, initialSyncMode: body.initialSyncMode,
       preferEarlierWatchedDate: body.preferEarlierWatchedDate,
     });
+    const fp = trackerSessionFingerprint(req);
+    if (fp) flowOwnerByUser().set(flow.id, fp);
     writeAuditLog("tracker-auth.trakt.started", { ip: req.ip || req.socket?.remoteAddress, detail: { flowId: flow.id } });
     return sendJson(res, { flowId: flow.id, userCode: flow.userCode, verificationUrl: flow.verificationUrl, intervalSeconds: flow.intervalSeconds, expiresAt: flow.expiresAt });
   }
@@ -89,6 +103,10 @@ export async function handleTrackerAuth(req, res, path) {
   if (req.method !== "GET") return methodNotAllowed(res);
   const flow = getTrackerAuthFlow(match[1], { includeCredentials: true });
   if (!flow || flow.provider !== provider) return sendJson(res, { error: "Authentication flow not found" }, 404);
+  const expectedFp = flowOwnerByUser().get(flow.id);
+  if (expectedFp && expectedFp !== trackerSessionFingerprint(req)) {
+    return sendJson(res, { error: "Authentication flow belongs to another session" }, 403);
+  }
   if (flow.expiresAt <= Date.now() || flow.status === "expired" || (flow.status === "pending" && flow.expectedConnectionId == null)) {
     markTrackerAuthFlow(flow.id, "expired");
     return sendJson(res, { status: "expired" }, 410);

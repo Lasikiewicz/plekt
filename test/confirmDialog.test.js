@@ -28,7 +28,8 @@ function dialogDocument() {
         if (!event.stopped) entry.callback(event);
       }
     },
-    createElement() {
+    createElement(tag) {
+      if (tag === "p") return { setAttribute() {}, focus() { doc.activeElement = this; } };
       const overlay = {
         removed: false,
         handlers: {},
@@ -42,6 +43,8 @@ function dialogDocument() {
         focus() { doc.activeElement = this; },
       });
       overlay.confirm = button();
+      overlay.confirm.parentElement = { before(status) { overlay.status = status; } };
+      overlay.confirm.remove = () => { overlay.confirm.removed = true; };
       overlay.cancel = button();
       overlay.season = Object.assign(button(), { dataset: { scope: "season" } });
       overlay.show = Object.assign(button(), { dataset: { scope: "show" } });
@@ -65,6 +68,28 @@ test("destructive confirmation focuses Cancel and Escape cancels it", async () =
     assert.equal(await result, false);
     assert.equal(overlay.removed, true);
     assert.equal(underlyingClosed, false);
+  } finally { globalThis.document = previous; }
+});
+
+test("a confirmation with an async action stays open through progress and results", async () => {
+  const previous = globalThis.document;
+  const doc = globalThis.document = dialogDocument();
+  try {
+    let complete;
+    const work = new Promise((resolve) => { complete = resolve; });
+    const result = openConfirmDialog({ runOnConfirm: () => work, pendingLabel: "Retrying…" });
+    const overlay = doc.overlays[0];
+    const click = overlay.confirm.click();
+    assert.equal(overlay.status.textContent, "Retrying…");
+    doc.dispatchKey("Escape");
+    assert.equal(overlay.removed, false);
+    complete("Trakt: Connection timed out");
+    await click;
+    assert.equal(overlay.status.textContent, "Trakt: Connection timed out");
+    assert.equal(overlay.removed, false);
+    assert.equal(overlay.cancel.textContent, "Close");
+    overlay.cancel.click();
+    assert.equal(await result, true);
   } finally { globalThis.document = previous; }
 });
 

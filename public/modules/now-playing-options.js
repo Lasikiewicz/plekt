@@ -21,6 +21,11 @@ export function nowPlayingOptions(config = state.savedConfig) {
   };
 }
 
+export function upNextSortOption(config = state.savedConfig) {
+  const sort = String(config?.upNextSync?.sort || "").trim();
+  return ["newly_aired", "oldest_unwatched", "closest_to_finishing", "custom"].includes(sort) ? sort : "recently_watched";
+}
+
 async function savePanelOptions(options, section) {
   const response = await fetch("/api/config", {
     method: "POST",
@@ -44,6 +49,8 @@ if (hasDocument) {
     const errorLine = menu.querySelector(".now-playing-option-error");
     const control = (key) => menu.querySelector(`[data-now-playing-option="${key}"]`);
     const syncControl = menu.querySelector('[data-up-next-sync-option="enabled"]');
+    const sortControl = menu.querySelector('[data-up-next-sort-option="sort"]');
+    const partWatchedControl = menu.querySelector('[data-up-next-sort-option="partWatchedFirst"]');
 
     const showError = (message) => {
       if (!errorLine) return;
@@ -55,6 +62,8 @@ if (hasDocument) {
       const options = nowPlayingOptions();
       for (const key of NOW_PLAYING_FLAGS) control(key).checked = options[key];
       if (syncControl) syncControl.checked = state.savedConfig?.upNextSync?.enabled !== false;
+      if (sortControl && document.activeElement !== sortControl) sortControl.value = upNextSortOption();
+      if (partWatchedControl) partWatchedControl.checked = state.savedConfig?.upNextSync?.partWatchedFirst !== false;
       // Do not overwrite a number the user is still typing.
       if (document.activeElement !== control("itemCount")) control("itemCount").value = String(options.itemCount);
     };
@@ -111,6 +120,9 @@ if (hasDocument) {
           pending.confirmed = saved[key] ?? changes[key];
           if (pending.revision === revision) {
             state.savedConfig = { ...state.savedConfig, [section]: { ...state.savedConfig?.[section], [key]: pending.confirmed } };
+            if (section === "upNextSync" && key !== "enabled") {
+              document.dispatchEvent(new CustomEvent("plekt:up-next-order-saved"));
+            }
           }
         } catch (error) {
           if (!sessionIsCurrent()) return;
@@ -142,6 +154,16 @@ if (hasDocument) {
         syncControl.disabled = false;
       }
     });
+    sortControl?.addEventListener("change", async (event) => {
+      const sort = upNextSortOption({ upNextSync: { sort: event.target.value } });
+      sortControl.disabled = true;
+      try {
+        await commit({ sort }, "upNextSync");
+      } finally {
+        sortControl.disabled = false;
+      }
+    });
+    partWatchedControl?.addEventListener("change", (event) => commit({ partWatchedFirst: event.target.checked }, "upNextSync"));
     document.addEventListener("click", (event) => {
       if (menu.classList.contains("hidden")) return;
       if (menu.contains(event.target) || button.contains(event.target)) return;

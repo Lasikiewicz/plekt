@@ -1,7 +1,13 @@
 # Emby Integration
 
+Opt-in Up Next Mirror can reorder eligible visible Continue Watching episodes and hide
+previously observed items that Plekt actively excludes. The settings preview lists the
+proposed changes. A hidden item can return when played again. See [Up Next](dashboard.md#up-next).
+
 How Plekt talks to Emby: webhooks in, API calls out, plus scheduled catch-up
 polling. Read [architecture.md](architecture.md) first for the big picture.
+What syncs with Emby, in which direction and how you sign in, is in the
+[support matrix](support-matrix.md#emby).
 
 ## Files
 
@@ -40,6 +46,14 @@ session/item/user, and explicit played/unplayed changes. Delivery is ordered and
 with a five-second timeout, no retry and at most 100 pending events. Plekt's scheduled sync
 catches up missed activity. Delivery failure logs exclude the webhook address and token.
 
+Starting with plugin v0.1.0.2, payloads also include an optional versioned `LibraryContext`
+object (resolved from Emby's `ILibraryManager.GetCollectionFolders` with short-lived caching and
+invalidation on library changes) plus `Server.Id`. Plekt validates that context against the
+configured server identity and selected libraries as a fast path, while keeping selection policy
+centralized in Plekt (**Settings → Media servers**). Older plugin builds and Emby's built-in
+webhook continue to work with identical enforcement via Plekt's `/Items/{id}/Ancestors` API
+fallback, and older Plekt builds safely ignore the extra fields.
+
 The built-in Emby webhook remains a supported alternative requiring no Plekt plugin (see
 [Inbound: webhooks](#inbound-webhooks)).
 
@@ -60,6 +74,8 @@ All three are required when Emby is enabled in manual mode (`validateConfig`). O
 mode is active: completing account setup removes the stored manual key, while saving
 manual setup switches Emby back to manual mode. Requests authenticate with the
 `X-Emby-Token` header.
+
+Choose the Emby libraries Plekt should monitor in [Settings → Media servers](settings.md#media-servers-monitored-libraries).
 
 ## Watchlist note
 
@@ -183,7 +199,7 @@ platform that reported them.
 | `fetchEmbySeriesEpisodes` / `fetchEmbyEpisodes` | Episode lists for season-level operations |
 | `fetchEmbyWatchedItems` / `fetchEmbyResumableItems` / `fetchEmbyNextUpItems` | Watched, resume, and Next Up feeds for catch-up sync |
 | `fetchEmbyPersonalRatingSnapshot` | Reads rated movies, series, and episodes for the isolated personal-rating snapshot worker |
-| `setEmbyPersonalRating` / `clearEmbyPersonalRating` | Writes or clears a personal rating without changing played state or resume progress. **Known defect:** Emby 4.9.5.0 returns 204 but does not store the numeric `Rating`, so writes report success without effect and the snapshot reads no ratings (see `plan/active/personal-rating-sync/step4-emby-readback.md`) |
+| `setEmbyPersonalRating` / `clearEmbyPersonalRating` | Writes or clears a personal rating without changing played state or resume progress. **Known defect:** Emby 4.9.5.0 and 4.10.1.0 accept the write without storing the numeric `Rating`, so Plekt reads the item back and fails the write instead of reporting success, and the snapshot reads no ratings (see `plan/archive/personal-rating-sync/step4-emby-readback.md`) |
 
 ## Artwork
 

@@ -2,13 +2,14 @@ import { db } from "../db.js";
 import { episodeOrderDisplay } from "./episodeOrder.js";
 import { yieldToEventLoop } from "./eventLoop.js";
 import { getCachedShows, loadTrackedEpisodeRows, queryShowDetail, showTitleFrom } from "./dataRepo.js";
-import { orderDetails as getCachedTmdbDetails, orderSeason as getCachedTmdbSeason } from "./episodeOrderUpNext.js";
+import { createUpNextMetadataCache, orderDetails as getCachedTmdbDetails, orderDisplayMap, orderSeason as getCachedTmdbSeason } from "./episodeOrderUpNext.js";
 import { getCanonicalPosterUrl, getCanonicalSeasonPosterUrls } from "./mediaArtwork.js";
 import { minResumePositionMs, watchedThresholdPercent } from "./tuning.js";
 import {
   mergeUpNextCandidates,
   normalizeUpNextCandidate,
   sortUpNextItems,
+  upNextOrderKey,
   upNextIdentityAliases,
   upNextUpdateTime,
 } from "./upNextIdentity.js";
@@ -716,14 +717,25 @@ function episodeCoordinateMatches(left = {}, right = {}) {
   return Boolean(leftCoordinate && leftCoordinate === rightCoordinate && episodeShowIdentityMatches(left, right));
 }
 
-function matchesAuthoritativeNextEpisode(candidate, authoritativeCandidates = []) {
+function matchesAuthoritativeNextEpisode(candidate, authoritativeCandidates = [], missingSeasonMarkers = []) {
   if (candidate?.media_type !== "episode") return true;
   const sameShow = authoritativeCandidates.filter((authoritative) => episodeShowIdentityMatches(candidate, authoritative));
   // If the local detail page could not resolve this show, retain the provider
   // observation as the best available source. A resolved show, however, gets
   // exactly one authoritative next coordinate and provider rows may not jump
   // past it.
-  return !sameShow.length || sameShow.some((authoritative) => episodeCoordinateMatches(candidate, authoritative));
+  if (sameShow.length) {
+    return sameShow.some((authoritative) => episodeCoordinateMatches(candidate, authoritative));
+  }
+  // When an intermediate regular season exists in show metadata but its
+  // episodes are not cached yet, do not let provider observations jump past
+  // that uncached season to a later season.
+  const blockedAfter = missingSeasonMarkers.filter((marker) => episodeShowIdentityMatches(candidate, marker));
+  if (blockedAfter.length) {
+    const candidateSeason = number(candidate.season, 0);
+    return blockedAfter.every((marker) => candidateSeason <= number(marker.season, 0));
+  }
+  return true;
 }
 
 function providerItemsFromTrackedEpisode(row = {}) {
@@ -846,22 +858,46 @@ function publicItem(item) {
   };
 }
 
-export function publicUpNextItems(items = []) {
-  return mergeUpNextCandidates(items).map(publicItem).map(episodeOrderDisplay);
+export function publicUpNextItems(items = [], sortOptions = {}) {
+  return sortUpNextItems(mergeUpNextCandidates(items), sortOptions).map(publicItem)
+    .map((item) => ({ ...episodeOrderDisplay(item), order_key: upNextOrderKey(item) }));
 }
+
+function seasonRemaining(item, playstateIndex, today, metadataCache = null) {
+  if (item.media_type !== "episode") return null;
+  const { show_tmdb_id: tmdbId, show_tvdb_id: tvdbId, show_imdb_id: imdb, season, episode } = item;
+  if (!tmdbId && !tvdbId) return null;
+  const order = (metadataCache ? metadataCache.orderDisplayMap : orderDisplayMap)(tvdbId);
+  const displaySeason = order?.displayByAiredKey.get(`${season}:${episode}`)?.season;
+  const episodes = displaySeason != null
+    ? order.seasons.find((row) => row.season_number === displaySeason)?.episodes
+    : (metadataCache ? metadataCache.orderSeason : getCachedTmdbSeason)({ tmdbId, tvdbId, seasonNumber: season })?.episodes;
+  if (!episodes?.length) return null;
+  return episodes.filter((row) => Number(row.episode_number) > 0 && airDayOf(row.air_date) && released(row.air_date, today)
+    && !stateIsWatched(normalizeUpNextCandidate({
+      media_type: "episode", show_title: item.show_title,
+      show_ids: { tmdb: tmdbId, tvdb: tvdbId, imdb },
+      season: row.season_number ?? season, episode: row.episode_number,
+    }), playstateIndex)).length;
+}
+function upNextShowOverride(item, overrides = []) {
+  return overrides.find((override) => {
+    const ids = ["tmdb", "tvdb", "imdb"].map((kind) => [
+      item.media_type === "episode" ? item[`show_${kind}_id`] : item[`${kind}_id`],
+      override[`${kind}_id`],
+    ]).filter(([left, right]) => left && right);
+    return ids.length && ids.every(([left, right]) => String(left) === String(right));
+  });
+}
+
 async function localNextUpForShow(show, {
-  showDetails,
-  playstateIndex,
-  progressCandidates,
-  providerCandidates = [],
-  episodeRows,
-  today,
-  resolveProviderItems = null,
-  resolveProviderEpisodes = null,
-  allowUnplayable = false,
-  ambiguousTitles = null,
-  laneMarkers = null,
+  showDetails, metadataCache = null, playstateIndex, progressCandidates, providerCandidates = [], episodeRows, today,
+  resolveProviderItems = null, resolveProviderEpisodes = null, allowUnplayable = false,
+  ambiguousTitles = null, laneMarkers = null, missingSeasonMarkers = null, isManual = false, manualTargetSeason = null, latestReleased = false,
 }) {
+  const readDetails = metadataCache ? metadataCache.orderDetails : getCachedTmdbDetails;
+  const readSeason = metadataCache ? metadataCache.orderSeason : getCachedTmdbSeason;
+  const readDisplayMap = metadataCache ? metadataCache.orderDisplayMap : orderDisplayMap;
   // Both passes use the same immutable episode snapshot. Cache the promise as
   // well as its result so concurrent workers share the read within this build.
   let detailPromise = showDetails.get(show);
@@ -887,7 +923,7 @@ async function localNextUpForShow(show, {
     }
   }
 
-  const metadata = getCachedTmdbDetails({
+  const metadata = readDetails({
     mediaType: "tv",
     tmdbId: show.tmdb_id,
     title: show.title,
@@ -906,11 +942,20 @@ async function localNextUpForShow(show, {
   // Episode rows also include provider-supplied unplayed/future rows. They
   // must not make the fallback jump from the last watched S03 episode to an
   // unrelated S04 placeholder; choose the season from watched coordinates
-  // only, then scan later seasons if that season is exhausted.
+  // only, then scan later seasons if that season is exhausted. Manually pinned
+  // shows default to the earliest unwatched season unless the user chose one.
   const maxWatchedSeason = Math.max(0, ...episodes
     .filter((row) => watched.has(coordinate(row)))
     .map((row) => number(row.season, 0)));
-  const firstSeason = maxWatchedSeason || seasonNumbers[0] || 1;
+  const displayMap = readDisplayMap(tvdbId);
+  const displayCoord = (s, e) => displayMap?.displayByAiredKey.get(`${s}:${e}`) || null;
+  const displaySeasonOf = (s, e) => displayCoord(s, e)?.season ?? number(s, 0);
+  const targetSeason = Number.isInteger(Number(manualTargetSeason)) && Number(manualTargetSeason) > 0 ? Number(manualTargetSeason) : null;
+  const targetAiredSeasons = targetSeason != null && displayMap
+    ? displayMap.seasons.filter((s) => s.season_number >= targetSeason).flatMap((s) => s.episodes.map((ep) => ep.season_number))
+    : [];
+  const firstSeason = (targetSeason != null && targetAiredSeasons.length ? Math.min(...targetAiredSeasons) : targetSeason)
+    || (isManual ? (seasonNumbers[0] || 1) : (maxWatchedSeason || seasonNumbers[0] || 1));
   const candidateSeasons = seasonNumbers.length
     ? [firstSeason, ...seasonNumbers.filter((season) => season > firstSeason)]
     : [firstSeason, firstSeason + 1];
@@ -1012,16 +1057,33 @@ async function localNextUpForShow(show, {
       const unanswered = new Set(detailed ? verified.unanswered || [] : []);
       const retained = Object.fromEntries(Object.entries(historyItems).filter(([provider]) => unanswered.has(provider)));
       const merged = { ...retained, ...((detailed ? verified.providerItems : verified) || {}) };
-      return Object.keys(merged).length ? { ...candidate, provider_items: merged } : null;
+      return Object.keys(merged).length ? { ...candidate, provider_items: merged } : (isManual ? { unplayable: true } : null);
     }
     if (allowUnplayable) return candidate;
     const providerItems = await lookupProviderItems();
     // Do not try a later episode when the first released unwatched one is
     // not currently resolvable. Provider inventory may be broader than the
     // metadata snapshot, but it must not override the canonical order.
-    if (!Object.keys(providerItems).length) return null;
+    if (!Object.keys(providerItems).length) return isManual ? { unplayable: true } : null;
     return { ...candidate, provider_items: providerItems };
   };
+
+  if (latestReleased) {
+    const releasedEpisodes = candidateSeasons.flatMap((season) => (
+      (readSeason({ tmdbId, tvdbId, seasonNumber: season })?.episodes || [])
+        .filter((episode) => Number(episode.episode_number) > 0 && airDayOf(episode.air_date) && released(episode.air_date, today)
+          && !watched.has(`${season}:${episode.episode_number}`)
+          && (targetSeason == null || displaySeasonOf(season, episode.episode_number) >= targetSeason))
+        .map((episode) => ({ season, episode }))
+    )).sort((left, right) => right.episode.air_date.localeCompare(left.episode.air_date)
+      || right.season - left.season || right.episode.episode_number - left.episode.episode_number);
+    for (const { season, episode } of releasedEpisodes) {
+      const candidate = await resolveEpisode(season, episode);
+      if (candidate === undefined) continue;
+      return candidate && !candidate.covered && !candidate.unplayable ? [candidate] : [];
+    }
+    return [];
+  }
 
   // A rewatch from an older season (loose-ends step 20) keeps its own card:
   // the episode after the most recent play, when that is released, unwatched,
@@ -1030,31 +1092,62 @@ async function localNextUpForShow(show, {
   // everywhere, which would erase a real earlier watch.
   const rewatch = rewatchPosition(episodes.filter((row) => watched.has(coordinate(row))));
   const rewatchTarget = rewatch
-    ? episodeAfter(rewatch.latest, seasonNumbers, (season) => getCachedTmdbSeason({ tmdbId, tvdbId, seasonNumber: season })?.episodes)
+    ? episodeAfter(rewatch.latest, seasonNumbers, (season) => readSeason({ tmdbId, tvdbId, seasonNumber: season })?.episodes)
     : null;
   const rewatchEpisode = rewatchTarget && compareCoordinates(rewatchTarget, rewatch.frontier) < 0
     && !watched.has(`${rewatchTarget.season}:${rewatchTarget.episode}`)
-    ? (getCachedTmdbSeason({ tmdbId, tvdbId, seasonNumber: rewatchTarget.season })?.episodes || [])
+    ? (readSeason({ tmdbId, tvdbId, seasonNumber: rewatchTarget.season })?.episodes || [])
       .find((episode) => number(episode.episode_number, 0) === rewatchTarget.episode && released(episode.air_date, today))
     : null;
   const withLane = (candidate, lane) => (candidate && rewatchEpisode ? { ...candidate, up_next_lane: lane } : candidate);
   const rewatchCandidates = async (frontierCandidate) => {
-    if (!rewatchEpisode) return [];
+    if (!rewatchEpisode || targetSeason != null) return [];
     if (frontierCandidate && episodeCoordinateForCandidate(frontierCandidate) === `${rewatchTarget.season}:${rewatchTarget.episode}`) return [];
     const candidate = await resolveEpisode(rewatchTarget.season, rewatchEpisode);
-    return candidate && !candidate.covered ? [withLane(candidate, "rewatch")] : [];
+    return candidate && !candidate.covered && !candidate.unplayable ? [withLane(candidate, "rewatch")] : [];
   };
 
-  for (const seasonNumber of [...new Set(candidateSeasons)].slice(0, 3)) {
-    const season = getCachedTmdbSeason({ tmdbId, tvdbId, seasonNumber });
-    const seasonEpisodes = [...(season?.episodes || [])]
-      .filter((episode) => number(episode.episode_number, 0) > 0)
+  let attemptedSeasons = 0;
+  let missingMetadataSeason = null;
+  seasonLoop: for (const seasonNumber of [...new Set(candidateSeasons)]) {
+    const season = readSeason({ tmdbId, tvdbId, seasonNumber });
+    const rawSeasonEpisodes = [...(season?.episodes || [])]
+      .filter((episode) => number(episode.episode_number, 0) > 0);
+    const seasonMeta = (metadata?.seasons || []).find((entry) => number(entry?.season_number, NaN) === seasonNumber);
+    if (!rawSeasonEpisodes.length) {
+      // Do not silently skip an intermediate regular season listed in show
+      // metadata whose episodes are not cached yet; skipping it leaps over an
+      // unwatched season straight to S03E01 after S01.
+      if (seasonMeta && (seasonMeta.episode_count == null || Number(seasonMeta.episode_count) > 0)) {
+        missingMetadataSeason = seasonNumber;
+        missingSeasonMarkers?.push(normalizeUpNextCandidate({
+          queue_kind: "next_up",
+          media_type: "episode",
+          title: show.title,
+          show_title: show.title,
+          season: seasonNumber,
+          episode: 1,
+          show_ids: { imdb: show.imdb_id, tmdb: tmdbId, tvdb: tvdbId },
+        }));
+        break seasonLoop;
+      }
+      continue;
+    }
+    const seasonEpisodes = rawSeasonEpisodes
+      .filter((episode) => targetSeason == null || displaySeasonOf(seasonNumber, episode.episode_number) >= targetSeason)
       .sort((left, right) => number(left.episode_number) - number(right.episode_number));
+    let seasonAttempted = false;
     for (const episode of seasonEpisodes) {
       const key = `${seasonNumber}:${number(episode.episode_number, 0)}`;
       if (!released(episode.air_date, today) || watched.has(key)) continue;
       const frontierCandidate = await resolveEpisode(seasonNumber, episode);
       if (frontierCandidate === undefined) continue;
+      seasonAttempted = true;
+      if (frontierCandidate?.unplayable) {
+        if (!isManual) return [];
+        if (resolveProviderEpisodes) break seasonLoop;
+        continue;
+      }
       // A frontier card is the "new" lane only beside a rewatch card that
       // actually resolved. Alone it stays an ordinary card, because the app
       // rail refresh skips the "new" lane.
@@ -1070,6 +1163,7 @@ async function localNextUpForShow(show, {
       const rewatchCards = await rewatchCandidates(frontierCandidate);
       return [rewatchCards.length ? withLane(frontierCandidate, "new") : frontierCandidate, ...rewatchCards].filter(Boolean);
     }
+    if (seasonAttempted && ++attemptedSeasons >= 3) break;
   }
   const rewatchCards = await rewatchCandidates(null);
 
@@ -1079,6 +1173,7 @@ async function localNextUpForShow(show, {
   // otherwise leaves the show with no candidate at all.
   if (resolveProviderEpisodes) {
     const inventoryCandidates = await resolveProviderEpisodes(show).catch(() => []);
+    const coord = (c) => displayCoord(c.season, c.episode) || { season: number(c.season, 0), episode: number(c.episode, 0) };
     const firstAvailable = inventoryCandidates
       .map((item) => normalizeUpNextCandidate({
         ...item,
@@ -1092,12 +1187,14 @@ async function localNextUpForShow(show, {
       }))
       .filter((candidate) => candidate.media_type === "episode")
       .filter(isRegularUpNextEpisode)
+      .filter((candidate) => missingMetadataSeason == null || number(candidate.season, 0) <= missingMetadataSeason)
+      .filter((candidate) => targetSeason == null || displaySeasonOf(candidate.season, candidate.episode) >= targetSeason)
       .filter((candidate) => released(candidate.air_date, today))
       .filter((candidate) => !watched.has(episodeCoordinateForCandidate(candidate)))
       .filter((candidate) => !stateIsWatched(candidate, playstateIndex))
       .filter((candidate) => !progressCandidates.some((resume) => aliasesIntersect(aliasesFor(candidate), aliasesFor(resume))))
-      .sort((left, right) => Number(left.season || 0) - Number(right.season || 0)
-        || Number(left.episode || 0) - Number(right.episode || 0)
+      .sort((left, right) => coord(left).season - coord(right).season
+        || coord(left).episode - coord(right).episode
         || String(left.source || "").localeCompare(String(right.source || "")));
     if (firstAvailable.length) {
       const first = firstAvailable[0];
@@ -1206,7 +1303,9 @@ export function collapseUncertainEpisodeQueues(items = []) {
 
 async function localNextUpCandidates({
   showDetails,
+  metadataCache = null,
   shows,
+  showOverrides = [],
   playstateIndex,
   watchedShowKeys,
   watchedTitleIds = null,
@@ -1218,10 +1317,7 @@ async function localNextUpCandidates({
   today,
   resolveProviderItems = null,
   resolveProviderEpisodes = null,
-  allowUnplayable = false,
-  manualShowKeys = new Set(),
-  ambiguousTitles = null,
-  laneMarkers = null,
+  allowUnplayable = false, manualShowKeys = new Set(), manualShowTargets = new Map(), ambiguousTitles = null, laneMarkers = null, missingSeasonMarkers = null,
 }) {
   // Every show resolves against the same episode snapshot, so read and dedupe
   // the episode table once for the whole pass rather than once per show.
@@ -1233,7 +1329,7 @@ async function localNextUpCandidates({
       manualShowKeys,
       completedShowKeys,
     }))
-    .filter((show) => Number(show.episode_count || 0) > 0)
+    .filter((show) => Number(show.episode_count || 0) > 0 || showIdentityKeys(show).some((key) => manualShowKeys.has(key)))
     .sort((left, right) => (
       Number(showIdentityKeys(right).some((key) => manualShowKeys.has(key)))
         - Number(showIdentityKeys(left).some((key) => manualShowKeys.has(key)))
@@ -1259,18 +1355,14 @@ async function localNextUpCandidates({
       }
       const show = selectedShows[cursor++];
       if (!show) break;
+      const keys = showIdentityKeys(show);
+      const isManual = keys.some((key) => manualShowKeys.has(key));
+      const manualTargetSeason = keys.map((key) => manualShowTargets.get(key)).find((value) => value !== undefined) ?? null;
       const candidates = await localNextUpForShow(show, {
-        showDetails,
-        playstateIndex,
-        progressCandidates,
-        providerCandidates,
-        episodeRows,
-        today,
-        resolveProviderItems,
-        resolveProviderEpisodes,
-        allowUnplayable,
-        ambiguousTitles,
-        laneMarkers,
+        showDetails, metadataCache, playstateIndex, progressCandidates, providerCandidates, episodeRows, today,
+        resolveProviderItems, resolveProviderEpisodes, allowUnplayable, ambiguousTitles, laneMarkers,
+        missingSeasonMarkers, isManual, manualTargetSeason,
+        latestReleased: upNextShowOverride(show, showOverrides)?.episodeChoice === "latest_released",
       });
       results.push(...candidates);
     }
@@ -1305,6 +1397,7 @@ export async function buildUpNextProjection({
   shows = null,
   localFallback = true,
   mediaConfig = null,
+  refreshLibrary = false,
   // Injectable so a test can stand in for the real library lookup. In
   // production this is built from the media config below.
   resolveProviderItems = null,
@@ -1313,6 +1406,7 @@ export async function buildUpNextProjection({
   trigger = "",
 } = {}) {
   const buildStartedAt = Date.now();
+  const showOverrides = mediaConfig?.upNextSync?.showOverrides || [];
   // Only the production path (real library lookups) logs its summary.
   const lookupStats = mediaConfig && !resolveProviderItems && !resolveProviderEpisodes ? {} : null;
   const deferredLookups = lookupStats ? [] : null;
@@ -1332,11 +1426,15 @@ export async function buildUpNextProjection({
     .slice(0, MAX_PROVIDER_OBSERVATIONS);
   const rawProviderCandidates = observations.map((item) => normalizeUpNextCandidate(item));
   const baseShowRows = shows || ((localFallback || rawProviderCandidates.some((candidate) => candidate.queue_kind === "next_up"))
-    ? await getCachedShows()
-    : []);
+    ? await getCachedShows() : []);
   const manualShows = listManualUpNextShows();
-  const showRows = [...(Array.isArray(baseShowRows) ? baseShowRows : []), ...manualShows];
+  const baseKeys = new Set((Array.isArray(baseShowRows) ? baseShowRows : []).flatMap(showIdentityKeys));
+  const showRows = [...(Array.isArray(baseShowRows) ? baseShowRows : []), ...manualShows.filter((show) => !showIdentityKeys(show).some((key) => baseKeys.has(key)))];
   const manualShowKeys = new Set(manualShows.flatMap((show) => showIdentityKeys(show)));
+  const manualShowTargets = new Map();
+  for (const show of manualShows) {
+    for (const key of showIdentityKeys(show)) if (!manualShowTargets.has(key)) manualShowTargets.set(key, show.target_season ?? null);
+  }
   // Resolve local resume rows against the known show identities before the
   // canonical key is built. Applying this only after merge is too late: an
   // episode-id key and a series-id key have already become separate groups.
@@ -1395,7 +1493,9 @@ export async function buildUpNextProjection({
 
   // Rewatch-lane positions held by a resume card rather than a next-up one.
   const laneMarkers = [];
+  const missingSeasonMarkers = [];
   const showDetails = new WeakMap();
+  const metadataCache = createUpNextMetadataCache();
   // The media detail page is the source of truth for episode progression: its
   // episode list marks the first released episode not currently watched as
   // next. Resolve those coordinates before accepting native provider rails so
@@ -1403,7 +1503,9 @@ export async function buildUpNextProjection({
   const authoritativeNextEpisodes = localFallback
     ? await localNextUpCandidates({
       showDetails,
+      metadataCache,
       shows: showRows,
+      showOverrides,
       playstateIndex,
       watchedShowKeys,
       watchedTitleIds,
@@ -1415,8 +1517,10 @@ export async function buildUpNextProjection({
       today: todayLocalDate(now),
       allowUnplayable: true,
       manualShowKeys,
+      manualShowTargets,
       ambiguousTitles,
       laneMarkers,
+      missingSeasonMarkers,
     })
     : [];
 
@@ -1453,7 +1557,7 @@ export async function buildUpNextProjection({
     // names the one after it, so that resume's own native items must not be
     // filtered as having jumped past it.
     .filter((candidate) => aliasesCanonicalResume(candidate)
-      || matchesAuthoritativeNextEpisode(candidate, authoritativeNextEpisodes))
+      || matchesAuthoritativeNextEpisode(candidate, authoritativeNextEpisodes, missingSeasonMarkers))
     .filter((candidate) => !stateBlocksCandidate(candidate, playstateIndex, { progressUpdatedAt: candidate.updated_at }))
     .filter((candidate) => !stateIsWatched(candidate, playstateIndex));
   const eligibleProviderNextUp = providerCandidates
@@ -1474,7 +1578,7 @@ export async function buildUpNextProjection({
     .filter((candidate) => !stateIsWatched(candidate, playstateIndex))
     .map((candidate) => ({ ...candidate, position_ms: 0, duration_ms: null, progress: 0 }));
   const providerNextUp = eligibleProviderNextUp
-    .filter((candidate) => matchesAuthoritativeNextEpisode(candidate, authoritativeNextEpisodes))
+    .filter((candidate) => matchesAuthoritativeNextEpisode(candidate, authoritativeNextEpisodes, missingSeasonMarkers))
     .filter((candidate) => !aliasesCanonicalResume(candidate));
   // Jellyfin Resume is not a projection feed, so a Jellyfin part-watch is only
   // a canonical row, and Jellyfin keeps listing that episode in Next Up. Merge
@@ -1497,7 +1601,9 @@ export async function buildUpNextProjection({
   if (localFallback) {
     localNextUp = await localNextUpCandidates({
       showDetails,
+      metadataCache,
       shows: showRows,
+      showOverrides,
       playstateIndex,
       watchedShowKeys,
       watchedTitleIds,
@@ -1511,9 +1617,10 @@ export async function buildUpNextProjection({
       providerCandidates: [...providerResume, ...providerNextUp],
       episodeRows: trackedEpisodeRows,
       today: todayLocalDate(now),
-      resolveProviderItems: resolveProviderItems || (mediaConfig ? createUpNextLibraryLookup(mediaConfig, { stats: lookupStats, deferred: deferredLookups }) : null),
-      resolveProviderEpisodes: resolveProviderEpisodes || (mediaConfig ? createUpNextLibraryEpisodeLookup(mediaConfig, { stats: lookupStats }) : null),
+      resolveProviderItems: resolveProviderItems || (mediaConfig ? createUpNextLibraryLookup(mediaConfig, { stats: lookupStats, deferred: deferredLookups, refreshMisses: refreshLibrary }) : null),
+      resolveProviderEpisodes: resolveProviderEpisodes || (mediaConfig ? createUpNextLibraryEpisodeLookup(mediaConfig, { stats: lookupStats, refresh: refreshLibrary }) : null),
       manualShowKeys,
+      manualShowTargets,
       ambiguousTitles,
       laneMarkers,
     });
@@ -1541,13 +1648,24 @@ export async function buildUpNextProjection({
   const sourceStatus = listUpNextProviderFeedStates()
     .filter((feed) => UP_NEXT_PROVIDERS.has(String(feed?.provider || "").toLowerCase()))
     .map(({ cursor: _cursor, ...feed }) => feed);
-  const items = publicUpNextItems(merged.slice(0, safeLimit).map((item) => withUsableArtwork(withLocalShowIdentity(item, showIdentities))));
+  const { sort, partWatchedFirst, customOrder, customFallbackSort } = mediaConfig?.upNextSync || {};
+  const countRemaining = sort === "closest_to_finishing" || (sort === "custom" && customFallbackSort === "closest_to_finishing");
+  const today = todayLocalDate(now);
+  const items = publicUpNextItems(merged.map((item) => withLocalShowIdentity(item, showIdentities))
+    .map((item) => item.media_type === "episode" ? { ...item, queue_placement: upNextShowOverride(item, showOverrides)?.placement } : item)
+    .map((item) => countRemaining ? { ...item, season_remaining: seasonRemaining(item, playstateIndex, today, metadataCache) } : item),
+  { sort, partWatchedFirst, customOrder, customFallbackSort })
+    .slice(0, safeLimit).map(withUsableArtwork);
   if (lookupStats) logUpNextBuildSummary(lookupStats, items.length, Date.now() - buildStartedAt, trigger);
   // Ask the lookups this build skipped for budget in the background, so the
   // next rebuild finds them cached (speed finding AK).
   if (deferredLookups?.length) topUpUpNextLibraryLookups(mediaConfig, deferredLookups);
   return {
     items,
+    sort,
+    partWatchedFirst,
+    customOrder,
+    customFallbackSort,
     sourceStatus,
     sourceVersion: getUpNextFeedSourceVersion(),
   };

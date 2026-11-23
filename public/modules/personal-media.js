@@ -781,14 +781,24 @@ async function refreshPersonalViews() {
 
 // maxAgeMs lets a page entry ask for fresh data without refetching a snapshot
 // that another pass of the same navigation loaded moments ago.
+let pendingForcedPersonalReload = false;
+
 export async function loadPersonalMedia({ force = false, maxAgeMs = PERSONAL_MEDIA_TTL_MS } = {}) {
   if (!state.token) return;
-  if (loadPromise) return loadPromise;
-  if (!force && state.personalMediaLoadedAt && Date.now() - state.personalMediaLoadedAt < maxAgeMs) {
+  if (loadPromise) {
+    if (!force) return loadPromise;
+    pendingForcedPersonalReload = true;
+    await loadPromise.catch(() => {});
+    if (!state.token) return;
+    if (loadPromise) return loadPromise;
+  }
+  if (!force && !pendingForcedPersonalReload && state.personalMediaLoadedAt && Date.now() - state.personalMediaLoadedAt < maxAgeMs) {
     renderPersonalMedia();
     refreshPersonalMetadata();
     return;
   }
+  const forceReload = force || pendingForcedPersonalReload;
+  pendingForcedPersonalReload = false;
 
   state.personalMediaLoading = true;
   state.personalMediaError = "";
@@ -799,7 +809,7 @@ export async function loadPersonalMedia({ force = false, maxAgeMs = PERSONAL_MED
     try {
       const response = await fetch("/api/personal-media", {
         headers: buildAuthHeaders(state.token),
-        cache: force ? "reload" : "default",
+        cache: forceReload ? "reload" : "default",
         signal: controller.signal,
       });
       const body = await response.json().catch(() => ({}));

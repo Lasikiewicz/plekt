@@ -141,13 +141,13 @@ const featureGroups = [
     items: [
       {
         title: "Self-hosted and private",
-        text: "One process and one SQLite file on your own hardware, with no external database.",
-        href: "/docs/getting-started/#before-you-install",
+        text: "Local SQLite storage on your own hardware, with no external database.",
+        href: "/docs/getting-started/#prerequisites",
       },
       {
         title: "Guided first-run setup",
         text: "Claim the instance, then a resumable wizard connects servers, metadata, and webhooks.",
-        href: "/docs/getting-started/#complete-the-guided-setup",
+        href: "/docs/onboarding/",
       },
       {
         title: "Automated backups",
@@ -219,8 +219,10 @@ const proofScreens = [
       <p class="simple-home-lede">
         Plekt keeps the important parts of your media stack together: the event, the local record, the next thing to watch, and the sync that follows.
       </p>
+      <p>Sync with <a href="/docs/trakt/">Trakt</a> and <a href="/docs/simkl/">Simkl</a>, or <a href="/docs/import-netflix-viewing-history/">import Netflix viewing history</a>. Each Plekt user can connect a separate Trakt account, with no Trakt VIP or Plex Pass required.</p>
+      <p>Plekt is free and open source under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a>. Self-host it with Docker, Docker Compose, Portainer, Unraid Community Apps, the Windows installer, or Node.js.</p>
       <div class="simple-actions">
-        <a class="simple-button simple-button--primary" href="/docs/getting-started/#before-you-install">Get started <span aria-hidden="true">↗</span></a>
+        <a class="simple-button simple-button--primary" href="/docs/getting-started/#prerequisites">Get started <span aria-hidden="true">↗</span></a>
         <a class="simple-button" href="/docs/guides/">Browse guides <span aria-hidden="true">→</span></a>
       </div>
       <p class="simple-meta">v{release.version} · self-hosted · local source of truth</p>

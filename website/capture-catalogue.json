@@ -3585,6 +3585,54 @@
           "wait": 3500
         }
       ]
+    },
+    "dashboard-home": {
+      "pages": [
+        "index",
+        "dashboard",
+        "navigation",
+        "onboarding",
+        "operations",
+        "safe-daily-workflows"
+      ],
+      "variants": [
+        "dark",
+        "light"
+      ],
+      "route": "/",
+      "state": "Homepage dashboard frame at 1440 x 683: Now Playing / Up Next panel and the first history rows loaded with posters, at scroll top. Used as the homepage product image. The sidebar Manual Watch review and Sync - Attention badges are hidden in the frame only.",
+      "hide": [
+        "#manualWatchReviewButton",
+        "#syncProgressIndicator"
+      ],
+      "storage": {
+        "plembfin:dashboard-compact:tv": "1",
+        "plembfin:dashboard-compact:movie": "1"
+      },
+      "framing": {
+        "type": "viewport"
+      },
+      "automation": "auto",
+      "sources": [
+        "public/modules/dashboard.js",
+        "public/modules/dashboard-modern.js",
+        "public/modules/up-next.js",
+        "public/modules/sync.js"
+      ],
+      "sizes": {
+        "dark": {
+          "width": 1440,
+          "height": 683
+        },
+        "light": {
+          "width": 1440,
+          "height": 683
+        }
+      },
+      "viewport": {
+        "width": 1440,
+        "height": 683
+      }
     }
   },
   "cropSources": {
@@ -3751,7 +3799,6 @@
   },
   "retired": [
     "media-sections-overview",
-    "dashboard-home",
     "media-actions",
     "media-actions-focus",
     "media-edit-images",

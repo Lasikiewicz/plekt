@@ -2,6 +2,7 @@ import fs from "node:fs";
 import nodePath from "node:path";
 import { embyLikeUnplayedIsPartWatchedClear } from "../utils/plexWatchstate.js";
 import { requireAdmin, resolveAdminPrincipal } from "../utils/auth.js";
+import { createPerUserState } from "../utils/perUserState.js";
 import { readFormData, readJson, readRawText } from "../utils/requestBody.js";
 import { sendJson, sendApiError, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout, assertSafeOutboundUrl } from "../utils/outbound.js";
@@ -47,6 +48,9 @@ import { acquirePendingDispatch } from "../utils/pendingDispatchGuard.js"; impor
 import { appendMediaForceSyncActivity, createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested, requestMediaForceSyncCancellation } from "../utils/mediaForceSyncActivity.js";
 import { dispatchTrackerWatchBatch } from "../utils/trackerBulkDispatch.js"; import { checkTrackersAfterMediaEvent } from "../utils/trackerSync.js";
 import { buildWatchProvenance, provenanceTelemetryLines } from "../utils/watchProvenance.js";
+import { storePlexPersonalWatch } from "../utils/plexPersonalWatch.js";
+import { authorizeQueuedLibraryWatch } from "../utils/queuedLibraryMonitoring.js";
+import { buildLibrarySkipDiagnostic, LIBRARY_MONITORING_PROVIDERS, resolveItemLibraryMembership } from "../utils/librarySelection.js";
 import { checkIncomingEpisodeSourceMismatch } from "../utils/sourceMismatch.js";
 import { localCalendarDay, releaseDateForItem, resolveWatchImportDate, runtimeMinutesForSourceItem } from "../utils/watchDates.js";
 import { watchImportMode } from "../utils/tuning.js";
@@ -66,7 +70,6 @@ import { searchTvdbSeriesList, resolveTvdbSeriesId, getTvdbSeriesArtwork } from 
 import { getFanartMovieArt, getFanartTvArt, getAllFanartMovieImages, getAllFanartTvImages } from "../utils/fanartGateway.js";
 import { getOmdbRating } from "../utils/omdbGateway.js";
 import { getCanonicalPosterUrl } from "../utils/mediaArtwork.js";
-import { syncUpNextToProviders } from "../utils/upNextProviderSync.js";
 import { mediaIsUpNextRailSeed } from "../utils/upNextSeedLedger.js";
 import { DISMISSED_TRAKT_NOT_FOUND_DETAIL } from "../utils/traktDismissals.js";
 import { traceLog } from "../utils/logVerbose.js";
@@ -147,24 +150,27 @@ import { shouldSkipPostRestoreCompletedWebhook } from "./backups.js";
 import { activityItemKeyFor } from "../utils/syncActivityIdentity.js";
 
 const SYNC_ACTIVITY_MATCH_REPORT_TTL_MS = 3000;
-let syncActivityMatchReportCache = { expiresAt: 0, value: null };
-let syncActivityMatchReportPromise = null;
+const syncActivityMatchReportByUser = createPerUserState(() => ({
+  cache: { expiresAt: 0, value: null },
+  promise: null,
+}));
 
 async function currentSyncActivityMatchReport() {
+  const slot = syncActivityMatchReportByUser();
   const now = Date.now();
-  if (syncActivityMatchReportCache.value && syncActivityMatchReportCache.expiresAt > now) {
-    return syncActivityMatchReportCache.value;
+  if (slot.cache.value && slot.cache.expiresAt > now) {
+    return slot.cache.value;
   }
-  if (syncActivityMatchReportPromise) return syncActivityMatchReportPromise;
-  syncActivityMatchReportPromise = (async () => {
+  if (slot.promise) return slot.promise;
+  slot.promise = (async () => {
     const value = unresolvedSyncMatchReport(buildSyncMatchReport(await getCachedHistory().catch(() => [])));
-    syncActivityMatchReportCache = { expiresAt: Date.now() + SYNC_ACTIVITY_MATCH_REPORT_TTL_MS, value };
+    slot.cache = { expiresAt: Date.now() + SYNC_ACTIVITY_MATCH_REPORT_TTL_MS, value };
     return value;
   })();
   try {
-    return await syncActivityMatchReportPromise;
+    return await slot.promise;
   } finally {
-    syncActivityMatchReportPromise = null;
+    slot.promise = null;
   }
 }
 
@@ -1274,7 +1280,7 @@ function retryableSyncActivityTargets(entry = {}) {
   return [...new Set((entry.targetStates || [])
     .filter((target) => ["error", "failed"].includes(String(target.status || "").toLowerCase()))
     .map((target) => String(target.target || "").trim().toLowerCase())
-    .filter((target) => ["plex", "emby", "jellyfin", "trakt"].includes(target)))];
+    .filter((target) => ["plex", "emby", "jellyfin", "trakt", "simkl"].includes(target)))];
 }
 
 // Recomputes an entry's overall status from its per-target results, the same
@@ -1417,8 +1423,9 @@ export async function dismissSyncActivityEntry(rawId, { scope = "item" } = {}) {
 // enabled sync destinations" - is downgraded from its old "error" to
 // "skipped" rather than left showing a stale error. A target that wasn't
 // part of this retry (already succeeding, or a platform outside
-// plex/emby/jellyfin/trakt) is carried over unchanged.
+// plex/emby/jellyfin/trakt/simkl) is carried over unchanged.
 function mergeTargetStates(originalTargetStates = [], retrySummaryTargetStates = [], retriedTargets = [], retryDetail = "") {
+  if (!originalTargetStates.length) return [...retrySummaryTargetStates];
   const retriedSet = new Set(retriedTargets);
   const byTarget = new Map(retrySummaryTargetStates.map((t) => [String(t.target || "").trim().toLowerCase(), t]));
   return originalTargetStates.map((t) => {
@@ -1488,6 +1495,10 @@ async function retryQueuedWatchRecord(watchRecordId) {
   const media = mediaFromWatchRecord(record);
   media.watched_at = record.watched_at || undefined;
   if (!media?.isValid) throw Object.assign(new Error("The media identity for this watch record could not be resolved"), { status: 422 });
+  const isLibraryCurrent = await authorizeQueuedLibraryWatch(media, config);
+  if (!isLibraryCurrent) {
+    throw Object.assign(new Error("This watch is local-only or its source library is no longer verified as monitored."), { status: 409 });
+  }
 
   const originalTargetStates = syncTelemetryTargetStates(record.sync_dispatch_telemetry);
   const retriedTargets = retryableSyncActivityTargets({ targetStates: originalTargetStates });
@@ -1496,13 +1507,13 @@ async function retryQueuedWatchRecord(watchRecordId) {
   let summary;
   try {
     summary = action === "unwatched" || action === "unplayed"
-      ? await syncMediaUnplayedPlaystate(media, config, loopStore, { lane: "interactive" })
-      : await syncMediaPlaystate(media, config, loopStore, { lane: "interactive" });
+      ? await syncMediaUnplayedPlaystate(media, config, loopStore, { lane: "interactive", shouldDefer: () => !isLibraryCurrent() })
+      : await syncMediaPlaystate(media, config, loopStore, { lane: "interactive", shouldDefer: () => !isLibraryCurrent() });
   } catch (error) {
     summary = { skipped: false, status: "error", details: `Retry failed: ${error.message || String(error)}`, targetStates: [] };
   }
   const mergedTargetStates = mergeTargetStates(originalTargetStates, summary.targetStates || [], retriedTargets, summary.details);
-  const mergedStatus = statusFromTargetStates(mergedTargetStates);
+  const mergedStatus = mergedTargetStates.length ? statusFromTargetStates(mergedTargetStates) : (summary.status || "skipped");
 
   // The "queued:<id>" pseudo-entry the Activity list renders for this item is
   // read straight off this row's own telemetry (queuedWatchRecordToSyncActivity
@@ -1554,17 +1565,17 @@ async function retrySyncActivityEntry(rawId, retryContext = {}) {
   const config = await loadMediaConfig();
   const media = await mediaFromSyncActivity(entry, config, retryContext);
   if (!media?.isValid) throw Object.assign(new Error("The media identity for this activity entry could not be resolved"), { status: 422 });
+  const isLibraryCurrent = await authorizeQueuedLibraryWatch(media, config);
+  if (!isLibraryCurrent) throw Object.assign(new Error("This watch is local-only or its source library is no longer verified as monitored."), { status: 409 });
   const existing = await findWatchedByAnyMediaKey(media).catch(() => null);
   if (existing?.watched_at) media.watched_at = existing.watched_at;
-  media.syncTargets = targets;
-
+  Object.assign(media, { syncTargets: targets, reopenUnsentTrackerWrite: targets.includes("simkl") });
   const action = String(entry.action || "watched").toLowerCase();
   const loopStore = createLoopStore();
   let summary;
   try {
-    summary = action === "unwatched" || action === "unplayed"
-      ? await syncMediaUnplayedPlaystate(media, config, loopStore, { lane: "interactive" })
-      : await syncMediaPlaystate(media, config, loopStore, { lane: "interactive" });
+    const opts = { lane: "interactive", shouldDefer: () => !isLibraryCurrent() };
+    summary = action === "unwatched" || action === "unplayed" ? await syncMediaUnplayedPlaystate(media, config, loopStore, opts) : await syncMediaPlaystate(media, config, loopStore, opts);
   } catch (error) {
     summary = { skipped: false, status: "error", details: `Retry failed: ${error.message || String(error)}`, targetStates: [] };
   }
@@ -1672,7 +1683,7 @@ export async function handleRetrySyncHistory(req, res) {
       }, 409);
     }
     console.error("Retry sync activity failed", error);
-    return sendApiError(res, error, { error: status === 404 ? "Sync activity item not found" : "Retry sync activity failed" }, status);
+    return sendApiError(res, error, { error: status === 404 ? "Sync activity item not found" : status < 500 ? error.message : "Retry sync activity failed" }, status);
   }
 }
 
@@ -2578,6 +2589,10 @@ export async function handleUpNextRemove(req, res) {
 
   const body = await readJson(req).catch(() => ({}));
   const mediaKey = String(body.media_key || body.id || "").trim();
+  if (body.importLegacyDismissal === true) {
+    const imported = Boolean(mediaKey && recordUpNextDismissal({ ...body, media_key: mediaKey }));
+    return sendJson(res, { ok: imported, imported }, imported ? 200 : 400);
+  }
   try {
     const config = await loadMediaConfig();
     const progressRow = mediaKey ? db.prepare("SELECT * FROM playback_progress WHERE media_key = ?").get(mediaKey) : null;
@@ -2640,10 +2655,7 @@ export async function handleUpNextDismissed(req, res) {
     // source of truth as the main TV grid before falling back to direct
     // canonical-artwork lookup.
     const cachedShows = await getCachedShows();
-    const showByTitle = new Map(cachedShows.map((show) => [
-      showTitleFrom(show.title || "").toLowerCase(),
-      show,
-    ]));
+    const showByTitle = Map.groupBy(cachedShows, (show) => showTitleFrom(show.title || "").toLowerCase());
     const items = listUpNextDismissals().map((dismissal) => {
       const snapshot = dismissal.snapshot && typeof dismissal.snapshot === "object"
         ? dismissal.snapshot
@@ -2654,9 +2666,10 @@ export async function handleUpNextDismissed(req, res) {
       // so the dismissed-card view can use the same cached artwork as the
       // rest of the app without mutating the stored dismissal.
       const isEpisode = dismissal.media_type === "episode";
-      const cachedShow = isEpisode
-        ? showByTitle.get(showTitleFrom(showTitle).toLowerCase())
-        : null;
+      const matchingShows = isEpisode ? showByTitle.get(showTitleFrom(showTitle).toLowerCase()) || [] : [];
+      const snapshotIds = ["tmdb", "tvdb", "imdb"].map((kind) => [kind, snapshot[`show_${kind}_id`] || snapshot[`show${kind[0].toUpperCase()}${kind.slice(1)}Id`]]).filter(([, id]) => id);
+      const compatible = matchingShows.filter((show) => !snapshotIds.some(([kind, id]) => show[`${kind}_id`] && String(show[`${kind}_id`]) !== String(id)));
+      const cachedShow = compatible.length === 1 ? compatible[0] : null;
       const showIdentity = {
         media_type: isEpisode ? "tv" : "movie",
         title: isEpisode ? showTitle : (snapshot.title || dismissal.title || ""),
@@ -2712,12 +2725,13 @@ export async function handleUpNextRestore(req, res) {
     const restored = body.all === true
       ? restoreAllUpNextDismissals()
       : (restoreUpNextDismissal(body.id) ? 1 : 0);
+    if (restored > 0) {
+      await invalidateHistoryDerivedCaches("handleUpNextRestore").catch(() => null);
+    }
     return sendJson(res, { ok: true, restored });
   } catch (error) {
     console.error("Up Next restore failed", error);
     return sendJson(res, { error: "Up Next restore failed" }, 500);
-  } finally {
-    await invalidateHistoryDerivedCaches("handleUpNextRestore").catch(() => null);
   }
 }
 
@@ -2727,30 +2741,24 @@ export async function handleUpNextSync(req, res) {
   if (!(await requireAdmin(req, res))) return;
 
   const body = await readJson(req).catch(() => ({}));
-  if (!Array.isArray(body.items)) return sendJson(res, { error: "Up Next items are required" }, 400);
+  if (!Array.isArray(body.items) && !body.previewMirror) return sendJson(res, { error: "Up Next items are required" }, 400);
 
-  const desiredItems = body.items.slice(0, 100);
-  let summary = null;
   try {
     const config = await loadMediaConfig();
-    summary = await syncUpNextToProviders({
-      desiredItems,
-      config,
-    });
-    if (summary?.ok && !summary.disabled) {
-      await import("../utils/upNextAutoSync.js")
-        .then(({ configuredUpNextProviders, rememberUpNextSync, upNextSyncCompleted }) => {
-          if (upNextSyncCompleted(configuredUpNextProviders(config), summary)) return rememberUpNextSync(desiredItems);
-          return null;
-        })
-        .catch((error) => console.error(`[up-next] Failed to remember manual sync: ${error?.message || error}`));
-    }
-    return sendJson(res, summary);
+    const { pushCurrentUpNextQueue, recordManualUpNextSyncResult } = await import("../utils/upNextAutoSync.js");
+    const { items, summary, preview } = await pushCurrentUpNextQueue(config, { previewMirror: body.previewMirror });
+    if (body.previewMirror) return sendJson(res, preview || { error: "Connect this media server first." }, preview ? 200 : 400);
+    const syncStatus = await recordManualUpNextSyncResult(config, items, summary)
+      .catch((error) => {
+        console.error(`[up-next] Failed to record manual sync: ${error?.message || error}`);
+        return null;
+      });
+    return sendJson(res, syncStatus ? { ...summary, syncStatus } : summary);
   } catch (error) {
     console.error("Up Next provider sync failed", error);
     return sendJson(res, { error: "Up Next provider sync failed" }, 500);
   } finally {
-    await invalidateHistoryDerivedCaches("handleUpNextSync", { skipUpNextAutoSync: true }).catch(() => null);
+    if (!body.previewMirror) await invalidateHistoryDerivedCaches("handleUpNextSync", { skipUpNextAutoSync: true }).catch(() => null);
   }
 }
 
@@ -2780,25 +2788,17 @@ export async function handleRetrySync(req, res) {
 
   const config = await loadMediaConfig();
   const loopStore = createLoopStore();
-
   const media = mediaFromWatchRecord(record);
-
+  const isLibraryCurrent = await authorizeQueuedLibraryWatch(media, config);
+  if (!isLibraryCurrent) return sendJson(res, { ok: false, code: "LIBRARY_NOT_MONITORED", error: "This watch is local-only or its source library is no longer verified as monitored." }, 409);
   const action = record.sync_action || "watched";
   let summary;
   try {
-    if (action === "unwatched" || action === "unplayed") {
-      summary = await syncMediaUnplayedPlaystate(media, config, loopStore, { lane: "interactive" });
-    } else {
-      summary = await syncMediaPlaystate(media, config, loopStore, { lane: "interactive" });
-    }
+    const opts = { lane: "interactive", shouldDefer: () => !isLibraryCurrent() };
+    summary = (action === "unwatched" || action === "unplayed") ? await syncMediaUnplayedPlaystate(media, config, loopStore, opts) : await syncMediaPlaystate(media, config, loopStore, opts);
   } catch (error) {
     console.error("Retry sync failed", error);
-    summary = {
-      skipped: false,
-      status: "error",
-      details: `Retry sync failed: ${error.message || String(error)}`,
-      targetStates: [],
-    };
+    summary = { skipped: false, status: "error", details: `Retry sync failed: ${error.message || String(error)}`, targetStates: [] };
   }
 
   // A manual retry resets the automatic backoff so the scheduled dispatcher
@@ -3182,6 +3182,75 @@ export async function handleWebhook(req, res) {
 
   const config = await loadMediaConfig();
 
+  if (isSyntheticUpNextWebhook(media)) {
+    discountEchoForWebhookTest(media);
+    console.log("Webhook: ignored synthetic Up Next rail seed playback", {
+      source: media.source,
+      title: media.title,
+      event: media.event,
+      phase: media.phase,
+      deviceId: media.deviceId,
+    });
+    await deleteActiveSession(media).catch(() => null);
+    await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
+    return sendJson(res, {
+      ok: true,
+      active: false,
+      inserted: false,
+      propagated: false,
+      skipped: true,
+      reason: "Legacy Up Next rail seed playback is synthetic, not user playback",
+    });
+  }
+
+  // Explicit library monitoring gate: run BEFORE metadata enrichment, series
+  // identity lookups, episode-order resolution, history, review, session, or
+  // outbound dispatch. Non-video events and empty selections stop with zero
+  // external API calls.
+  if (LIBRARY_MONITORING_PROVIDERS.includes(String(media.source || "").toLowerCase())) {
+    const libraryDecision = await resolveItemLibraryMembership(media.source, config, media, { lane: "sync" });
+    if (!libraryDecision.allowed) {
+      const diagnostic = buildLibrarySkipDiagnostic(media.source, libraryDecision, media.title);
+      console.log("Webhook skipped: library monitoring", {
+        source: media.source,
+        title: media.title,
+        phase: media.phase,
+        status: libraryDecision.status,
+        libraryId: libraryDecision.libraryId,
+      });
+      // Keep diagnostics bounded: do not spam sync_history for non-video drops or
+      // active playback progress pings from unselected libraries.
+      if (libraryDecision.status !== "non_video" && media.phase !== "active") {
+        await recordSyncHistory(media, {
+          status: "skipped",
+          details: diagnostic,
+          targetStates: [],
+        }, media.phase || "webhook").catch(() => null);
+      }
+      return sendJson(res, {
+        ok: true,
+        inserted: false,
+        skipped: true,
+        reason: diagnostic,
+        libraryStatus: libraryDecision.status,
+      });
+    }
+    media.libraryId = libraryDecision.libraryId;
+    media.libraryRevision = libraryDecision.revision;
+    if (media.watchProvenance && typeof media.watchProvenance === "object") {
+      media.watchProvenance = {
+        ...media.watchProvenance,
+        library_id: libraryDecision.libraryId,
+        library_revision: libraryDecision.revision,
+      };
+    }
+  }
+
+  if (media.localOnly) {
+    const inserted = media.phase === "completed" && await storePlexPersonalWatch(media, media.playedAt);
+    return sendJson(res, { ok: true, inserted, propagated: false });
+  }
+
   // Resolve series identity before deriving keys or interpreting episode order.
   media = await withSeriesIdentity(media, config);
   if (["completed", "unplayed"].includes(media.phase)) { try { media = await resolveOrderWatch(media, config); } catch (error) { await recordSyncHistory(media, {status:"error",details:error.message,targetStates:[]}, "mapping").catch(()=>null); return sendJson(res,{error:error.message,code:"EPISODE_MAPPING_REQUIRED",inserted:false},409); } }
@@ -3494,6 +3563,8 @@ export async function handleWebhook(req, res) {
     // backstop will discover a season-only event later.
     if (isMovie || isEpisode || media.type === "series") {
       try {
+        const { noteUpNextLibraryAddition } = await import("../utils/upNextLibraryLookup.js");
+        noteUpNextLibraryAddition(media.source, isEpisode ? media.show_title || showTitleFrom(media.title) : media.title);
         queueTmdbMetadataWarmup([{
           mediaType: isMovie ? "movie" : "tv",
           // Episode notifications can carry an episode-level TMDB id. Let the
@@ -4018,10 +4089,10 @@ export async function handleWebhook(req, res) {
         });
       }
       if (existingCanonicalState === "watched") {
-        // The local watch is authoritative, but the reporting app may be
-        // ahead of another connected app. Reconcile the canonical watched
-        // state to every configured destination, including the reporter, so
-        // an already-watched item cannot leave the other apps mismatched.
+        if (!isExplicitPlayedFlagEvent(media) && await getPlaybackProgressForMedia(media).catch(() => null)) {
+          return sendJson(res, { ok: true, inserted: false, skipped: true, reason: "Played flag ignored while resume progress exists" });
+        }
+        // Reconcile the authoritative local watch across all connected apps.
         const canonicalMedia = {
           ...media,
           watched_at: existingPlaystate?.watched_at || existingWatchedHistory?.watched_at || media.watched_at,
@@ -4144,7 +4215,7 @@ export async function handleWebhook(req, res) {
             : "already marked watched today",
           playstateUpdatedAt: existingPlaystate.updated_at,
         });
-        await deletePlaybackProgress(media).catch(() => null);
+        if (!isPlayedFlagEcho) await deletePlaybackProgress(media).catch(() => null);
         await setRuntimeState({ nowPlayingRefresh: Date.now() }).catch(() => null);
         return sendJson(res, {
           ok: true,

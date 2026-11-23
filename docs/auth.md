@@ -63,6 +63,7 @@ All accounts share one login form (`POST /api/login`) and one Node process:
 - Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when `COOKIE_SECURE=true`,
   path `/`.
 - Revocation: rotating `sessionSecret` (`POST /api/auth/sessions/revoke-all`) invalidates every cookie across the install and issues the admin caller a fresh cookie. For an individual non-admin user, the admin can click **Sign out now** or **Disable sign-in** in **Settings → Users**, which updates `sessionsValidAfter` / `disabled` in `data/users.json` and immediately invalidates that user's existing cookies.
+- Session verification reuses the prepared revocation query, but executes it on every verification so a logout in another process is still observed.
 - Creating or renaming an account and resetting its password also invalidate earlier
   cookies for that account name.
 

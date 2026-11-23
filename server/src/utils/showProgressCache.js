@@ -220,6 +220,12 @@ export function queueShowProgressUpdate(showTitle) {
   }
 }
 
+const selectShowEpisodeRowsStmt = db.prepare(`
+  SELECT season, episode, tmdb_id, tvdb_id, sync_action, sync_dispatch_telemetry, show_title, title
+  FROM watch_history
+  WHERE media_type = 'episode' AND (show_title_lower = ? OR (show_title_lower >= ? AND show_title_lower < ?))
+`);
+
 /**
  * Calculates show progress for a single show and updates cache in-place.
  */
@@ -231,14 +237,9 @@ async function calculateAndSetShowProgress(showTitle, state = cacheState()) {
   // a trailing "(year)". Matching show_title_lower exactly therefore missed rows
   // stored as "Robin Hood (2025)" - the show was never cached, so it was
   // rediscovered as uncached and requeued on every boot. Prefilter on the exact
-  // title plus the "(year)" form, then confirm by canonical key so only rows
-  // that really belong to this show are counted.
+  // title plus the indexable "(year)" range, then confirm by canonical key.
   const lowerTitle = showTitle.toLowerCase();
-  const rows = db.prepare(`
-    SELECT season, episode, tmdb_id, tvdb_id, sync_action, sync_dispatch_telemetry, show_title, title
-    FROM watch_history
-    WHERE media_type = 'episode' AND (show_title_lower = ? OR show_title_lower LIKE ?)
-  `).all(lowerTitle, `${lowerTitle} (%`)
+  const rows = selectShowEpisodeRowsStmt.all(lowerTitle, `${lowerTitle} (`, `${lowerTitle} )`)
     .filter((row) => {
       const derived = showTitleFrom(row.show_title || row.title);
       return (canonicalTitleKey(derived) || normalizeKeyPart(derived)) === showKey;
@@ -248,8 +249,9 @@ async function calculateAndSetShowProgress(showTitle, state = cacheState()) {
   
   if (trackedRows.length === 0) {
     // If no watched episodes remain, delete from cache
-    delete progressCache[showKey];
-    return;
+    const hadEntry = Object.hasOwn(progressCache, showKey);
+    if (hadEntry) delete progressCache[showKey];
+    return { fileChanged: hadEntry, dataChanged: hadEntry };
   }
   
   // Deduplicate watched episodes by season and episode number
@@ -300,22 +302,31 @@ async function calculateAndSetShowProgress(showTitle, state = cacheState()) {
     }
   }
   
-  progressCache[showKey] = {
+  const nextEntry = {
     title: showTitle,
     tmdb_id: tmdbId || "",
     episode_count: watchedCount,
     total_episodes: totalEpisodes,
     // Stamped so a show whose total cannot be resolved is retried on a schedule
     // rather than on every single boot.
-    total_checked_at: Date.now(),
-    schema_version: PROGRESS_CACHE_SCHEMA_VERSION
+    total_checked_at: reuseRecentTotal ? Number(previous.total_checked_at || Date.now()) : Date.now(),
+    schema_version: PROGRESS_CACHE_SCHEMA_VERSION,
   };
+  const dataChanged = !previous
+    || previous.title !== nextEntry.title
+    || String(previous.tmdb_id || "") !== nextEntry.tmdb_id
+    || Number(previous.episode_count || 0) !== nextEntry.episode_count
+    || Number(previous.total_episodes || 0) !== nextEntry.total_episodes
+    || Number(previous.schema_version || 0) !== nextEntry.schema_version;
+  const fileChanged = dataChanged || Number(previous?.total_checked_at || 0) !== nextEntry.total_checked_at;
+  if (fileChanged) progressCache[showKey] = nextEntry;
+  return { fileChanged, dataChanged };
 }
 
 /**
  * Flushes all pending queued updates to the cache and writes the cache file.
  */
-export async function flushShowProgressUpdates() {
+export async function flushShowProgressUpdates({ skipVersionBump = false } = {}) {
   const state = cacheState();
   if (state.progressFlushPromise) return state.progressFlushPromise;
   if (state.pendingShowUpdates.size === 0) return;
@@ -329,6 +340,8 @@ export async function flushShowProgressUpdates() {
   const flushPromise = (async () => {
     const calculationStartedAt = performance.now();
     const processedTitles = new Set();
+    let anyFileChanged = false;
+    let anyDataChanged = false;
     // Drain again when an update arrives while an earlier title is awaiting
     // metadata. Concurrent callers join this promise, so no update is lost and
     // each caller retains the durable-await contract.
@@ -339,29 +352,34 @@ export async function flushShowProgressUpdates() {
       console.log(`[ShowProgressCache] Updating progress for ${titles.length} shows: ${titles.join(", ")}`);
       for (const title of titles) {
         if (!db.open) return;
-        await calculateAndSetShowProgress(title, state);
+        const delta = await calculateAndSetShowProgress(title, state);
+        if (delta?.fileChanged) anyFileChanged = true;
+        if (delta?.dataChanged) anyDataChanged = true;
       }
     }
 
     const calculationMs = performance.now() - calculationStartedAt;
-    try {
-      const serializationStartedAt = performance.now();
-      const serialized = JSON.stringify(state.progressCache, null, 2);
-      const serializationMs = performance.now() - serializationStartedAt;
-      const writeStartedAt = performance.now();
-      const cacheFile = cacheFilePath(state);
-      const tempPath = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
-      fs.writeFileSync(tempPath, serialized, "utf8");
-      fs.renameSync(tempPath, cacheFile);
-      state.cacheMtimeMs = fs.statSync(cacheFile).mtimeMs;
-      const writeMs = performance.now() - writeStartedAt;
-      console.log(`[ShowProgressCache] Saved updated progress cache to file (${processedTitles.size} shows; calculate ${calculationMs.toFixed(1)}ms, serialize ${serializationMs.toFixed(1)}ms, write ${writeMs.toFixed(1)}ms).`);
-    } catch (e) {
-      console.error("[ShowProgressCache] Failed to save updated progress cache:", e);
+    if (anyFileChanged) {
+      try {
+        const serializationStartedAt = performance.now();
+        const serialized = JSON.stringify(state.progressCache, null, 2);
+        const serializationMs = performance.now() - serializationStartedAt;
+        const writeStartedAt = performance.now();
+        const cacheFile = cacheFilePath(state);
+        const tempPath = `${cacheFile}.${process.pid}.${Date.now()}.tmp`;
+        fs.writeFileSync(tempPath, serialized, "utf8");
+        fs.renameSync(tempPath, cacheFile);
+        state.cacheMtimeMs = fs.statSync(cacheFile).mtimeMs;
+        const writeMs = performance.now() - writeStartedAt;
+        console.log(`[ShowProgressCache] Saved updated progress cache to file (${processedTitles.size} shows; calculate ${calculationMs.toFixed(1)}ms, serialize ${serializationMs.toFixed(1)}ms, write ${writeMs.toFixed(1)}ms).`);
+      } catch (e) {
+        console.error("[ShowProgressCache] Failed to save updated progress cache:", e);
+      }
     }
-    // The show list is memoized by data version - bump it so refreshed totals
-    // are visible without waiting for an unrelated watch event.
-    bumpDataVersion();
+    // The show list is memoized by data version - bump it only when visible
+    // progress totals or counts actually changed and the caller is not already
+    // about to bump the data version immediately after this flush.
+    if (!skipVersionBump && anyDataChanged && db.open) bumpDataVersion();
   })();
   state.progressFlushPromise = flushPromise;
   try {

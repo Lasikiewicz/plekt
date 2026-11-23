@@ -10,6 +10,7 @@ const {
   clearUpNextLibraryLookupCache,
   createUpNextLibraryEpisodeLookup,
   createUpNextLibraryLookup,
+  noteUpNextLibraryAddition,
 } = await import("../server/src/utils/upNextLibraryLookup.js");
 const { __resetJellyfinSeriesCache } = await import("../server/src/utils/jellyfinClient.js");
 const { db } = await import("../server/src/db.js");
@@ -186,6 +187,29 @@ test("a restart during an outage keeps the provider's last library-confirmed id,
 // every Up Next rebuild paid seconds of provider round trips. Step 3 of
 // plan/archive/up-next-build-speed/summary.md: an expired miss still hides the card, and is
 // asked again in the background rather than during the build.
+test("a library addition bypasses only cached misses for the affected title", async (t) => {
+  const originalFetch = globalThis.fetch;
+  let now = 400_000;
+  clearAllAnswers();
+  __resetJellyfinSeriesCache();
+  __setUpNextLibraryLookupNow(() => now);
+  t.after(() => {
+    globalThis.fetch = originalFetch;
+    __setUpNextLibraryLookupNow(null);
+    clearAllAnswers();
+    __resetJellyfinSeriesCache();
+    db.prepare("DELETE FROM settings WHERE id = ?").run("upNextLibraryChanges");
+  });
+  globalThis.fetch = jellyfinLibrary({ present: false });
+  assert.deepEqual(await createUpNextLibraryLookup(config)(rememberedEpisode), {});
+  now += 1000;
+  __resetJellyfinSeriesCache();
+  globalThis.fetch = jellyfinLibrary({ present: true });
+  assert.deepEqual(await createUpNextLibraryLookup(config)(rememberedEpisode), {});
+  noteUpNextLibraryAddition("jellyfin", rememberedEpisode.show_title);
+  assert.deepEqual(await createUpNextLibraryLookup(config)(rememberedEpisode), { jellyfin: ["jf-e2"] });
+});
+
 test("a live miss is kept for two hours, then rechecked in the background while it still hides the card", async () => {
   const originalFetch = globalThis.fetch;
   let now = 5_000_000;

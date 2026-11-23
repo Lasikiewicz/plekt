@@ -247,6 +247,12 @@
     "sourcePaths": ["docs/metadata.md"]
   },
   {
+    "id": "import-netflix-viewing-history",
+    "label": "Import Netflix viewing history",
+    "docSlug": "import-netflix-viewing-history",
+    "sourcePaths": ["public/modules/netflix-import.js", "server/src/routes/netflixImport.js", "server/src/utils/netflixImport.js", "server/src/utils/netflixCsv.js"]
+  },
+  {
     "id": "sync-plex-with-trakt",
     "label": "Sync Plex with Trakt",
     "docSlug": "sync-plex-with-trakt",

@@ -1100,7 +1100,8 @@ export async function handleWatchBackups(req, res) {
       const file = readWatchBackupFile(filename);
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/gzip");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      const safeFilename = path.basename(file.absolute);
+      res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
       res.setHeader("Content-Length", String(file.compressed.length));
       res.setHeader("X-Content-SHA256", file.checksum);
       return res.end(file.compressed);

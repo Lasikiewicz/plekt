@@ -356,6 +356,8 @@ export function sessionMatchesCardArt(session = {}, cardKey = "") {
   const liveName = liveRest.slice(3).join("|").trim().toLowerCase();
   const cardName = cardRest.slice(3).join("|").trim().toLowerCase();
   if (liveType === "episode" && liveName.split(" ")[0] !== cardName.split(" ")[0]) return false;
+  const conflictingId = liveIds.some((id, index) => id && cardIds[index] && id !== cardIds[index]);
+  if (conflictingId) return false;
   const sharedId = liveIds.some((id, index) => id && id === cardIds[index]);
   return sharedId || Boolean(liveName && liveName === cardName);
 }
@@ -428,13 +430,21 @@ function syncIdleFeatureCard() {
   // live is already shown by its session card, so it is hidden and never copied.
   const slots = Math.max(0, options.itemCount - liveCount);
   const sessions = liveCount ? state.activeSessions || [] : [];
-  const isPlaying = (card) => sessions.some((session) => sessionMatchesCardArt(session, card.getAttribute("data-art")));
   const loadingCards = state.upNextLoading && !state.upNextItems.length
     ? [...(upNextPanel?.querySelectorAll(":scope > .up-next-loading-tiles > .up-next-skeleton") || [])]
     : [];
   const allRailCards = [...(upNextPanel?.querySelectorAll(":scope > [data-up-next-card-id]") || [])];
-  const playing = allRailCards.filter(isPlaying);
-  const railCards = allRailCards.filter((card) => !playing.includes(card));
+  const playingSet = new Set();
+  for (const session of sessions) {
+    const matched = allRailCards.filter((card) => sessionMatchesCardArt(session, card.getAttribute("data-art")));
+    const ids = session?.ids || {};
+    const hasIds = Boolean(ids.tmdb || ids.tvdb || ids.imdb || session?.tmdb_id || session?.tmdbId || session?.tvdb_id || session?.tvdbId || session?.imdb_id || session?.imdbId);
+    if (matched.length === 1 || (hasIds && matched.length > 0)) {
+      for (const card of matched) playingSet.add(card);
+    }
+  }
+  const playing = allRailCards.filter((card) => playingSet.has(card));
+  const railCards = allRailCards.filter((card) => !playingSet.has(card));
   const isResume = (card) => card.getAttribute("data-up-next-queue-kind") === "resume";
   const sources = loadingCards.length
     ? loadingCards.slice(0, slots)

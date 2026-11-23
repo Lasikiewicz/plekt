@@ -205,8 +205,9 @@ async function main() {
     if (fs.existsSync(manifestPath)) copy(manifestPath, path.join(appDir, manifestName));
   }
 
+  // Keep the source out of Community Apps' XML template scan; WinSW needs the installed .xml name.
   copy(
-    path.join(root, "packaging", "windows", "PlektService.xml"),
+    path.join(root, "packaging", "windows", "PlektService.xml.txt"),
     path.join(appDir, "PlektService.xml"),
   );
   copy(

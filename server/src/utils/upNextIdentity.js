@@ -442,7 +442,7 @@ export function normalizeUpNextCandidate(candidate = {}) {
     ? explicitPositionKnown
     : queueKind === "resume" && (!providerResumeObservation || positionMs > 0);
   const updatedAt = parseDateMs(candidate.updated_at ?? candidate.updatedAt ?? candidate.source_updated_at ?? candidate.sourceUpdatedAt ?? item.lastViewedAt ?? item.viewedAt ?? item.UpdatedAt ?? item.UserData?.LastPlayedDate ?? item.UserData?.PlayedDate);
-  const airDate = text(candidate.air_date || candidate.airDate || candidate.premiere_date || candidate.premiereDate || item.air_date || item.PremiereDate || item.parentPremiereDate);
+  const airDate = text(candidate.air_date || candidate.airDate || candidate.premiere_date || candidate.premiereDate || candidate.originallyAvailableAt || candidate.originally_available_at || item.air_date || item.PremiereDate || item.parentPremiereDate || item.originallyAvailableAt || item.originallyAvailableAtUtc);
   const year = parseYear(candidate.year || candidate.production_year || candidate.productionYear || item.ProductionYear, rawTitle);
   const canonicalKey = canonicalUpNextKey({ ...candidate, item, media_type: mediaType, title, show_title: showTitle, ids, series_ids: seriesIds, season: coordinates.season, episode: coordinates.episode });
   const artwork = providerArtworkPathsForCandidate({ ...candidate, item, provider, media_type: mediaType });
@@ -450,6 +450,9 @@ export function normalizeUpNextCandidate(candidate = {}) {
   const explicitShowPoster = text(candidate.show_poster_url || candidate.showPosterUrl || item.show_poster_url || item.showPosterUrl);
   const posterUrl = explicitPoster || (mediaType === "episode" ? artwork.show_poster || artwork.poster : artwork.poster);
   const showPosterUrl = explicitShowPoster || artwork.show_poster;
+  const upNextLane = candidate.up_next_lane === "rewatch" || candidate.up_next_lane === "new"
+    ? candidate.up_next_lane
+    : "";
 
   return {
     id: canonicalKey,
@@ -457,6 +460,7 @@ export function normalizeUpNextCandidate(candidate = {}) {
     media_key: text(candidate.media_key || candidate.mediaKey) || canonicalKey,
     media_type: mediaType,
     queue_kind: queueKind,
+    ...(upNextLane ? { up_next_lane: upNextLane } : {}),
     title,
     show_title: showTitle || null,
     episode_title: mediaType === "episode" ? episodeTitle : null,
@@ -482,6 +486,8 @@ export function normalizeUpNextCandidate(candidate = {}) {
     source_updated_at: parseDateMs(candidate.source_updated_at ?? candidate.sourceUpdatedAt) || updatedAt,
     show_latest_watched_at: text(candidate.show_latest_watched_at || candidate.showLatestWatchedAt || candidate.latest_watched_at || candidate.latestWatchedAt) || null,
     air_date: airDate,
+    season_remaining: Number.isInteger(candidate.season_remaining) ? candidate.season_remaining : null,
+    queue_placement: ["top", "bottom"].includes(candidate.queue_placement) ? candidate.queue_placement : "normal",
     source: provider || text(candidate.source) || "local",
     sources: [...new Set([...(Array.isArray(candidate.sources) ? candidate.sources : []), provider || text(candidate.source)].map(lower).filter(Boolean))].sort(),
     provider_items: providerItems,
@@ -550,6 +556,12 @@ function mergeGroup(rows) {
     title: [...normalized].map((row) => text(row.title)).find(Boolean) || representative.title,
     show_title: [...normalized].map((row) => text(row.show_title)).find(Boolean) || representative.show_title,
     episode_title: [...normalized].map((row) => text(row.episode_title)).find(Boolean) || representative.episode_title,
+    air_date: [...normalized].map((row) => text(row.air_date)).find(Boolean) || representative.air_date || "",
+    season_remaining: normalized.find((row) => row.season_remaining != null)?.season_remaining ?? null,
+    queue_placement: normalized.find((row) => row.queue_placement !== "normal")?.queue_placement ?? "normal",
+    up_next_lane: (representative.up_next_lane === "rewatch" || representative.up_next_lane === "new")
+      ? representative.up_next_lane
+      : (normalized.find((row) => row.up_next_lane === "rewatch" || row.up_next_lane === "new")?.up_next_lane || null),
     show_latest_watched_at: latestShowWatch,
     poster_url: [...normalized].map((row) => text(row.poster_url)).find(Boolean) || null,
     show_poster_url: [...normalized].map((row) => text(row.show_poster_url)).find(Boolean) || null,
@@ -801,14 +813,54 @@ function reconcileTitleOnlyMovieGroups(groups) {
   }
 }
 
-export function sortUpNextItems(items = []) {
+function parseAirDateMs(item = {}) {
+  const raw = text(item.air_date || item.airDate);
+  if (!raw) return 0;
+  if (/^\d{4}$/.test(raw)) return Date.parse(`${raw}-01-01T00:00:00Z`) || 0;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function upNextOrderKey(item = {}) {
+  if (item.media_type !== "episode") return item.media_key || item.id || "";
+  const identity = item.show_tvdb_id ? `tvdb:${item.show_tvdb_id}`
+    : item.show_tmdb_id ? `tmdb:${item.show_tmdb_id}`
+      : item.show_imdb_id ? `imdb:${item.show_imdb_id}` : `title:${lower(item.show_title)}`;
+  return `show:${identity}:${item.up_next_lane || ""}`;
+}
+
+export function sortUpNextItems(items = [], { sort = "recently_watched", partWatchedFirst = true, customOrder = [], customFallbackSort = "recently_watched" } = {}) {
+  const ranks = new Map(customOrder.map((key, index) => [key, index]));
+  const mode = sort === "custom" ? customFallbackSort : sort;
   return [...items].sort((left, right) => {
     const leftKnownResume = left.queue_kind === "resume" && left.playback_position_known !== false;
     const rightKnownResume = right.queue_kind === "resume" && right.playback_position_known !== false;
-    if (leftKnownResume !== rightKnownResume) return leftKnownResume ? -1 : 1;
-    if (leftKnownResume) {
+    if (partWatchedFirst && leftKnownResume !== rightKnownResume) return leftKnownResume ? -1 : 1;
+    const placement = { top: -1, bottom: 1 };
+    const placementDifference = (placement[left.queue_placement] ?? 0) - (placement[right.queue_placement] ?? 0);
+    if (placementDifference) return placementDifference;
+    if (sort === "custom") {
+      const leftRank = ranks.get(upNextOrderKey(left)) ?? Infinity;
+      const rightRank = ranks.get(upNextOrderKey(right)) ?? Infinity;
+      if (leftRank !== rightRank) return leftRank - rightRank;
+    }
+    if (mode === "closest_to_finishing") {
+      const leftRemaining = left.season_remaining ?? Infinity;
+      const rightRemaining = right.season_remaining ?? Infinity;
+      if (leftRemaining !== rightRemaining) return leftRemaining - rightRemaining;
+    }
+    if (partWatchedFirst && leftKnownResume) {
       return upNextUpdateTime(right) - upNextUpdateTime(left)
         || String(left.id || left.canonical_key || "").localeCompare(String(right.id || right.canonical_key || ""));
+    }
+    if (mode === "newly_aired" || mode === "oldest_unwatched") {
+      const leftAirMs = parseAirDateMs(left);
+      const rightAirMs = parseAirDateMs(right);
+      if (leftAirMs !== rightAirMs) {
+        if (!leftAirMs) return 1;
+        if (!rightAirMs) return -1;
+        return mode === "oldest_unwatched" ? leftAirMs - rightAirMs : rightAirMs - leftAirMs;
+      }
     }
     const leftShowWatchedAt = parseDateMs(left.show_latest_watched_at || left.showLatestWatchedAt);
     const rightShowWatchedAt = parseDateMs(right.show_latest_watched_at || right.showLatestWatchedAt);

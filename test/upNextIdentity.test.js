@@ -6,6 +6,7 @@ import {
   mergeUpNextCandidates,
   normalizeUpNextCandidate,
   sortUpNextItems,
+  upNextOrderKey,
 } from "../server/src/utils/upNextIdentity.js";
 
 function plexEpisode(overrides = {}) {
@@ -551,3 +552,53 @@ test("next-up cards prioritize the show watched most recently", () => {
 
   assert.deepEqual(items.map((item) => item.show_title), ["Reacher", "Ted Lasso"]);
 });
+
+test("custom order follows the show as its queued episode advances and keeps rewatch lanes distinct", () => {
+  const show = { media_type: "episode", show_tmdb_id: "123", season: 1, episode: 1, queue_kind: "next_up" };
+  const advanced = { ...show, episode: 2 };
+  const other = { ...show, show_tmdb_id: "456", show_title: "A different show" };
+  assert.equal(upNextOrderKey(show), upNextOrderKey(advanced));
+  assert.notEqual(upNextOrderKey({ ...show, up_next_lane: "rewatch" }), upNextOrderKey(show));
+  assert.deepEqual(sortUpNextItems([other, advanced], { sort: "custom", customOrder: [upNextOrderKey(show)] }), [advanced, other]);
+});
+
+test("newly_aired sort puts newly aired episodes first while keeping known resumes at the front", async () => {
+  const { sortUpNextItems } = await import("../server/src/utils/upNextIdentity.js");
+  const sorted = sortUpNextItems([
+    { id: "older-watch-new-air", show_title: "Fresh Show", media_type: "episode", queue_kind: "next_up", air_date: "2026-09-10", show_latest_watched_at: "2026-08-01T00:00:00Z" },
+    { id: "recent-watch-old-air", show_title: "Catalog Show", media_type: "episode", queue_kind: "next_up", air_date: "2021-04-01", show_latest_watched_at: "2026-09-09T00:00:00Z" },
+    { id: "active-resume", show_title: "Active Resume", media_type: "episode", queue_kind: "resume", playback_position_known: true, air_date: "2018-01-01", updated_at: 1000 },
+    { id: "missing-air", show_title: "Undated Show", media_type: "episode", queue_kind: "next_up", show_latest_watched_at: "2026-09-11T00:00:00Z" },
+  ], { sort: "newly_aired" });
+
+  assert.deepEqual(
+    sorted.map((item) => item.id),
+    ["active-resume", "older-watch-new-air", "recent-watch-old-air", "missing-air"],
+  );
+  assert.deepEqual(
+    sortUpNextItems(sorted, { sort: "newly_aired", partWatchedFirst: false }).map((item) => item.id),
+    ["older-watch-new-air", "recent-watch-old-air", "active-resume", "missing-air"],
+  );
+  assert.deepEqual(
+    sortUpNextItems(sorted, { sort: "oldest_unwatched", partWatchedFirst: false }).map((item) => item.id),
+    ["active-resume", "recent-watch-old-air", "older-watch-new-air", "missing-air"],
+  );
+
+  const merged = mergeUpNextCandidates([
+    {
+      provider: "plex",
+      feed_kind: "next_up",
+      provider_item_id: "plex-ep-1",
+      media_type: "episode",
+      title: "Show Air - S02E01",
+      show_title: "Show Air",
+      season: 2,
+      episode: 1,
+      queue_kind: "next_up",
+      show_ids: { tvdb: "112233" },
+      item: { originallyAvailableAt: "2026-09-05" },
+    },
+  ]);
+  assert.equal(merged[0].air_date, "2026-09-05");
+});
+

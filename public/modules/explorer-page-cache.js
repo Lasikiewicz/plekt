@@ -19,8 +19,10 @@ function cacheVersion() {
 }
 
 function cacheKey() {
-  const userKey = state.currentUser?.uid || state.currentUser?.email || "local";
-  return `${PERSISTED_KEY}:${userKey}`;
+  const user = state.currentUser || {};
+  const userKey = user.uid || user.email || "local";
+  const active = String(user.activeUser || "").trim();
+  return `${PERSISTED_KEY}:${active ? `${userKey}:${active}` : userKey}`;
 }
 
 function readPersistentCache() {

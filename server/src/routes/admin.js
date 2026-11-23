@@ -27,6 +27,7 @@ import { pinUnrecordedSeasonSources, readGlobalSeasonSource } from "../utils/sea
 import { searchTvdbSeriesList, resolveTvdbSeriesId, getTvdbSeriesArtwork } from "../utils/tvdbGateway.js";
 import { getFanartMovieArt, getFanartTvArt, getAllFanartMovieImages, getAllFanartTvImages } from "../utils/fanartGateway.js";
 import { getOmdbRating } from "../utils/omdbGateway.js";
+import { checkUpNextMirrorEnable, commitUpNextMirrorEnable } from "../utils/upNextMirror.js";
 import { POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, PUBLIC_DIR } from "../paths.js";
 import {
   countPlaybackProgressRows,
@@ -87,6 +88,7 @@ import {
 
 const USER_EDITABLE_CONFIG_SECTIONS = new Set([
   "plex", "emby", "jellyfin", "seerr", "tautulli", "watchlistSync",
+  "nowPlaying", "upNextSync", "ratingSync", "upNextMirrorPreview",
 ]);
 
 function imagePath(path, params = {}) {
@@ -236,8 +238,11 @@ export async function handleConfig(req, res) {
     }
     const errors = validateConfig(toValidate);
     if (errors.length) return sendJson(res, { error: "Invalid configuration", details: errors }, 400);
+    const mirrorApproval = await checkUpNextMirrorEnable(config);
+    if (!mirrorApproval.ok) return sendJson(res, { error: "Preview Mirror before enabling it for this app." }, 409);
     const previousSeasonSource = readGlobalSeasonSource();
     await saveMediaConfig(config);
+    await commitUpNextMirrorEnable(mirrorApproval.enabling, mirrorApproval.current);
     // Connecting or re-pointing a media server changes what can be found, so a
     // remembered "not in any library" answer must not outlive the change.
     clearEmptyAppLinksCache();
@@ -925,10 +930,10 @@ export async function handleSeerrMediaStatus(req, res) {
     return sendJson(res, { ok: false, error: "Seerr is not configured or disabled." }, 503);
   }
 
-  const mediaType = String(req.query.mediaType || "").trim();
+  const mediaType = String(req.query.mediaType || "").trim().toLowerCase();
   const mediaId = Number(req.query.mediaId);
-  if (!mediaType || !mediaId) {
-    return sendJson(res, { ok: false, error: "mediaType and mediaId are required." }, 400);
+  if (!["movie", "tv"].includes(mediaType) || !Number.isInteger(mediaId) || mediaId <= 0) {
+    return sendJson(res, { ok: false, error: "Valid mediaType ('movie' or 'tv') and positive integer mediaId are required." }, 400);
   }
 
   const cacheKey = seerrMediaStatusCacheKey(mediaType, mediaId);

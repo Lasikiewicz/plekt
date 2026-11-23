@@ -3,7 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 import { bumpDataVersion, db, parseJson, toJson } from "../db.js";
-import { FULL_BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR } from "../paths.js";
+import { DATA_DIR, FULL_BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR } from "../paths.js";
+import { getActiveDataDir, isNonAdminTenantContext } from "./userContext.js";
+import { decryptCredential, encryptCredential } from "./credentialVault.js";
+import { sameServerUrl } from "./outbound.js";
 import { createAdapter, DESTINATION_TYPES } from "./backupDestinations/index.js";
 import { protectedSnapshotFiles } from "./syncPlans.js";
 import { persistedWatchDerivedFields } from "./watchDerivedFields.js";
@@ -187,14 +190,56 @@ function mergeEnvBackupDestinations(list = []) {
   return next;
 }
 
+function encryptDestinationSecrets(secrets = {}) {
+  const out = {};
+  for (const [key, value] of Object.entries(secrets || {})) {
+    const plain = String(value ?? "");
+    if (!plain) continue;
+    out[key] = { __encrypted: true, ...encryptCredential(plain) };
+  }
+  return out;
+}
+
+function decryptDestinationSecrets(secrets = {}) {
+  const out = {};
+  for (const [key, value] of Object.entries(secrets || {})) {
+    if (!value) continue;
+    if (typeof value === "string") {
+      out[key] = value;
+    } else if (typeof value === "object" && value.__encrypted && value.ciphertext && value.iv && value.tag) {
+      try { out[key] = decryptCredential(value); } catch { /* ignore corrupted secret */ }
+    }
+  }
+  return out;
+}
+
+function destinationEndpointChanged(existing = {}, next = {}) {
+  for (const field of ["url", "endpoint", "baseUrl"]) {
+    const prev = String(existing?.settings?.[field] || "").trim();
+    const curr = String(next?.settings?.[field] || "").trim();
+    if (prev && curr && !sameServerUrl(prev, curr)) return true;
+  }
+  return false;
+}
+
 export function loadBackupDestinations() {
   const list = parseJson(selectSetting.get(DESTINATIONS_ID)?.data, []) || [];
-  const stored = Array.isArray(list) ? list.map((item) => ({ ...item, secrets: item.secrets || {}, settings: item.settings || {} })) : [];
+  const stored = Array.isArray(list)
+    ? list.map((item) => ({
+      ...item,
+      secrets: decryptDestinationSecrets(item.secrets || {}),
+      settings: item.settings || {},
+    }))
+    : [];
   return mergeEnvBackupDestinations(stored);
 }
 
 function writeBackupDestinations(list) {
-  upsertSetting.run(DESTINATIONS_ID, toJson(list), Date.now());
+  const encrypted = (Array.isArray(list) ? list : []).map((item) => ({
+    ...item,
+    secrets: encryptDestinationSecrets(item.secrets || {}),
+  }));
+  upsertSetting.run(DESTINATIONS_ID, toJson(encrypted), Date.now());
 }
 
 // Replace secrets with "is-set" boolean flags so the UI never receives credentials.
@@ -230,7 +275,8 @@ export function saveBackupDestination(input = {}) {
   const existing = index >= 0 ? list[index] : null;
   const next = safeDestination({ ...input, id: existing?.id || input.id });
 
-  next.secrets = { ...(existing?.secrets || {}) };
+  const endpointChanged = Boolean(existing && destinationEndpointChanged(existing, next));
+  next.secrets = endpointChanged ? {} : { ...(existing?.secrets || {}) };
   if (input.secrets && typeof input.secrets === "object") {
     for (const [key, value] of Object.entries(input.secrets)) {
       if (value === null) delete next.secrets[key];
@@ -304,11 +350,13 @@ export async function pullRemoteBackupToLocal(id, filename) {
     throw new Error("Downloaded file is not a Plekt watch-history backup");
   }
 
-  fs.mkdirSync(WATCH_HISTORY_BACKUPS_DIR, { recursive: true });
+  const dir = activeWatchHistoryBackupsDir();
+  fs.mkdirSync(dir, { recursive: true });
   const finalPath = backupPath(name);
   const temporary = `${finalPath}.tmp-${process.pid}`;
-  fs.writeFileSync(temporary, buffer);
+  fs.writeFileSync(temporary, buffer, { mode: 0o600 });
   fs.renameSync(temporary, finalPath);
+  try { fs.chmodSync(finalPath, 0o600); } catch { /* non-POSIX FS */ }
   return { name, sizeBytes: buffer.length };
 }
 
@@ -342,8 +390,9 @@ export async function pullRemotePlektBackupToLocal(id, filename) {
   fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
   const finalPath = path.join(FULL_BACKUPS_DIR, name);
   const temporary = `${finalPath}.tmp-${process.pid}`;
-  fs.writeFileSync(temporary, buffer);
+  fs.writeFileSync(temporary, buffer, { mode: 0o600 });
   fs.renameSync(temporary, finalPath);
+  try { fs.chmodSync(finalPath, 0o600); } catch { /* non-POSIX FS */ }
   return { name, sizeBytes: buffer.length };
 }
 
@@ -368,19 +417,21 @@ export function importWatchHistoryBackupFile({ filename = "", buffer }) {
     throw new Error("Uploaded backup data checksum verification failed");
   }
 
-  fs.mkdirSync(WATCH_HISTORY_BACKUPS_DIR, { recursive: true });
+  const dir = activeWatchHistoryBackupsDir();
+  fs.mkdirSync(dir, { recursive: true });
   const uploadedName = path.basename(String(filename || ""));
   let name = FILE_PATTERN.test(uploadedName) ? uploadedName : timestampName(new Date());
   let collisionOffset = 1;
-  while (fs.existsSync(path.join(WATCH_HISTORY_BACKUPS_DIR, name))) {
+  while (fs.existsSync(path.join(dir, name))) {
     name = timestampName(new Date(Date.now() + collisionOffset * 1000));
     collisionOffset += 1;
   }
 
   const finalPath = backupPath(name);
   const temporary = `${finalPath}.tmp-${process.pid}`;
-  fs.writeFileSync(temporary, compressed);
+  fs.writeFileSync(temporary, compressed, { mode: 0o600 });
   fs.renameSync(temporary, finalPath);
+  try { fs.chmodSync(finalPath, 0o600); } catch { /* non-POSIX FS */ }
   const stat = fs.statSync(finalPath);
   return {
     name,
@@ -489,15 +540,24 @@ function backupDocument() {
   };
 }
 
+function activeWatchHistoryBackupsDir() {
+  return isNonAdminTenantContext(DATA_DIR)
+    ? path.join(getActiveDataDir(DATA_DIR), "backups", "watch-history")
+    : WATCH_HISTORY_BACKUPS_DIR;
+}
+
 function backupPath(filename) {
-  const name = path.basename(String(filename || ""));
+  const raw = String(filename || "");
+  if (raw.includes("/") || raw.includes("\\")) throw new Error("Invalid watch-history backup filename");
+  const name = path.basename(raw);
   if (!FILE_PATTERN.test(name)) throw new Error("Invalid watch-history backup filename");
-  return path.join(WATCH_HISTORY_BACKUPS_DIR, name);
+  return path.join(activeWatchHistoryBackupsDir(), name);
 }
 
 export function listWatchBackups() {
-  fs.mkdirSync(WATCH_HISTORY_BACKUPS_DIR, { recursive: true });
-  return fs.readdirSync(WATCH_HISTORY_BACKUPS_DIR)
+  const dir = activeWatchHistoryBackupsDir();
+  fs.mkdirSync(dir, { recursive: true });
+  return fs.readdirSync(dir)
     .filter((name) => FILE_PATTERN.test(name))
     .map((name) => {
       const absolute = backupPath(name);
@@ -533,21 +593,23 @@ function applyRetention(retention) {
 }
 
 export async function createWatchHistoryBackup({ reason = "manual", mirrorRemote = false } = {}) {
-  fs.mkdirSync(WATCH_HISTORY_BACKUPS_DIR, { recursive: true });
+  const dir = activeWatchHistoryBackupsDir();
+  fs.mkdirSync(dir, { recursive: true });
   const document = backupDocument();
   const json = Buffer.from(`${JSON.stringify(document)}\n`, "utf8");
   const compressed = zlib.gzipSync(json, { level: 9 });
   let createdAt = new Date();
   let filename = timestampName(createdAt);
-  while (fs.existsSync(path.join(WATCH_HISTORY_BACKUPS_DIR, filename))) {
+  while (fs.existsSync(path.join(dir, filename))) {
     createdAt = new Date(createdAt.getTime() + 1000);
     filename = timestampName(createdAt);
   }
   const destination = backupPath(filename);
   const temporary = `${destination}.tmp-${process.pid}`;
-  fs.writeFileSync(temporary, compressed);
+  fs.writeFileSync(temporary, compressed, { mode: 0o600 });
   fs.renameSync(temporary, destination);
-  if (/^pre[-_]/.test(reason)) fs.writeFileSync(`${destination}.safety`, String(reason));
+  try { fs.chmodSync(destination, 0o600); } catch { /* non-POSIX FS */ }
+  if (/^pre[-_]/.test(reason)) fs.writeFileSync(`${destination}.safety`, String(reason), { mode: 0o600 });
   const config = loadWatchBackupConfig();
   applyRetention(config.retention);
   const result = {

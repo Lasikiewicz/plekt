@@ -23,6 +23,21 @@ const carol = { name: "carol", role: "user", dataDir: tenancy.ensureTenantDataDi
 const asBob = (fn) => runWithUserContext(bob, fn);
 const asCarol = (fn) => runWithUserContext(carol, fn);
 
+test("Custom Up Next order and show overrides stay with the active account", async () => {
+  const { loadMediaConfig, saveMediaConfig, saveUpNextShowOverride } = await import("../server/src/utils/configStore.js");
+  await asBob(async () => {
+    await saveMediaConfig({ upNextSync: { enabled: false, sort: "custom", customOrder: ["show:tvdb:123:"] } });
+    saveUpNextShowOverride({ tvdb_id: "123", placement: "top" });
+    saveUpNextShowOverride({ tvdb_id: "456", placement: "bottom" });
+  });
+  const own = await asBob(() => loadMediaConfig({ resolveConnections: false }));
+  const other = await asCarol(() => loadMediaConfig({ resolveConnections: false }));
+  assert.deepEqual(own.upNextSync.customOrder, ["show:tvdb:123:"]);
+  assert.equal(own.upNextSync.showOverrides.length, 2);
+  assert.deepEqual(other.upNextSync.customOrder, []);
+  assert.deepEqual(other.upNextSync.showOverrides, []);
+});
+
 test("the leader's lease is valid inside every added user's context", () => {
   const lease = leaseStore.claimSchedulerLease({ holderId: "tenant-worker", role: "worker", ttlMs: 60_000, now: Date.now() });
   assert.ok(lease);

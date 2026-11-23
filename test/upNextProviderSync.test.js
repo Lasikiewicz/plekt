@@ -309,7 +309,7 @@ test("a provider whose every feed read failed is not pushed to in that run", asy
     .map((feed) => feed.status), ["failed", "failed"]);
   const jellyfinRail = summary.providerRails.find((entry) => entry.provider === "jellyfin");
   assert.equal(jellyfinRail.status, "failed");
-  assert.match(jellyfinRail.reason, /could not be reached/);
+  assert.match(jellyfinRail.reason, /no current Up Next feed/);
   assert.equal(summary.pushedProviders.includes("jellyfin"), false);
   // Only the feed reads reached Jellyfin: no item search or rail walk.
   assert.deepEqual(calls
@@ -397,7 +397,7 @@ test("a stale automatic sync does not push resume positions built before a canon
 // Verified live in the Emby plugin step 3 audit: rewriting Plex's unchanged
 // Evil S02E03 position every push restamped lastViewedAt, and the next resume
 // pass pushed it back to Emby and Jellyfin every 15 minutes.
-async function pushResumeAgainstJellyfinFeed(t, feedPositionMs) {
+async function pushResumeAgainstJellyfinFeed(t, feedPositionMs, { destinationCurrent = null, onFeedRead = null } = {}) {
   const originalFetch = globalThis.fetch;
   const writes = [];
   globalThis.fetch = async (input, options = {}) => {
@@ -407,6 +407,7 @@ async function pushResumeAgainstJellyfinFeed(t, feedPositionMs) {
       writes.push(url);
       return new Response(null, { status: 204 });
     }
+    if (/resume/i.test(url.pathname)) await onFeedRead?.();
     const items = /resume/i.test(url.pathname) ? [{
       Id: "0f292f2c",
       Type: "Episode",
@@ -436,6 +437,7 @@ async function pushResumeAgainstJellyfinFeed(t, feedPositionMs) {
       provider_items: { jellyfin: ["0f292f2c"] },
     }],
     config: { jellyfin: { baseUrl: "http://jellyfin.test", apiKey: "jellyfin-key", userId: "jelly-user" } },
+    destinationCurrent,
   });
   return { summary, progressWrites: writes.filter((url) => /0f292f2c/.test(url.pathname) && /UserData|Playing/.test(url.pathname)) };
 }
@@ -551,12 +553,7 @@ test("a legacy Jellyfin rail seed is cleared while the watched predecessor refre
   assert.equal(summary.jellyfinRail.failed_count, 0);
   assert.equal(listUpNextRailSeeds("jellyfin").some((seed) => seed.providerItemId === "jelly-target"), false);
 
-  const predecessorUnplayed = calls.find((call) => call.method === "DELETE" && call.url.pathname.endsWith("/PlayedItems/jelly-e2"));
-  const predecessorPlayed = calls.find((call) => call.method === "POST" && call.url.pathname.endsWith("/PlayedItems/jelly-e2"));
-  assert.ok(predecessorUnplayed, "the watched predecessor is first marked unwatched");
-  assert.ok(predecessorPlayed, "the watched predecessor is then marked watched");
-  assert.equal(predecessorPlayed.url.searchParams.get("datePlayed"), "2026-08-02T10:00:00.000Z");
-  assert.ok(calls.indexOf(predecessorUnplayed) < calls.indexOf(predecessorPlayed), "the provider sees the unplayed-to-played transition in order");
+  assert.equal(calls.some((call) => call.url.pathname.endsWith("/PlayedItems/jelly-e2")), false);
   const predecessorDateRestore = calls.find((call) => call.method === "POST" && call.url.pathname.endsWith("/Items/jelly-e2/UserData"));
   assert.ok(predecessorDateRestore, "the watched predecessor date is explicitly restored");
   assert.deepEqual(JSON.parse(predecessorDateRestore.body), { LastPlayedDate: "2026-08-02T10:00:00.000Z" });
@@ -583,7 +580,7 @@ test("the native rail refresh applies to Plex, Emby, and Jellyfin", async (t) =>
       { Id: "emby-target", Type: "Episode", Name: "Native Refresh - S01E02", SeriesName: "Native Refresh", ParentIndexNumber: 1, IndexNumber: 2, PremiereDate: "2026-01-02", UserData: { Played: false, PlaybackPositionTicks: 0 } },
     ],
     jellyfin: [
-      { Id: "jelly-prev", Type: "Episode", Name: "Native Refresh - S01E01", SeriesName: "Native Refresh", ParentIndexNumber: 1, IndexNumber: 1, PremiereDate: "2026-01-01", UserData: { Played: true, PlaybackPositionTicks: 0 } },
+      { Id: "jelly-prev", Type: "Episode", Name: "Native Refresh - S01E01", SeriesName: "Native Refresh", ParentIndexNumber: 1, IndexNumber: 1, PremiereDate: "2026-01-01", UserData: { Played: true, PlaybackPositionTicks: 0, LastPlayedDate: "2026-01-03T10:00:00.000Z" } },
       { Id: "jelly-target", Type: "Episode", Name: "Native Refresh - S01E02", SeriesName: "Native Refresh", ParentIndexNumber: 1, IndexNumber: 2, PremiereDate: "2026-01-02", UserData: { Played: false, PlaybackPositionTicks: 0 } },
     ],
   };
@@ -658,8 +655,21 @@ test("the native rail refresh applies to Plex, Emby, and Jellyfin", async (t) =>
   assert.ok(restore, "the Emby rail touch restores the item's UserData");
   assert.ok(calls.indexOf(stopped) < calls.indexOf(restore), "the restore follows the session");
   assert.deepEqual(JSON.parse(restore.body), { PlayCount: 3, Played: false, PlaybackPositionTicks: 0, LastPlayedDate: "2026-09-22T19:35:42.0000000Z" });
-  assert.ok(calls.some((call) => call.method === "DELETE" && call.url.hostname === "jelly-native.test" && call.url.pathname.endsWith("/PlayedItems/jelly-prev")));
-  assert.ok(calls.some((call) => call.method === "POST" && call.url.hostname === "jelly-native.test" && call.url.pathname.endsWith("/PlayedItems/jelly-prev")));
+  assert.ok(calls.some((call) => call.method === "POST" && call.url.hostname === "jelly-native.test" && call.url.pathname.endsWith("/Items/jelly-prev/UserData")));
+  assert.equal(calls.some((call) => call.url.pathname.endsWith("/PlayedItems/jelly-prev")), false);
+  const previousWrites = calls.length;
+  const beforeMirror = Date.now();
+  const mirror = await refreshProviderRail({
+    provider: "jellyfin", config: configs, targets: [{ item, providerItemId: "jelly-target" }],
+    mirrorOrderIds: new Set(["jelly-target"]),
+  });
+  const mirrorWrites = calls.slice(previousWrites).filter((call) => call.method === "POST" || call.method === "DELETE");
+  assert.equal(mirror.refreshed_count, 1);
+  assert.equal(mirrorWrites.length, 1);
+  assert.ok(mirrorWrites[0].url.pathname.endsWith("/Items/jelly-prev/UserData"));
+  const { LastPlayedDate, ...otherFields } = JSON.parse(mirrorWrites[0].body);
+  assert.deepEqual(otherFields, {});
+  assert.ok(Date.parse(LastPlayedDate) >= beforeMirror);
 });
 
 test("a new season uses the watched final episode of the previous season as its rail predecessor", async (t) => {
@@ -736,10 +746,10 @@ test("a new season uses the watched final episode of the previous season as its 
   ]);
   assert.ok(calls.some((call) => call.method === "GET" && call.url.hostname === "plex-boundary.test" && call.url.pathname === "/:/scrobble" && call.url.searchParams.get("key") === "plex-s1e2"));
   assert.ok(calls.some((call) => call.method === "DELETE" && call.url.hostname === "emby-boundary.test" && call.url.pathname.endsWith("/PlayedItems/emby-s1e2")));
-  assert.ok(calls.some((call) => call.method === "DELETE" && call.url.hostname === "jelly-boundary.test" && call.url.pathname.endsWith("/PlayedItems/jelly-s1e2")));
+  assert.ok(calls.some((call) => call.method === "POST" && call.url.hostname === "jelly-boundary.test" && call.url.pathname.endsWith("/Items/jelly-s1e2/UserData")));
 });
 
-function unwatchRaceFixture(t, seriesTmdb, { onPlayedWrite = null } = {}) {
+function unwatchRaceFixture(t, seriesTmdb, { onPlayedWrite = null, onInventoryRead = null } = {}) {
   const originalFetch = globalThis.fetch;
   const calls = [];
   const host = `jelly-${seriesTmdb}.test`;
@@ -751,12 +761,13 @@ function unwatchRaceFixture(t, seriesTmdb, { onPlayedWrite = null } = {}) {
     const url = new URL(String(input));
     const method = String(options.method || "GET").toUpperCase();
     calls.push({ url, method });
-    if (method === "POST" && url.pathname.endsWith(`/PlayedItems/${seriesTmdb}-e1`)) await onPlayedWrite?.();
+    if (method === "POST" && url.pathname.endsWith(`/Items/${seriesTmdb}-e1/UserData`)) await onPlayedWrite?.();
     if (method !== "GET") return new Response(null, { status: 204 });
     let body = { Items: [] };
     if (url.searchParams.get("AnyProviderIdEquals")) {
       body = { Items: [{ Id: `${seriesTmdb}-series`, Type: "Series", Name: "Unwatch Race", ProviderIds: { Tmdb: seriesTmdb } }] };
     } else if (url.searchParams.get("ParentId") === `${seriesTmdb}-series`) {
+      await onInventoryRead?.();
       body = { Items: episodes, TotalRecordCount: episodes.length };
     }
     return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
@@ -765,13 +776,14 @@ function unwatchRaceFixture(t, seriesTmdb, { onPlayedWrite = null } = {}) {
   return {
     calls,
     host,
-    run: () => refreshProviderRail({
+    run: (extra = {}) => refreshProviderRail({
       provider: "jellyfin",
       config: { jellyfin: { baseUrl: `http://${host}`, apiKey: "jelly-key", userId: "jelly-user" } },
       targets: [{
         providerItemId: `${seriesTmdb}-e2`,
         item: { media_type: "episode", title: "Unwatch Race - S01E02", show_title: "Unwatch Race", season: 1, episode: 2, show_tmdb_id: seriesTmdb, position_ms: 0 },
       }],
+      ...extra,
     }),
   };
 }
@@ -794,7 +806,7 @@ test("the native rail refresh never restamps a predecessor Plembfin has as unwat
   assert.equal(calls.filter((call) => call.method !== "GET").length, 0, "no played or unplayed write reaches Jellyfin");
 });
 
-test("an unwatch that lands during the rail restamp is sent to the provider again", async (t) => {
+test("a Jellyfin restamp does not write watched state during a concurrent unwatch", async (t) => {
   const { setPlaystateForMediaIdentitySync } = await import("../server/src/utils/dataRepo.js");
   const media = {
     title: "Unwatch Race - S01E01", show_title: "Unwatch Race", type: "episode", media_type: "episode",
@@ -810,11 +822,10 @@ test("an unwatch that lands during the rail restamp is sent to the provider agai
   const writes = calls
     .filter((call) => call.method !== "GET" && call.url.pathname.includes("/PlayedItems/"))
     .map((call) => call.method);
-  assert.deepEqual(writes, ["DELETE", "POST", "DELETE"], "the restamp is followed by the canonical unwatch");
-  assert.equal(result.results[0].predecessor_unwatched_during_refresh, true);
-  assert.equal(result.results[0].predecessor_unwatch_restored, true);
+  assert.deepEqual(writes, []);
+  assert.equal(result.refreshed_count, 1);
 
-  // The toggle's own callbacks are marked by item id so the webhook consumes
+  // The restamp's callbacks are marked by item id so the webhook consumes
   // them (defect AG); the target and other items are not covered.
   const { isRecentOutboundRailRefresh } = await import("../server/src/utils/syncOrchestrator.js");
   const { createLoopStore } = await import("../server/src/utils/loopStore.js");
@@ -874,4 +885,98 @@ test("an empty Emby resume feed falls back to the legacy resumable query", async
   assert.deepEqual(items.map((item) => item.Id), ["emby-real-resume"]);
   assert.ok(paths.some((path) => path.endsWith("/Items/Resume")), "the native endpoint is still tried first");
   assert.ok(paths.some((path) => path.includes("Filters=IsResumable")), "and the legacy query is consulted when it comes back empty");
+});
+
+// Step 0a write-time rechecks: a push plans against the queue and config it
+// read at its start, so a dismissal or a provider account switch made after
+// that point must still stop the write.
+const resumeWriteItem = { media_type: "episode", title: "Scrubs - S01E04", show_title: "Scrubs", season: 1, episode: 4, provider_items: { jellyfin: ["0f292f2c"] } };
+
+test("a resume item dismissed during the push is not written", async (t) => {
+  const { recordUpNextDismissal, restoreAllUpNextDismissals } = await import("../server/src/utils/upNextDismissals.js");
+  t.after(() => restoreAllUpNextDismissals());
+  const { summary, progressWrites } = await pushResumeAgainstJellyfinFeed(t, 120_000, {
+    onFeedRead: () => recordUpNextDismissal({ ...resumeWriteItem, media_key: "episode:1:4:imdb:tt0285403", ids: { imdb: "tt0285403" } }),
+  });
+  assert.equal(summary.progress[0].status, "skipped");
+  assert.match(summary.progress[0].details, /removed from the queue before the write/);
+  assert.deepEqual(progressWrites, []);
+});
+
+test("a resume write stops when the provider connection changed after the push started", async (t) => {
+  const checked = [];
+  const { summary, progressWrites } = await pushResumeAgainstJellyfinFeed(t, 120_000, {
+    destinationCurrent: async (provider) => { checked.push(provider); return false; },
+  });
+  assert.deepEqual(checked, ["jellyfin"]);
+  assert.equal(summary.progress[0].status, "skipped");
+  assert.match(summary.progress[0].details, /connection changed before the write/);
+  assert.deepEqual(progressWrites, []);
+});
+
+test("a rail restamp stops inside the lease when the provider connection changed", async (t) => {
+  const { setPlaystateForMediaIdentitySync } = await import("../server/src/utils/dataRepo.js");
+  setPlaystateForMediaIdentitySync({
+    title: "Unwatch Race - S01E01", show_title: "Unwatch Race", type: "episode", media_type: "episode",
+    season: 1, episode: 1, ids: { tmdb: "dest-switch" }, source: "manual",
+  }, "watched", "2025-01-03T10:00:00.000Z");
+  const { calls, run } = unwatchRaceFixture(t, "dest-switch");
+  let checks = 0;
+
+  const result = await run({ destinationCurrent: async () => { checks += 1; return false; } });
+
+  assert.equal(checks, 1);
+  assert.equal(result.refreshed_count, 0);
+  assert.equal(result.results[0].status, "skipped");
+  assert.match(result.results[0].reason, /jellyfin connection changed before the write/);
+  assert.equal(calls.filter((call) => call.method !== "GET").length, 0, "no write reaches the old destination");
+});
+
+test("a rail item dismissed after planning starts is not restamped", async (t) => {
+  const { setPlaystateForMediaIdentitySync } = await import("../server/src/utils/dataRepo.js");
+  const { recordUpNextDismissal } = await import("../server/src/utils/upNextDismissals.js");
+  setPlaystateForMediaIdentitySync({
+    title: "Unwatch Race - S01E01", show_title: "Unwatch Race", type: "episode", media_type: "episode",
+    season: 1, episode: 1, ids: { tmdb: "dismiss-mid" }, source: "manual",
+  }, "watched", "2025-01-03T10:00:00.000Z");
+  const { calls, run } = unwatchRaceFixture(t, "dismiss-mid", {
+    onInventoryRead: () => recordUpNextDismissal({ media_type: "episode", title: "Unwatch Race - S01E02", show_title: "Unwatch Race", season: 1, episode: 2, show_tmdb_id: "dismiss-mid" }),
+  });
+
+  const result = await run();
+
+  assert.equal(result.refreshed_count, 0);
+  assert.equal(result.results[0].status, "skipped");
+  assert.equal(calls.filter((call) => call.method !== "GET").length, 0);
+});
+
+test("the Up Next destination check follows account, connection, server and disabled changes", async () => {
+  const { createUpNextDestinationCheck } = await import("../server/src/utils/upNextMirror.js");
+  const planned = { emby: { baseUrl: "http://emby.test", connectionId: "c1", userId: "u1" } };
+  const checkAgainst = (current) => createUpNextDestinationCheck(planned, async () => current)("emby");
+  assert.equal(await checkAgainst(structuredClone(planned)), true);
+  assert.equal(await checkAgainst({ emby: { ...planned.emby, userId: "u2" } }), false);
+  assert.equal(await checkAgainst({ emby: { ...planned.emby, connectionId: "c2" } }), false);
+  assert.equal(await checkAgainst({ emby: { ...planned.emby, baseUrl: "http://other.test" } }), false);
+  assert.equal(await checkAgainst({ emby: { ...planned.emby, disabled: true } }), false);
+  assert.equal(await checkAgainst({}), false);
+});
+
+test("a Jellyfin rail date update outside the monitored libraries is skipped, not failed", async (t) => {
+  const { setPlaystateForMediaIdentitySync } = await import("../server/src/utils/dataRepo.js");
+  setPlaystateForMediaIdentitySync({
+    title: "Unwatch Race - S01E01", show_title: "Unwatch Race", type: "episode", media_type: "episode",
+    season: 1, episode: 1, ids: { tmdb: "unselected" }, source: "manual",
+  }, "watched", "2025-01-03T10:00:00.000Z");
+  const { calls, host, run } = unwatchRaceFixture(t, "unselected");
+
+  const result = await run({
+    config: { jellyfin: { baseUrl: `http://${host}`, apiKey: "jelly-key", userId: "jelly-user", monitoredLibraryIds: [] } },
+  });
+
+  assert.equal(result.refreshed_count, 0);
+  assert.equal(result.failed_count, 0);
+  assert.equal(result.results[0].status, "skipped");
+  assert.match(result.results[0].reason, /No libraries selected for Jellyfin/);
+  assert.equal(calls.filter((call) => call.method !== "GET").length, 0, "no date write reaches an unselected library");
 });

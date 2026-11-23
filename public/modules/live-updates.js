@@ -10,6 +10,7 @@ let lockAbortController = null;
 let liveChannel = null;
 
 const RECONNECT_MS = 1_000;
+const MAX_RECONNECT_MS = 30_000;
 // The server writes at least a heartbeat every 15 s. A stream that has been
 // silent for three of those is dead (typically a half-open socket after the
 // computer slept) even though the browser has not reported an error, so the
@@ -71,7 +72,7 @@ export function stopLiveUpdates() {
   lastUpNextVersion = null;
 }
 
-export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVersion, onUpNextVersion, onResume, onSyncProgress, onSyncAttention, onError, stallMs = STALL_MS, stallCheckMs = STALL_CHECK_MS } = {}) {
+export function startLiveUpdates({ authHeaders, isAuthenticated, onHistoryVersion, onDiscoverVersion, onUpNextVersion, onResume, onSyncProgress, onSyncAttention, onError, stallMs = STALL_MS, stallCheckMs = STALL_CHECK_MS, reconnectMs = RECONNECT_MS, maxReconnectMs = MAX_RECONNECT_MS } = {}) {
   stopLiveUpdates();
   const generation = connectionGeneration;
 
@@ -82,6 +83,8 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
   // visible tab; a newly visible tab reconnects and receives the current
   // authoritative version/progress snapshot immediately.
   const isVisible = () => document.visibilityState !== "hidden";
+  const canConnect = () => (typeof isAuthenticated === "function" ? Boolean(isAuthenticated()) : true);
+  let consecutiveFailures = 0;
   let lastResumeNotificationAt = 0;
   const notifyResume = (reason) => {
     if (!isVisible()) return;
@@ -94,11 +97,14 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
   };
 
   const scheduleReconnect = () => {
-    if (generation !== connectionGeneration || reconnectTimer || !isVisible()) return;
+    if (generation !== connectionGeneration || reconnectTimer || !isVisible() || !canConnect()) return;
+    const delay = consecutiveFailures > 0
+      ? Math.min(maxReconnectMs, reconnectMs * (2 ** Math.min(consecutiveFailures - 1, 6)))
+      : reconnectMs;
     reconnectTimer = window.setTimeout(() => {
       reconnectTimer = null;
       requestConnection();
-    }, RECONNECT_MS);
+    }, delay);
   };
 
   let latestSnapshot = null;
@@ -208,10 +214,11 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
   }
 
   const connect = async () => {
-    if (generation !== connectionGeneration || !isVisible() || activeController) return;
+    if (generation !== connectionGeneration || !isVisible() || !canConnect() || activeController) return;
     const controller = new AbortController();
     activeController = controller;
     let lastActivityAt = Date.now();
+    let stopReconnect = false;
     const stallTimer = setInterval(() => {
       if (Date.now() - lastActivityAt >= stallMs) controller.abort();
     }, stallCheckMs);
@@ -222,7 +229,13 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
         cache: "no-store",
         signal: controller.signal,
       });
+      if (response.status === 401 || response.status === 403) {
+        stopReconnect = true;
+        stopLiveUpdates();
+        return;
+      }
       if (!response.ok || !response.body) throw new Error(`Live updates failed with ${response.status}`);
+      consecutiveFailures = 0;
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -243,11 +256,14 @@ export function startLiveUpdates({ authHeaders, onHistoryVersion, onDiscoverVers
         }
       }
     } catch (error) {
-      if (error?.name !== "AbortError") onError?.(error);
+      if (error?.name !== "AbortError") {
+        consecutiveFailures += 1;
+        onError?.(error);
+      }
     } finally {
       clearInterval(stallTimer);
       if (activeController === controller) activeController = null;
-      scheduleReconnect();
+      if (!stopReconnect) scheduleReconnect();
     }
   };
 

@@ -5,6 +5,12 @@ import { compoundEpisodeForMedia, compoundEpisodeItemsForMedia } from "./compoun
 import { restoreLookupKey } from "./restoreLookupCache.js";
 import { nativeProviderItemIds } from "./providerItemIds.js";
 import {
+  filterAuthorizedTargetItems,
+  getProviderLibrarySelection,
+  registerLibrarySelectionInvalidator,
+  resolveItemLibraryMembership,
+} from "./librarySelection.js";
+import {
   PLEX_ALREADY_MATCHING_DETAIL,
   PLEX_POLICY_SKIP_DETAIL,
   isHistoricalWatchIntent,
@@ -152,8 +158,8 @@ function titleMatches(a, b) {
   return clean(a) === clean(b);
 }
 
-function yearMatches(dbTitle, resultYear) {
-  const dbYear = extractYear(dbTitle);
+function yearMatches(dbTitle, resultYear, explicitYear = null) {
+  const dbYear = Number(explicitYear || 0) || extractYear(dbTitle);
   if (!dbYear || !resultYear) return true;
   return Number(dbYear) === Number(resultYear);
 }
@@ -230,6 +236,33 @@ async function pickShowSearchResultByIds(config, media, candidates, { requireSha
   return requireSharedId ? undefined : first;
 }
 
+async function pickMovieSearchResultByIds(config, media, candidates) {
+  if (!candidates.length) return undefined;
+  const requested = Object.fromEntries(["imdb", "tmdb", "tvdb"]
+    .map((provider) => [provider, String(media?.ids?.[provider] || "").trim().toLowerCase()])
+    .filter(([, value]) => value));
+  if (!Object.keys(requested).length) {
+    return candidates.length === 1 ? candidates[0] : undefined;
+  }
+  const nonConflicting = [];
+  for (const candidate of candidates) {
+    let item = candidate;
+    if (!(item.Guid || []).length && item.ratingKey) {
+      try {
+        item = (await fetchPlexMetadataItem(config, item.ratingKey, { lane: media?.lane || "sync" })) || candidate;
+      } catch (error) {
+        console.warn(`Plex movie search fallback could not read Guids for ${candidate.ratingKey}`, error.message);
+      }
+    }
+    const ids = plexGuidIds(item);
+    const conflicts = Object.keys(requested).some((provider) => ids[provider] && ids[provider] !== requested[provider]);
+    if (conflicts) continue;
+    if (Object.keys(requested).some((provider) => ids[provider] === requested[provider])) return item;
+    nonConflicting.push(item);
+  }
+  return nonConflicting.length === 1 ? nonConflicting[0] : undefined;
+}
+
 // Plex names a show that shares its title with another country's version
 // "The Assembly (UK)", while watch records and Up Next cards carry "The
 // Assembly". The guid lookup cannot bridge the two: this server's
@@ -267,12 +300,12 @@ async function searchPlexFallback(config, media, targetType) {
     const typeMatched = results.filter((item) => {
       const itemType = item.type === "series" ? "show" : item.type;
       const expectedType = targetType === "series" ? "show" : targetType;
-      return itemType === expectedType && yearMatches(media.title, item.year);
+      return itemType === expectedType && yearMatches(media.title, item.year, media.year);
     });
     const titleMatched = typeMatched.filter((item) => titleMatches(queryTitle, item.title));
     let matched = isShowSearch
       ? await pickShowSearchResultByIds(config, media, titleMatched)
-      : titleMatched[0];
+      : await pickMovieSearchResultByIds(config, media, titleMatched);
     if (!matched && isShowSearch) {
       const qualified = typeMatched.filter((item) => !titleMatches(queryTitle, item.title)
         && titleMatches(queryTitle, removeTrailingQualifier(item.title)));
@@ -362,6 +395,30 @@ export function __resetPlexIdentityCache() {
   plexEpisodeSeriesMetadataCache.clear();
   plexEpisodeSeriesMetadataInFlight.clear();
   plexCacheNow = () => Date.now();
+}
+
+registerLibrarySelectionInvalidator(({ provider }) => {
+  if (!provider || provider === "plex") {
+    plexRatingKeyCache.clear();
+    plexSeriesIdentityCache.clear();
+    plexEpisodeSeriesMetadataCache.clear();
+  }
+});
+
+function plexLibraryEnforced(config = {}) {
+  return Boolean(config?.libraryMonitoringEnforced || Array.isArray(config?.monitoredLibraryIds));
+}
+
+function effectivePlexLibraryIds(config = {}, requestedLibraryIds = null) {
+  if (!plexLibraryEnforced(config)) return requestedLibraryIds;
+  const monitored = getProviderLibrarySelection(config, "plex").selectedIds;
+  if (!monitored.length) return [];
+  if (Array.isArray(requestedLibraryIds)) {
+    if (!requestedLibraryIds.length) return [];
+    const allowed = new Set(monitored.map(String));
+    return requestedLibraryIds.map(String).filter((id) => allowed.has(id));
+  }
+  return monitored;
 }
 
 export function __setPlexIdentityCacheNow(fn) {
@@ -727,18 +784,33 @@ export async function findPlexItem(config, media) {
 }
 
 async function findPlexItemForMutation(config, media) {
+  if (plexLibraryEnforced(config) && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+    return null;
+  }
   const item = await findPlexItem(config, media);
-  if (item?.ratingKey || media.type !== "episode" || media.__identityRetry) return item;
-
-  // The cached allLeaves list can predate an item added or reindexed in Plex.
-  // Refresh once on an exact episode miss before reporting not_found.
-  traceLog("Plex episode lookup missed; refreshing the cached series index", {
-    title: media.title,
-    season: media.season,
-    episode: media.episode,
-  });
-  invalidatePlexSeriesIdentity(config, media);
-  return findPlexItem(config, { ...media, __identityRetry: true });
+  let resolved = item;
+  if (!resolved?.ratingKey && media.type === "episode" && !media.__identityRetry) {
+    // The cached allLeaves list can predate an item added or reindexed in Plex.
+    // Refresh once on an exact episode miss before reporting not_found.
+    traceLog("Plex episode lookup missed; refreshing the cached series index", {
+      title: media.title,
+      season: media.season,
+      episode: media.episode,
+    });
+    invalidatePlexSeriesIdentity(config, media);
+    resolved = await findPlexItem(config, { ...media, __identityRetry: true });
+  }
+  if (!resolved?.ratingKey || !plexLibraryEnforced(config)) return resolved;
+  const candidates = resolved.__compoundItems || [resolved];
+  const authorized = [];
+  for (const candidate of candidates) {
+    const decision = await resolveItemLibraryMembership("plex", config, candidate, { lane: media?.lane || "sync" });
+    if (decision.allowed) authorized.push(candidate);
+  }
+  if (!authorized.length) return null;
+  return resolved.__compoundItems
+    ? { ...authorized[0], __compoundItems: authorized }
+    : authorized[0];
 }
 
 function noMatchingPlexItem(media = {}) {
@@ -779,7 +851,11 @@ async function plexItemsAlreadyWatched(config, items, media) {
 
 export async function markPlexPlayed(config, media) {
   try {
-    requirePlexConfig(config); media = await prepareEpisodeOrderTarget(media,"plex",config,"watched");
+    requirePlexConfig(config);
+    if (plexLibraryEnforced(config) && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+      return { platform: "plex", status: "skipped", detail: "No monitored Plex libraries selected" };
+    }
+    media = await prepareEpisodeOrderTarget(media,"plex",config,"watched");
 
     // Adapter-level enforcement of the provider matrix, deliberately redundant
     // with syncOrchestrator's target filtering: `/:/scrobble` is the only
@@ -847,7 +923,11 @@ export async function markPlexPlayed(config, media) {
 
 export async function markPlexUnplayed(config, media) {
   try {
-    requirePlexConfig(config); media = await prepareEpisodeOrderTarget(media,"plex",config,"unwatched");
+    requirePlexConfig(config);
+    if (plexLibraryEnforced(config) && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+      return { platform: "plex", status: "skipped", detail: "No monitored Plex libraries selected" };
+    }
+    media = await prepareEpisodeOrderTarget(media,"plex",config,"unwatched");
 
     const item = await findPlexItemForMutation(config, media);
     if (!item?.ratingKey) {
@@ -892,6 +972,9 @@ export async function markPlexUnplayed(config, media) {
 export async function setPlexProgress(config, media, { protectNewerView = false } = {}) {
   try {
     requirePlexConfig(config);
+    if (plexLibraryEnforced(config) && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+      return { platform: "plex", status: "skipped", detail: "No monitored Plex libraries selected" };
+    }
 
     const item = await findPlexItemForMutation(config, media);
     if (!item?.ratingKey) {
@@ -971,6 +1054,12 @@ export async function setPlexProgress(config, media, { protectNewerView = false 
 export async function markPlexUnplayedByRatingKey(config, ratingKey, { lane = "sync" } = {}) {
   requirePlexConfig(config);
   if (!ratingKey) return { platform: "plex", status: "not_found" };
+  if (plexLibraryEnforced(config)) {
+    const decision = await resolveItemLibraryMembership("plex", config, { ratingKey }, { lane });
+    if (!decision.allowed) {
+      return { platform: "plex", status: "skipped", detail: decision.reason || "Plex item is outside monitored libraries" };
+    }
+  }
 
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/:/unscrobble`);
   url.searchParams.set("key", String(ratingKey));
@@ -995,6 +1084,12 @@ export async function markPlexUnplayedByRatingKey(config, ratingKey, { lane = "s
 export async function hidePlexFromContinueWatching(config, ratingKey, { lane = "interactive" } = {}) {
   requirePlexConfig(config);
   if (!ratingKey) return { platform: "plex", status: "not_found" };
+  if (plexLibraryEnforced(config)) {
+    const decision = await resolveItemLibraryMembership("plex", config, { ratingKey }, { lane });
+    if (!decision.allowed) {
+      return { platform: "plex", status: "skipped", detail: decision.reason || "Plex item is outside monitored libraries" };
+    }
+  }
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/actions/removeFromContinueWatching`);
   url.searchParams.set("ratingKey", String(ratingKey));
   await addConfiguredPlexAccountId(url, config, { lane });
@@ -1176,7 +1271,8 @@ export async function listPlexLibraries(config) {
 }
 
 function selectPlexSections(directories, libraryIds) {
-  const wanted = Array.isArray(libraryIds) && libraryIds.length ? new Set(libraryIds.map(String)) : null;
+  if (Array.isArray(libraryIds) && libraryIds.length === 0) return [];
+  const wanted = Array.isArray(libraryIds) ? new Set(libraryIds.map(String)) : null;
   return directories.filter((dir) => {
     if (dir.type !== "movie" && dir.type !== "show") return false;
     return !wanted || wanted.has(String(dir.key));
@@ -1189,13 +1285,15 @@ function selectPlexSections(directories, libraryIds) {
 // unplayed on Plex even when Plembfin already knows the episode was watched.
 export async function fetchPlexLibraryItems(config, { libraryIds } = {}) {
   requirePlexConfig(config);
+  const scopedIds = effectivePlexLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
   const libraryItems = [];
   const pageSize = 200;
 
-  for (const dir of selectPlexSections(directories, libraryIds)) {
+  for (const dir of selectPlexSections(directories, scopedIds)) {
     let start = 0;
     let totalSize = 0;
     const seen = new Set();
@@ -1240,6 +1338,8 @@ export async function fetchPlexLibraryItems(config, { libraryIds } = {}) {
 
 export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = async () => false } = {}) {
   requirePlexConfig(config);
+  const scopedIds = effectivePlexLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
@@ -1247,7 +1347,7 @@ export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = 
   const watchedItems = [];
   const pageSize = 200;
 
-  for (const dir of selectPlexSections(directories, libraryIds)) {
+  for (const dir of selectPlexSections(directories, scopedIds)) {
     const sectionId = dir.key;
     const type = dir.type;
 
@@ -1291,7 +1391,9 @@ export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = 
         if (id && seen.has(id)) continue;
         if (id) seen.add(id);
         newItems += 1;
-        if (Number(item.viewCount || 0) > 0) watchedItems.push(item);
+        if (Number(item.viewCount || 0) > 0) {
+          watchedItems.push(item.librarySectionID != null ? item : { ...item, librarySectionID: String(container.librarySectionID ?? sectionId) });
+        }
       }
       if ((!page.length && totalSize > start) || (page.length && !newItems)) {
         throw new Error(`Plex watched scan paging did not advance for section ${sectionId}`);
@@ -1308,12 +1410,14 @@ export async function fetchPlexWatchedItems(config, { libraryIds, isCancelled = 
 // zero-size container and reads totalSize. Used for plan staleness checks.
 export async function countPlexWatchedItems(config, { libraryIds } = {}) {
   requirePlexConfig(config);
+  const scopedIds = effectivePlexLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return 0;
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config);
 
   let total = 0;
-  for (const dir of selectPlexSections(directories, libraryIds)) {
+  for (const dir of selectPlexSections(directories, scopedIds)) {
     const allUrl = new URL(`${baseUrl}/library/sections/${dir.key}/all`);
     allUrl.searchParams.set("unwatched", "0");
     allUrl.searchParams.set("type", dir.type === "movie" ? "1" : "4");
@@ -1330,8 +1434,10 @@ export async function countPlexWatchedItems(config, { libraryIds } = {}) {
   return total;
 }
 
-export async function fetchPlexResumableItems(config, { limit = 0 } = {}) {
+export async function fetchPlexResumableItems(config, { limit = 0, libraryIds } = {}) {
   requirePlexConfig(config);
+  const scopedIds = effectivePlexLibraryIds(config, libraryIds);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const accountId = await resolveRequiredPlexAccountId(config);
 
@@ -1342,7 +1448,7 @@ export async function fetchPlexResumableItems(config, { limit = 0 } = {}) {
   }
 
   const sectionsData = await sectionsRes.json();
-  const directories = sectionsData?.MediaContainer?.Directory || [];
+  const directories = selectPlexSections(sectionsData?.MediaContainer?.Directory || [], scopedIds);
   const resumableItems = [];
   const maxItems = Math.max(0, Math.round(Number(limit) || 0));
 
@@ -1356,7 +1462,7 @@ export async function fetchPlexResumableItems(config, { limit = 0 } = {}) {
     const sectionItems = await fetchPlexSectionResumeItems(config, { sectionId, type, accountId });
     for (const item of sectionItems) {
       if (Number(item.viewOffset || 0) <= 0) continue;
-      resumableItems.push(item);
+      resumableItems.push(item.librarySectionID != null ? item : { ...item, librarySectionID: String(sectionId) });
       if (maxItems && resumableItems.length >= maxItems) return resumableItems;
     }
   }
@@ -1409,6 +1515,8 @@ function plexContinueWatchingItems(body) {
 // do not expose that hub, so the section scan remains the fallback.
 export async function fetchPlexContinueWatchingItems(config, { limit = 0 } = {}) {
   requirePlexConfig(config);
+  const enforced = plexLibraryEnforced(config);
+  if (enforced && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) return [];
   const baseUrl = trimTrailingSlash(config.baseUrl);
   const accountId = await resolveRequiredPlexAccountId(config);
   try {
@@ -1448,13 +1556,16 @@ export async function fetchPlexContinueWatchingItems(config, { limit = 0 } = {})
         if (id) seen.add(id);
         collected.push(item);
         newItems++;
-        if (requestedLimit && collected.length >= requestedLimit) return collected.slice(0, requestedLimit);
+        if (!enforced && requestedLimit && collected.length >= requestedLimit) return collected.slice(0, requestedLimit);
       }
       const total = Number(body?.MediaContainer?.totalSize || 0);
       if (!page.length || !newItems || (total > 0 && start + page.length >= total) || (total <= 0 && page.length < pageSize)) break;
     }
     if (foundHub) {
-      return requestedLimit ? collected.slice(0, requestedLimit) : collected;
+      const authorized = enforced
+        ? (await filterAuthorizedTargetItems("plex", config, collected, { lane: "sync" })).allowed
+        : collected;
+      return requestedLimit ? authorized.slice(0, requestedLimit) : authorized;
     }
   } catch (error) {
     console.warn(`Plex Continue Watching feed unavailable; using section fallback: ${error.message}`);
@@ -1563,21 +1674,30 @@ function plexRatingMedia(item, mediaType, parent = null) {
 
 export async function fetchPlexPersonalRatingSnapshot(config) {
   requirePlexConfig(config);
+  const scopedIds = effectivePlexLibraryIds(config, null);
+  if (Array.isArray(scopedIds) && scopedIds.length === 0) return [];
   const accountId = await resolveRequiredPlexAccountId(config);
   const directories = await fetchPlexLibraryDirectories(config, true);
   const records = [];
-  for (const directory of selectPlexSections(directories)) {
+  for (const directory of selectPlexSections(directories, scopedIds)) {
     const types = directory.type === "movie" ? [{ type: 1, mediaType: "movie" }] : [
       { type: 2, mediaType: "show" },
       { type: 4, mediaType: "episode" },
     ];
+    const showsByRatingKey = new Map();
     for (const entry of types) {
       const items = await fetchPlexRatingSectionItems(config, directory, entry.type, accountId);
       for (const item of items) {
+        if (entry.mediaType === "show" && item.ratingKey) {
+          showsByRatingKey.set(String(item.ratingKey), item);
+        }
         const rating = Number(item.userRating);
         if (!Number.isInteger(rating) || rating < 1 || rating > 10) continue;
+        const parent = entry.mediaType === "episode"
+          ? showsByRatingKey.get(String(item.grandparentRatingKey || "")) || null
+          : null;
         records.push({
-          media: plexRatingMedia(item, entry.mediaType, null),
+          media: plexRatingMedia(item, entry.mediaType, parent),
           providerItemId: String(item.ratingKey || ""),
           providerIds: { plex: String(item.ratingKey || ""), ...plexRatingProviderIds(item) },
           rating,
@@ -1591,8 +1711,12 @@ export async function fetchPlexPersonalRatingSnapshot(config) {
 
 async function writePlexPersonalRating(config, media, rating, { lane = "sync" } = {}) {
   requirePlexConfig(config);
+  if (plexLibraryEnforced(config) && !getProviderLibrarySelection(config, "plex").hasSelectedLibraries) {
+    return { platform: "plex", status: "skipped", detail: "No monitored Plex libraries selected" };
+  }
   const lookup = {
     ...media,
+    lane,
     type: media.media_type || media.mediaType || media.type,
     ids: {
       tmdb: media.show_tmdb_id || media.tmdb_id,
@@ -1600,7 +1724,7 @@ async function writePlexPersonalRating(config, media, rating, { lane = "sync" } 
       imdb: media.show_imdb_id || media.imdb_id,
     },
   };
-  const item = await findPlexItem(config, lookup);
+  const item = await findPlexItemForMutation(config, lookup);
   if (!item?.ratingKey) return { platform: "plex", status: "not_found" };
   const url = new URL(`${trimTrailingSlash(config.baseUrl)}/:/rate`);
   url.searchParams.set("key", String(item.ratingKey));

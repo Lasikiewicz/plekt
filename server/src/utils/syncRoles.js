@@ -80,7 +80,11 @@ export function syncRolesRevision(config = {}) {
   for (const server of ["plex", "emby", "jellyfin"]) {
     const roles = serverSyncRoles(config, server);
     const enabled = !config?.[server]?.disabled;
-    parts.push(`${server}=${enabled ? 1 : 0}:${roles.preset}:${roles.watched}:${roles.unwatched}:${roles.progress}`);
+    const lib = config?.libraryMonitoring?.[server];
+    const libPart = lib
+      ? `:lib=${String(lib.serverId || "")}@${Number(lib.revision || 0)}[${(Array.isArray(lib.selectedIds) ? lib.selectedIds : []).map(String).sort().join(",")}]`
+      : "";
+    parts.push(`${server}=${enabled ? 1 : 0}:${roles.preset}:${roles.watched}:${roles.unwatched}:${roles.progress}${libPart}`);
   }
   const authority = conflictAuthority(config);
   parts.push(`authority=${authority.conflictPolicy}:${authority.server}`);

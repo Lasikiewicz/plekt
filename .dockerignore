@@ -6,11 +6,11 @@ data
 .env
 .env.*
 !.env.example
-scripts
-!scripts/
+scripts/*
 !scripts/install-git-hooks.js
 !scripts/docker-entrypoint.sh
 !scripts/check-worker-health.js
+!scripts/seed-demo-catalog.js
 docs
 website
 scratch

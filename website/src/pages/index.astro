@@ -19,7 +19,27 @@ const softwareApplication = {
   softwareVersion: release.version,
   sameAs: ["https://github.com/Lasikiewicz/plekt"],
   codeRepository: "https://github.com/Lasikiewicz/plekt",
+  license: "https://www.gnu.org/licenses/agpl-3.0.html",
+  downloadUrl: "https://plekt.net/docs/getting-started/",
+  screenshot: "https://plekt.net/assets/app-captures/dashboard-home-dark.png",
+  featureList: ["Watch history sync", "Cross-platform resume progress", "Trakt and Simkl sync", "Netflix viewing history import", "Watch history backup and restore"],
+  softwareRequirements: "Docker, Windows, or Node.js",
 };
+const website = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Plekt",
+  url: "https://plekt.net/",
+};
+
+const popularGuides = [
+  { title: "Sync Plex with Trakt", href: "/docs/sync-plex-with-trakt/" },
+  { title: "Move friends from Plex to Emby or Jellyfin", href: "/docs/move-friends-from-plex-to-emby-or-jellyfin/" },
+  { title: "Fix watch progress that is not syncing", href: "/docs/watch-progress-not-syncing/" },
+  { title: "Back up watch history before a library rebuild", href: "/docs/watch-history-before-library-rebuild/" },
+  { title: "Upgrade from Plembfin", href: "/docs/upgrading-from-plembfin/" },
+  { title: "Import Netflix viewing history", href: "/docs/import-netflix-viewing-history/" },
+];
 
 const loopSteps = [
   {
@@ -100,7 +120,6 @@ const comparisonFeatures = [
   { name: "Restores watch state to rebuilt libraries", supported: [true, false, false, false, true, true, false] },
   { name: "Up Next queue for movies and episodes", supported: [true, false, false, false, false, false, false] },
   { name: "Discover rails and requests through Seerr", supported: [true, false, true, false, false, false, false] },
-  { name: "Single process, one SQLite file", supported: [true, false, false, false, false, false, false] },
 ];
 ---
 
@@ -108,6 +127,7 @@ const comparisonFeatures = [
   description="Keep Plex, Emby, and Jellyfin in sync from one private watch-history archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild."
 >
   <script type="application/ld+json" is:inline set:html={JSON.stringify(softwareApplication)} />
+  <script type="application/ld+json" is:inline set:html={JSON.stringify(website)} />
   <div class="simple-home">
     <div class="modern-home-intro">
     <section class="simple-home-hero" aria-labelledby="home-title">
@@ -125,9 +145,11 @@ const comparisonFeatures = [
           />
           <h1 id="home-title">The local brain for your<br /><span>media stack.</span></h1>
         </div>
-        <p class="simple-home-lede">
-        Keep Plex, Emby, and Jellyfin in sync from one private watch-history archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild.
-        </p>
+      <div class="simple-home-lede">
+        <p>Sync watch history across Plex, Jellyfin &amp; Emby from one private archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild.</p>
+      <p>Plekt also syncs with <a href="/docs/trakt/">Trakt</a> and <a href="/docs/simkl/">Simkl</a> and can <a href="/docs/import-netflix-viewing-history/">import Netflix viewing history</a>. Each Plekt user can connect a separate Trakt account; no Trakt VIP or Plex Pass is required.</p>
+      <p>Free and open source under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a>, Plekt runs on your own hardware via Docker, Docker Compose, Portainer, Unraid Community Apps, the Windows installer, or Node.js.</p>
+      </div>
       <div class="simple-actions">
         <a class="simple-button simple-button--primary" href="/docs/getting-started/">Get started <span aria-hidden="true">↗</span></a>
         <a class="simple-button" href="/features/">View features <span aria-hidden="true">→</span></a>
@@ -136,7 +158,7 @@ const comparisonFeatures = [
       <p class="simple-demo-note">
         Public demo login: <code>demo</code> / <code>demo</code> · actions are simulated and nothing is saved.
       </p>
-      <p class="simple-meta">v{release.version} · one process · one SQLite file · your hardware</p>
+      <p class="simple-meta">v{release.version} · local SQLite storage · your hardware</p>
     </section>
 
     <section class="simple-home-preview" aria-labelledby="preview-title">
@@ -149,8 +171,8 @@ const comparisonFeatures = [
         <a class="simple-text-link" href="/docs/dashboard/">Explore the dashboard <span aria-hidden="true">→</span></a>
       </div>
       <ScreenshotFigure
-        src="/assets/home-dashboard.jpg"
-        darkSrc="/assets/home-dashboard-dark.jpg"
+        lightSrc="/assets/app-captures/dashboard-home-light.png"
+        darkSrc="/assets/app-captures/dashboard-home-dark.png"
         alt="Plekt dashboard showing an Up Next row and recent watch history for TV and movies"
         loading="eager"
         fetchpriority="high"
@@ -286,11 +308,22 @@ const comparisonFeatures = [
       </div>
     </section>
 
+    <section class="simple-home-app" aria-labelledby="popular-guides-title">
+      <div class="simple-section-heading"><div><h2 id="popular-guides-title">Popular guides</h2></div></div>
+      <div class="simple-feature-grid">
+        {popularGuides.map((guide) => (
+          <a class="simple-feature-item" href={guide.href}>
+            <span><strong>{guide.title}</strong></span><span class="simple-arrow" aria-hidden="true">&#8594;</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
     <section class="simple-home-hub" aria-labelledby="stack-title">
       <div class="simple-home-hub-copy">
         <p class="simple-eyebrow">BUILT AROUND YOUR STACK</p>
         <h2 id="stack-title">Everything talks to Plekt.</h2>
-        <p>Watch state syncs across your servers and Trakt. Metadata and request tools connect through Plekt.</p>
+        <p>Watch state syncs across your servers, Trakt, and Simkl. Metadata and request tools connect through Plekt.</p>
         <div class="simple-service-list" aria-label="Watch-state services">
           {syncServices.map((service) => (
             <span><img src={service.icon} alt="" aria-hidden="true" width="20" height="20" />{service.name}</span>
@@ -302,6 +335,7 @@ const comparisonFeatures = [
         src="/assets/optimized/plembfin-hub.svg"
         lightboxSrc="/assets/optimized/plembfin-hub.svg"
         alt="Diagram connecting Plekt to Plex, Emby, Jellyfin, and Trakt for two-way watch state, and to TMDB, TheTVDB, Fanart.tv, OMDb, and Seerr for metadata and requests"
+        caption="Select the diagram to enlarge it."
         width={1200}
         height={540}
         loading="lazy"

@@ -204,7 +204,7 @@ function providerItemPayload(candidate) {
 
 function rowToCandidate(row) {
   const payload = parseJson(row.provider_ids_json, {}) || {};
-  return normalizeUpNextCandidate({
+  const candidate = normalizeUpNextCandidate({
     provider: row.provider,
     feed_kind: row.feed_kind,
     provider_item_id: row.provider_item_id,
@@ -230,6 +230,13 @@ function rowToCandidate(row) {
     source_updated_at: row.source_updated_at,
     updated_at: row.source_updated_at,
   });
+  return {
+    ...candidate,
+    provider: row.provider,
+    feed_kind: row.feed_kind,
+    observed_at: Number(row.observed_at),
+    last_seen_at: Number(row.last_seen_at),
+  };
 }
 
 // The stored snapshot reads back ordered by id while providers send recency
@@ -280,7 +287,7 @@ function metadataWarmupItems(candidates = []) {
   });
 }
 
-export function startUpNextProviderFeed(provider, feedKind, { now = Date.now(), cursor = null } = {}) {
+function allocateFeedGeneration(provider, feedKind, { now = Date.now(), cursor = null } = {}) {
   const normalized = assertFeed(provider, feedKind);
   const current = selectFeedStateStmt.get(normalized.provider, normalized.feedKind);
   const generation = Math.max(Number(current?.current_generation || 0), Number(current?.active_generation || 0)) + 1;
@@ -305,6 +312,8 @@ export function startUpNextProviderFeed(provider, feedKind, { now = Date.now(), 
   return generation;
 }
 
+export const startUpNextProviderFeed = db.transaction(allocateFeedGeneration).immediate;
+
 export function completeUpNextProviderFeed(provider, feedKind, generation, items = [], {
   now = Date.now(),
   cursor = null,
@@ -314,20 +323,18 @@ export function completeUpNextProviderFeed(provider, feedKind, generation, items
   triggerOnRecovery = triggerAutoSync,
 } = {}) {
   const normalized = assertFeed(provider, feedKind);
-  const state = selectFeedStateStmt.get(normalized.provider, normalized.feedKind);
-  if (!state || Number(state.current_generation) !== Number(generation)) {
-    return { changed: false, ignored: true, generation };
-  }
   const candidates = normalizedFeedItems(normalized.provider, normalized.feedKind, items, now);
-  const before = selectActiveItemsForFeedStmt.all(normalized.provider, normalized.feedKind).map(rowToCandidate);
-  const changed = contentSignature(before) !== contentSignature(candidates);
-  // A provider coming back with the same items is not a content change, but
-  // the automatic push skipped it while it was down and must now reach it.
-  const recovered = Boolean(state.last_error);
-
-  db.transaction(() => {
+  const completion = db.transaction(() => {
+    const state = selectFeedStateStmt.get(normalized.provider, normalized.feedKind);
+    if (!state || Number(state.current_generation) !== Number(generation)) return null;
+    const before = selectActiveItemsForFeedStmt.all(normalized.provider, normalized.feedKind).map(rowToCandidate);
+    const firstSeen = new Map(before.map((item) => [item.provider_item_id, item]));
+    const changed = contentSignature(before) !== contentSignature(candidates);
+    const recovered = Boolean(state.last_error);
     deleteFeedItemsStmt.run(normalized.provider, normalized.feedKind);
     for (const candidate of candidates) {
+      const previous = firstSeen.get(candidate.provider_item_id);
+      const observedAt = previous?.canonical_key === candidate.canonical_key ? previous.observed_at : now;
       insertProviderItemStmt.run({
         provider: normalized.provider,
         feed_kind: normalized.feedKind,
@@ -356,7 +363,7 @@ export function completeUpNextProviderFeed(provider, feedKind, generation, items
         duration_ms: candidate.duration_ms,
         progress: candidate.progress,
         source_updated_at: candidate.source_updated_at || null,
-        observed_at: now,
+        observed_at: observedAt || now,
         feed_generation: generation,
         last_seen_at: now,
         resolution_status: candidate.resolution_status || "resolved",
@@ -380,7 +387,10 @@ export function completeUpNextProviderFeed(provider, feedKind, generation, items
       retry_after: 0,
       updated_at: now,
     });
+    return { changed, recovered };
   }).immediate();
+  if (!completion) return { changed: false, ignored: true, generation };
+  const { changed, recovered } = completion;
 
   // Metadata enrichment belongs to the background discovery path, never to
   // the dashboard projection. Keep it outside the SQLite transaction so a
@@ -405,7 +415,7 @@ export function completeUpNextProviderFeed(provider, feedKind, generation, items
   return { changed, ignored: false, generation, itemCount: candidates.length };
 }
 
-export function failUpNextProviderFeed(provider, feedKind, generation, error, { now = Date.now(), retryAfter = 0, partial = false, cursor = null } = {}) {
+function recordFeedFailure(provider, feedKind, generation, error, { now = Date.now(), retryAfter = 0, partial = false, cursor = null } = {}) {
   const normalized = assertFeed(provider, feedKind);
   const state = selectFeedStateStmt.get(normalized.provider, normalized.feedKind);
   if (!state || Number(state.current_generation) !== Number(generation)) return { ignored: true, generation };
@@ -427,6 +437,8 @@ export function failUpNextProviderFeed(provider, feedKind, generation, error, { 
   });
   return { ignored: false, generation, status: partial ? "partial" : "failed" };
 }
+
+export const failUpNextProviderFeed = db.transaction(recordFeedFailure).immediate;
 
 // Feed episodes often carry only their own ids plus the native series handle
 // (Plex's modern agent sends no grandparent guids). Without series ids the
