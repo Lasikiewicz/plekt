@@ -2,7 +2,7 @@
 // watched date preference and the optional compare-then-confirm full sync.
 // Rendered from the connection the server returns, so a reload or another tab
 // shows the same durable state.
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.1";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.2";
 
 let request = async () => ({});
 const timers = new Map();

@@ -1,15 +1,15 @@
-import { state } from "./state.js?v=2.3.0.0.1"; import { renderEpisodeOrderConflict } from "./episode-order-conflict.js?v=2.3.0.0.1";
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.1";
-import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.3.0.0.1";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.3.0.0.1";
-import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.3.0.0.1";
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.3.0.0.1";
+import { state } from "./state.js?v=2.3.0.0.2"; import { renderEpisodeOrderConflict } from "./episode-order-conflict.js?v=2.3.0.0.2";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.2";
+import { posterMarkup, hydratePosters, tmdbPoster } from "./images.js?v=2.3.0.0.2";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.3.0.0.2";
+import { calendarStateFromIso, mountCalendarPicker } from "./calendar-picker.js?v=2.3.0.0.2";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, movieHref, movieTmdbHref, platformSourceValues, slug, sourceBadgeHtml, tvShowTmdbHref, tvShowTvdbHref } from "./utils.js?v=2.3.0.0.2";
 import {
   bulkSelectionSummary, clearBulkReviewSelection, executeBulkSelectionAction,
   handleBulkSelectionChange, pruneBulkReviewSelection, renderBulkReviewBar,
   reviewSelectCheckboxHtml, runSequentialReviewBatch, syncIndeterminateCheckboxes,
   triggerBulkSelectionWorkflow,
-} from "./manual-watch-review-bulk.js?v=2.3.0.0.1";
+} from "./manual-watch-review-bulk.js?v=2.3.0.0.2";
 
 let _cb = {};
 let _openConfirmDialog = async () => false;

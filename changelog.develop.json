@@ -1,18 +1,53 @@
 {
-  "version": "2.3.0.0.1",
-  "build": 1,
+  "version": "2.3.0.0.2",
+  "build": 2,
   "resetCommit": "941febbbdcd64af11716bfe24099ed45b93955e5",
-  "updatedAt": "2026-11-15T18:45:21.827Z",
+  "updatedAt": "2026-11-23T15:48:45.980Z",
   "entries": [
     {
-      "build": 1,
-      "date": "2026-11-15T18:45:21.827Z",
-      "commit": "35407d0bc0fb145fb277b6c42210bbe19d0652b5",
-      "message": "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
+      "build": 2,
+      "date": "2026-11-23T15:48:45.980Z",
+      "commit": "499aa022093d526c5ab337af3c0e2b3aea13c1ab",
+      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries and add tracker write review, explicit library monitoring, faster background sync and clearer sync retries.",
       "author": "Lasikiewicz",
       "details": [
         "Importing every file from a Trakt export no longer adds a random, unrelated movie for each show. The per-show summaries in watched-shows.json are now skipped instead of being read as movies that carried the show's TMDB number.",
-        "Trakt collection files are no longer imported as watches, so movies you own but have not watched stay unwatched."
+        "Trakt collection files are no longer imported as watches, so movies you own but have not watched stay unwatched.",
+        "Sync Activity groups held Trakt and Simkl writes by movie or show, with episode and provider details inside each group",
+        "Recheck all checks eligible held writes against tracker history and reports how many holds cleared and how many remain",
+        "Cancel pending updates removes held watch updates for the selected movies and shows after confirmation, keeping local and tracker watch history",
+        "Simkl rechecks due held watches in batches of up to 100 and clears a hold only when Simkl reports the same item at the same watch time",
+        "Retry failed shows the watch action, the affected apps and their recorded errors before retrying, then keeps the popup open with the result and any new app errors",
+        "Retry failed now covers Simkl: a Simkl update that was never sent because the watch arrived without IDs is queued again with the resolved IDs",
+        "A refused retry shows the server's reason instead of a generic failure, and Retry is only offered for apps that can be retried",
+        "Manual Watch Review lets you select items to see proposed watch dates, pick a date or mark an item unwatched, and confirm the selected decisions together",
+        "Episode watch-date suggestions in Manual Watch Review show which neighbouring episode the date was based on",
+        "Add library monitoring controls and bulk manual watch review",
+        "Show the zero-library warning banner on cold loads to Dashboard and every non-Settings route, and fix its mobile height at narrow widths",
+        "On desktop, the \"No libraries selected\" banner sits in its own row above the Dashboard instead of filling the page and squashing the four sections",
+        "Enforce explicit library selection across resume, Next Up, personal rating scans and writes, Jellyfin resume checks, unwatched fallback polls, live session completion, scoped Force Sync, and manual retry routes",
+        "Scope personal rating baselines and Force Sync plan staleness to the library selection revision so deselecting a library never triggers synthetic clears, strip portable backup library selections on restore, and harden plugin LibraryContext validation",
+        "Changing which libraries are selected takes effect immediately for library membership checks",
+        "A Plex library selected while Plekt is running is checked for manual watched marks on the next poll, instead of up to an hour later",
+        "A manual watched mark made in Plex just before a settings save is no longer skipped when the background check restarts",
+        "Improve Up Next provider feed sync, Mirror mode ordering and safe hide passes, per-show override controls, Dashboard recovery, and settings dialog focus and session guards",
+        "Opening per-show Up Next options no longer throws an error on show pages",
+        "Plex, Emby and Jellyfin catch-up imports, library availability checks and resume to Next Up chains run in parallel, so a three-server catch-up finishes several times faster without duplicate watches",
+        "Recent-watch imports recheck the item inside one database transaction, so two servers reporting the same watch at once record it only once",
+        "Up Next builds, show progress updates, settings loads and the pending sync sweep do far less repeated work, so the dashboard and background ticks stay quicker on large libraries",
+        "Sync Activity keeps every row, retry and dismissal, but trims recognized raw request and response bodies after 90 days to stop the database growing",
+        "Sync Activity stops its periodic refresh while the browser tab is hidden and refreshes when you return",
+        "Season details on show pages lay out with fewer reflows, keeping wrapped episode heights exact",
+        "Fix Force Sync episode matching, watch dates, plexHistoricalWatchedSync enforcement, Trakt durable retry loops, queued-retry outcome preservation, Simkl batch quota lock release, Plex movie fallback matching, episode personal rating series IDs, Plex WebSocket subpath preservation, and cross-process cache version bumps",
+        "Isolate multi-tenant in-memory state, watch-history backup folders, tenant artwork restores, and activeUser browser caches; block secret reuse on server URL changes, add DNS metadata-IP pinning, encrypt backup passphrases and remote destination secrets at rest, strip calendarFeedToken from portable exports, and sanitize frontend URLs and CSS backdrops",
+        "Fix dropped-only show detail visibility, sign-out and sign-in live update SSE lifecycle with backoff, stuck action buttons, stale detail render races, listener and poller leaks, and Up Next controls including per-show options, Now Playing reorder bindings, and Mirror order and hide safety",
+        "Document that Emby 4.9.5.0 and 4.10.1.0 both accept rating writes without storing them and that Plekt reads back to report the failure",
+        "Add two-way dropped-title sync notes for Trakt (shows) and Simkl (shows and movies), and include YouTube and optional AniDB in the Metadata sources overview",
+        "Add provider support matrix docs and migration 64 SQLite poster cache and TVDB expression indexes"
+      ],
+      "messageFragments": [
+        "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
+        "Feature - Add tracker write review, explicit library monitoring, faster background sync and clearer sync retries"
       ]
     }
   ]
