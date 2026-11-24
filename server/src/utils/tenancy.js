@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
-import { DATA_DIR, FULL_BACKUPS_DIR } from "../paths.js";
+import { DATA_DIR, FULL_BACKUPS_DIR, migrateLegacyFullBackupsDir } from "../paths.js";
 
 // Multi-user registry, path helpers, and account management for a single Node process.
 // users.json with at least one non-admin user turns multi-user mode on.
@@ -252,6 +252,7 @@ export function ensureTenantDataDir(name, rootDataDir = DATA_DIR) {
   const dir = tenantDataDir(name, rootDataDir);
   fs.mkdirSync(dir, { recursive: true });
   fs.mkdirSync(path.join(dir, "backups", "watch-history"), { recursive: true });
+  migrateLegacyFullBackupsDir(path.join(dir, "backups"));
   fs.mkdirSync(path.join(dir, "backups", FULL_BACKUPS_SUBDIR), { recursive: true });
   fs.mkdirSync(path.join(dir, "logs"), { recursive: true });
   return dir;

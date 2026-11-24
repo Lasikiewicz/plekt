@@ -51,10 +51,11 @@ remote retention each default to 7 files (about seven days). A fresh local backu
 verified and durable before it is uploaded. Remote failures are recorded per destination
 and do not invalidate or delete the local file.
 
-Supported destination adapters are listed in [backups.md](backups.md): local folder,
-WebDAV, S3-compatible storage, Backblaze B2, OneDrive, and Dropbox. Destination secrets
-remain server-side and are redacted from API responses. Remote retention applies only
-to files of the same backup type.
+In Settings → Backup → Remote, choose Backblaze B2, S3-compatible storage, WebDAV,
+Dropbox, or an external mounted folder. Enable watch-history uploads and set a retention
+override per destination as needed. Destination secrets remain server-side and are redacted
+from API responses. Remote retention applies only to files of the same backup type.
+See [Backups](backups.md) for adapter details.
 
 ## API and runtime state
 
@@ -72,4 +73,4 @@ Implementation: `server/src/utils/watchHistoryBackups.js` and
 
 ## Backups from before the rename
 
-Plekt writes new backup files and format markers under Plekt names. Backups written by Plembfin remain accepted, listed and pruned, including encrypted and watch-history backups. The local full-backup folder `data/backups/plembfin` and default Dropbox folder `/Plembfin Backups` stay unchanged so existing backups remain visible. A newly written Plekt backup cannot be restored by an older Plembfin build.
+Plekt writes new backup files and format markers under Plekt names. Backups written by Plembfin remain accepted, listed and pruned, including encrypted and watch-history backups. Pre-rename `data/backups/plembfin` folders migrate automatically to `data/backups/plekt` on startup, and the default Dropbox folder is `/Plekt Backups`. A newly written Plekt backup cannot be restored by an older Plembfin build.

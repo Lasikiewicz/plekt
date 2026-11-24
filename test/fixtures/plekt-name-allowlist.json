@@ -1386,18 +1386,6 @@
       "reason": "compatibility",
       "lines": [
         [
-          "`plembfin/plekt:<version>`), the same image as the GHCR `:latest`. The earlier",
-          1
-        ],
-        [
-          "`plembfin/plembfin` Docker Hub name is still published alongside it. The `alpha` and",
-          1
-        ],
-        [
-          "<a href=\"https://www.reddit.com/r/plembfin/\">Reddit</a>",
-          1
-        ],
-        [
           "## Formerly Plembfin",
           1
         ],
@@ -1407,6 +1395,10 @@
         ],
         [
           "`plembfin/plembfin` to `plembfin/plekt`. Keep the same tag, volume, data folder,",
+          1
+        ],
+        [
+          "[plekt.net/docs/upgrading-from-plembfin](https://plekt.net/docs/upgrading-from-plembfin/).",
           1
         ],
         [
@@ -1434,19 +1426,15 @@
           1
         ],
         [
-          "These screenshots predate the rebrand and may show the old Plembfin name or logo.",
-          1
-        ],
-        [
           "Tagged releases are also on Docker Hub as `plembfin/plekt:latest` (and",
           1
         ],
         [
-          "`plembfin/plekt:<version>`), the same image as the GHCR `:latest`. The `alpha` and",
+          "`plembfin/plekt:<version>`), the same image as the GHCR `:latest`. The earlier",
           1
         ],
         [
-          "Try the [public Plekt demo](https://demo.plembfin.com/) with `demo` / `demo`.",
+          "`plembfin/plembfin` Docker Hub name is still published alongside it. The `alpha` and",
           1
         ],
         [
@@ -1454,23 +1442,7 @@
           1
         ],
         [
-          "`plembfin` → paste the URL → enable `Playback Start/Progress/Stop` and `User Data",
-          1
-        ],
-        [
-          "- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`, including new installs; the folder name is retained for compatibility); restore checks SQLite integrity before import and explains recovery options if the database is corrupt",
-          1
-        ],
-        [
-          "the Oracle-hosted [public demo](https://demo.plembfin.com/) and verifies its release",
-          1
-        ],
-        [
-          "- **[r/plembfin](https://www.reddit.com/r/plembfin/)** - discussions, feature requests, and release announcements on Reddit.",
-          1
-        ],
-        [
-          "[plekt.net/docs/upgrading-from-plembfin](https://plekt.net/docs/upgrading-from-plembfin/).",
+          "- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plekt`; existing `data/backups/plembfin` folders are migrated automatically on startup); restore checks SQLite integrity before import and explains recovery options if the database is corrupt",
           1
         ]
       ]
@@ -2366,7 +2338,7 @@
           1
         ],
         [
-          "- **Storage** - `data/backups/plembfin/`. **Warning:** these backups contain",
+          "- **Storage** - `data/backups/plekt/` (pre-rename `data/backups/plembfin/` folders are migrated automatically on startup). **Warning:** these backups contain",
           1
         ],
         [
@@ -2390,11 +2362,7 @@
           1
         ],
         [
-          "The local full-backup folder `data/backups/plembfin` and default Dropbox folder",
-          1
-        ],
-        [
-          "`/Plembfin Backups` retain their old names so existing backups remain visible.",
+          "The local full-backup folder is `data/backups/plekt` (existing `data/backups/plembfin`",
           1
         ]
       ]
@@ -3007,10 +2975,6 @@
       "reason": "compatibility",
       "lines": [
         [
-          "`https://plembfin-traks-collect.lasikie.workers.dev/t.js`; its CSP permits that origin",
-          1
-        ],
-        [
           "## Formerly Plembfin",
           1
         ],
@@ -3023,11 +2987,11 @@
           1
         ],
         [
-          "`backups/plembfin`, cookies, browser storage, provider device ids, database source",
+          "values and `/api/plembfin-backups` routes. Fresh databases and new backups use Plekt",
           1
         ],
         [
-          "values and `/api/plembfin-backups` routes. Fresh databases and new backups use Plekt",
+          "names, and existing `backups/plembfin` folders are migrated to `backups/plekt` on startup. Old backups remain supported, but new ones cannot restore on older builds.",
           1
         ],
         [
@@ -3035,19 +2999,7 @@
           1
         ],
         [
-          "git -c core.excludesFile=C:\\path\\to\\plembfin\\.git\\info\\exclude status --short --branch",
-          1
-        ],
-        [
-          "[demo.plembfin.com](https://demo.plembfin.com/), keeps `PLEKT_DEMO_MODE=1` and the",
-          1
-        ],
-        [
           "GHCR and to Docker Hub (`docker.io/plembfin/plekt`, logged in with the",
-          1
-        ],
-        [
-          "The public application demo at [demo.plembfin.com](https://demo.plembfin.com/) runs on",
           1
         ],
         [
@@ -3055,23 +3007,15 @@
           1
         ],
         [
-          "Optional Traks analytics for `demo.plembfin.com` are configured with repository",
-          1
-        ],
-        [
-          "Variables `PLEKT_TRAKS_COLLECTOR_ORIGIN` and `PLEKT_TRAKS_SITE_KEY`; workflows also accept their existing `PLEMBFIN_TRAKS_*` counterparts. The existing",
-          1
-        ],
-        [
-          "separately from `plembfin.com`.",
-          1
-        ],
-        [
-          "- **`Dockerfile`** - `node:25-trixie-slim`, production deps only, non-root `plembfin`",
+          "`https://plembfin-traks-collect.lasikie.workers.dev/t.js`; its CSP permits that origin",
           1
         ],
         [
           "uninstalled from r/plembfin on 2026-10-19, and a follow-up CLI listing showed no apps",
+          1
+        ],
+        [
+          "- **`Dockerfile`** - `node:25-trixie-slim`, production deps only, non-root `plembfin`",
           1
         ]
       ]
@@ -3283,7 +3227,7 @@
       "reason": "compatibility",
       "lines": [
         [
-          "Plekt writes new backup files and format markers under Plekt names. Backups written by Plembfin remain accepted, listed and pruned, including encrypted and watch-history backups. The local full-backup folder `data/backups/plembfin` and default Dropbox folder `/Plembfin Backups` stay unchanged so existing backups remain visible. A newly written Plekt backup cannot be restored by an older Plembfin build.",
+          "Plekt writes new backup files and format markers under Plekt names. Backups written by Plembfin remain accepted, listed and pruned, including encrypted and watch-history backups. Pre-rename `data/backups/plembfin` folders migrate automatically to `data/backups/plekt` on startup, and the default Dropbox folder is `/Plekt Backups`. A newly written Plekt backup cannot be restored by an older Plembfin build.",
           1
         ]
       ]
@@ -3498,14 +3442,6 @@
       "reason": "internal",
       "lines": [
         [
-          "<p>Plembfin is now Plekt</p>",
-          1
-        ],
-        [
-          "<li><b>Docker installs</b><span>Change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt.</span></li>",
-          1
-        ],
-        [
           "<input id=\"globalSearchInput\" type=\"search\" name=\"plembfin-search\" placeholder=\"Search movies, shows, IDs...\" autocomplete=\"off\" autocapitalize=\"off\" autocorrect=\"off\" spellcheck=\"false\" readonly />",
           1
         ],
@@ -3514,7 +3450,7 @@
           1
         ],
         [
-          "<details id=\"remote-plembfin-backups\" class=\"sync-tool-details\">",
+          "<div class=\"backup-remote-schedule-section\" id=\"remote-plembfin-backups\">",
           1
         ],
         [
@@ -3535,6 +3471,14 @@
         ],
         [
           "<form id=\"remotePlembfinRestoreForm\" class=\"backup-settings-grid backup-settings-inline backup-passphrase-row backup-managed-form\" autocomplete=\"off\">",
+          1
+        ],
+        [
+          "<p>Plembfin is now Plekt</p>",
+          1
+        ],
+        [
+          "<li><b>Docker installs</b><span>Change the image to ghcr.io/lasikiewicz/plekt or plembfin/plekt.</span></li>",
           1
         ],
         [
@@ -3737,14 +3681,6 @@
     "public/modules/onboarding-backups.js": {
       "reason": "internal",
       "lines": [
-        [
-          "<label class=\"field-label\"><span class=\"setup-backup-label-line\">Key prefix <span class=\"muted-copy\">(optional)</span></span><input class=\"field\" data-setup-backblaze-field=\"prefix\" value=\"${escapeAttribute(settings.prefix || \"plembfin/\")}\" /></label>`;",
-          1
-        ],
-        [
-          "<label class=\"field-label\"><span class=\"setup-backup-label-line\">Key prefix <span class=\"muted-copy\">(optional)</span></span><input class=\"field\" data-setup-backblaze-field=\"prefix\" value=\"${escapeAttribute(settings.prefix || \"plembfin/\")}\" /></label>",
-          1
-        ],
         [
           "const config = getBackupData().plembfin?.config || {};",
           1
@@ -4789,7 +4725,15 @@
           1
         ],
         [
-          "export const FULL_BACKUPS_DIR = path.join(BACKUPS_DIR, \"plembfin\");",
+          "export const LEGACY_FULL_BACKUPS_DIR = path.join(BACKUPS_DIR, \"plembfin\");",
+          1
+        ],
+        [
+          "// Migrates an existing pre-rename backups/plembfin folder into backups/plekt.",
+          1
+        ],
+        [
+          "const legacyDir = path.join(backupsDir, \"plembfin\");",
           1
         ]
       ]
@@ -5092,15 +5036,6 @@
         ],
         [
           "const placeholder = \"__plembfinCollectionsPlaceholder__\";",
-          1
-        ]
-      ]
-    },
-    "server/src/utils/backupDestinations/dropbox.js": {
-      "reason": "internal",
-      "lines": [
-        [
-          "let folder = String(destination.settings?.folder || \"/Plembfin Backups\").trim();",
           1
         ]
       ]
@@ -6842,7 +6777,7 @@
           1
         ],
         [
-          "{ class: \"keep\", pattern: /\"plembfin\"/, files: [\"server/src/paths.js\"], reason: \"Local full-backup folder backups/plembfin/; renaming hides existing backups from the list and from retention.\" },",
+          "{ class: \"accept-both\", pattern: /\"plembfin\"/, files: [\"server/src/paths.js\"], reason: \"Migrates pre-rename backups/plembfin/ into backups/plekt/ on startup so existing backups remain visible.\" },",
           1
         ],
         [
@@ -6863,10 +6798,6 @@
         ],
         [
           "{ class: \"keep\", pattern: /\"Plembfin\"|Device=\"Plembfin(?: Up Next)?\"|\\^plembfin\\\\b/, files: [\"server/src/utils/brandEnv.js\", \"server/src/utils/embyLikeAuth.js\", \"server/src/utils/jellyfinAuth.js\", \"server/src/utils/embyClient.js\"], reason: \"App and device name announced by connections registered before the rename (decision D7); new registrations announce Plekt.\" },",
-          1
-        ],
-        [
-          "{ class: \"keep\", pattern: /\\/Plembfin Backups/, files: [\"server/src/utils/backupDestinations/dropbox.js\"], reason: \"Default Dropbox folder; existing installs relying on the default keep finding their backups.\" },",
           1
         ],
         [
@@ -11868,6 +11799,36 @@
       "lines": [
         [
           "\"upgrading-from-plembfin\": \"Reviewed 9cc5165: notice placement and a startup log line changed, but the image-switch and data-preservation steps did not.\"",
+          1
+        ]
+      ]
+    },
+    "test/backupDestinations.test.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "test(\"migrateLegacyFullBackupsDir renames backups/plembfin to backups/plekt when target is absent\", (t) => {",
+          1
+        ],
+        [
+          "const legacy = path.join(root, \"plembfin\");",
+          2
+        ],
+        [
+          "fs.writeFileSync(path.join(legacy, \"plembfin-backup-20260101T000000Z.encrypted.json\"), \"{\\\"ok\\\":1}\");",
+          1
+        ],
+        [
+          "assert.equal(fs.readFileSync(path.join(current, \"plembfin-backup-20260101T000000Z.encrypted.json\"), \"utf8\"), \"{\\\"ok\\\":1}\");",
+          1
+        ]
+      ]
+    },
+    "public/modules/backup-destinations.js": {
+      "reason": "compatibility",
+      "lines": [
+        [
+          "? await postBackupEndpoint(\"/api/plembfin-backups\", {",
           1
         ]
       ]

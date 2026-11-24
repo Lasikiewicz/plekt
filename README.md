@@ -131,7 +131,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Seerr integration** - Discover and request movies and TV shows directly from detail pages via Overseerr or Jellyseerr; opening Settings skips automatic Seerr capability requests
 - **Movie collections** - Explore related franchise entries, sequels, prequels, and spin-offs from movie detail pages and collection search results
 - **Direct server deep links** - Quick one-click links to jump directly to any title in Plex, Emby, or Jellyfin
-- **Automated backups** - Built-in daily local backups with optional scheduled offsite backups to Backblaze B2; full restores first save a SQLite recovery snapshot, safety watch snapshots survive at least seven days, and interrupted restore fences recover after a three-minute stale heartbeat, while failure notices remain until dismissed
+- **Automated backups** - Built-in daily local backups with optional scheduled remote backups to Backblaze B2, S3-compatible storage (Cloudflare R2, AWS S3, MinIO, Wasabi, and others), WebDAV, Dropbox, or an external mounted folder; full restores first save a SQLite recovery snapshot, safety watch snapshots survive at least seven days, and interrupted restore fences recover after a three-minute stale heartbeat, while failure notices remain until dismissed
 - **Guided first-run setup** - A one-time account claim replaces the old generated-password dead end, followed by a resumable `/setup` wizard that offers enabled watch trackers together, connects media servers, adds metadata, configures webhooks, and tunes watch and Up Next sync. Continue on Import & sync starts an add-only initial outward pass after selected imports finish; its progress chip shows destination counts and remaining items, with interrupted or uncertain sends kept for review
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
 - **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, cross-site mutation checks and HMAC session signing; logout revokes the individual session across restarts
@@ -511,13 +511,7 @@ retention count, enter an encryption passphrase of at least 12 characters, and s
 **Remember the passphrase for scheduled backups**. Scheduled jobs cannot run unless the
 passphrase is remembered because nobody is present to enter it.
 
-To add an off-server Backblaze B2 mirror, create a private bucket and a restricted
-application key with read/write access to that bucket. The wizard places the matching
-fields beside each part of the guide: paste the bucket name and endpoint into **Bucket
-name** and **Region or S3 endpoint**, then paste `keyID` and `applicationKey` into **Key
-ID** and **Application key**. Save and test the destination before enabling scheduled
-uploads. Backblaze displays `applicationKey` only once, so copy it when the key is
-created.
+To add an off-server mirror, expand **Remote destinations** and use the **+** card to pick **Backblaze B2**, **S3-Compatible** (Cloudflare R2, AWS S3, MinIO, Wasabi, and others), **WebDAV** (Nextcloud, ownCloud, Hetzner Storage Box, NAS), **Dropbox**, or an **External / Mounted Folder**. Each destination has a setup guide and a **Test** action. The Dropbox form also includes **Connect Dropbox**. Save and test at least one destination before enabling scheduled remote uploads.
 
 **7. Import & sync.** Review the Trakt and media-server imports you selected. Imports
 continue in the background, so you do not need to wait on this page. Trakt runs first;
@@ -603,9 +597,9 @@ Plekt runs automated daily backups; each type has its own schedule, retention, a
 manual Back Up Now button.
 
 - **Watch history backups** - snapshots of history, playstates, and resume markers (`data/backups/watch-history`)
-- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plembfin`, including new installs; the folder name is retained for compatibility); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
+- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plekt`; existing `data/backups/plembfin` folders are migrated automatically on startup); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
 - **Personal watchlist recovery** - full backups include the local canonical watchlist and sync ledger; restore pauses provider delivery until an explicit publish, while watch-history-only backups exclude it
-- **Remote backups** - optional Backblaze B2 copies of either type, with per-type schedules and retention settings (Settings → Backup → Remote)
+- **Remote backups** - optional mirrored copies of either type to Backblaze B2, S3-compatible buckets (Cloudflare R2, AWS S3, MinIO, Wasabi, etc.), WebDAV, Dropbox, or an external mounted folder, with per-type schedules and retention settings (Settings → Backup → Remote)
 
 Media and tracker connections remain as configured on the destination machine; reconnect
 any that are missing. Restoring history or wiping data rebuilds show progress automatically. Deduplicated history
@@ -712,6 +706,7 @@ is in [`.env.example`](.env.example).
 | `PLEKT_PUBLIC_URL` | _none_ | Fixed internet-reachable public origin for provider return links and calendar feed URLs (`http(s)://host`, no path). Calendar feeds otherwise use the browser's current origin; local hostnames and private IP addresses are not shown. |
 | `PLEKT_PUBLISHED_PORT` | _none_ | Host port Plekt is published on (5056 in the compose files); used by the startup webhook port advisory, which is skipped when unset. |
 | `PLEKT_MEDIA_AUTH_ENABLED` | `true` | Set `false` to expose manual server setup only. |
+| `PLEKT_DROPBOX_APP_KEY` | _bundled public app key_ | Use a different Dropbox app for backup destinations without a per-destination app key. The `DROPBOX_APP_KEY` alias is also accepted. |
 | `COOKIE_SECURE` | `false` | Set `true` behind HTTPS to enable the `Secure` cookie flag and HSTS. |
 | `TRUST_PROXY` | _unset_ | Set to `1` only behind one trusted reverse proxy; uses its forwarded client IP for login and API rate limits. Keep direct access to Plekt restricted to that proxy, and preserve the public `Host` header for browser origin checks. |
 | `TRAKT_CLIENT_ID` / `TRAKT_CLIENT_SECRET` | _built-in_ | Optional replacement for the bundled Trakt app. Both required together. |

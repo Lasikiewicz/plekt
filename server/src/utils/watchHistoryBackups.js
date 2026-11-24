@@ -120,14 +120,44 @@ export function setLastRestoreAt(timestamp = Date.now()) {
 
 // ---- Remote backup destinations --------------------------------------------
 
+function parseOptionalRetention(value) {
+  if (value === undefined || value === null || String(value).trim() === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return null;
+  return Math.max(1, Math.min(Math.trunc(parsed), 365));
+}
+
+export function destinationAcceptsBackupType(destination = {}, isFullBackup = false) {
+  const settings = destination?.settings || {};
+  return isFullBackup ? settings.backupFullPlekt !== false : settings.backupWatchHistory !== false;
+}
+
+export function destinationRetentionForBackupType(destination = {}, isFullBackup = false, fallbackRetention = 7) {
+  const settings = destination?.settings || {};
+  const override = parseOptionalRetention(isFullBackup ? settings.fullRetention : settings.watchRetention);
+  if (override !== null) return override;
+  if (isFullBackup && destination?.type === "dropbox") return 2;
+  return Math.max(1, Math.min(Number(fallbackRetention) || 7, 365));
+}
+
 function safeDestination(value = {}) {
   if (!DESTINATION_TYPES.includes(value.type)) throw new Error(`Unsupported destination type: ${value.type}`);
+  const settings = value.settings && typeof value.settings === "object" ? { ...value.settings } : {};
+  if (settings.backupWatchHistory !== undefined) settings.backupWatchHistory = Boolean(settings.backupWatchHistory);
+  if (settings.backupFullPlekt !== undefined) settings.backupFullPlekt = Boolean(settings.backupFullPlekt);
+  for (const key of ["watchRetention", "fullRetention"]) {
+    if (key in settings) {
+      const parsed = parseOptionalRetention(settings[key]);
+      if (parsed === null) delete settings[key];
+      else settings[key] = parsed;
+    }
+  }
   return {
     id: String(value.id || crypto.randomUUID()),
     type: value.type,
     label: String(value.label || value.type).slice(0, 120),
     enabled: Boolean(value.enabled),
-    settings: value.settings && typeof value.settings === "object" ? { ...value.settings } : {},
+    settings,
     secrets: value.secrets && typeof value.secrets === "object" ? { ...value.secrets } : {},
   };
 }
@@ -218,6 +248,11 @@ function destinationEndpointChanged(existing = {}, next = {}) {
     const prev = String(existing?.settings?.[field] || "").trim();
     const curr = String(next?.settings?.[field] || "").trim();
     if (prev && curr && !sameServerUrl(prev, curr)) return true;
+  }
+  for (const field of ["clientId", "appKey"]) {
+    const prev = String(existing?.settings?.[field] || "").trim();
+    const curr = String(next?.settings?.[field] || "").trim();
+    if (prev && curr && prev !== curr) return true;
   }
   return false;
 }
@@ -453,20 +488,28 @@ async function applyRemoteRetention(adapter, retention, pattern) {
   }
 }
 
-// Mirror a freshly written local backup to every enabled remote. A remote failure is
-// recorded per-destination but never invalidates or deletes the local backup.
-export async function pushBackupToRemotes(localAbsolutePath, filename, retention) {
-  const destinations = loadBackupDestinations().filter((item) => item.enabled);
+// Mirror a freshly written local backup to every enabled remote configured for this
+// backup type (or a single explicitly targeted destinationId for on-demand runs).
+// A remote failure is recorded per-destination but never invalidates or deletes the local backup.
+export async function pushBackupToRemotes(localAbsolutePath, filename, retention, { destinationId = "" } = {}) {
+  const isFullBackup = FULL_BACKUP_FILE_PATTERN.test(filename);
+  const targetId = String(destinationId || "").trim();
+  const all = loadBackupDestinations();
+  const destinations = targetId
+    ? all.filter((item) => item.id === targetId)
+    : all.filter((item) => item.enabled && destinationAcceptsBackupType(item, isFullBackup));
   if (!destinations.length) return [];
 
-  const retentionPattern = FULL_BACKUP_FILE_PATTERN.test(filename) ? FULL_BACKUP_FILE_PATTERN : FILE_PATTERN;
+  const retentionPattern = isFullBackup ? FULL_BACKUP_FILE_PATTERN : FILE_PATTERN;
+  const typeKey = isFullBackup ? "fullBackup" : "watchHistory";
   const statuses = [];
   for (const destination of destinations) {
     const lastAttemptAt = Date.now();
     try {
       const adapter = adapterFor(destination);
       const { bytes, durationMs } = await adapter.upload(localAbsolutePath, filename);
-      await applyRemoteRetention(adapter, retention, retentionPattern).catch(() => null);
+      const targetRetention = destinationRetentionForBackupType(destination, isFullBackup, retention);
+      await applyRemoteRetention(adapter, targetRetention, retentionPattern).catch(() => null);
       statuses.push({ id: destination.id, status: "success", lastAttemptAt, lastSuccessAt: Date.now(), lastError: "", bytes, durationMs });
     } catch (error) {
       statuses.push({ id: destination.id, status: "error", lastAttemptAt, lastError: error.message || String(error) });
@@ -476,7 +519,12 @@ export async function pushBackupToRemotes(localAbsolutePath, filename, retention
   const runtime = loadWatchBackupRuntime();
   const map = { ...(runtime.destinations || {}) };
   for (const { id, ...rest } of statuses) {
-    map[id] = { ...(map[id] || {}), ...rest };
+    const prev = map[id] || {};
+    map[id] = {
+      ...prev,
+      ...rest,
+      [typeKey]: { ...(prev[typeKey] || {}), ...rest },
+    };
   }
   saveRuntime({ destinations: map });
   return statuses;
@@ -592,7 +640,7 @@ function applyRetention(retention) {
   }
 }
 
-export async function createWatchHistoryBackup({ reason = "manual", mirrorRemote = false } = {}) {
+export async function createWatchHistoryBackup({ reason = "manual", mirrorRemote = false, destinationId = "" } = {}) {
   const dir = activeWatchHistoryBackupsDir();
   fs.mkdirSync(dir, { recursive: true });
   const document = backupDocument();
@@ -624,8 +672,8 @@ export async function createWatchHistoryBackup({ reason = "manual", mirrorRemote
   // Mirroring runs on its own schedule (or on-demand via the remote Back Up Now), with its
   // own retention count on the remote. Local backup is verified and durable; remote
   // mirroring is best-effort and must not throw back into the caller.
-  if (mirrorRemote) {
-    result.remotes = await pushBackupToRemotes(destination, filename, config.remoteRetention).catch(() => []);
+  if (mirrorRemote || destinationId) {
+    result.remotes = await pushBackupToRemotes(destination, filename, config.remoteRetention, { destinationId }).catch(() => []);
   }
   return result;
 }

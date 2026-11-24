@@ -249,10 +249,11 @@ export function writeEncryptedPlektBackup(filePath, passphrase, { chunks = fullB
   return { encryptedAt, sizeBytes };
 }
 
-export async function createPlektBackup({ reason = "manual", passphrase, forceRemote = false } = {}) {
+export async function createPlektBackup({ reason = "manual", passphrase, forceRemote = false, destinationId = "" } = {}) {
   fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
   const config = loadPlektBackupConfig();
-  const actualPassphrase = passphrase || (forceRemote
+  const targetingRemote = forceRemote || Boolean(destinationId);
+  const actualPassphrase = passphrase || (targetingRemote
     ? config.remotePassphrase || config.passphrase
     : config.passphrase || config.remotePassphrase);
   if (!actualPassphrase || actualPassphrase.length < 12) {
@@ -289,9 +290,9 @@ export async function createPlektBackup({ reason = "manual", passphrase, forceRe
   };
 
   let remoteStatus = {};
-  if (config.remoteEnabled || forceRemote) {
+  if (config.remoteEnabled || forceRemote || destinationId) {
     try {
-      const statuses = await pushBackupToRemotes(destination, filename, config.remoteRetention);
+      const statuses = await pushBackupToRemotes(destination, filename, config.remoteRetention, { destinationId });
       result.remotes = statuses;
       if (statuses.length) {
         const succeeded = statuses.filter((s) => s.status === "success");

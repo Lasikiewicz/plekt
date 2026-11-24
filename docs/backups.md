@@ -94,12 +94,10 @@ background syncing.
 
 ### Remote destinations (`backupDestinations/`)
 
-Watch-history backups upload to destinations on their own daily schedule (the Remote
-Watch History Backups card) or on demand via that card's Back Up Now button; encrypted
-full backups upload on their schedule or Back Up Now in the same way. Every upload is
-best-effort - a remote failure never invalidates or deletes the local file.
-Per-destination status (last attempt/success, bytes, duration, error) is recorded in
-the backup runtime and shown on the Remote Watch History Backups card. Remote retention
+Watch-history and encrypted full backups have separate daily schedules. Use
+**Back Up Now** inside a destination to upload the selected backup type on demand.
+A remote upload failure leaves the local backup available.
+Each destination shows the outcome of its latest upload for each backup type. Remote retention
 is ordered by the sortable filename and scoped per backup type: pruning after a
 watch-history upload only counts watch-history files (remote retention setting), and
 pruning after a full-backup upload only counts encrypted full backups (Plekt
@@ -111,30 +109,46 @@ delete(remoteName)`.
 
 | Type | Adapter | Auth |
 | --- | --- | --- |
-| `folder` | `folder.js` | none - local path (useful for mounted NAS storage) |
-| `webdav` | `webdav.js` | basic auth |
-| `s3` / `backblaze` | `s3.js` | access key + secret, built-in SigV4 signer (AWS S3, Backblaze B2, MinIO…) |
-| `onedrive` | `onedrive.js` | Microsoft device-code OAuth (user supplies an Azure app client ID; app-folder scope; refresh token persisted via `persistSecrets`) |
-| `dropbox` | `dropbox.js` | manual no-redirect OAuth code flow; refresh token persisted |
+| `backblaze` / `s3` | `s3.js` | access key + secret, built-in SigV4 signer (Backblaze B2, Cloudflare R2, AWS S3, MinIO, Wasabi…) |
+| `webdav` | `webdav.js` | basic auth (Nextcloud, ownCloud, Hetzner Storage Box, NAS WebDAV…) |
+| `onedrive` | `onedrive.js` | Microsoft device-code OAuth (user supplies an Azure/Entra app client ID; app-folder scope; refresh token persisted via `persistSecrets`; Graph resumable upload sessions above 4 MiB) |
+| `dropbox` | `dropbox.js` | OAuth 2.0 PKCE with bundled Plekt App Key (no secret needed; optional custom app override); refresh token persisted; chunked `upload_session` above 8 MiB (default folder `/Plekt Backups`) |
+| `folder` | `folder.js` | none - external/mounted absolute path outside Plekt's built-in `data/backups/` (NAS share, external drive, Docker mount, desktop sync folder) |
 
 Destination records (`{ id, type, label, settings, secrets }`) live in the settings row
 `watchBackupDestinations`. Secret fields (`password`, `secretAccessKey`, `appSecret`,
 `refreshToken`) never reach the browser - every API response redacts them to "is-set"
 flags (`loadBackupDestinationsRedacted`). Backup transfers use a 60-second outbound
-timeout (vs the configurable 10s default). S3/Backblaze uploads are streamed from disk
+timeout (vs the configurable 10s default). All network adapters stream uploads from disk
 (`uploadFileWithTimeout` in `server/src/utils/outbound.js`, over `node:http(s)` because
 Node's `fetch` keeps every chunk of a streamed body in memory until the request ends):
-the SigV4 payload hash comes from a separate streaming pass, `Content-Length` is sent
-up front, and the 60 seconds restart with every chunk, so they only catch a stalled
-transfer. The other adapters still read the whole file and are not exposed in the UI.
+`Content-Length` is sent up front and the 60 seconds restart with every chunk, so they
+only catch a stalled transfer. S3/Backblaze computes its SigV4 payload hash in a separate
+streaming pass; OneDrive uses Graph `createUploadSession` in 10 MiB chunks (320 KiB
+multiples) above 4 MiB; Dropbox uses `upload_session/start` → `append_v2` → `finish` in
+8 MiB chunks above 8 MiB.
 
-The settings UI currently exposes Backblaze B2 destinations. Each configured target is
-shown as a status card; the trailing **+** card opens the type picker, and selecting a
-card opens an edit dialog with Save, Test, and Delete. The B2 form uses the adapter's
-canonical `region`, `bucket`, `accessKeyId`, `prefix`, and `secretAccessKey` fields.
-Secret values are never prefilled; a configured placeholder means leaving the field
-blank preserves the stored application key. Multiple B2 destination records are
-supported.
+The Settings UI (`public/modules/backup-destinations.js`, shared with `/setup`) exposes
+five destination types: **Backblaze B2**, **Dropbox**, **S3-Compatible**, **WebDAV**,
+and **External / Mounted Folder** (the `onedrive` adapter remains on the backend only and
+is not shown in the UI picker). In Settings → Backup → Remote, a shared **Remote Schedule
+& Encryption** section configures the daily time, default retention, and encryption
+passphrase, while only added destinations render as expandable accordions (matching
+External Trackers), sorted with enabled destinations first and disabled ones at the
+bottom. Each accordion includes inline connection fields, built-in Dropbox PKCE connect,
+independent **Watch History** and **Full Encrypted Plekt** toggles/retention/Back Up Now
+buttons, a collapsible Setup Guide, and Save/Test/Remove actions; **+ Add remote
+destination** opens the type picker. Each destination can independently choose
+whether to receive **watch-history backups**, **encrypted full Plekt backups**, or both
+(`backupWatchHistory`, `backupFullPlekt`, both enabled by default), and can optionally
+override retention per backup type (`watchRetention`, `fullRetention`; Dropbox defaults to
+retaining `2` full backups unless overridden). Secret values are never prefilled; leaving
+a configured secret blank preserves the stored credential. Changing a destination's URL,
+endpoint, `clientId`, or `appKey` clears previously stored secrets. Multiple destination
+records of any type are supported.
+
+Settings → Restore lists backups by enabled destination and reports connection errors
+alongside each location. Use **Refresh** to reload either remote backup list.
 
 ## Encrypted full backups (`plektBackups.js`)
 
@@ -202,7 +216,7 @@ Nightly encrypted snapshots of the entire portable backup document.
   Now button. Reuses `pushBackupToRemotes` from the watch-history subsystem, so the
   same destination list applies; the aggregated attempt/success/error status across
   destinations is shown on the card.
-- **Storage** - `data/backups/plembfin/`. **Warning:** these backups contain
+- **Storage** - `data/backups/plekt/` (pre-rename `data/backups/plembfin/` folders are migrated automatically on startup). **Warning:** these backups contain
   media-server URLs, usernames, tokens, and API keys (that's what the encryption is
   for).
 - **API** - `GET/POST /api/plekt-backups` (`handlePlembfinBackups`): status, list,
@@ -380,5 +394,6 @@ install that already had one; the old file is always used when present), `media/
 complete manual backup/restore - see the Backups section of
 [hardening.md](hardening.md).
 
-The local full-backup folder `data/backups/plembfin` and default Dropbox folder
-`/Plembfin Backups` retain their old names so existing backups remain visible.
+The local full-backup folder is `data/backups/plekt` (existing `data/backups/plembfin`
+folders are migrated automatically on startup via `migrateLegacyFullBackupsDir` in
+`server/src/paths.js`), and the default Dropbox folder is `/Plekt Backups`.

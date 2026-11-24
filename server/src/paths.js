@@ -49,7 +49,8 @@ export const PROFILES_DIR = path.join(MEDIA_DIR, "profiles");
 export const LOGOS_DIR = path.join(MEDIA_DIR, "logos");
 export const BACKUPS_DIR = path.join(DATA_DIR, "backups");
 export const WATCH_HISTORY_BACKUPS_DIR = path.join(BACKUPS_DIR, "watch-history");
-export const FULL_BACKUPS_DIR = path.join(BACKUPS_DIR, "plembfin");
+export const LEGACY_FULL_BACKUPS_DIR = path.join(BACKUPS_DIR, "plembfin");
+export const FULL_BACKUPS_DIR = path.join(BACKUPS_DIR, "plekt");
 export const DB_PATH = resolveDbPath(DATA_DIR);
 // Install-wide provider metadata caches and (optionally) mirrored keys.
 // Lives beside the admin DB so every user in one process shares one store.
@@ -59,7 +60,44 @@ export const CONFIG_PATH = path.join(DATA_DIR, "config.json");
 export const CREDENTIAL_KEY_PATH = path.join(DATA_DIR, "credential.key");
 export const PUBLIC_DIR = path.join(repoRoot, "public");
 
+// Migrates an existing pre-rename backups/plembfin folder into backups/plekt.
+// Idempotent: a clean rename runs when backups/plekt does not exist yet, and
+// otherwise individual files are moved without overwriting newer copies.
+export function migrateLegacyFullBackupsDir(backupsDir = BACKUPS_DIR) {
+  const legacyDir = path.join(backupsDir, "plembfin");
+  const currentDir = path.join(backupsDir, "plekt");
+  if (!fs.existsSync(legacyDir)) return { migrated: false, movedFiles: 0 };
+  try {
+    if (!fs.existsSync(currentDir)) {
+      fs.renameSync(legacyDir, currentDir);
+      return { migrated: true, renamed: true, movedFiles: 0 };
+    }
+    let movedFiles = 0;
+    for (const entry of fs.readdirSync(legacyDir)) {
+      const from = path.join(legacyDir, entry);
+      const to = path.join(currentDir, entry);
+      if (fs.existsSync(to)) continue;
+      try {
+        fs.renameSync(from, to);
+      } catch {
+        fs.copyFileSync(from, to);
+        fs.unlinkSync(from);
+      }
+      movedFiles += 1;
+    }
+    if (fs.readdirSync(legacyDir).length === 0) {
+      fs.rmdirSync(legacyDir);
+    }
+    return { migrated: movedFiles > 0, renamed: false, movedFiles };
+  } catch (error) {
+    console.warn(`Could not finish migrating legacy backups folder (${legacyDir} -> ${currentDir}): ${error.message}`);
+    return { migrated: false, movedFiles: 0, error: error.message };
+  }
+}
+
 export function ensureDataDirs() {
+  fs.mkdirSync(BACKUPS_DIR, { recursive: true });
+  migrateLegacyFullBackupsDir(BACKUPS_DIR);
   for (const dir of [DATA_DIR, MEDIA_DIR, POSTERS_DIR, BACKDROPS_DIR, PROFILES_DIR, LOGOS_DIR, BACKUPS_DIR, WATCH_HISTORY_BACKUPS_DIR, FULL_BACKUPS_DIR]) {
     fs.mkdirSync(dir, { recursive: true });
   }

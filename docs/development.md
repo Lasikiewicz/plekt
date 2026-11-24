@@ -86,9 +86,9 @@ publish both GHCR names only. `PLEKT_*` variables are preferred, with nonblank n
 values taking precedence over `PLEMBFIN_*`; both webhook-secret header names work.
 
 Persisted identifiers remain deliberately unchanged: old databases (`plembfin.db`),
-`backups/plembfin`, cookies, browser storage, provider device ids, database source
+cookies, browser storage, provider device ids, database source
 values and `/api/plembfin-backups` routes. Fresh databases and new backups use Plekt
-names. Old backups remain supported, but new ones cannot restore on older builds.
+names, and existing `backups/plembfin` folders are migrated to `backups/plekt` on startup. Old backups remain supported, but new ones cannot restore on older builds.
 The Windows installer prepares an in-place service/data-folder migration; real
 upgrade verification remains required. See [decision 44](decisions.md#44-plekt-keeps-legacy-identifiers-to-preserve-existing-installs).
 

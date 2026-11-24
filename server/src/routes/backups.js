@@ -53,6 +53,7 @@ import {
   savePlektBackupConfig,
 } from "../utils/plektBackups.js";
 import { deviceCodeEndpoint, tokenEndpoint, ONEDRIVE_SCOPE } from "../utils/backupDestinations/onedrive.js";
+import { resolveDropboxAppKey } from "../utils/dropboxAppConfig.js";
 
 const insertRestoreReportStmt = db.prepare(`
   INSERT INTO restore_reports (run_id, result_json, log_json, created_at, updated_at)
@@ -192,7 +193,8 @@ export async function handlePlektBackups(req, res) {
     if (action === "create") {
       const passphrase = String(body.passphrase || "").trim();
       const forceRemote = body.remote === true;
-      return sendJson(res, { ok: true, backup: await createPlektBackup({ reason: "manual", passphrase, forceRemote }) });
+      const destinationId = String(body.destinationId || "").trim();
+      return sendJson(res, { ok: true, backup: await createPlektBackup({ reason: "manual", passphrase, forceRemote, destinationId }) });
     }
     if (action === "delete") {
       const filename = String(body.filename || "").trim();
@@ -284,35 +286,74 @@ async function pollOneDriveDeviceAuth(pendingId) {
   return { status: "error", error: data.error_description || data.error || "Authorization failed" };
 }
 
-// Dropbox manual (no-redirect) OAuth: the authorize page shows a code the user pastes
-// back, so no public callback URL is required for self-hosted installs.
+// Short-lived PKCE verifiers for in-flight Dropbox no-redirect OAuth flows
+// (destinationId -> { codeVerifier, appKey, expiresAt }).
+const dropboxPkceSessions = new Map();
+
+// Dropbox manual (no-redirect) OAuth with PKCE: the authorize page shows a code
+// the user pastes back, so no public callback URL or bundled client secret is
+// required for self-hosted installs.
 function dropboxAuthorizeUrl(destination) {
-  const appKey = destination.settings?.appKey;
-  if (!appKey) throw new Error("Enter and save the Dropbox app key first");
+  const customAppKey = String(destination.settings?.appKey || "").trim();
+  const appKey = customAppKey || resolveDropboxAppKey();
+  if (!appKey) throw new Error("Dropbox app key is required");
+
+  for (const [id, session] of dropboxPkceSessions) {
+    if (session.expiresAt < Date.now()) dropboxPkceSessions.delete(id);
+  }
+  const codeVerifier = crypto.randomBytes(32).toString("base64url");
+  const codeChallenge = crypto.createHash("sha256").update(codeVerifier).digest("base64url");
+  dropboxPkceSessions.set(destination.id, {
+    codeVerifier,
+    appKey,
+    expiresAt: Date.now() + 15 * 60 * 1000,
+  });
+
   const params = new URLSearchParams({
     client_id: appKey,
     response_type: "code",
     token_access_type: "offline",
+    code_challenge: codeChallenge,
+    code_challenge_method: "S256",
   });
   return `https://www.dropbox.com/oauth2/authorize?${params.toString()}`;
 }
 
 async function exchangeDropboxCode(destination, code) {
-  const appKey = destination.settings?.appKey;
-  const appSecret = destination.secrets?.appSecret;
-  if (!appKey || !appSecret) throw new Error("Save the Dropbox app key and secret first");
+  const customAppKey = String(destination.settings?.appKey || "").trim();
+  const appKey = customAppKey || resolveDropboxAppKey();
+  const appSecret = customAppKey ? String(destination.secrets?.appSecret || "").trim() : "";
+  if (!appKey) throw new Error("Dropbox app key is required");
   if (!code) throw new Error("Authorization code is required");
-  const basic = Buffer.from(`${appKey}:${appSecret}`).toString("base64");
+
+  const pkce = dropboxPkceSessions.get(destination.id);
+  if (pkce && pkce.expiresAt < Date.now()) dropboxPkceSessions.delete(destination.id);
+  const activePkce = dropboxPkceSessions.get(destination.id);
+  if (!appSecret && (!activePkce || activePkce.appKey !== appKey)) {
+    throw new Error("Dropbox authorization session expired - click Connect Dropbox again");
+  }
+
+  const headers = { "Content-Type": "application/x-www-form-urlencoded" };
   const params = new URLSearchParams({ grant_type: "authorization_code", code: String(code).trim() });
+  if (activePkce?.appKey === appKey && activePkce.codeVerifier) {
+    params.set("code_verifier", activePkce.codeVerifier);
+  }
+  if (appSecret) {
+    headers.Authorization = `Basic ${Buffer.from(`${appKey}:${appSecret}`).toString("base64")}`;
+  } else {
+    params.set("client_id", appKey);
+  }
+
   const response = await fetchWithTimeout("https://api.dropbox.com/oauth2/token", {
     method: "POST",
-    headers: { Authorization: `Basic ${basic}`, "Content-Type": "application/x-www-form-urlencoded" },
+    headers,
     body: params.toString(),
   }, 15_000);
   const data = await response.json().catch(() => ({}));
   if (!response.ok || !data.refresh_token) {
     throw new Error(data.error_description || data.error || "Dropbox authorization failed");
   }
+  dropboxPkceSessions.delete(destination.id);
   updateDestinationSecrets(destination.id, { refreshToken: data.refresh_token });
   return { status: "authorized" };
 }
@@ -1128,7 +1169,8 @@ export async function handleWatchBackups(req, res) {
       return sendJson(res, { ok: true, config: saveWatchBackupConfig(body.config || {}) });
     }
     if (action === "create") {
-      return sendJson(res, { ok: true, backup: await createWatchHistoryBackup({ reason: "manual", mirrorRemote: body.remote === true }) });
+      const destinationId = String(body.destinationId || "").trim();
+      return sendJson(res, { ok: true, backup: await createWatchHistoryBackup({ reason: "manual", mirrorRemote: body.remote === true, destinationId }) });
     }
     if (action === "restore") {
       const filename = String(body.filename || "").trim();

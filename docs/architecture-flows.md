@@ -110,6 +110,9 @@ The full table of supported variables, with defaults, is the
   `brandEnv()` in `server/src/utils/brandEnv.js`; the server logs one line at boot
   listing any old names in use. New code reads these variables through `brandEnv()`,
   never `process.env.PLEKT_*` directly.
+- `PLEKT_DROPBOX_APP_KEY` selects the default public Dropbox app key.
+  `DROPBOX_APP_KEY` is accepted as a fallback, and a custom destination app key takes
+  precedence over both.
 - `EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED`: Emby's and Jellyfin's per-item lookup,
   `findEpisode`, costs several outbound requests, so each checked batch is capped lower
   than Plex's, at `EMBY_LIKE_UNWATCHED_BATCH_SIZE = 5`, and records are checked

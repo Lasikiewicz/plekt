@@ -1,7 +1,7 @@
-// WebDAV adapter - covers Nextcloud, ownCloud, Apache mod_dav, and most NAS units.
-// Settings: { url, username, directory? }  Secrets: { password }
+// WebDAV adapter - covers Nextcloud, ownCloud, Hetzner Storage Box, Apache mod_dav, and most NAS units.
+// Settings: { url, username?, directory? }  Secrets: { password? }
 import fs from "node:fs";
-import { fetchWithTimeout } from "../outbound.js";
+import { fetchWithTimeout, uploadFileWithTimeout } from "../outbound.js";
 import path from "node:path";
 import { REMOTE_BACKUP_FILE_PATTERN } from "../backupNames.js";
 
@@ -12,7 +12,10 @@ function baseUrl(destination) {
   if (!url) throw new Error("WebDAV URL is required");
   if (!/^https?:\/\//i.test(url)) throw new Error("WebDAV URL must start with http:// or https://");
   if (!url.endsWith("/")) url += "/";
-  return url;
+  const directory = String(destination.settings?.directory || "").trim().replace(/^\/+|\/+$/g, "");
+  if (!directory) return url;
+  const encoded = directory.split("/").filter(Boolean).map(encodeURIComponent).join("/");
+  return `${url}${encoded}/`;
 }
 
 function authHeaders(destination) {
@@ -28,11 +31,30 @@ function remoteUrl(destination, name) {
 }
 
 async function ensureCollection(destination) {
-  // MKCOL is a no-op (405/301) when the collection already exists; tolerate that.
-  const response = await fetchWithTimeout(baseUrl(destination), { method: "MKCOL", headers: authHeaders(destination) });
-  if (![200, 201, 204, 301, 405].includes(response.status)) {
-    const body = await response.text().catch(() => "");
-    throw new Error(`WebDAV MKCOL failed (${response.status}): ${body.slice(0, 200)}`);
+  // MKCOL is a no-op (405/301) when the collection already exists; some servers
+  // also return 403 on an existing root collection. Create nested directory
+  // segments one level at a time when a subdirectory is configured.
+  const directory = String(destination.settings?.directory || "").trim().replace(/^\/+|\/+$/g, "");
+  const root = String(destination.settings?.url || "").trim().replace(/\/+$/, "") + "/";
+  const targets = [];
+  if (directory) {
+    let cursor = root;
+    for (const segment of directory.split("/").filter(Boolean)) {
+      cursor = `${cursor}${encodeURIComponent(segment)}/`;
+      targets.push(cursor);
+    }
+  } else {
+    targets.push(baseUrl(destination));
+  }
+  for (const target of targets) {
+    const response = await fetchWithTimeout(target, { method: "MKCOL", headers: authHeaders(destination) });
+    if (![200, 201, 204, 301, 405].includes(response.status)) {
+      // If no subdirectory was specified and the server refuses MKCOL on its
+      // existing root (common on Nextcloud/Synology shares), let PUT decide.
+      if (!directory && (response.status === 403 || response.status === 409)) continue;
+      const body = await response.text().catch(() => "");
+      throw new Error(`WebDAV MKCOL failed (${response.status}): ${body.slice(0, 200)}`);
+    }
   }
 }
 
@@ -55,17 +77,17 @@ export function createWebdavAdapter(destination) {
     async upload(localPath, remoteName) {
       const started = Date.now();
       await ensureCollection(destination);
-      const body = fs.readFileSync(localPath);
-      const response = await fetchWithTimeout(remoteUrl(destination, remoteName), {
+      const { size } = await fs.promises.stat(localPath);
+      const contentType = remoteName.endsWith(".gz") ? "application/gzip" : "application/octet-stream";
+      const response = await uploadFileWithTimeout(remoteUrl(destination, remoteName), {
         method: "PUT",
-        headers: { ...authHeaders(destination), "Content-Type": "application/gzip" },
-        body,
+        headers: { ...authHeaders(destination), "Content-Type": contentType, "Content-Length": String(size) },
+        filePath: localPath,
       }, 60_000);
       if (!(response.ok || response.status === 201 || response.status === 204)) {
-        const text = await response.text().catch(() => "");
-        throw new Error(`WebDAV upload failed (${response.status}): ${text.slice(0, 200)}`);
+        throw new Error(`WebDAV upload failed (${response.status}): ${response.text.slice(0, 200)}`);
       }
-      return { bytes: body.length, durationMs: Date.now() - started };
+      return { bytes: size, durationMs: Date.now() - started };
     },
 
     async list() {

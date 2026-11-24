@@ -577,10 +577,11 @@ borrowed by the guided-setup wizard's "Restore from backup" step (`onboarding.js
 Restore page is opened directly, so they must stay direct children of that container -
 never wrap them in an intermediate element.
 
-Remote backup destinations use the same card and modal primitives. The Backblaze B2
-dialog edits its name, enabled state, region/endpoint, bucket, key ID, optional prefix,
-and application key. Save and Test persist the destination before refreshing status;
-Delete removes the destination record after confirmation without deleting remote files.
+In Settings → Backup → Remote, **Add remote destination** opens the provider picker.
+Each destination then has an accordion with connection fields, setup instructions,
+and separate controls for watch-history and encrypted full backups. Remote backup
+help sits beside the Remote card. Settings → Restore groups remote backups by enabled
+destination and provides a Refresh button for each backup type.
 
 Dialogs are singletons, close on Escape/backdrop/close button, keep their header and
 footer visible while the body scrolls, and collapse to stacked fields on mobile.
@@ -596,7 +597,8 @@ footer visible while the body scrolls, and collapse to stacked fields on mobile.
 | `public/modules/watchlist-sync-settings.js` | Plex Watchlist Sync on/off control, Plex connection summary, Sync now, and status polling |
 | `public/modules/settings.js` | Shared connection-label formatting |
 | `public/modules/tools.js` | Trakt import and compatibility exports for backup and maintenance behavior |
-| `public/modules/tools-backups.js` | Backup schedules, restore, destination cards/dialogs, and appearance behavior |
+| `public/modules/tools-backups.js` | Backup schedules, backup and restore actions, and appearance behavior |
+| `public/modules/backup-destinations.js` | Remote destination forms, setup guides, Dropbox sign-in, and grouped remote restore lists |
 | `public/modules/tools-maintenance.js` | Diagnostics, cross-platform match reporting, repairs, backfills, and cache behavior |
 | `public/modules/tools-wipe-data.js` | Wipe data: Watch History, Personal Watchlist, Sync History & Logs, Everything Tracked, and Wipe All / Fresh Start, each behind two confirm dialogs |
 | `public/modules/help-content.js` | Credential, webhook, migration, and account setup guides |

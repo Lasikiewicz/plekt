@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.3";
-import { state, elements } from "./state.js?v=2.3.0.0.3";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.3.0.0.3";
-import { openSettingsEditModal, openSettingsPickerModal, renderServiceCardGrid } from "./settings-ui.js?v=2.3.0.0.3";
-import { applyAppearanceToBody } from "./appearance.js?v=2.3.0.0.3";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.4";
+import { state, elements } from "./state.js?v=2.3.0.0.4";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.3.0.0.4";
+import { DESTINATION_FORMS, openBackupDestinationModal as openDestinationModalShared, renderBackupDestinationAccordions, renderRemoteRestoreGroups } from "./backup-destinations.js?v=2.3.0.0.4";
+import { applyAppearanceToBody } from "./appearance.js?v=2.3.0.0.4";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -400,13 +400,14 @@ export function renderWatchBackups() {
         <span style="font-size: 0.85rem;">Cron sync is paused until ${escapeHtml(new Date(cronPausedUntil).toLocaleTimeString())} while restore work settles.</span>
        </div>`
     : "";
+  const activeDestinations = Array.isArray(state.watchBackups?.destinations)
+    ? state.watchBackups.destinations.filter((d) => d.enabled)
+    : [];
   let remoteLoading = "";
   if (state.remoteBackupFilesLoading) {
-    const destNames = Array.isArray(state.watchBackups?.destinations)
-      ? state.watchBackups.destinations.map((d) => d.label || d.type).filter(Boolean)
-      : [];
+    const destNames = activeDestinations.map((d) => d.label || d.type).filter(Boolean);
     const destText = destNames.length ? ` (${destNames.map(escapeHtml).join(", ")})` : "";
-    remoteLoading = `<div class="remote-search-banner"><span class="remote-search-spinner"></span><span>Searching remote destinations${destText} for backups…</span></div>`;
+    remoteLoading = `<div class="remote-search-banner"><span class="remote-search-spinner"></span><span>Searching active remote locations${destText} for backups…</span></div>`;
   }
   const clearMode = state.restoreClearMode || "wipe";
   const clearModeSelector = `
@@ -449,12 +450,19 @@ export function renderWatchBackups() {
     return rows.slice(0, 2).join("") + collapseOlderRows(rows.slice(2));
   };
   const localEmpty = `<div class="empty-log"><b>No local watch-history backups</b><span>Use Back Up Now on the Backups tab or add a .json.gz file from your computer.</span></div>`;
-  const remoteEmpty = state.remoteBackupFilesLoading
-    ? ""
-    : `<div class="empty-log"><b>No remote watch-history backups</b><span>Configure a remote destination on the Backups tab, then create a watch-history backup.</span></div>`;
   elements.watchBackupList.innerHTML = cronPausedBanner + (localEntries.length ? clearModeSelector : "") + renderEntries(localEntries, localEmpty);
   if (elements.remoteWatchBackupList) {
-    elements.remoteWatchBackupList.innerHTML = remoteLoading + (remoteEntries.length ? clearModeSelector : "") + renderEntries(remoteEntries, remoteEmpty);
+    elements.remoteWatchBackupList.innerHTML = renderRemoteRestoreGroups({
+      kind: "watch",
+      activeDestinations,
+      groups: state.remoteWatchRestoreGroups,
+      fallbackFiles: remoteEntries,
+      loading: state.remoteBackupFilesLoading,
+      loadingHtml: remoteLoading,
+      preambleHtml: remoteEntries.length ? clearModeSelector : "",
+      renderGroupFiles: (groupFiles) => renderEntries(groupFiles, ""),
+      emptyForGroup: (group) => `<div class="empty-log"><b>No watch-history backups found in ${escapeHtml(group.destLabel)}</b><span>Run a watch-history backup to this location first.</span></div>`,
+    });
   }
 }
 // Runtime readout for the Remote Watch History Backups card on the Backups tab:
@@ -477,6 +485,9 @@ function renderRemoteWatchBackupRuntime(data) {
     const label = destination.label || destination.type || "Remote";
     if (!destination.enabled) {
       return `<div><span>${escapeHtml(label)}</span><b>Disabled</b></div>`;
+    }
+    if (destination.settings?.backupWatchHistory === false) {
+      return `<div><span>${escapeHtml(label)}</span><b>Watch history off</b></div>`;
     }
     if (!status.lastAttemptAt) {
       return `<div><span>${escapeHtml(label)}</span><b>Never synced</b></div>`;
@@ -501,147 +512,49 @@ function renderRemoteWatchBackupRuntime(data) {
 export async function loadRemoteBackupsForRestoreTab() {
   const data = state.watchBackups;
   if (!data) return;
-  const destinations = Array.isArray(data.destinations) ? data.destinations : [];
-  if (!destinations.length) return;
-  state.remoteBackupFilesLoading = true;
+  const destinations = (Array.isArray(data.destinations) ? data.destinations : []).filter((dest) => dest.enabled);
   state.remoteBackupFiles = [];
+  state.remoteWatchRestoreGroups = [];
+  if (!destinations.length) {
+    state.remoteBackupFilesLoading = false;
+    renderWatchBackups();
+    return;
+  }
+  state.remoteBackupFilesLoading = true;
   renderWatchBackups();
-  const results = await Promise.allSettled(
+  const groups = await Promise.all(
     destinations.map(async (dest) => {
+      const destLabel = dest.label || DESTINATION_FORMS[dest.type]?.label || dest.type || "Remote";
       try {
         const result = await postWatchBackupAction({ action: "list-remote-backups", destinationId: dest.id });
-        const files = Array.isArray(result.files) ? result.files : [];
-        return files.map((f) => ({ ...f, source: "remote", destId: dest.id, destLabel: dest.label || dest.type || "Remote" }));
-      } catch {
-        return [];
+        const files = (Array.isArray(result.files) ? result.files : [])
+          .map((f) => ({ ...f, source: "remote", destId: dest.id, destLabel }));
+        return { destId: dest.id, destLabel, destType: dest.type, files, error: "" };
+      } catch (error) {
+        return { destId: dest.id, destLabel, destType: dest.type, files: [], error: error?.message || "Connection failed" };
       }
     })
   );
-  state.remoteBackupFiles = results.flatMap((r) => r.status === "fulfilled" ? r.value : []);
+  state.remoteWatchRestoreGroups = groups;
+  state.remoteBackupFiles = groups.flatMap((g) => g.files);
   state.remoteBackupFilesLoading = false;
   renderWatchBackups();
 }
-const DESTINATION_FORMS = {
-  backblaze: {
-    label: "Backblaze B2",
-    description: "Mirror backups to a Backblaze B2 bucket",
-    settings: [
-      { key: "region", label: "Region or endpoint", placeholder: "eu-central-003", help: "A region name or full S3 endpoint is accepted." },
-      { key: "bucket", label: "Bucket name", placeholder: "yourname-plekt" },
-      { key: "accessKeyId", label: "Key ID", placeholder: "0035..." },
-      { key: "prefix", label: "Key prefix", placeholder: "plekt/", optional: true, help: "Optional folder-like prefix within the bucket." },
-    ],
-    secrets: [{ key: "secretAccessKey", label: "Application key", placeholder: "Backblaze application key" }],
-    helpHtml: `
-      <p class="tool-accordion-desc">Plekt needs a private B2 bucket and an application key that can read and write it. No Backblaze account yet? <a href="https://www.backblaze.com/sign-up/cloud-storage" target="_blank" rel="noopener noreferrer">Sign up for B2 Cloud Storage</a> (the first 10 GB are free).</p>
-      <ol class="tool-accordion-desc settings-help-steps">
-        <li>Open <a href="https://secure.backblaze.com/b2_buckets.htm" target="_blank" rel="noopener noreferrer">Buckets</a> and choose <b>Create a Bucket</b>. Keep files <b>Private</b> and enter the name under <b>Bucket name</b>.</li>
-        <li>On the bucket's card, copy the <b>Endpoint</b> (for example <code>s3.eu-central-003.backblazeb2.com</code>) into <b>Region or endpoint</b>. The region alone (<code>eu-central-003</code>) also works.</li>
-        <li>Open <a href="https://secure.backblaze.com/app_keys.htm" target="_blank" rel="noopener noreferrer">Application Keys</a> and choose <b>Add a New Application Key</b>. Allow access to this bucket only, with <b>Read and Write</b> access.</li>
-        <li>Copy the <b>keyID</b> into <b>Key ID</b> and the <b>applicationKey</b> into <b>Application key</b>. Backblaze shows the application key only once.</li>
-        <li>Choose <b>Test</b>, then tick <b>Enable</b> and save.</li>
-      </ol>
-      <p class="tool-accordion-desc"><b>Tip:</b> B2 keeps old versions of a deleted file by default, so backups removed by retention still use space. In the bucket's <b>Lifecycle Settings</b>, choose <b>Keep only the last version of the file</b>. If the bucket is shared, use a custom rule scoped to the Plekt prefix. <a href="https://www.backblaze.com/docs/cloud-storage-configure-and-manage-lifecycle-rules" target="_blank" rel="noopener noreferrer">Backblaze lifecycle rule instructions</a>.</p>
-      <p class="tool-accordion-desc">Plekt stores the application key securely and never sends it back to the browser. More detail: <a href="https://www.backblaze.com/docs/cloud-storage-s3-compatible-api" target="_blank" rel="noopener noreferrer">Backblaze S3-compatible API</a>.</p>
-    `,
-  },
-};
-function destinationBadges(destination, status) {
-  const badges = [{ label: destination.enabled ? "Enabled" : "Disabled", tone: destination.enabled ? "ready" : "muted" }];
-  if (status?.status === "success") badges.push({ label: "Connected", tone: "ready" });
-  else if (status?.status === "error") badges.push({ label: "Last run failed", tone: "danger" });
-  else badges.push({ label: "Not tested", tone: "warning" });
-  return badges;
-}
-
-function destinationFields(destination, form) {
-  return [
-    { key: "label", label: "Name", value: destination.label || form.label, help: "A recognizable name for this backup target." },
-    { key: "enabled", label: "Enable", type: "checkbox", value: Boolean(destination.enabled) },
-    ...form.settings.map((field) => ({ ...field, value: destination.settings?.[field.key] || "" })),
-    ...form.secrets.map((field) => ({
-      ...field,
-      type: "password",
-      secret: true,
-      configured: Boolean(destination.secretFlags?.[field.key]),
-      configuredPlaceholder: `Configured - enter a new ${field.label.toLowerCase()} to replace it`,
-    })),
-  ];
-}
-
-function destinationFromValues(destination, form, values) {
-  const settings = Object.fromEntries(form.settings.map((field) => [field.key, values[field.key]]));
-  const secrets = {};
-  for (const field of form.secrets) {
-    if (values[field.key]) secrets[field.key] = values[field.key];
-  }
-  return {
-    ...(destination.id ? { id: destination.id } : {}),
-    type: destination.type,
-    label: values.label || form.label,
-    enabled: Boolean(values.enabled),
-    settings,
-    secrets,
-  };
-}
-
 async function refreshBackupDestinations() {
   state.watchBackups = null;
-  await loadWatchBackups({ force: true });
-}
-
-async function saveDestinationValues(destination, form, values) {
-  const body = await postWatchBackupAction({
-    action: "save-destination",
-    destination: destinationFromValues(destination, form, values),
-  });
-  if (body.destination) Object.assign(destination, body.destination);
-  return body.destination;
+  state.plektBackups = null;
+  state.remoteBackupFiles = [];
+  state.remotePlektBackupFiles = [];
+  state.remoteWatchRestoreGroups = [];
+  state.remotePlektRestoreGroups = [];
+  await Promise.all([loadWatchBackups({ force: true }), loadPlektBackups({ force: true })]);
 }
 
 export function openBackupDestinationModal(destination = {}) {
-  const type = destination.type || "backblaze";
-  const form = DESTINATION_FORMS[type];
-  if (!form) throw new Error(`Unsupported destination type: ${type}`);
-  const target = { type, settings: {}, secretFlags: {}, ...destination };
-  openSettingsEditModal({
-    title: target.id ? `Edit ${target.label || form.label}` : `Add ${form.label}`,
-    fields: destinationFields(target, form),
-    enabledKey: "enabled",
-    saveDisabledLabel: "Save & disable",
-    helpHtml: form.helpHtml,
-    onSave: async (values) => {
-      await saveDestinationValues(target, form, values);
-      await refreshBackupDestinations();
-      _setMessage("Backup destination saved.", "success");
-    },
-    onTest: async (values) => {
-      const saved = await saveDestinationValues(target, form, values);
-      const result = await postWatchBackupAction({ action: "test-destination", destinationId: saved.id });
-      await refreshBackupDestinations();
-      return `Connection OK - ${result.result?.detail || "reachable"}.`;
-    },
-    onDelete: target.id ? async () => {
-      const approved = await _openConfirmDialog({
-        title: "Remove destination?",
-        body: "Stop mirroring backups here? Files already uploaded to the remote are left untouched.",
-        confirmLabel: "Remove",
-        danger: true,
-      });
-      if (!approved) return false;
-      await postWatchBackupAction({ action: "remove-destination", destinationId: target.id });
-      await refreshBackupDestinations();
-      _setMessage("Destination removed.", "success");
-    } : undefined,
-  });
-}
-
-function openBackupDestinationPicker() {
-  openSettingsPickerModal({
-    title: "Add Backup Destination",
-    intro: "Choose where Plekt should mirror scheduled backups.",
-    items: Object.entries(DESTINATION_FORMS).map(([id, form]) => ({ id, name: form.label, description: form.description })),
-    onPick: (type) => openBackupDestinationModal({ type }),
+  openDestinationModalShared(destination, {
+    onChanged: refreshBackupDestinations,
+    setMessage: _setMessage,
+    openConfirmDialog: _openConfirmDialog,
   });
 }
 
@@ -649,17 +562,15 @@ export function renderBackupDestinationCards() {
   const destinations = Array.isArray(state.watchBackups?.destinations) ? state.watchBackups.destinations : [];
   const statusMap = state.watchBackups?.runtime?.destinations || {};
   setEnabledStatus(elements.backupDestinationSummary, destinations.some((destination) => destination.enabled));
-  renderServiceCardGrid(elements.backupDestinationCards, {
-    items: destinations.map((destination) => ({
-      id: destination.id,
-      name: destination.label || DESTINATION_FORMS[destination.type]?.label || destination.type,
-      description: DESTINATION_FORMS[destination.type]?.description || "Remote backup destination",
-      badges: destinationBadges(destination, statusMap[destination.id]),
-    })),
-    onSelect: (id) => openBackupDestinationModal(destinations.find((destination) => destination.id === id)),
-    onAdd: openBackupDestinationPicker,
-    addLabel: "Add backup destination",
-    addVisibleLabel: "Click to add a remote destination",
+  renderBackupDestinationAccordions(elements.backupDestinationCards, {
+    destinations,
+    statusMap,
+    globalWatchRetention: Number(state.watchBackups?.config?.remoteRetention) || 7,
+    globalFullRetention: Number(state.plektBackups?.config?.remoteRetention || state.plektBackups?.config?.retention) || 7,
+    getPlektPassphrase: () => elements.plektBackupRemotePassphrase?.value.trim() || elements.backupExportPassphrase?.value.trim() || "",
+    onChanged: refreshBackupDestinations,
+    setMessage: _setMessage,
+    openConfirmDialog: _openConfirmDialog,
   });
 }
 export async function restoreRemoteBackupFromCard(card, filename, clearMode = "wipe") {
@@ -731,24 +642,23 @@ export function updatePlektButtonsState() {
   const remember = Boolean(elements.backupExportRememberPassphrase?.checked);
   const hasStoredPassphrase = Boolean(config.passphraseStored);
   const hasLocalPassphrase = passphrase.length >= 12 || (remember && hasStoredPassphrase);
-  const localScheduleEnabled = Boolean(elements.plektBackupEnabled?.checked);
   if (elements.savePlektBackupConfigButton) {
-    elements.savePlektBackupConfigButton.disabled = localScheduleEnabled && (!remember || !hasLocalPassphrase);
+    elements.savePlektBackupConfigButton.disabled = false;
   }
   if (elements.createPlektBackupButton) elements.createPlektBackupButton.disabled = !hasLocalPassphrase && passphrase.length < 12;
 
   const remotePassphrase = elements.plektBackupRemotePassphrase?.value.trim() || "";
-  const remoteRemember = Boolean(elements.plektBackupRemoteRememberPassphrase?.checked);
   const hasStoredRemotePassphrase = Boolean(config.remotePassphraseStored);
-  const hasRemotePassphrase = remotePassphrase.length >= 12 || (remoteRemember && hasStoredRemotePassphrase);
-  const remoteScheduleEnabled = Boolean(elements.plektBackupRemoteEnabled?.checked);
   if (elements.savePlektBackupRemoteButton) {
-    elements.savePlektBackupRemoteButton.disabled = remoteScheduleEnabled && !hasLocalPassphrase && (!remoteRemember || !hasRemotePassphrase);
+    elements.savePlektBackupRemoteButton.disabled = false;
   }
   if (elements.createPlektBackupRemoteButton) {
     const canBackUpRemoteNow = remotePassphrase.length >= 12 || hasStoredRemotePassphrase || hasStoredPassphrase || hasLocalPassphrase;
     elements.createPlektBackupRemoteButton.disabled = !canBackUpRemoteNow;
   }
+}
+function remoteRetentionInput() {
+  return elements.plektBackupRemoteRetention || document.querySelector("#plektBackupRemoteRetention");
 }
 export function renderPlektBackups() {
   if (!elements.plektBackupList) return;
@@ -775,12 +685,15 @@ export function renderPlektBackups() {
   }
 
   elements.plektBackupRemoteEnabled && (elements.plektBackupRemoteEnabled.checked = Boolean(config.remoteEnabled));
-  elements.plektBackupRemoteRetention && (elements.plektBackupRemoteRetention.value = String(config.remoteRetention || config.retention || 7));
+  const remoteRetentionEl = remoteRetentionInput();
+  if (remoteRetentionEl) remoteRetentionEl.value = String(config.remoteRetention || config.retention || 7);
   if (elements.plektBackupRemoteRememberPassphrase) {
     elements.plektBackupRemoteRememberPassphrase.checked = Boolean(config.remoteRememberPassphrase || config.remotePassphraseStored);
   }
   if (elements.plektBackupRemotePassphrase) {
-    elements.plektBackupRemotePassphrase.placeholder = config.remotePassphraseStored ? "Saved - leave blank to keep" : "";
+    elements.plektBackupRemotePassphrase.placeholder = config.remotePassphraseStored
+      ? "Saved - leave blank to keep"
+      : (config.passphraseStored ? "Using saved local passphrase - leave blank to reuse" : "");
   }
   
   setEnabledStatus(elements.plektBackupSummary, Boolean(config.enabled));
@@ -843,42 +756,64 @@ export function renderPlektBackups() {
     : `<div class="empty-log"><b>No scheduled Plekt backups yet</b><span>Use Back Up Now or enable the daily schedule.</span></div>`;
 
   if (elements.remotePlektBackupList) {
+    const activeDestinations = (Array.isArray(state.watchBackups?.destinations) ? state.watchBackups.destinations : []).filter((d) => d.enabled);
     const remoteFiles = Array.isArray(state.remotePlektBackupFiles) ? state.remotePlektBackupFiles : [];
-    const remoteSorted = [...remoteFiles].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-    const remoteRows = remoteSorted.map((file) => `
-      <article class="watch-backup-row">
-        <div class="watch-backup-copy">
-          <b>${escapeHtml(file.name)}</b>
-          <span>
-            ${escapeHtml(watchBackupDate(file.createdAt))} · ${escapeHtml(formatBytes(file.sizeBytes))}
-            <span class="status-pill status-muted" style="font-size: 0.7rem; padding: 1px 6px; margin-left: 4px;">${escapeHtml(file.destLabel || "Remote")}</span>
-          </span>
-        </div>
-        <div class="watch-backup-actions">
-          <button class="button-primary" type="button" data-plekt-remote-backup-restore="${escapeAttribute(file.name)}" data-restore-dest-id="${escapeAttribute(file.destId)}">Restore</button>
-        </div>
-      </article>
-    `);
-    if (state.remotePlektBackupFilesLoading) {
-      elements.remotePlektBackupList.innerHTML = `<div class="empty-log"><b>Checking remote destinations...</b></div>`;
-    } else {
-      elements.remotePlektBackupList.innerHTML = remoteRows.length
-        ? remoteRows.slice(0, 2).join("") + collapseOlderRows(remoteRows.slice(2))
-        : `<div class="empty-log"><b>No remote Plekt backups</b><span>Configure a remote destination on the Backups tab, then create a Plekt backup with remote mirroring on.</span></div>`;
-    }
+    const destNames = activeDestinations.map((d) => d.label || d.type).filter(Boolean);
+    const destText = destNames.length ? ` (${destNames.map(escapeHtml).join(", ")})` : "";
+    const renderGroupRows = (groupFiles) => {
+      const sorted = [...groupFiles].sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      const rows = sorted.map((file) => `
+        <article class="watch-backup-row">
+          <div class="watch-backup-copy">
+            <b>${escapeHtml(file.name)}</b>
+            <span>${escapeHtml(watchBackupDate(file.createdAt))} · ${escapeHtml(formatBytes(file.sizeBytes))}</span>
+          </div>
+          <div class="watch-backup-actions">
+            <button class="button-primary" type="button" data-plekt-remote-backup-restore="${escapeAttribute(file.name)}" data-restore-dest-id="${escapeAttribute(file.destId)}">Restore</button>
+          </div>
+        </article>
+      `);
+      return rows.slice(0, 2).join("") + collapseOlderRows(rows.slice(2));
+    };
+    elements.remotePlektBackupList.innerHTML = renderRemoteRestoreGroups({
+      kind: "plekt",
+      activeDestinations,
+      groups: state.remotePlektRestoreGroups,
+      fallbackFiles: remoteFiles,
+      loading: state.remotePlektBackupFilesLoading,
+      loadingHtml: `<div class="remote-search-banner"><span class="remote-search-spinner"></span><span>Searching active remote locations${destText} for full backups…</span></div>`,
+      renderGroupFiles: renderGroupRows,
+      emptyForGroup: (group) => `<div class="empty-log"><b>No full Plekt backups found in ${escapeHtml(group.destLabel)}</b><span>Run an encrypted full backup to this location first.</span></div>`,
+    });
   }
 
   updatePlektButtonsState();
 }
+function setInlineBackupNotice(id, text = "", tone = "warning") {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
+  el.className = text ? `message ${tone}` : "message hidden";
+  el.dataset.tone = text ? tone : "";
+}
 export async function savePlektBackupSettings() {
+  const prev = state.plektBackups?.config || {};
+  const enabled = Boolean(elements.plektBackupEnabled.checked);
   const rememberPassphrase = Boolean(elements.backupExportRememberPassphrase?.checked);
+  const typedPassphrase = elements.backupExportPassphrase.value.trim();
+  const hasPassphrase = rememberPassphrase && (typedPassphrase.length >= 12 || Boolean(prev.passphraseStored));
+  if (enabled && !hasPassphrase) {
+    const msg = "Enter a passphrase (at least 12 characters) and turn on \"Remember passphrase\" before enabling scheduled local backups.";
+    setInlineBackupNotice("plektBackupLocalNotice", msg, "error");
+    elements.backupExportPassphrase?.focus();
+    _setMessage(msg, "warning");
+    return;
+  }
+  setInlineBackupNotice("plektBackupLocalNotice", "");
   const config = {
-    ...state.plektBackups?.config,
-    enabled: elements.plektBackupEnabled.checked,
-    time: elements.plektBackupTime.value || "03:00",
+    ...prev, enabled, time: elements.plektBackupTime.value || "03:00",
     retention: Number(elements.plektBackupRetention.value) || 7,
-    rememberPassphrase,
-    passphrase: rememberPassphrase ? elements.backupExportPassphrase.value.trim() : "",
+    rememberPassphrase, passphrase: rememberPassphrase ? typedPassphrase : "",
   };
   await postPlektBackupAction({ action: "configure", config });
   state.plektBackups = null;
@@ -886,15 +821,31 @@ export async function savePlektBackupSettings() {
   flashButtonSuccess(elements.savePlektBackupConfigButton);
 }
 export async function savePlektBackupRemoteSettings() {
+  const prev = state.plektBackups?.config || {};
+  const remoteEnabled = Boolean(elements.plektBackupRemoteEnabled.checked);
   const remoteRememberPassphrase = Boolean(elements.plektBackupRemoteRememberPassphrase?.checked);
+  const typedRemotePassphrase = elements.plektBackupRemotePassphrase.value.trim();
+  const hasStoredLocalPassphrase = Boolean(prev.rememberPassphrase && prev.passphraseStored);
+  const hasRemotePassphrase = remoteRememberPassphrase && (typedRemotePassphrase.length >= 12 || Boolean(prev.remotePassphraseStored));
+  if (remoteEnabled && !hasStoredLocalPassphrase && !hasRemotePassphrase) {
+    const msg = "Enter a passphrase (at least 12 characters) and turn on \"Remember passphrase for scheduled remote backups\" before enabling scheduled remote mirroring.";
+    setInlineBackupNotice("plektBackupRemoteNotice", msg, "error");
+    elements.plektBackupRemotePassphrase?.focus();
+    _setMessage(msg, "warning");
+    return;
+  }
+  setInlineBackupNotice("plektBackupRemoteNotice", "");
   const config = {
-    ...state.plektBackups?.config,
-    remoteEnabled: elements.plektBackupRemoteEnabled.checked,
-    remoteRetention: Number(elements.plektBackupRemoteRetention.value) || 7,
-    remoteRememberPassphrase,
-    remotePassphrase: remoteRememberPassphrase ? elements.plektBackupRemotePassphrase.value.trim() : "",
+    ...prev, remoteEnabled,
+    remoteRetention: Number(remoteRetentionInput()?.value) || 7,
+    remoteRememberPassphrase, remotePassphrase: remoteRememberPassphrase ? typedRemotePassphrase : "",
   };
-  await postPlektBackupAction({ action: "configure", config });
+  try {
+    await postPlektBackupAction({ action: "configure", config });
+  } catch (error) {
+    setInlineBackupNotice("plektBackupRemoteNotice", error?.message || "Could not save remote backup settings.", "error");
+    throw error;
+  }
   state.plektBackups = null;
   await loadPlektBackups({ force: true });
   flashButtonSuccess(elements.savePlektBackupRemoteButton);
@@ -995,9 +946,13 @@ export async function restorePlektBackupFromServer(filename, passphraseOverride)
 export async function restoreRemotePlektBackup(destinationId, filename) {
   const passphrase = elements.backupRestoreRemotePassphrase?.value.trim() || "";
   if (passphrase.length < 12) {
-    _setMessage("Enter a restore passphrase of at least 12 characters.", "warning");
+    const msg = "Enter the backup encryption passphrase (at least 12 characters) above before restoring.";
+    setInlineBackupNotice("remotePlektRestoreNotice", msg, "error");
+    elements.backupRestoreRemotePassphrase?.focus();
+    _setMessage(msg, "warning");
     return;
   }
+  setInlineBackupNotice("remotePlektRestoreNotice", "");
   if (!(await confirmPlektRestore(filename))) return;
   setBackupTransferState("Downloading", "warning", `Downloading ${filename} from remote destination...`, "restore");
   try {
@@ -1005,6 +960,7 @@ export async function restoreRemotePlektBackup(destinationId, filename) {
     await loadPlektBackups({ force: true });
     await runServerPlektRestore({ filename: pulled.name }, passphrase);
   } catch (error) {
+    setInlineBackupNotice("remotePlektRestoreNotice", `Restore failed: ${error.message}`, "error");
     setBackupTransferState("Failed", "error", `Restore failed: ${error.message}`, "restore");
     _setMessage(error.message, "error");
   }
@@ -1012,23 +968,31 @@ export async function restoreRemotePlektBackup(destinationId, filename) {
 export async function loadRemotePlektBackupsForRestoreTab() {
   const data = state.watchBackups;
   if (!data) return;
-  const destinations = Array.isArray(data.destinations) ? data.destinations : [];
-  if (!destinations.length) return;
-  state.remotePlektBackupFilesLoading = true;
+  const destinations = (Array.isArray(data.destinations) ? data.destinations : []).filter((dest) => dest.enabled);
   state.remotePlektBackupFiles = [];
+  state.remotePlektRestoreGroups = [];
+  if (!destinations.length) {
+    state.remotePlektBackupFilesLoading = false;
+    renderPlektBackups();
+    return;
+  }
+  state.remotePlektBackupFilesLoading = true;
   renderPlektBackups();
-  const results = await Promise.allSettled(
+  const groups = await Promise.all(
     destinations.map(async (dest) => {
+      const destLabel = dest.label || DESTINATION_FORMS[dest.type]?.label || dest.type || "Remote";
       try {
         const result = await postPlektBackupAction({ action: "list-remote-backups", destinationId: dest.id });
-        const files = Array.isArray(result.files) ? result.files : [];
-        return files.map((f) => ({ ...f, source: "remote", destId: dest.id, destLabel: dest.label || dest.type || "Remote" }));
-      } catch {
-        return [];
+        const files = (Array.isArray(result.files) ? result.files : [])
+          .map((f) => ({ ...f, source: "remote", destId: dest.id, destLabel }));
+        return { destId: dest.id, destLabel, destType: dest.type, files, error: "" };
+      } catch (error) {
+        return { destId: dest.id, destLabel, destType: dest.type, files: [], error: error?.message || "Connection failed" };
       }
     })
   );
-  state.remotePlektBackupFiles = results.flatMap((r) => r.status === "fulfilled" ? r.value : []);
+  state.remotePlektRestoreGroups = groups;
+  state.remotePlektBackupFiles = groups.flatMap((g) => g.files);
   state.remotePlektBackupFilesLoading = false;
   renderPlektBackups();
 }
@@ -1046,14 +1010,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.3.0.0.3");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.3.0.0.4");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.3.0.0.3");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.3.0.0.4");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {

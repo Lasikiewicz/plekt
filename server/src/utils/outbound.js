@@ -450,7 +450,7 @@ const UPLOAD_RESPONSE_TEXT_LIMIT = 64 * 1024;
 // are followed, and the timeout restarts whenever a chunk is sent or received,
 // so a large file can take as long as it needs while a stalled one still fails.
 // Resolves to { ok, status, text } with the response text capped at 64 KB.
-export async function uploadFileWithTimeout(url, { method = "PUT", headers = {}, filePath, lane = "sync" } = {}, timeoutMs = undefined) {
+export async function uploadFileWithTimeout(url, { method = "PUT", headers = {}, filePath, start = undefined, end = undefined, lane = "sync" } = {}, timeoutMs = undefined) {
   if (isDemoMode()) {
     const error = outboundPolicyError("Outbound requests are disabled in demo mode", OUTBOUND_POLICY_CODES.DEMO_DISABLED);
     error.status = 503;
@@ -462,7 +462,11 @@ export async function uploadFileWithTimeout(url, { method = "PUT", headers = {},
   const releaseSlot = await acquireOutboundSlot(safeUrl.hostname, { lane });
   trackOutbound(safeUrl);
   const timeoutError = createUpstreamTimeoutError(resolvedTimeoutMs);
-  const file = fs.createReadStream(filePath);
+  const emptyBody = !filePath || (start != null && end != null && end < start);
+  const streamOptions = {};
+  if (start != null) streamOptions.start = start;
+  if (end != null) streamOptions.end = end;
+  const file = emptyBody ? null : fs.createReadStream(filePath, streamOptions);
   const transport = safeUrl.protocol === "https:" ? https : http;
   const request = transport.request(safeUrl, { method, headers });
   let timer = null;
@@ -491,8 +495,8 @@ export async function uploadFileWithTimeout(url, { method = "PUT", headers = {},
       };
 
       restartTimer();
-      file.on("data", restartTimer);
-      file.on("error", fail);
+      file?.on("data", restartTimer);
+      file?.on("error", fail);
       request.on("error", networkFail);
       request.on("response", (response) => {
         restartTimer();
@@ -516,11 +520,12 @@ export async function uploadFileWithTimeout(url, { method = "PUT", headers = {},
           });
         });
       });
-      file.pipe(request);
+      if (file) file.pipe(request);
+      else request.end();
     });
   } finally {
     clearTimeout(timer);
-    file.destroy();
+    file?.destroy();
     // An early answer (an error before the body was sent) or a failure leaves
     // the request unfinished; drop its socket rather than reuse it.
     if (!request.writableFinished) request.destroy();

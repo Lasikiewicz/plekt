@@ -5,12 +5,12 @@
 // parsed when Settings is opened. app-events.js wires this module through
 // onRouteModuleLoaded() with the same callbacks object it received, so each
 // wrapper below reads the app.js implementation at call time.
-import { rotateWebhookSecret } from "./auth.js?v=2.3.0.0.3";
-import { clearDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.3.0.0.3";
-import { state, elements } from "./state.js?v=2.3.0.0.3";
-import { loadSyncHistory, loadSyncJobs, triggerCronSync, triggerStopSync } from "./sync.js?v=2.3.0.0.3";
-import { initSettingsUsers, loadSettingsUsers } from "./settings-users.js?v=2.3.0.0.3";
-import { ifLoaded, lazyExport } from "./route-modules.js?v=2.3.0.0.3";
+import { rotateWebhookSecret } from "./auth.js?v=2.3.0.0.4";
+import { clearDebugLogs, fetchDiagnosticLogs, clearDiagnosticLogs as clearBackendDiagnosticLogs } from "./logs.js?v=2.3.0.0.4";
+import { state, elements } from "./state.js?v=2.3.0.0.4";
+import { loadSyncHistory, loadSyncJobs, triggerCronSync, triggerStopSync } from "./sync.js?v=2.3.0.0.4";
+import { initSettingsUsers, loadSettingsUsers } from "./settings-users.js?v=2.3.0.0.4";
+import { ifLoaded, lazyExport } from "./route-modules.js?v=2.3.0.0.4";
 
 const lazyTools = (name) => lazyExport("tools", name);
 const lazyBackups = (name) => lazyExport("tools-backups", name);
@@ -24,6 +24,7 @@ const uploadWatchBackupFile = lazyBackups("uploadWatchBackupFile"), restoreWatch
 const savePlektBackupSettings = lazyBackups("savePlektBackupSettings"), createPlektBackupNow = lazyBackups("createPlektBackupNow"), downloadPlektBackup = lazyBackups("downloadPlektBackup");
 const deletePlektBackupFile = lazyBackups("deletePlektBackupFile"), restorePlektBackupFromServer = lazyBackups("restorePlektBackupFromServer"), restoreRemotePlektBackup = lazyBackups("restoreRemotePlektBackup");
 const updatePlektButtonsState = lazyBackups("updatePlektButtonsState"), savePlektBackupRemoteSettings = lazyBackups("savePlektBackupRemoteSettings");
+const loadRemoteBackupsForRestoreTab = lazyBackups("loadRemoteBackupsForRestoreTab"), loadRemotePlektBackupsForRestoreTab = lazyBackups("loadRemotePlektBackupsForRestoreTab");
 const createPlektBackupRemoteNow = lazyBackups("createPlektBackupRemoteNow"), createRemoteWatchBackupNow = lazyBackups("createRemoteWatchBackupNow"), saveRemoteWatchBackupSettings = lazyBackups("saveRemoteWatchBackupSettings");
 
 let _cb = {};
@@ -298,7 +299,21 @@ export function initSettingsEvents(callbacks = {}) {
     }
   });
 
+  elements.remoteWatchBackupList?.addEventListener("click", (event) => {
+    if (event.target.closest('[data-remote-restore-refresh="watch"]')) {
+      loadWatchBackups({ force: true })
+        .then(() => loadRemoteBackupsForRestoreTab())
+        .catch((error) => setMessage(error.message, "error"));
+    }
+  });
+
   elements.remotePlektBackupList?.addEventListener("click", (event) => {
+    if (event.target.closest('[data-remote-restore-refresh="plekt"]')) {
+      loadWatchBackups({ force: true })
+        .then(() => loadRemotePlektBackupsForRestoreTab())
+        .catch((error) => setMessage(error.message, "error"));
+      return;
+    }
     const restoreBtn = event.target.closest("[data-plekt-remote-backup-restore]");
     if (restoreBtn) {
       const filename = restoreBtn.dataset.plektRemoteBackupRestore;

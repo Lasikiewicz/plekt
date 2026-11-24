@@ -3,17 +3,17 @@
 // wherever possible - openServiceEditModal() for every provider connect/test
 // flow, and the webhook-guide functions - so setup and Settings never diverge
 // in behavior, only in presentation.
-import { createOnboardingSections } from "./onboarding-sections.js?v=2.3.0.0.3";
-import { createOnboardingTrackers } from "./onboarding-trackers.js?v=2.3.0.0.3";
-import { state, elements } from "./state.js?v=2.3.0.0.3";
-import { escapeHtml, escapeAttribute, isDemoMode, storageSet } from "./utils.js?v=2.3.0.0.3";
-import { setupSwitchMarkup } from "./supervisor-switch.js?v=2.3.0.0.3";
-import { openServiceEditModal } from "./settings-services.js?v=2.3.0.0.3";
-import { claimAdminAccount } from "./auth.js?v=2.3.0.0.3";
-import { lazyExport, loadRouteModule, loadedRouteModule } from "./route-modules.js?v=2.3.0.0.3";
+import { createOnboardingSections } from "./onboarding-sections.js?v=2.3.0.0.4";
+import { createOnboardingTrackers } from "./onboarding-trackers.js?v=2.3.0.0.4";
+import { state, elements } from "./state.js?v=2.3.0.0.4";
+import { escapeHtml, escapeAttribute, isDemoMode, storageSet } from "./utils.js?v=2.3.0.0.4";
+import { setupSwitchMarkup } from "./supervisor-switch.js?v=2.3.0.0.4";
+import { openServiceEditModal } from "./settings-services.js?v=2.3.0.0.4";
+import { claimAdminAccount } from "./auth.js?v=2.3.0.0.4";
+import { lazyExport, loadRouteModule, loadedRouteModule } from "./route-modules.js?v=2.3.0.0.4";
 import {
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=2.3.0.0.3";
+} from "./plex-history-policy.js?v=2.3.0.0.4";
 
 let _cb = {};
 const loadWatchBackups = lazyExport("tools-backups", "loadWatchBackups");
@@ -39,6 +39,7 @@ export function initOnboarding(callbacks = {}) {
 const authHeaders = (...args) => _cb.authHeaders?.(...args) || {};
 const navigateTo = (...args) => _cb.navigateTo?.(...args);
 const setMessage = (...args) => _cb.setMessage?.(...args);
+const openConfirmDialog = (...args) => _cb.openConfirmDialog?.(...args) || Promise.resolve(false);
 const setUnlocked = (...args) => _cb.setUnlocked?.(...args);
 const loadHistory = (...args) => _cb.loadHistory?.(...args) || Promise.resolve();
 const loadSavedConfig = (...args) => _cb.loadSavedConfig?.(...args) || Promise.resolve();
@@ -294,9 +295,12 @@ const sections = createOnboardingSections({
   getStatus: () => cachedStatus, getBackupData: () => backupSetupData,
   MEDIA_SERVERS, WATCH_IMPORT_MODES, isPreClaimSetup, serverImportPending, watchlistSyncPending,
   seasonSourcePending, setupWatchImportMode, setupFastLocalPacing, setupUpNextSync, setupPlexHistoricalSync,
-  currentStep, api, setMessage, loadBackupSetupData,
+  currentStep, api, setMessage, openConfirmDialog, loadBackupSetupData,
+  onDestinationsChanged: async () => {
+    if (restoreView === "remote") await loadWatchBackups({ force: true }).catch(() => {});
+  },
 });
-const { renderOverview, renderServers, renderMetadata, renderWebhooks, renderSeerr, renderImports, renderOptions, renderBackup, renderReview, updateBackupContinueAction, setPassphraseError, saveBackupSetup, saveBackblazeAction, testBackblazeAction, backblazeDestination, renderBackblazeCard, webhookSetupRequired, importState } = sections;
+const { renderOverview, renderServers, renderMetadata, renderWebhooks, renderSeerr, renderImports, renderOptions, renderBackup, renderReview, updateBackupContinueAction, setPassphraseError, saveBackupSetup, renderRemoteDestinationsCard, mountBackupDestinations, webhookSetupRequired, importState } = sections;
 const trackers = createOnboardingTrackers({ getStatus: () => cachedStatus, api, renderSetupPage, loadSetupStatus, setMessage });
 
 function savedWatchImportMode() {
@@ -449,7 +453,7 @@ export function renderSetupPage() {
     root.innerHTML = `<div class="settings-content"><p class="muted-copy">Loading setup...</p></div>`;
     return;
   }
-  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.3.0.0.3" : "/plekt_header_logo_dark.png?v=2.3.0.0.3";
+  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.3.0.0.4" : "/plekt_header_logo_dark.png?v=2.3.0.0.4";
   if (restoreView) {
     renderRestoreView(root, logoSrc);
     return;
@@ -503,7 +507,10 @@ export function renderSetupPage() {
     ${setupSwitchMarkup()}`;
   if (step === "overview" && isPreClaim) mountClaimPanel();
   if (step === "imports") mountOneTimeImports();
-  if (step === "backup") updateBackupContinueAction();
+  if (step === "backup") {
+    mountBackupDestinations();
+    updateBackupContinueAction();
+  }
   scheduleImportStatusRefresh(step);
   if (step === "backup" && !backupSetupData && !backupSetupLoading) loadBackupSetupData().catch(() => {});
 }
@@ -551,18 +558,17 @@ function renderRestoreChoice() {
       </button>
       <button type="button" class="settings-card setup-overview-item setup-restore-choice" data-setup-restore-view="remote">
         <div class="setup-overview-item-heading"><b>Restore from a remote backup</b></div>
-        <p class="muted-copy">Connect a Backblaze B2 destination, then choose a backup stored there.</p>
+        <p class="muted-copy">Connect a remote backup destination (Backblaze B2, S3, WebDAV, Dropbox, or a mounted folder), then choose a backup stored there.</p>
       </button>
     </div>`;
 }
 
 function renderRestoreRemoteIntro() {
   if (!backupSetupData) return `<p class="muted-copy">Loading remote destinations...</p>`;
-  const destination = backblazeDestination();
   const config = backupSetupData.plembfin?.config || {};
   return `
-    <p class="muted-copy setup-step-intro">Enter the Backblaze B2 destination your old Plekt server was backing up to, then test the connection to pull its backup list below.</p>
-    ${renderBackblazeCard({ destination, config, showScheduleToggle: false, mode: "connect" })}`;
+    <p class="muted-copy setup-step-intro">Connect the remote destination your old Plekt server backed up to, then choose a backup from its list below.</p>
+    ${renderRemoteDestinationsCard({ config, showScheduleToggle: false, mode: "connect" })}`;
 }
 
 // Renders the "Restore from backup" flow, entered from the overview step's
@@ -598,6 +604,7 @@ function renderRestoreView(root, logoSrc) {
     loadWatchBackups().catch(() => {});
     loadPlektBackups().catch(() => {});
   } else if (restoreView === "remote") {
+    mountBackupDestinations();
     if (!backupSetupData && !backupSetupLoading) loadBackupSetupData().catch(() => {});
     const remote = document.getElementById("restore-remote");
     if (remote) body.appendChild(remote);
@@ -807,10 +814,6 @@ async function handleSetupClick(event) {
     homeRestoreSections();
     homeOneTimeImports();
     navigateTo("/settings");
-  } else if (action === "backblaze-save") {
-    saveBackblazeAction();
-  } else if (action === "backblaze-test") {
-    testBackblazeAction();
   } else if (action === "trackers-skip") {
     api("/api/setup/step", { method: "POST", body: JSON.stringify({ trackersSkipped: true }) })
       .then(() => { setCurrentStep(stepNeighbor(1)); })

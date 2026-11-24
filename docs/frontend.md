@@ -742,6 +742,7 @@ The size limits and grandfathered files that constrain these modules are in `CLA
 | "Import from apps" dialog (app playlists into Plekt playlists) | `modules/playlist-import.js` |
 | Automatic playlists: rule editor, rule summary and Info pop-up, Auto label, Refresh now, Stop updating, held rule check | `modules/playlist-rules.js` |
 | Backup/restore tools (Settings route) | `modules/tools-backups.js` |
+| Remote backup destination forms, picker, and OAuth/device-code modals (shared by Settings and `/setup`) | `modules/backup-destinations.js` |
 | Settings changelog renderer and Main/Alpha tabs (build-version display formatting is core, in `modules/utils.js`) | `modules/changelog-channels.js` |
 | TV/movie detail entry points, lookups, modal-close routing | `modules/media-detail.js` |
 | Detail-page Drop/Un-drop controls and dropped-title state | `modules/dropped-titles.js` |

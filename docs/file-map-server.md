@@ -206,5 +206,6 @@ Part of the file map (with [file-map-public.md](file-map-public.md) and [file-ma
 | `backupDestinations/folder.js` | Local/mounted-folder destination adapter. |
 | `backupDestinations/webdav.js` | WebDAV destination adapter (basic auth). |
 | `backupDestinations/s3.js` | S3-compatible destination adapter with its own SigV4 signer (AWS S3, Backblaze B2, MinIO…). |
-| `backupDestinations/onedrive.js` | OneDrive adapter using the Microsoft device-code OAuth flow (app-folder scope, refresh-token persistence). |
-| `backupDestinations/dropbox.js` | Dropbox adapter using the manual no-redirect OAuth code flow (refresh-token persistence). |
+| `backupDestinations/onedrive.js` | OneDrive adapter using Microsoft device-code OAuth, refresh-token persistence, and resumable uploads. |
+| `backupDestinations/dropbox.js` | Dropbox adapter using PKCE OAuth, refresh-token persistence, and chunked uploads. |
+| `dropboxAppConfig.js` | Resolves the public Dropbox app key from configuration or the bundled app. |

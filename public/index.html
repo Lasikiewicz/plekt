@@ -8,32 +8,32 @@
     <link rel="icon" href="/icon-192-dark.png?v=20261009a" type="image/png" media="(prefers-color-scheme: dark)" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icon-192.png?v=20261009a" />
     <meta name="apple-mobile-web-app-title" content="Plekt" />
-    <link rel="manifest" href="/manifest.webmanifest?v=2.3.0.0.3" />
+    <link rel="manifest" href="/manifest.webmanifest?v=2.3.0.0.4" />
     <meta name="theme-color" content="#05080c" />
-    <script src="/theme-boot.js?v=2.3.0.0.3"></script>
+    <script src="/theme-boot.js?v=2.3.0.0.4"></script>
     <link rel="preconnect" href="https://image.tmdb.org" />
-    <link rel="modulepreload" href="/app.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/auth.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/episode-order.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/logs.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/state.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/appearance.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/media-routing.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/utils.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/images.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/sync.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/route-modules.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/manual-watch-review-bulk.js?v=2.3.0.0.3" />
-    <link rel="modulepreload" href="/modules/library-monitoring.js?v=2.3.0.0.3" />
-    <link rel="stylesheet" href="/styles.css?v=2.3.0.0.3" />
+    <link rel="modulepreload" href="/app.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/auth.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/episode-order.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/logs.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/logs-viewer.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/settings-shell.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/state.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/appearance.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/status-indicators.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/initial-sync.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/media-routing.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/explorer-page-cache.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/cast-disclosure.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/utils.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/images.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/sync.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/route-modules.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/dropped-titles.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/dropped-title-views.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/manual-watch-review-bulk.js?v=2.3.0.0.4" />
+    <link rel="modulepreload" href="/modules/library-monitoring.js?v=2.3.0.0.4" />
+    <link rel="stylesheet" href="/styles.css?v=2.3.0.0.4" />
     <link rel="stylesheet" href="/tracker-full-sync.css?v=5" />
   </head>
   <body class="auth-locked">
@@ -2474,6 +2474,7 @@
 
                               <div id="plektBackupRuntime" class="backup-runtime" aria-live="polite"></div>
                               <div id="plektBackupProgress" class="backup-progress hidden" role="progressbar" aria-label="Backup in progress"><span class="backup-progress-bar"></span></div>
+                              <p id="plektBackupLocalNotice" class="message hidden" role="status" aria-live="polite" style="margin: var(--space-2) 0 0;"></p>
                               <div class="backup-settings-grid backup-settings-inline" style="margin-top: var(--space-2);">
                                 <label class="checkbox-label backup-enable-row">
                                   <input id="plektBackupEnabled" type="checkbox" />
@@ -2488,121 +2489,12 @@
                           </details>
                       </div>
                     </article>
-
-                    <article id="backup-remote" class="glass-panel p-section settings-card tool-section-card">
-                      <div class="section-heading sync-heading sync-static-heading">
-                        <div class="sync-heading-title">
-                          <p style="margin: 0;">Remote</p>
-                        </div>
-                        <span>Remote backup destinations and mirroring</span>
-                      </div>
-                      <div style="display: flex; flex-direction: column; gap: var(--space-3);">
-                          <details class="sync-tool-details">
-                            <summary class="accordion-header">
-                              <div class="sync-tool-summary-title">
-                                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-                                <b>Remote Destinations</b>
-                            </div>
-                            <span id="backupDestinationSummary" class="status-pill status-muted">Checking</span>
-                              <span>Configure cloud destinations for remote backups</span>
-                            </summary>
-                            <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
-                              <div id="backupDestinationCards" class="settings-card-grid"></div>
-                            </div>
-                          </details>
-
-                          <details id="remote-watch-history-backups" class="sync-tool-details">
-                            <summary class="accordion-header">
-                              <div class="sync-tool-summary-title">
-                                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-                                <b>Remote Watch History Backups</b>
-                            </div>
-                            <span id="remoteWatchBackupSummary" class="status-pill status-muted">Checking</span>
-                              <span>Upload daily watch history backups to remote destinations</span>
-                            </summary>
-                            <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
-                              <div class="backup-settings-grid backup-settings-inline">
-                                <div class="backup-settings-center">
-                                  <label class="field-label">
-                                    Backup time (local)
-                                    <input id="remoteWatchBackupTime" class="field" type="time" value="03:00" />
-                                  </label>
-                                  <label class="field-label">
-                                    Backups to retain
-                                    <input id="remoteWatchBackupRetention" class="field" type="number" min="1" max="365" value="7" />
-                                  </label>
-                                </div>
-                              </div>
-                              <div id="watchBackupRemoteRuntime" class="backup-runtime backup-runtime-remote" aria-live="polite"></div>
-                              <div id="remoteWatchBackupProgress" class="backup-progress hidden" role="progressbar" aria-label="Backup in progress"><span class="backup-progress-bar"></span></div>
-                              <div class="backup-settings-grid backup-settings-inline" style="margin-top: var(--space-2);">
-                                <label class="checkbox-label backup-enable-row">
-                                  <input id="remoteWatchBackupEnabled" type="checkbox" />
-                                  <span>Enable daily backups</span>
-                                </label>
-                                <div class="backup-settings-right">
-                                  <button id="saveRemoteWatchBackupConfigButton" class="button-primary sync-action-btn sync-tool-button" type="button">Save Schedule</button>
-                                  <button id="createRemoteWatchBackupButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Back Up Now</button>
-                                </div>
-                              </div>
-                            </div>
-                          </details>
-
-                          <details id="remote-plembfin-backups" class="sync-tool-details">
-                            <summary class="accordion-header">
-                              <div class="sync-tool-summary-title">
-                                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
-                                <b>Remote Plekt Backups</b>
-                            </div>
-                            <span id="plektBackupRemoteSummary" class="status-pill status-muted">Checking</span>
-                              <span>Store encrypted Plekt backup files off-server automatically</span>
-                            </summary>
-                            <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
-                              <form class="backup-managed-form backup-settings-stack" data-submit-target="savePlektBackupRemoteButton">
-                                <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true" tabindex="-1" />
-                                <div class="backup-settings-grid backup-settings-inline">
-                                  <div class="backup-settings-center">
-                                    <label class="field-label">
-                                      Backups to retain remotely
-                                      <input id="plektBackupRemoteRetention" class="field" type="number" min="1" max="365" value="7" />
-                                    </label>
-                                  </div>
-                                </div>
-                                <p class="tool-accordion-desc">Plekt prunes older remote backups after the next successful upload. Backblaze keeps deleted file versions by default, so they can still use storage. In your bucket's <b>Lifecycle Settings</b>, choose <b>Keep only the last version of the file</b> to delete older versions. If this bucket also stores other files, scope a lifecycle rule to Plekt's prefix. <a href="https://www.backblaze.com/docs/cloud-storage-configure-and-manage-lifecycle-rules" target="_blank" rel="noopener noreferrer">Backblaze lifecycle rule instructions</a>.</p>
-                                <div class="backup-settings-grid backup-settings-inline backup-passphrase-row">
-                                  <label class="field-label backup-passphrase-label">
-                                    <span class="backup-passphrase-caption">Passphrase - <span style="color: var(--muted); font-weight: normal; font-size: 0.8rem;">At least 12 chars</span></span>
-                                    <input id="plektBackupRemotePassphrase" class="field" name="remoteBackupPassphrase" type="password" autocomplete="new-password" />
-                                  </label>
-                                  <label class="checkbox-label backup-enable-row">
-                                    <input id="plektBackupRemoteRememberPassphrase" type="checkbox" />
-                                    <span>Remember passphrase for scheduled remote backups</span>
-                                  </label>
-                                </div>
-                              </form>
-
-                              <div id="plektBackupRemoteRuntime" class="backup-runtime" aria-live="polite"></div>
-                              <div id="plektBackupRemoteProgress" class="backup-progress hidden" role="progressbar" aria-label="Backup in progress"><span class="backup-progress-bar"></span></div>
-                              <div class="backup-settings-grid backup-settings-inline" style="margin-top: var(--space-2);">
-                                <label class="checkbox-label backup-enable-row">
-                                  <input id="plektBackupRemoteEnabled" type="checkbox" />
-                                  <span>Enable remote mirroring</span>
-                                </label>
-                                <div class="backup-settings-right">
-                                  <button id="savePlektBackupRemoteButton" class="button-primary sync-action-btn sync-tool-button" type="button" disabled>Save Settings</button>
-                                  <button id="createPlektBackupRemoteButton" class="button-ghost sync-action-btn sync-tool-button" type="button" disabled>Back Up Now</button>
-                                </div>
-                              </div>
-                            </div>
-                          </details>
-                      </div>
-                    </article>
                   </div>
 
                   <div class="settings-row-help">
                     <article class="glass-panel p-section settings-card">
                       <div class="section-heading">
-                        <p>Backup - Help</p>
+                        <p>Local Backup - Help</p>
                         <a class="settings-help-link" href="https://plekt.net/docs/settings/backup/" target="_blank" rel="noopener noreferrer">Website guide</a>
                       </div>
                       <div class="settings-help-content">
@@ -2610,11 +2502,129 @@
                           <ul>
                             <li><b>Local Watch History Backups</b><span>Creates daily snapshots of watched state, playstate, and resume progress on the server. No passphrase is needed; scheduling and <b>Back Up Now</b> work when enabled.</span></li>
                             <li><b>Local Plekt Backups</b><span>Creates a full encrypted export of the database and saved settings, including credentials and API keys. The browser encrypts it with your passphrase and Plekt never stores the plaintext. Use at least 12 characters; a lost passphrase cannot be recovered.</span><span>Saving the passphrase lets scheduled backups run without an open browser. If it is not saved, only <b>Back Up Now</b> works.</span></li>
-                            <li><b>Remote Destinations</b><span>Configures Backblaze B2 upload targets with their endpoint, bucket, and scoped application key. Every enabled destination receives remote backup copies.</span></li>
-                            <li><b>Remote Watch History Backups</b><span>Mirrors watch-history snapshots to enabled remote destinations on their configured schedule and retention.</span></li>
-                            <li><b>Remote Plekt Backups</b><span>Mirrors encrypted full backups remotely using the same passphrase and saved-passphrase setting as the local full backup. Set the remote retention count here; it is independent of local retention.</span></li>
                           </ul>
                         </div>
+                      </div>
+                    </article>
+                  </div>
+                </div>
+
+                <div class="settings-row" style="margin-top: var(--space-4);">
+                  <div class="settings-row-main">
+                    <article id="backup-remote" class="glass-panel p-section settings-card tool-section-card">
+                      <div class="section-heading sync-heading sync-static-heading">
+                        <div class="sync-heading-title">
+                          <p style="margin: 0;">Remote</p>
+                          <span id="backupDestinationSummary" class="status-pill status-muted">Checking</span>
+                        </div>
+                        <span>Configure each remote backup location and its watch-history / full backup settings</span>
+                      </div>
+                      <div style="display: flex; flex-direction: column; gap: var(--space-3);">
+                          <details id="remote-schedule-settings" class="sync-tool-details">
+                            <summary class="accordion-header">
+                              <div class="sync-tool-summary-title">
+                                <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                                <b>Remote Schedule &amp; Encryption</b>
+                              </div>
+                              <span id="remoteWatchBackupSummary" class="status-pill status-muted">Checking</span>
+                              <span>Daily schedule, default retention, and shared encryption passphrase for remote backups</span>
+                            </summary>
+                            <div class="tool-item-row backup-remote-schedule-body" style="padding: var(--space-3); width: 100%;">
+                              <div class="backup-remote-schedule-section" id="remote-watch-history-backups">
+                                <div class="backup-remote-schedule-head">
+                                  <b>Watch History Schedule</b>
+                                  <span class="muted-copy">Mirrors daily watch-history backups to every enabled destination with Watch History on</span>
+                                </div>
+                                <div class="backup-settings-grid backup-settings-inline">
+                                  <div class="backup-settings-center">
+                                    <label class="field-label">
+                                      Backup time (local)
+                                      <input id="remoteWatchBackupTime" class="field" type="time" value="03:00" />
+                                    </label>
+                                    <label class="field-label">
+                                      Default backups to retain
+                                      <input id="remoteWatchBackupRetention" class="field" type="number" min="1" max="365" value="7" />
+                                    </label>
+                                  </div>
+                                </div>
+                                <div id="watchBackupRemoteRuntime" class="backup-runtime backup-runtime-remote" aria-live="polite"></div>
+                                <div id="remoteWatchBackupProgress" class="backup-progress hidden" role="progressbar" aria-label="Backup in progress"><span class="backup-progress-bar"></span></div>
+                                <div class="backup-settings-grid backup-settings-inline" style="margin-top: var(--space-2);">
+                                  <label class="checkbox-label backup-enable-row">
+                                    <input id="remoteWatchBackupEnabled" type="checkbox" />
+                                    <span>Enable daily watch-history backups</span>
+                                  </label>
+                                  <div class="backup-settings-right">
+                                    <button id="saveRemoteWatchBackupConfigButton" class="button-primary sync-action-btn sync-tool-button" type="button">Save Schedule</button>
+                                    <button id="createRemoteWatchBackupButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Back Up All Now</button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div class="backup-remote-schedule-section" id="remote-plembfin-backups">
+                                <div class="backup-remote-schedule-head">
+                                  <b>Full Encrypted Plekt Schedule &amp; Passphrase</b>
+                                  <span id="plektBackupRemoteSummary" class="status-pill status-muted">Checking</span>
+                                </div>
+                                <form class="backup-managed-form backup-settings-stack" data-submit-target="savePlektBackupRemoteButton">
+                                  <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true" tabindex="-1" />
+                                  <div class="backup-settings-grid backup-settings-inline">
+                                    <div class="backup-settings-center">
+                                      <label class="field-label">
+                                        Default full backups to retain
+                                        <input id="plektBackupRemoteRetention" class="field" type="number" min="1" max="365" value="7" />
+                                      </label>
+                                    </div>
+                                  </div>
+                                  <p class="tool-accordion-desc">Plekt prunes older remote backups after the next successful upload. Each destination below can override its own retention count (Dropbox defaults to 2).</p>
+                                  <div class="backup-settings-grid backup-settings-inline backup-passphrase-row">
+                                    <label class="field-label backup-passphrase-label">
+                                      <span class="backup-passphrase-caption">Passphrase - <span style="color: var(--muted); font-weight: normal; font-size: 0.8rem;">At least 12 chars</span></span>
+                                      <input id="plektBackupRemotePassphrase" class="field" name="remoteBackupPassphrase" type="password" autocomplete="new-password" />
+                                    </label>
+                                    <label class="checkbox-label backup-enable-row">
+                                      <input id="plektBackupRemoteRememberPassphrase" type="checkbox" />
+                                      <span>Remember passphrase for scheduled remote backups</span>
+                                    </label>
+                                  </div>
+                                </form>
+
+                                <div id="plektBackupRemoteRuntime" class="backup-runtime" aria-live="polite"></div>
+                                <div id="plektBackupRemoteProgress" class="backup-progress hidden" role="progressbar" aria-label="Backup in progress"><span class="backup-progress-bar"></span></div>
+                                <p id="plektBackupRemoteNotice" class="message hidden" role="status" aria-live="polite" style="margin: var(--space-2) 0 0;"></p>
+                                <div class="backup-settings-grid backup-settings-inline" style="margin-top: var(--space-2);">
+                                  <label class="checkbox-label backup-enable-row">
+                                    <input id="plektBackupRemoteEnabled" type="checkbox" />
+                                    <span>Enable daily full backup mirroring</span>
+                                  </label>
+                                  <div class="backup-settings-right">
+                                    <button id="savePlektBackupRemoteButton" class="button-primary sync-action-btn sync-tool-button" type="button">Save Settings</button>
+                                    <button id="createPlektBackupRemoteButton" class="button-ghost sync-action-btn sync-tool-button" type="button" disabled>Back Up All Now</button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </details>
+
+                          <div id="backupDestinationCards" class="backup-dest-accordions"></div>
+                      </div>
+                    </article>
+                  </div>
+
+                  <div class="settings-row-help">
+                    <article class="glass-panel p-section settings-card">
+                      <div class="section-heading">
+                        <p>Remote Backup - Help</p>
+                        <a class="settings-help-link" href="https://plekt.net/docs/settings/backup/" target="_blank" rel="noopener noreferrer">Website guide</a>
+                      </div>
+                      <div class="settings-help-content">
+                        <div>
+                          <ul>
+                            <li><b>Remote Schedule &amp; Encryption</b><span>Sets the daily schedule, default retention counts, and shared encryption passphrase for remote backups.</span></li>
+                            <li><b>Remote Destinations</b><span>Each added target (Backblaze B2, Dropbox, S3-compatible, WebDAV, or external mounted folder) has its own Watch History and Full Plekt toggles, retention override (Dropbox defaults to 2 full backups), and targeted Back Up Now buttons.</span></li>
+                          </ul>
+                        </div>
+                        <div id="backupDestinationHelpGuides" class="backup-help-guides"></div>
                       </div>
                     </article>
                   </div>
@@ -2699,7 +2709,7 @@
                                 <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
                                 <b>Remote Watch History Restore</b>
                               </div>
-                              <span>Restore a watch-history backup mirrored to Backblaze B2</span>
+                              <span>Restore a watch-history backup mirrored to a remote destination</span>
                             </summary>
                             <div class="tool-item-row" style="padding: var(--space-3); width: 100%;">
                               <div id="remoteWatchBackupList" class="watch-backup-list" data-watch-backup-list="remote" aria-live="polite"></div>
@@ -2721,6 +2731,7 @@
                                   <input id="backupRestoreRemotePassphrase" name="backupPassphrase" class="field" type="password" autocomplete="new-password" />
                                 </label>
                               </form>
+                              <p id="remotePlektRestoreNotice" class="message hidden" role="status" aria-live="polite" style="margin: var(--space-2) 0 0;"></p>
                               <div id="remotePlektBackupList" class="watch-backup-list" data-watch-backup-list="remote" aria-live="polite" style="margin-top: var(--space-3);"></div>
                             </div>
                           </details>
@@ -2741,7 +2752,7 @@
                           <ul>
                             <li><b>Local Watch History Restore</b><span>Restores watched state, playstate, and resume progress from a watch-history file stored locally or uploaded from your computer. The selected backup becomes the source of truth, preserves watch dates, and pushes the restored state to Plex, Emby, and Jellyfin.</span><span>During the restore, scheduled sync and incoming webhooks are paused so the restored state cannot be overwritten mid-run.</span></li>
                             <li><b>Local Plekt Restore</b><span>Restores an encrypted full Plekt backup containing database data and saved settings, including credentials and API keys. Enter the same passphrase used when the backup was created.</span></li>
-                            <li><b>Remote Watch History Restore</b><span>Restores a watch-history backup mirrored to a configured Backblaze B2 destination. It uses the same source-of-truth restore process and preserves the recorded watch dates.</span></li>
+                            <li><b>Remote Watch History Restore</b><span>Restores a watch-history backup mirrored to a configured remote destination. It uses the same source-of-truth restore process and preserves the recorded watch dates.</span></li>
                             <li><b>Remote Plekt Restore</b><span>Restores an encrypted full Plekt backup from remote storage. The original encryption passphrase is required before the saved data can be read.</span></li>
                           </ul>
                         </div>
@@ -3543,8 +3554,8 @@
       </article>
     </div>
 
-    <script type="module" src="/modules/analytics.js?v=2.3.0.0.3"></script>
-    <script type="module" src="/modules/legacy-image-banner.js?v=2.3.0.0.3"></script>
-    <script type="module" src="/app.js?v=2.3.0.0.3"></script>
+    <script type="module" src="/modules/analytics.js?v=2.3.0.0.4"></script>
+    <script type="module" src="/modules/legacy-image-banner.js?v=2.3.0.0.4"></script>
+    <script type="module" src="/app.js?v=2.3.0.0.4"></script>
   </body>
 </html>

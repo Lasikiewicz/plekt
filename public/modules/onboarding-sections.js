@@ -1,14 +1,14 @@
-import { state, elements } from "./state.js?v=2.3.0.0.3";
-import { escapeHtml, escapeAttribute, platformIconMarkup, storageGet } from "./utils.js?v=2.3.0.0.3";
-import { SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.3.0.0.3";
-import { renderFieldRow } from "./settings-ui.js?v=2.3.0.0.3";
-import { embyWebhookSetup, jellyfinWebhookSetup } from "./help-content.js?v=2.3.0.0.3";
-import { PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_LABEL } from "./plex-history-policy.js?v=2.3.0.0.3";
+import { state, elements } from "./state.js?v=2.3.0.0.4";
+import { escapeHtml, escapeAttribute, platformIconMarkup, storageGet } from "./utils.js?v=2.3.0.0.4";
+import { SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.3.0.0.4";
+import { renderFieldRow } from "./settings-ui.js?v=2.3.0.0.4";
+import { embyWebhookSetup, jellyfinWebhookSetup } from "./help-content.js?v=2.3.0.0.4";
+import { PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_LABEL } from "./plex-history-policy.js?v=2.3.0.0.4";
 
-import { createOnboardingBackups } from "./onboarding-backups.js?v=2.3.0.0.3";
+import { createOnboardingBackups } from "./onboarding-backups.js?v=2.3.0.0.4";
 
 export function createOnboardingSections(context) {
-const { backblazeDestination, renderBackblazeCard, renderBackup, updateBackupContinueAction, setPassphraseError, saveBackupSetup, saveBackblazeAction, testBackblazeAction } = createOnboardingBackups(context);
+const { remoteDestinations, hasEnabledDestination, renderRemoteDestinationsCard, mountBackupDestinations, renderBackup, updateBackupContinueAction, setPassphraseError, saveBackupSetup } = createOnboardingBackups(context);
 const { getStatus, getBackupData, MEDIA_SERVERS, WATCH_IMPORT_MODES, isPreClaimSetup, serverImportPending, watchlistSyncPending, seasonSourcePending, setupWatchImportMode, setupFastLocalPacing, setupUpNextSync, setupPlexHistoricalSync, currentStep, api, setMessage, loadBackupSetupData } = context;
 function claimedAdminUsername() {
   const user = state.currentUser || {};
@@ -535,7 +535,7 @@ function renderReview(hasTestedServer) {
     {
       label: "Backups",
       detail: backupConfig.enabled
-        ? `Daily encrypted backup at ${backupConfig.time || "03:00"}${backupConfig.remoteEnabled ? ", mirrored to Backblaze B2" : ", stored locally"}`
+        ? `Daily encrypted backup at ${backupConfig.time || "03:00"}${backupConfig.remoteEnabled ? ", mirrored to remote storage" : ", stored locally"}`
         : "Not scheduled; this can be configured later in Settings",
       status: backupConfig.enabled ? "Scheduled" : "Optional", tone: backupConfig.enabled ? "success" : "muted",
     },
@@ -555,5 +555,5 @@ function renderReview(hasTestedServer) {
 }
 
 
-return { renderOverview, renderServers, renderMetadata, renderWebhooks, renderSeerr, renderImports, renderOptions, renderBackup, renderReview, updateBackupContinueAction, setPassphraseError, saveBackupSetup, saveBackblazeAction, testBackblazeAction, backblazeDestination, renderBackblazeCard, webhookSetupRequired, importState };
+return { renderOverview, renderServers, renderMetadata, renderWebhooks, renderSeerr, renderImports, renderOptions, renderBackup, renderReview, updateBackupContinueAction, setPassphraseError, saveBackupSetup, remoteDestinations, hasEnabledDestination, renderRemoteDestinationsCard, mountBackupDestinations, webhookSetupRequired, importState };
 }

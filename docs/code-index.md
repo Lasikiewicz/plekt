@@ -205,6 +205,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `app-events.js`: closeMobileMenu, initAppEvents, setMobileMenuState
 - `appearance.js`: APPEARANCE_DEFAULTS, ART_TOGGLES, ART_TOGGLE_EVENT, applyAppearanceToBody, applyTextScale, isArtEnabled and 2 more
 - `auth.js`: buildAuthHeaders, buildNowPlayingUrl, claimAdminAccount, currentUser, getWebhookPath, getWebhookToken and 7 more
+- `backup-destinations.js`: DESTINATION_FORMS, destinationLabel, openBackupDestinationModal, openBackupDestinationPicker, renderBackupDestinationAccordions, renderBackupDestinationCardGrid and 2 more
 - `calendar-picker.js`: calendarStateFromIso, formatCalendarDisplay, mountCalendarPicker, renderCalendarPickerHtml
 - `card-art.js`: ART_RETRY_DELAYS_MS, artKey, cardArtAttribute, mediaArtKey, observeCardArtwork, requestArtKey
 - `cast-disclosure.js`: hydrateDeferredCastDisclosure, renderCastActor
@@ -305,7 +306,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `db.js`: adminDb, assertNotRealDataDirUnderTest, bumpDataVersion, bumpDiscoverVersion, bumpUpNextVersion, dataVersionTrigger and 15 more
 - `env.js`: loadLocalEnv
 - `index.js`: backfillUnknownShowTitles, dispatch, runScheduledTick, startPlexNotificationListener, stopPlexNotificationListener
-- `paths.js`: BACKDROPS_DIR, BACKUPS_DIR, CONFIG_PATH, CREDENTIAL_KEY_PATH, DATA_DIR, DB_PATH and 14 more
+- `paths.js`: BACKDROPS_DIR, BACKUPS_DIR, CONFIG_PATH, CREDENTIAL_KEY_PATH, DATA_DIR, DB_PATH and 16 more
 - `scheduled.js`: executeForceSyncPlan, mediaFromEmbyLikeResumableItem, mediaFromPlexResumableItem, recoverStaleSyncOperation, resumeProgressAuthorityTimestamp, resumeProgressBlockedByPlaystate and 1 more
 - `scheduler.js`: pokeLiveSessionPoller, pokePlexAdaptivePoller, resolvePlexNotificationWatchDate, restartPlexAdaptivePoller, restartPlexNotificationListener, runScheduledTick and 10 more
 - `workerCoordinator.js`: createWorkerCoordinator, nextTickDelayMs
@@ -375,6 +376,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `demoMode.js`: isDemoMode
 - `diagnosticLogger.js`: categorizeLog, clearLogs, flushPending, getLogs, isSpamLog, pruneLogArchive and 3 more
 - `diskMaintenance.js`: sweepOrphanArtwork
+- `dropboxAppConfig.js`: BUNDLED_DROPBOX_APP_KEY, resolveDropboxAppKey
 - `droppedTitleTrackerSync.js`: pendingDroppedTitleRowsForConnection, resolveSimklRestoreStatus, scheduleDroppedTitleTrackerDrain, shouldApplyRemoteDroppedChange, snapshotContainsDroppedIdentity, syncDroppedTitleTracker
 - `droppedTitles.js`: createDroppedTitleFilter, dropTitle, droppedTitleAliases, isSameDroppedTitle, listDroppedTitles, publishDroppedTitleMutation and 4 more
 - `embyClient.js`: UP_NEXT_SEED_DEVICE_ID, __resetEmbySeriesCache, __setEmbySeriesCacheNow, clearEmbyPersonalRating, countEmbyWatchedItems, embyDatePlayedParam and 20 more
@@ -558,7 +560,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `watchAudit.js`: AUDIT_PAYLOAD_RETENTION_MS, auditSourceEventPayload, countPrunableAuditPayloads, hasWatchAuditEventForRecord, listWatchAuditEvents, pruneWatchAuditPayloads and 3 more
 - `watchDates.js`: airDayOf, dateOnlyIso, embyLikePlayedDate, episodeTimingWatchDate, episodeTimingWatchMatch, isEmbyLikeApiMarked and 12 more
 - `watchDerivedFields.js`: decodeStoredWatchTitle, episodeCoordinatesFromStoredTitle, persistedWatchDerivedFields, repairedStoredEpisodeTitle
-- `watchHistoryBackups.js`: clearRestoreStatus, createWatchHistoryBackup, getBackupDestination, importWatchHistoryBackupFile, isCronSyncPaused, listRemoteBackups and 23 more
+- `watchHistoryBackups.js`: clearRestoreStatus, createWatchHistoryBackup, destinationAcceptsBackupType, destinationRetentionForBackupType, getBackupDestination, importWatchHistoryBackupFile and 25 more
 - `watchProvenance.js`: buildWatchProvenance, legacyProvenanceNote, normalizeProviderOverrides, normalizeWatchProvenance, provenanceTelemetryLines
 - `watchStateTransitions.js`: applyUnwatchedTransition, applyWatchedTransition
 - `watchSyncPolicy.js`: DEFAULT_WATCH_SYNC_INTENT, HISTORICAL_WATCH_SYNC_INTENTS, PLEX_ALREADY_MATCHING_DETAIL, PLEX_POLICY_SKIP_DETAIL, TARGET_DECISIONS, WATCH_SYNC_INTENTS and 11 more

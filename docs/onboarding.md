@@ -134,9 +134,9 @@ as side-by-side checkbox cards in one Other options section, stacking on mobile.
   Version 2 stores tracker imports by provider and one `trackersSkipped` acknowledgement;
   an in-progress version 1 Trakt step, import and skip answer migrate automatically.
 - The wizard's overview step offers a **Restore from backup** shortcut for migrating an
-  existing install onto a fresh one, before connecting anything. It reuses the exact same
-  local-upload/server-stored and Backblaze B2 restore tools as Settings → Backups → Restore
-  (see [`docs/backups.md`](backups.md)) rather than a separate implementation.
+  existing install onto a fresh one. Upload a local file, pick a backup stored on the
+  server, or connect a remote destination and pick a backup there. The wizard uses
+  the same restore tools as Settings → Restore. See [Backups](backups.md).
 
 ### Recommended setup tasks
 
