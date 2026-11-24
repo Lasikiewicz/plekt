@@ -374,6 +374,7 @@ export async function syncRecentlyWatchedFromPlex(config, loopStore, logger = co
         historyRows: timingHistory,
       });
       media.watched_at = dateChoice.previewWatchedAt;
+      if (item.ratingKey && !media.itemId) media.itemId = String(item.ratingKey);
       media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
         { source: "plex", event: "library_history", phase: "completed", itemId: item.ratingKey, user: username },
         { ingestPath: "plex_scheduled_library_history", sourceTimestamp: watchDate.sourceTimestamp, note: [watchDate.note, `Import policy: ${dateChoice.reason}.`].filter(Boolean).join(" ") },
@@ -597,6 +598,7 @@ export async function syncRecentlyWatchedFromEmby(config, loopStore, logger = co
         historyRows: timingHistory,
       });
       media.watched_at = dateChoice.previewWatchedAt;
+      if (item.Id && !media.itemId) media.itemId = String(item.Id);
 
       media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
         { source: "emby", event: "library_history", phase: "completed", itemId: item.Id, user: config.emby.userId },
@@ -796,6 +798,7 @@ export async function syncRecentlyWatchedFromJellyfin(config, loopStore, logger 
         historyRows: timingHistory,
       });
       media.watched_at = dateChoice.previewWatchedAt;
+      if (item.Id && !media.itemId) media.itemId = String(item.Id);
 
       media.watchProvenance = keepOrderProvenance(media.watchProvenance, buildWatchProvenance(
         { source: "jellyfin", event: "library_history", phase: "completed", itemId: item.Id, user: config.jellyfin.userId },

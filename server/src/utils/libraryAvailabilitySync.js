@@ -58,6 +58,18 @@ function isProviderItemUnplayed(provider, item = {}) {
   return userData.Played !== true && Number(userData.PlayCount || 0) <= 0;
 }
 
+function hasAnyProviderId(ids = {}) {
+  return Boolean(ids && (ids.imdb || ids.tmdb || ids.tvdb));
+}
+
+function itemHasSeriesProviderIds(provider, item = {}) {
+  if (provider === "plex") {
+    const guid = text(item?.grandparentGuid);
+    return Boolean(guid && !/^plex:\/\//i.test(guid));
+  }
+  return hasAnyProviderId(normalizeProviderIds(item?.SeriesProviderIds || {}));
+}
+
 function providerEpisodeIds(item = {}) {
   return {
     ...(item.ProviderIds || {}),
@@ -222,7 +234,7 @@ export async function reconcileAvailableWatchedItems(config = {}, {
         providerResult.skipped += 1;
         continue;
       }
-      candidates.push(media);
+      candidates.push({ media, hasSeriesProviderIds: itemHasSeriesProviderIds(provider, item) });
     }
     providerResult.candidates = candidates.length;
     result.scanned += providerResult.scanned;
@@ -234,22 +246,40 @@ export async function reconcileAvailableWatchedItems(config = {}, {
     // synchronous stretch. Profiling measured 8-10 s stretches that stalled
     // every page load and API request queued behind them.
     let sliceStartedAt = Date.now();
-    await runWithConcurrency(candidates, async (media) => {
+    await runWithConcurrency(candidates, async ({ media, hasSeriesProviderIds }) => {
       if (Date.now() - sliceStartedAt >= AVAILABILITY_YIELD_MS) {
         await yieldToEventLoop();
         sliceStartedAt = Date.now();
       }
-      const canonicalState = await getCanonicalWatchState(media).catch(() => null);
+      let canonicalState = await getCanonicalWatchState(media).catch(() => null);
+      const episodeNeedsSeriesCheck = media.type === "episode" && Boolean(media.seriesItemId);
+      let usedCoordinatePrecheck = false;
+      if (canonicalState !== "watched" && episodeNeedsSeriesCheck && !hasSeriesProviderIds && hasAnyProviderId(media.ids)) {
+        // Jellyfin/Emby unplayed episode feeds carry episode-level ProviderIds
+        // (and no SeriesProviderIds). Those episode TVDB/TMDB ids disagree with
+        // the show's series profile until withSeriesIdentity resolves them, so
+        // do a cheap local coordinate check first and fetch series ids only on hits.
+        const coordinateState = await getCanonicalWatchState({ ...media, ids: {} }).catch(() => null);
+        if (coordinateState === "watched") {
+          canonicalState = "watched";
+          usedCoordinatePrecheck = true;
+        }
+      }
       if (canonicalState !== "watched") {
         providerResult.skipped += 1;
         return;
       }
-      // Jellyfin episodes often carry no provider ids, so the lookup above
-      // matched on title and coordinate alone and can land on a same-title
+      // Jellyfin/Emby episodes often carry no series provider ids (either empty
+      // or episode-level only), so a coordinate match can land on a same-title
       // show's watch. Resolve the series ids (only for the few watched
       // candidates) and require the watch to hold under them.
-      if (media.type === "episode" && media.seriesItemId) {
-        const resolved = await resolveSeriesIdentity(media, config).catch(() => media);
+      if (episodeNeedsSeriesCheck) {
+        const lookupMedia = usedCoordinatePrecheck ? { ...media, ids: {} } : media;
+        const resolved = await resolveSeriesIdentity(lookupMedia, config).catch(() => lookupMedia);
+        if (usedCoordinatePrecheck && !hasAnyProviderId(resolved?.ids)) {
+          providerResult.skipped += 1;
+          return;
+        }
         if (resolved !== media) {
           const resolvedState = await getCanonicalWatchState(resolved).catch(() => null);
           if (resolvedState !== "watched") {

@@ -111,3 +111,25 @@ test("the audit read path still returns events whose payload was pruned", () => 
   assert.equal(events[0].title, "Pruned movie");
   assert.equal(events[0].payload, null);
 });
+
+test("listWatchAuditEvents keeps the newest events in chronological order when capped by limit", () => {
+  db.prepare("DELETE FROM watch_audit_events").run();
+  const base = 1_790_000_000_000;
+  for (let index = 1; index <= 5; index += 1) {
+    recordWatchAuditEvent({
+      eventType: "source_event",
+      timestamp: base + index * 1000,
+      mediaKey: `episode:2:${index}:imdb:tt18332852`,
+      mediaType: "episode",
+      title: `Outlander: Blood of My Blood - S02E0${index}`,
+      showTitle: "Outlander: Blood of My Blood",
+      ids: { imdb: "tt18332852", tmdb: "207484", tvdb: "429964" },
+      season: 2,
+      episode: index,
+      status: "received",
+    });
+  }
+
+  const events = listWatchAuditEvents({ ids: { tmdb: "207484" }, mediaType: "tv", limit: 2 });
+  assert.deepEqual(events.map((event) => event.episode), [4, 5]);
+});

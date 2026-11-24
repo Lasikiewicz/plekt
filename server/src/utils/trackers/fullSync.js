@@ -25,6 +25,9 @@ import { watchedPlayedSyncEnabled } from '../syncFlags.js';
 import { maintainTrackerWriteIntents } from '../trackerWriteIntents.js';
 import { activeSimklFullSyncRun, createSimklFullSyncRun } from './simklFullSyncStore.js';
 import { SIMKL_FULL_SYNC_NORMAL_POLICY, estimateSimklFullSync } from './simklFullSyncPolicy.js';
+import { activityGroupKeyFor, activityItemKeyFor } from '../syncActivityIdentity.js';
+import { freshSimklConnection } from './simklConnection.js';
+import { SIMKL_ORDER_SKIP, simklEpisodeOrderIdentity, verifySimklEpisodeOrder } from './simklEpisodeOrder.js';
 
 // Optional compare-then-confirm full sync for a connected tracker (decision
 // 21 October 2026). It only adds missing watches, never removes one, and sends
@@ -53,7 +56,7 @@ export function localWatchedItems() {
   return db.prepare(`WITH ranked AS (
       SELECT w.*, ROW_NUMBER() OVER (PARTITION BY w.media_key ORDER BY w.watched_at DESC, w.created_at DESC) AS rn
       FROM watch_history w WHERE w.media_type IN ('movie','episode') AND COALESCE(w.media_key,'')<>'')
-    SELECT r.media_key, r.title, r.media_type, r.imdb_id, r.tmdb_id, r.tvdb_id, r.season, r.episode,
+    SELECT r.media_key, r.title, r.media_type, r.imdb_id, r.tmdb_id, r.tvdb_id, r.season, r.episode, r.watch_provenance,
       (SELECT w.show_title FROM watch_history w WHERE w.media_key=r.media_key AND w.show_title IS NOT NULL ORDER BY w.created_at DESC LIMIT 1) AS show_title,
       (SELECT MIN(w.watched_at) FROM watch_history w WHERE w.media_key=r.media_key
         AND COALESCE(w.sync_action,'watched') NOT IN ('unwatched','unplayed')) AS first_watched_at
@@ -63,7 +66,8 @@ export function localWatchedItems() {
     season: row.season, episode: row.episode, imdb_id: row.imdb_id, tmdb_id: row.tmdb_id, tvdb_id: row.tvdb_id,
     // Trakt documents TMDB and TVDB ids as integers; playstate stores text.
     ids: Object.fromEntries([["imdb", row.imdb_id], ["tmdb", numericId(row.tmdb_id)], ["tvdb", numericId(row.tvdb_id)]].filter(([, value]) => value)),
-    watched_at: row.first_watched_at, source: "full_sync", syncIntent: "historical",
+    watched_at: row.first_watched_at, mediaKey: row.media_key, watch_provenance: row.watch_provenance,
+    source: "full_sync", syncIntent: "historical",
   }));
 }
 
@@ -117,7 +121,45 @@ const identityGuard=config=>digest({config,syncEnabled:watchedPlayedSyncEnabled(
 // A paced run's own intents are not holds against its remaining items.
 export const currentWriteHolds=(provider,connection,{excludeRunId=''}={})=>db.prepare("SELECT id,status,media_json FROM tracker_write_intents WHERE provider=? AND connection_id=? AND account_id=? AND action='watched' AND (status NOT IN ('settled','cancelled','rejected') OR status='settled' AND settled_at>?) AND (?='' OR logical_key NOT LIKE ?) ORDER BY id")
   .all(provider,connection.id,connection.remoteUserId,Date.now()-30*60_000,excludeRunId,`simkl-full-sync:${excludeRunId}:%`).map(row=>({id:row.id,status:row.status,media:JSON.parse(row.media_json)}));
-async function collectPreviewState(provider,{fresh=false,includeLan=true}={}) {
+const skippedOrderRows = db.prepare(`WITH latest AS (
+  SELECT id, activity_item_key, action, target_states,
+    ROW_NUMBER() OVER (PARTITION BY activity_item_key ORDER BY timestamp DESC, id DESC) AS rank
+  FROM sync_history WHERE activity_group_key=? AND action IN ('watched','unwatched')
+)
+SELECT id, activity_item_key FROM latest
+WHERE rank=1 AND action='watched' AND EXISTS (
+  SELECT 1 FROM json_each(CASE WHEN json_valid(latest.target_states) THEN latest.target_states ELSE '[]' END) AS target
+  WHERE json_extract(target.value,'$.target')='simkl' AND json_extract(target.value,'$.status')='skipped'
+  AND (json_extract(target.value,'$.detail') LIKE 'Simkl does not support alternate episode orders%' OR json_extract(target.value,'$.detail')=?)
+)`);
+
+async function scopeSimklOrderPreview(local, connection, groupKey) {
+  const skipped = new Map(skippedOrderRows.all(groupKey, SIMKL_ORDER_SKIP).map(row => [row.activity_item_key, row.id]));
+  const group = local.filter(media => activityGroupKeyFor(media) === groupKey);
+  const series = new Set(group.map(media => String(media.ids.tvdb || "")));
+  if (series.size > 1) throw fail("This group includes multiple possible series. Resolve the show match before sending.", "SIMKL_ORDER_GROUP_AMBIGUOUS");
+  const candidates = group.filter(media => skipped.has(activityItemKeyFor(media)));
+  if (!candidates.length) return [];
+  const credentials = await freshSimklConnection();
+  if (credentials?.id !== connection.id || credentials.remoteUserId !== connection.remoteUserId) {
+    throw fail("Simkl connection changed. Build a new preview.", "FULL_SYNC_PLAN_STALE");
+  }
+  return Promise.all(candidates.map(async media => {
+    const match = await verifySimklEpisodeOrder(credentials, media);
+    const firstWatch = db.prepare(`SELECT id, watch_provenance FROM watch_history WHERE media_key=? AND watched_at=?
+      AND COALESCE(sync_action,'watched') NOT IN ('unwatched','unplayed') ORDER BY created_at, id LIMIT 1`)
+      .get(media.mediaKey, media.watched_at);
+    const firstOrder = firstWatch && simklEpisodeOrderIdentity(firstWatch);
+    const verified = match && String(firstOrder?.airedId) === match.airedId && String(firstOrder?.tvdbId) === String(media.ids.tvdb);
+    return { ...media,
+      simklOrderActivityId: skipped.get(activityItemKeyFor(media)),
+      simklOrderWatchRecordId: verified ? firstWatch.id : null,
+      simklOrderMatch: verified ? match : null,
+    };
+  }));
+}
+
+async function collectPreviewState(provider,{fresh=false,includeLan=true,activityGroupKey=null}={}) {
   const {connection}=readyConnection(provider);
   maintainTrackerWriteIntents();
   const config=await loadMediaConfig();
@@ -134,7 +176,9 @@ async function collectPreviewState(provider,{fresh=false,includeLan=true}={}) {
   const lanRead=includeLan?await collectServerWatchedItems(config):{scopeErrors:[],itemsByServer:{},configuredServers:[]};
   if(lanRead.scopeErrors.length)throw fail('A media-server read was incomplete; preview cannot be approved','FULL_SYNC_INCOMPLETE');
   const lan=Object.fromEntries(Object.entries(lanRead.itemsByServer).map(([target,items])=>[target,items.map(item=>({type:item.type,ids:{imdb:item.imdb,tmdb:item.tmdb,tvdb:item.tvdb},season:item.season,episode:item.episode,watched_at:item.timestamp?new Date(item.timestamp).toISOString():null}))]));
-  return {connection:{id:connection.id,account:connection.remoteUserId,preferEarlier:connection.preferEarlierWatchedDate},local:localWatchedItems(),
+  const local = localWatchedItems();
+  const scoped = activityGroupKey ? await scopeSimklOrderPreview(local, connection, activityGroupKey) : local;
+  return {connection:{id:connection.id,account:connection.remoteUserId,preferEarlier:connection.preferEarlierWatchedDate},local:scoped,activityGroupKey,
     writeHolds:currentWriteHolds(provider,connection),
     remote:remote.filter(item=>Number(item.remoteWatchedAt)>0).map(item=>({media:translate(item.media),remoteWatchedAt:Number(item.remoteWatchedAt)})),review,
     lan,lanTargets:lanRead.configuredServers.filter(target=>watchedPlayedSyncEnabled()&&canReceiveState(config,target,'watched')&&watchTargetPolicy({target,intent:'import',state:'watched'}).decision===TARGET_DECISIONS.SEND),config,syncEnabled:watchedPlayedSyncEnabled(),
@@ -144,12 +188,12 @@ async function collectPreviewState(provider,{fresh=false,includeLan=true}={}) {
 }
 
 function savePreview(provider,snapshot) {
-  const plan=storeTrackerFullSyncPlan(provider,snapshot,{pushSupported:pushers.has(provider)});
+  const plan=storeTrackerFullSyncPlan(provider,snapshot,{pushSupported:pushers.has(provider),outboundOnly:Boolean(snapshot.activityGroupKey)});
   const imports=plan.items.filter(r=>r.side==='plekt'&&r.selectable),sends=plan.items.filter(r=>r.side==='tracker'&&r.selectable);
   const state={status:'compared',comparedAt:Date.now(),trackerOnly:imports.length,plektOnly:sends.length,
     unidentified:plan.items.filter(r=>r.reason==='No supported provider identifiers').length,
     examples:{trackerOnly:imports.slice(0,5).map(r=>r.title),plektOnly:sends.slice(0,5).map(r=>r.title)},preview:plan.preview};
-  updateTrackerConnectionStatus(provider,{fullSync:state,connectionId:snapshot.connection.id});
+  if (!snapshot.activityGroupKey) updateTrackerConnectionStatus(provider,{fullSync:state,connectionId:snapshot.connection.id});
   return state;
 }
 
@@ -166,11 +210,19 @@ function assertNoPacedRun(provider,connection) {
   if(pacedRun(provider,connection))throw fail('A paced Simkl full sync is in progress; cancel it or wait for it to finish','FULL_SYNC_RUNNING');
 }
 
-export async function compareTrackerWithPlekt(provider) {
+export async function compareTrackerWithPlekt(provider, { activityGroupKey = null } = {}) {
+  if (activityGroupKey !== null && (provider !== "simkl" || typeof activityGroupKey !== "string" || !/^show\|.{1,300}$/.test(activityGroupKey))) {
+    throw fail("Choose a show in Sync Activity to review its Simkl updates", "INVALID_SIMKL_ORDER_GROUP", 400);
+  }
   const { connection } = readyConnection(provider);
   if (running.has(provider)) throw fail("A full sync is already running", "FULL_SYNC_RUNNING");
   assertNoPacedRun(provider,connection);
-  return savePreview(provider,await collectPreviewState(provider));
+  const collect = () => runInTrackerGeneration(provider, connection.id, () => collectPreviewState(provider,{
+    fresh: Boolean(activityGroupKey), includeLan: !activityGroupKey, activityGroupKey,
+  }));
+  return savePreview(provider, await (activityGroupKey
+    ? simklTransport.withBudget({ maxRequests: 21, minimumRemaining: 56, allowUnknownFirst: true }, collect)
+    : collectPreviewState(provider)));
 }
 
 async function runSelectedFullSync(provider,rows,snapshot,write,isCancelled,onItems=()=>{}) {
@@ -236,10 +288,12 @@ export async function startTrackerFullSync(provider, direction, {planId,selected
     // leave an otherwise fresh approval using stale LAN state, and no second
     // tracker scan is needed just to close that gap.
     backup=await createWatchHistoryBackup({reason:'pre-tracker-full-sync',mirrorRemote:false});verifyWatchBackup(backup.name);
-    const verify=()=>runInTrackerGeneration(provider,connection.id,()=>collectPreviewState(provider,{fresh:true,includeLan:!plan.outboundOnly}));
+    const verify=()=>runInTrackerGeneration(provider,connection.id,()=>collectPreviewState(provider,{
+      fresh:true,includeLan:!plan.outboundOnly,activityGroupKey:plan.activityGroupKey || null,
+    }));
     // Simkl sends no longer need to fit today's quota: they become a durable
     // paced run that continues after each daily reset (step 8c).
-    snapshot=await(provider==='simkl'?simklTransport.withBudget({maxRequests:18,minimumRemaining:56,allowUnknownFirst:true},verify):verify());
+    snapshot=await(provider==='simkl'?simklTransport.withBudget({maxRequests:plan.activityGroupKey ? 21 : 18,minimumRemaining:56,allowUnknownFirst:true},verify):verify());
     if(plan.fingerprint!==trackerFullSyncFingerprint(snapshot)) {
       savePreview(provider,snapshot);
       throw fail('State changed. Review the updated preview before applying','FULL_SYNC_PLAN_STALE');

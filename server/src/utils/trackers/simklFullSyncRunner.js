@@ -86,7 +86,7 @@ function revalidate(run, pending, connection, snapshot) {
   for (const item of pending) {
     const keys = trackerMediaIdentityKeys(item.row.media);
     if (keys.some(key => remoteKeys.has(key))) { outcomes.push({ itemId: item.itemId, status: 'completed', detail: { reason: 'Already on Simkl' } }); continue; }
-    const current = localFor(keys);
+    let current = localFor(keys);
     if (!current) { outcomes.push({ itemId: item.itemId, status: 'cancelled', detail: { reason: 'No longer watched in Plekt; not sent' } }); continue; }
     if (Date.parse(current.watched_at) !== Date.parse(item.row.watchedAt)) { outcomes.push(review(item.itemId, 'The first Plekt watch date changed after approval; review it before sending')); continue; }
     const hold = holdFor(keys);
@@ -95,6 +95,14 @@ function revalidate(run, pending, connection, snapshot) {
       if (['review', 'uncertain'].includes(hold.status)) outcomes.push(review(item.itemId, `An existing Simkl write is ${hold.status}; resolve it in Sync Attention`));
       else deferred++;
       continue;
+    }
+    if (item.row.media.simklOrderMatch) {
+      if (current.watch_provenance !== item.row.media.watch_provenance || current.mediaKey !== item.row.media.mediaKey) {
+        outcomes.push(review(item.itemId, 'The local episode match changed. Review it before sending.'));
+        continue;
+      }
+      current = { ...current, simklOrderMatch: item.row.media.simklOrderMatch,
+        simklOrderActivityId: item.row.media.simklOrderActivityId, simklOrderWatchRecordId: item.row.media.simklOrderWatchRecordId };
     }
     candidates.push({ item, current });
   }
@@ -118,7 +126,8 @@ async function sendChunk(run, connection, chunk, dispatch) {
   for (const { item, current } of chunk) {
     const media = { ...current, watched_at: item.row.watchedAt, syncIntent: 'historical', simklFullSyncRunId: run.id };
     // Stable logical key: a resumed run reuses its intent instead of creating a second play.
-    const intent = createTrackerWriteIntent({ provider: 'simkl', connection, media, action: 'watched', logicalKey: `${intentPrefix(run.id)}${item.itemId}`, dueAt: now });
+    const intent = createTrackerWriteIntent({ provider: 'simkl', connection, media, action: 'watched',
+      watchRecordId: current.simklOrderWatchRecordId, logicalKey: `${intentPrefix(run.id)}${item.itemId}`, dueAt: now });
     if (intent.status === 'settled') outcomes.push({ itemId: item.itemId, status: 'completed', detail: null });
     else if (intent.status !== 'pending') outcomes.push(review(item.itemId, intent.last_error || `An earlier send for this item is ${intent.status}; it will not be sent again automatically`));
     else prepared.push({ item, intent, media: { ...media, watched_at: intent.watched_at, trackerWriteIntentId: intent.id, syncTargets: ['simkl'] } });
@@ -127,7 +136,8 @@ async function sendChunk(run, connection, chunk, dispatch) {
   if (prepared.length) {
     try {
       await withSimklFullSyncContext({ runId: run.id, isCurrent: () => leaseCurrent(run.id) }, () => simklTransport.withBudget({
-        maxRequests: SIMKL_FULL_SYNC_BATCH_REQUESTS + 2, minimumRemaining: 56, normalReservePolicy: run.state.policy,
+        maxRequests: SIMKL_FULL_SYNC_BATCH_REQUESTS + (prepared.some(({ media }) => media.simklOrderMatch) ? 5 : 2),
+        minimumRemaining: 56, normalReservePolicy: run.state.policy,
       }, () => dispatch(prepared.map(entry => entry.media), 'watched', { lane: 'sync' })));
     } catch { /* Outcomes come from each durable intent below. */ }
   }

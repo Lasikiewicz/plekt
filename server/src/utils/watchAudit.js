@@ -296,11 +296,16 @@ export function listWatchAuditEvents({
 
   const safeLimit = Math.min(Math.max(Number(limit) || 2000, 1), 10000);
   const identityClause = clauses.join(" OR ");
+  // Bound by the newest events so busy titles never lose recent episodes behind
+  // an older backlog, then return the slice in chronological order.
   return db.prepare(`
-    SELECT * FROM watch_audit_events
-    WHERE (${identityClause})${typeClause ? ` AND ${typeClause}` : ""}
+    SELECT * FROM (
+      SELECT * FROM watch_audit_events
+      WHERE (${identityClause})${typeClause ? ` AND ${typeClause}` : ""}
+      ORDER BY timestamp DESC, id DESC
+      LIMIT ?
+    )
     ORDER BY timestamp ASC, id ASC
-    LIMIT ?
   `).all(...params, safeLimit).map(rowToEvent);
 }
 

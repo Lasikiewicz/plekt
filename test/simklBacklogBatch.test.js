@@ -7,14 +7,15 @@ makeTempDataDir('plekt-simkl-backlog-');
 const { db } = await import('../server/src/db.js');
 const repo = await import('../server/src/utils/trackerConnectionRepo.js');
 const data = await import('../server/src/utils/dataRepo.js');
-const { listDueTrackerWriteIntents } = await import('../server/src/utils/trackerWriteIntents.js');
+const { listDueTrackerWriteIntents, cancelTrackerWriteIntent } = await import('../server/src/utils/trackerWriteIntents.js');
+const { appendSyncHistory } = await import('../server/src/utils/configStore.js');
 const { syncPendingTrackerWriteIntents } = await import('../server/src/utils/trackerIntentWorker.js');
 const { simklTransport } = await import('../server/src/utils/trackers/simklTransport.js');
 const { recheckHeldSimklWrites } = await import('../server/src/utils/trackers/simklHeldWrites.js');
 
 const watchedAt = '2026-10-22T12:34:56.000Z';
 function reset() {
-  for (const table of ['tracker_write_intents', 'tracker_observations', 'tracker_connections', 'watch_history', 'playstate']) db.prepare(`DELETE FROM ${table}`).run();
+  for (const table of ['tracker_write_intents', 'tracker_observations', 'tracker_connections', 'watch_history', 'playstate', 'sync_history']) db.prepare(`DELETE FROM ${table}`).run();
   db.prepare("DELETE FROM settings WHERE id LIKE 'simkl-batch-budget:%'").run();
   repo.saveTrackerConnection({ provider: 'simkl', clientId: 'offline-client', remoteUserId: 'offline-account',
     accessToken: 'fake-access', refreshToken: 'fake-refresh', accessTokenExpiresAt: Date.now() + 3_600_000 });
@@ -183,5 +184,101 @@ test('a backlog of 101 keeps the 100-per-run bound and finishes in two confirmed
     assert.deepEqual(calls.filter(c=>c.path==='/sync/history').map(c=>c.body.movies.length),[100,1]);
     assert.equal(db.prepare("SELECT COUNT(*) n FROM tracker_write_intents WHERE status='settled'").get().n,101);
   });
+});
+
+test('queued Simkl outcomes update sync_history target_states on settle, review hold, recheck, and cancel', async () => {
+  reset();
+  const settledFixture = addWatch(201);
+  const heldFixture = addWatch(202);
+  const cancelFixture = addWatch(203);
+  const seedActivity = async (index) => appendSyncHistory({
+    mediaType: 'movie',
+    title: `Offline Backlog ${index}`,
+    source: 'plex',
+    status: 'success',
+    details: 'Successfully synced to Emby, Jellyfin & Trakt',
+    action: 'watched',
+    targetStates: [
+      { target: 'emby', status: 'success', detail: '200 OK' },
+      { target: 'jellyfin', status: 'success', detail: '200 OK' },
+      { target: 'simkl', status: 'pending', detail: 'Queued for the next Simkl batch send' },
+      { target: 'trakt', status: 'success', detail: 'Marked watched on Trakt' },
+    ],
+  });
+  await seedActivity(201);
+  await seedActivity(202);
+  await seedActivity(203);
+
+  const activityFor = (index) => {
+    const row = db.prepare('SELECT status, details, target_states FROM sync_history WHERE title = ? ORDER BY id DESC LIMIT 1').get(`Offline Backlog ${index}`);
+    return { ...row, targetStates: JSON.parse(row.target_states) };
+  };
+
+  // 201 confirms immediately; 202 and 203 are unconfirmed on readback and held for review.
+  const previous = globalThis.fetch;
+  simklTransport.resetForTests();
+  let posted = false;
+  globalThis.fetch = async (url, init = {}) => {
+    const parsed = new URL(url);
+    const body = init.body ? JSON.parse(init.body) : null;
+    if (parsed.pathname === '/sync/history' && init.method === 'POST') {
+      posted = true;
+      return Response.json({ added: { movies: 1, episodes: 0 }, not_found: {} }, { headers: { 'x-ratelimit-remaining': '400' } });
+    }
+    if (parsed.pathname === '/sync/activities') {
+      return Response.json({ all: posted ? '2026-10-22T13:00:00.000Z' : '2026-10-22T12:00:00.000Z' }, { headers: { 'x-ratelimit-remaining': '400' } });
+    }
+    return Response.json(body.map(({ ids }) => ({
+      ids,
+      result: ids.tmdb === '10201',
+      list: ids.tmdb === '10201' ? 'completed' : null,
+      last_watched_at: ids.tmdb === '10201' ? watchedAt : null,
+    })), { headers: { 'x-ratelimit-remaining': '400' } });
+  };
+  try {
+    await syncPendingTrackerWriteIntents(() => {});
+  } finally {
+    globalThis.fetch = previous;
+    simklTransport.resetForTests();
+  }
+
+  const settledRow = activityFor(201);
+  assert.equal(settledRow.status, 'success');
+  assert.equal(settledRow.targetStates.find((t) => t.target === 'simkl')?.status, 'success');
+  assert.match(settledRow.details, /Simkl/);
+
+  const heldRow = activityFor(202);
+  assert.equal(heldRow.status, 'partial');
+  assert.equal(heldRow.targetStates.find((t) => t.target === 'simkl')?.status, 'error');
+  assert.match(heldRow.details, /failed Simkl/);
+
+  // Recheck confirms 202 and flips its Sync Activity row from error -> success.
+  await withFetch(async () => {
+    const result = await recheckHeldSimklWrites(() => {}, { ids: [heldFixture.intent.id] });
+    assert.equal(result.completed, 1);
+  }, { recheckDates: { 10202: watchedAt } });
+  const recheckedRow = activityFor(202);
+  assert.equal(recheckedRow.status, 'success');
+  assert.equal(recheckedRow.targetStates.find((t) => t.target === 'simkl')?.status, 'success');
+
+  // Cancelling held write 203 clears the Simkl error pill to skipped.
+  assert.equal(cancelTrackerWriteIntent(cancelFixture.intent.id), true);
+  const cancelledRow = activityFor(203);
+  assert.equal(cancelledRow.status, 'partial');
+  assert.equal(cancelledRow.targetStates.find((t) => t.target === 'simkl')?.status, 'skipped');
+  assert.match(cancelledRow.details, /Simkl cancelled/);
+
+  // A superseded queued write cancelled by simklBacklogIntentCurrent also clears
+  // its Sync Activity pending pill so no row stays stuck on "Simkl: pending".
+  const supersededFixture = addWatch(204);
+  await seedActivity(204);
+  db.prepare('UPDATE watch_history SET watched_at = ? WHERE id = ?').run('2026-10-25T12:00:00.000Z', supersededFixture.id);
+  await withFetch(async (calls) => {
+    await syncPendingTrackerWriteIntents(() => {});
+    assert.equal(calls.length, 0);
+  });
+  const supersededRow = activityFor(204);
+  assert.equal(supersededRow.targetStates.find((t) => t.target === 'simkl')?.status, 'skipped');
+  assert.match(supersededRow.targetStates.find((t) => t.target === 'simkl')?.detail || '', /Local watch changed/);
 });
 

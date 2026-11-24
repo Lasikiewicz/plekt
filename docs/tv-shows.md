@@ -91,6 +91,15 @@ dedupe or playstate lookup, so nothing is stored under the media server's own nu
 episode cannot be translated, that item is skipped with the reason in the log and nothing is
 written or sent; the rest of the poll carries on.
 
+For episodes skipped by Simkl because of alternate numbering, expand the show in Sync Activity
+and use **Review Simkl updates**. Plekt finds the show on Simkl and matches each skipped watch to
+an episode by title and air date. A watch is ready to send only when exactly one Simkl episode
+matches and Simkl uses the same aired season and episode number. Other watches are listed but
+can't be selected. **Send selected watches** queues the selected watches with their saved dates
+through the normal Simkl batch, with its backup, quota and readback checks, and updates their
+Sync Activity status. To sync future updates automatically, use aired numbering on the media
+server and select **Episode order → Aired → Use Aired** in Plekt.
+
 ## Data model
 
 A "show" is derived from `watch_history` rows with `media_type = "episode"`, grouped by

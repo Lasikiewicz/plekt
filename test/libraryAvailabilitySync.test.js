@@ -301,3 +301,101 @@ test("a large availability pass yields so timers and requests are not starved", 
   // Only meaningful when the pass is long enough to need a yield at all.
   if (elapsed > 100) assert.ok(timerRuns > 0, `a ${elapsed} ms pass never let a timer run`);
 });
+
+test("Jellyfin episode with episode-level TVDB/IMDb ids (no SeriesProviderIds) is repaired once series ids resolve", async () => {
+  const seriesIds = { imdb: "tt18332852", tmdb: "207484", tvdb: "429964" };
+  // Seed two watched episodes so the show establishes a proven sole series profile
+  // (the exact condition where disagreesWithSoleProfile rejects episode-level TVDB ids).
+  for (const [ep, watchedAt] of [[8, "2026-11-07T19:09:59.000Z"], [9, "2026-11-20T23:07:50.000Z"]]) {
+    const title = `Outlander: Blood of My Blood - S02E0${ep}`;
+    await repo.insertWatchRecord({
+      title,
+      show_title: "Outlander: Blood of My Blood",
+      media_type: "episode",
+      season: 2,
+      episode: ep,
+      imdb_id: seriesIds.imdb,
+      tmdb_id: seriesIds.tmdb,
+      tvdb_id: seriesIds.tvdb,
+      watched_at: watchedAt,
+      source: "plex",
+    });
+    await repo.upsertPlaystateForMedia({
+      title,
+      show_title: "Outlander: Blood of My Blood",
+      media_type: "episode",
+      type: "episode",
+      season: 2,
+      episode: ep,
+      ids: seriesIds,
+    }, "watched", watchedAt);
+  }
+  repo.invalidateSeriesIdentityIndex();
+
+  const jellyfinConfig = {
+    plex: { disabled: true },
+    emby: { disabled: true },
+    jellyfin: { baseUrl: "https://jf.example", apiKey: "key", userId: "user" },
+  };
+  const unplayedEpisode = {
+    Id: "jf-4k-outlander-s2e9",
+    Type: "Episode",
+    Name: "Another Man's Shadow",
+    SeriesName: "Outlander: Blood of My Blood",
+    SeriesId: "jf-4k-series",
+    ParentIndexNumber: 2,
+    IndexNumber: 9,
+    // Real Jellyfin /Items responses include episode-level ProviderIds and no SeriesProviderIds.
+    ProviderIds: { Tvdb: "11982499", Imdb: "tt39602099" },
+    UserData: { Played: false, PlayCount: 0 },
+  };
+
+  // Confirm raw episode-level ids alone are rejected by the proven series profile.
+  assert.equal(await repo.getCanonicalWatchState(mediaFromLibraryItem("jellyfin", unplayedEpisode)), null);
+
+  const marked = [];
+  const resolvedSeriesCalls = [];
+  const result = await reconcileAvailableWatchedItems(jellyfinConfig, {
+    clients: { jellyfin: { fetch: async () => [unplayedEpisode] } },
+    resolveSeriesIdentity: async (media) => {
+      resolvedSeriesCalls.push({ seriesItemId: media.seriesItemId, ids: { ...media.ids } });
+      return { ...media, ids: { ...media.ids, ...seriesIds } };
+    },
+    markWatched: async (media, provider) => {
+      marked.push({ media, provider });
+      return { status: "success" };
+    },
+  });
+
+  assert.equal(result.marked, 1);
+  assert.equal(resolvedSeriesCalls.length, 1);
+  assert.deepEqual(resolvedSeriesCalls[0], { seriesItemId: "jf-4k-series", ids: {} });
+  assert.deepEqual(marked[0].media.provider_items, { jellyfin: ["jf-4k-outlander-s2e9"] });
+  assert.deepEqual(marked[0].media.ids, seriesIds);
+
+  // If series lookup fails (returns no series ids), do not falsely mark on coordinate alone.
+  const failedLookupMarked = [];
+  const failedLookupResult = await reconcileAvailableWatchedItems(jellyfinConfig, {
+    clients: { jellyfin: { fetch: async () => [unplayedEpisode] } },
+    resolveSeriesIdentity: async (media) => media,
+    markWatched: async (media) => {
+      failedLookupMarked.push(media);
+      return { status: "success" };
+    },
+  });
+  assert.equal(failedLookupResult.marked, 0);
+  assert.equal(failedLookupMarked.length, 0);
+
+  // If series lookup resolves to a different show sharing the same title, skip it.
+  const wrongShowMarked = [];
+  const wrongShowResult = await reconcileAvailableWatchedItems(jellyfinConfig, {
+    clients: { jellyfin: { fetch: async () => [unplayedEpisode] } },
+    resolveSeriesIdentity: async (media) => ({ ...media, ids: { imdb: "tt99999999", tmdb: "999999", tvdb: "999999" } }),
+    markWatched: async (media) => {
+      wrongShowMarked.push(media);
+      return { status: "success" };
+    },
+  });
+  assert.equal(wrongShowResult.marked, 0);
+  assert.equal(wrongShowMarked.length, 0);
+});

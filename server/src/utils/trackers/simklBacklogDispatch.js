@@ -5,6 +5,7 @@ import { watchedPlayedSyncEnabled } from '../syncFlags.js';
 import { updateWatchTelemetry } from '../dataRepo.js';
 import { isTargetSynced } from '../syncHistoryTelemetry.js';
 import { listTrackerConnections } from '../trackerConnectionRepo.js';
+import { updateSyncHistoryTargetOutcome } from '../syncHistoryTargetUpdate.js';
 
 // Only existing captured intents gain this gather path; this does not discover
 // old history or create new write eligibility. Superseded local state wins.
@@ -28,7 +29,7 @@ export async function recordSimklBacklogResult(intent,results) {
   if(!result)return;
   const config=await loadMediaConfig();
   if(!trackerIntentConnectionCurrent(intent))return;
-  const row=db.prepare('SELECT source,watched_at,sync_action,sync_dispatch_telemetry FROM watch_history WHERE id=?').get(intent.watch_record_id);
+  const row=db.prepare('SELECT media_key,media_type,title,show_title,season,episode,source,watched_at,sync_action,sync_dispatch_telemetry FROM watch_history WHERE id=?').get(intent.watch_record_id);
   if(!row||Date.parse(row.watched_at)!==Date.parse(intent.watched_at)||['unwatched','unplayed'].includes(row.sync_action))return;
   const status=result.status==='failed'?'error':result.status==='not_found'?'skipped':result.status;
   const lines=String(row.sync_dispatch_telemetry||'').split(/\r?\n/).filter(line=>! /^(?:Target\s+)?Simkl status:/i.test(line));
@@ -41,8 +42,16 @@ export async function recordSimklBacklogResult(intent,results) {
   const next=lines.filter(line=>!/^Dispatch status:/i.test(line));
   next.push(`Dispatch status: ${overall}`);
   const updated=next.join('\n');
+  const activityUpdated = updateSyncHistoryTargetOutcome(intent, {
+    target: 'simkl',
+    status,
+    detail: result.detail || '',
+    decision: result.decision || '',
+    dismissed: Boolean(result.dismissed),
+    watchRow: row,
+  });
   // Rewriting identical telemetry still fires the history version trigger.
-  if(updated===String(row.sync_dispatch_telemetry||''))return false;
+  if(updated===String(row.sync_dispatch_telemetry||''))return activityUpdated;
   await updateWatchTelemetry(intent.watch_record_id,updated,{skipInvalidate:true});
   return true;
 }

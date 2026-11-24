@@ -862,8 +862,10 @@ async function processPlexLibraryItemChange(ratingKey, metadataOverride = null) 
     });
 
     const result = await insertWatchRecord(watchRecord, { skipInvalidate: true, watchlistConfig: config });
-    await upsertPlaystateForMedia(media, "watched", watchedAt, { skipInvalidate: true });
-    const summary = await syncMediaPlaystate({ ...media, watchRecordId: result.id }, config, loopStore).catch((error) => ({
+    const ids = { ...(media.ids || {}), imdb: media.ids?.imdb || result.record?.imdb_id, tmdb: media.ids?.tmdb || result.record?.tmdb_id, tvdb: media.ids?.tvdb || result.record?.tvdb_id };
+    const dispatchMedia = { ...media, ids, watchRecordId: result.id };
+    await upsertPlaystateForMedia(dispatchMedia, "watched", watchedAt, { skipInvalidate: true });
+    const summary = await syncMediaPlaystate(dispatchMedia, config, loopStore).catch((error) => ({
       skipped: false,
       status: "error",
       details: `Plex watch-state propagation failed: ${error.message || String(error)}`,

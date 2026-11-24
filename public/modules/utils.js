@@ -678,7 +678,7 @@ export function trapDialogKey(event, overlay, onEscape) {
   }
 }
 
-export function openConfirmDialog({ title = "Are you sure?", body = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false, runOnConfirm, pendingLabel = "Working…" } = {}) {
+export function openConfirmDialog({ title = "Are you sure?", body = "", mediaHtml = "", confirmLabel = "Confirm", cancelLabel = "Cancel", danger = false, runOnConfirm, pendingLabel = "Working…" } = {}) {
   return new Promise((resolve) => {
     const opener = document.activeElement;
     const overlay = document.createElement("div");
@@ -697,7 +697,7 @@ export function openConfirmDialog({ title = "Are you sure?", body = "", confirmL
     const onKeydown = (event) => trapDialogKey(event, overlay, dismiss);
     registerConfirmDialog(cancel);
     overlay.addEventListener("click", (event) => { if (event.target === overlay) dismiss(); });
-    overlay.innerHTML = `<div class="edit-dialog" role="dialog" aria-modal="true" aria-label="${escapeAttribute(title)}"><h3>${escapeHtml(title)}</h3>${body ? `<p class="confirm-dialog-body">${escapeHtml(body)}</p>` : ""}<div class="edit-dialog-actions"><button class="${danger ? "button-danger" : "button-primary"} confirm-dialog-confirm" type="button">${escapeHtml(confirmLabel)}</button><button class="button-ghost confirm-dialog-cancel" type="button">${escapeHtml(cancelLabel)}</button></div></div>`;
+    overlay.innerHTML = `<div class="edit-dialog confirm-dialog${danger ? " confirm-dialog--danger" : ""}" role="dialog" aria-modal="true" aria-label="${escapeAttribute(title)}"><div class="confirm-dialog-header"><h3>${escapeHtml(title)}</h3></div><div class="confirm-dialog-content">${mediaHtml ? `<div class="confirm-modal-media confirm-dialog-media">${mediaHtml}</div>` : ""}${body ? `<p class="confirm-dialog-body">${escapeHtml(body)}</p>` : ""}</div><div class="edit-dialog-actions confirm-dialog-actions"><button class="button-ghost confirm-dialog-cancel" type="button">${escapeHtml(cancelLabel)}</button><button class="${danger ? "button-danger" : "button-primary"} confirm-dialog-confirm" type="button">${escapeHtml(confirmLabel)}</button></div></div>`;
     const confirmButton = overlay.querySelector(".confirm-dialog-confirm");
     const cancelButton = overlay.querySelector(".confirm-dialog-cancel");
     confirmButton.addEventListener("click", async () => {
@@ -707,7 +707,7 @@ export function openConfirmDialog({ title = "Are you sure?", body = "", confirmL
       confirmButton.disabled = cancelButton.disabled = true;
       confirmButton.textContent = pendingLabel;
       const status = document.createElement("p");
-      status.className = "confirm-dialog-body";
+      status.className = "confirm-dialog-body confirm-dialog-status";
       status.tabIndex = 0;
       status.setAttribute("role", "status");
       confirmButton.parentElement.before(status);

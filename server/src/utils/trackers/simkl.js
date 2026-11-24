@@ -9,6 +9,7 @@ import { runInTrackerGeneration, assertTrackerGeneration } from "./generation.js
 import { simklReportedWatched } from "./simklObservations.js";
 import { enqueueSimklWatched } from "./simklBatch.js";
 import { simklFullSyncContext } from './simklFullSyncContext.js';
+import { simklEpisodeOrderIdentity, verifySimklEpisodeOrder } from "./simklEpisodeOrder.js";
 
 export function classifySimklError(error) {
   const status = Number(error?.status);
@@ -74,6 +75,23 @@ export async function writeSimklWatched(connection, media, { trigger, sendNow = 
     catch (error) {
       finishTrackerWriteIntent(intent.id, "review", `Not sent: ${error.message || "Simkl media identity or observed date needs review"}`);
       throw error;
+    }
+    const storedOrder = simklEpisodeOrderIdentity(stored);
+    const order = simklEpisodeOrderIdentity(item);
+    if (storedOrder || order) {
+      if (!order || !storedOrder || JSON.stringify(storedOrder) !== JSON.stringify(order)) return { orderUnverified: true };
+      const fresh = await freshSimklConnection();
+      assertTrackerGeneration("simkl");
+      if (!fresh || fresh.id !== connection.id || fresh.remoteUserId !== connection.remoteUserId) {
+        throw client.simklReviewRequired("Simkl account changed before episode verification");
+      }
+      const match = await verifySimklEpisodeOrder(fresh, item);
+      assertTrackerGeneration("simkl");
+      const approved = stored.simklOrderMatch;
+      if (!match || approved && (match.simklId !== approved.simklId || match.episodeId !== approved.episodeId || match.airedId !== approved.airedId)) return { orderUnverified: true };
+      // Use only the series identity proven by the catalogue lookup when
+      // writing the cross-checked aired coordinate.
+      item.ids = { tvdb: order.tvdbId, simkl: match.simklId };
     }
     // Simkl already reported this item watched: settle without reading its
     // whole library, which costs several requests from the daily quota.

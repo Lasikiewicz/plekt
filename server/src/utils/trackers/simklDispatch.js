@@ -4,6 +4,7 @@ import { writeSimklWatched } from "./simkl.js";
 import { assertSimklTrigger, simklHistoryPayload, simklReviewRequired } from "./simklClient.js";
 import { runInTrackerGeneration } from "./generation.js";
 import { TARGET_DECISIONS } from "../watchSyncPolicy.js";
+import { SIMKL_ORDER_SKIP } from "./simklEpisodeOrder.js";
 
 const UNWATCH_NOT_SENT = "Simkl unwatches are not sent: removing a play on Simkl can also remove list membership";
 
@@ -36,6 +37,10 @@ export async function dispatchSimklWatchState(media, state, lane, isCancelled = 
     });
     if (result.deferred) {
       return { target: "simkl", status: "pending", detail: "Queued for the next Simkl batch send" };
+    }
+    if (result.orderUnverified) {
+      finishTrackerWriteIntent(intent.id, "cancelled", SIMKL_ORDER_SKIP);
+      return { target: "simkl", status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: SIMKL_ORDER_SKIP };
     }
     return { target: "simkl", status: "success", detail: result.alreadySatisfied ? "Simkl already has this watched item; its date was kept" : "Watched state confirmed on Simkl" };
   });

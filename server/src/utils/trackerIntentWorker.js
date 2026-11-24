@@ -20,6 +20,7 @@ export async function syncPendingTrackerWriteIntents(logger = console.log) {
       const isLibraryCurrent = await authorizeQueuedLibraryWatch(media);
       if (!isLibraryCurrent) {
         deferUnverifiedIntent.run(Date.now() + 5 * 60_000, intent.id, intent.status, intent.due_at);
+        logger(`Tracker intent ${intent.id}: deferred (${intent.provider}) - library monitoring could not verify source item`);
         return;
       }
       const results = await dispatchTrackerWatchState(media, intent.action, { isCancelled: () => !isLibraryCurrent() });

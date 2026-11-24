@@ -108,15 +108,14 @@ function render() {
     body = `<div class="episode-order-summarybar"><p class="episode-order-summary">${headline}${detail}<br><span class="muted-copy">Left: what ${escapeHtml(name(view))} calls the episode, as your media server reports it. Right: the aired episode it becomes in Plekt and Trakt.</span></p><button class="button-ghost episode-order-small" type="button" data-episode-order-action="toggle-all">${showAll ? "Show only changes" : `Show all ${total} episodes`}</button></div>
       <div class="episode-order-list" role="list">${previewRows(view) || `<p class="muted-copy episode-order-empty">Nothing to change. Choose "Show all ${total} episodes" to see every one.</p>`}</div>`;
   }
-  // Simkl cannot prove an episode from its TVDB id, so it receives nothing
-  // for a show in a non-Aired order. The admin must agree before switching.
+  // Keep the acknowledgement because some alternate episodes cannot be matched.
   const needsSimklAck = view !== "official" && view !== current && data.simklConnected === true;
   const canSwitch = view !== current && !busy && (!needsSimklAck || simklAck);
   const futureSimklNotice = view !== "official" && view !== current && data.simklConnected === false;
   const simklNotice = futureSimklNotice
-    ? `<div class="episode-order-simkl" role="note" aria-label="Simkl note"><p><strong>Simkl does not support this order.</strong> Simkl is not connected, so nothing changes now. If you connect Simkl later, this show's watches in ${escapeHtml(name(view))} will not be sent to it. Other shows are not affected.</p></div>`
+    ? `<div class="episode-order-simkl" role="note" aria-label="Simkl note"><p>If you connect Simkl later, Plekt will send watches only for episodes it can match in both catalogues.</p></div>`
     : needsSimklAck
-    ?`<div class="episode-order-simkl" role="group" aria-label="Simkl warning"><p><strong>Simkl does not support this order.</strong> Simkl cannot confirm which episode a watch in ${escapeHtml(name(view))} is, so Plekt will not send this show's watches to Simkl while this order is in use. Only this show is affected; its watches still reach Plex, Emby, Jellyfin and Trakt.</p><label class="episode-order-simkl-check"><input type="checkbox" data-episode-order-action="ack-simkl" ${simklAck ? "checked" : ""} ${busy ? "disabled" : ""}> <span>I understand that watches for this show will not be sent to Simkl.</span></label></div>`
+    ?`<div class="episode-order-simkl" role="group" aria-label="Simkl warning"><p>Plekt sends watches to Simkl when it can verify the same episode in both catalogues. Sync Activity shows any watches that need a match.</p><label class="episode-order-simkl-check"><input type="checkbox" data-episode-order-action="ack-simkl" ${simklAck ? "checked" : ""} ${busy ? "disabled" : ""}> <span>I understand that some episodes may be skipped on Simkl.</span></label></div>`
     : "";
   dialog.innerHTML = `
     <header class="episode-order-head"><div><h3 id="episode-order-title">Episode order</h3><p class="muted-copy">Choose the numbering your media server uses for this show. Plekt translates it to the aired episode before saving a watch or sending it to a tracker.</p></div><button class="button-ghost" type="button" data-episode-order-action="close" aria-label="Close episode order">Close</button></header>

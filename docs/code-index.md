@@ -230,7 +230,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `live-updates.js`: startLiveUpdates, stopLiveUpdates
 - `logs-viewer.js`: createLogsViewer, filterLogLines
 - `logs.js`: DEBUG_LOGS_KEY, MAX_DEBUG_LOGS, appendDebugLog, clearDebugLogs, clearDiagnosticLogs, escapeHtml and 6 more
-- `manual-watch-review-bulk.js`: BULK_REVIEW_BATCH_CAP, DEFAULT_BULK_REVIEW_MODE, buildBulkConfirmItems, bulkDismissConfirmation, bulkItemDecision, bulkSelectionSummary and 23 more
+- `manual-watch-review-bulk.js`: BULK_REVIEW_BATCH_CAP, DEFAULT_BULK_REVIEW_MODE, buildBulkConfirmItems, bulkDismissConfirmation, bulkItemDecision, bulkSelectionSummary and 28 more
 - `manual-watch-review.js`: buildManualWatchReviewEpisodeCatalog, filterManualWatchReviews, groupManualWatchReviews, groupReviewsByEpisode, groupReviewsBySeason, initManualWatchReview and 15 more
 - `media-card.js`: mediaCardHref, normalizeMediaCardRecord, renderMediaCard
 - `media-detail-context.js`: authHeaders, bumpMediaRenderToken, clearMediaDetailState, closeDebugModal, closeMediaDetail, closeMediaInfoModal and 24 more
@@ -276,7 +276,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `status-indicators.js`: loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary, renderSyncActivityStatus, setSyncActivityProgress, setSyncAttentionSummary and 2 more
 - `supervisor-switch.js`: initSupervisorSwitch, refreshSwitchUsers, setupSwitchMarkup
 - `sync-activity.js`: activityPlatform, attentionIssueMarkup, buildSyncActivityLog, canonicalShowKey, clearClientAttention, clearClientAttentionForRoute and 47 more
-- `sync-attention-cards.js`: bindTrackerWriteReview, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview
+- `sync-attention-cards.js`: bindTrackerWriteReview, handleSimklEpisodeOrderReviewClick, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview, simklEpisodeOrderGuidance and 1 more
 - `sync-preview.js`: initSyncPreview
 - `sync.js`: activeSessionsKey, categorizeIssues, getActiveTargets, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip and 45 more
 - `tautulli-import.js`: initTautulliImport, refreshTautulliImport
@@ -324,7 +324,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `libraryMonitoring.js`: handleLibraryMonitoring
 - `liveUpdates.js`: handleLiveUpdates
 - `maintenance.js`: describePendingAlphaBuild, describePendingDevelopBuild, handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats and 27 more
-- `manualWatchReview.js`: handleManualWatchReview
+- `manualWatchReview.js`: handleManualWatchReview, waitForManualWatchReviewBulkIdle
 - `media.js`: handleAddWatchDate, handleClearMissingTelemetry, handleDeleteHistoryRecord, handleDeleteMedia, handleDeleteWatchDate, handleDeleteWatchDates and 14 more
 - `mediaAuth.js`: handleEmbyLikeAuth, handleEmbyLikeConnection, handlePlexAuth, handlePlexConnection
 - `metadata.js`: handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch, handleOmdbRating and 19 more
@@ -503,6 +503,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `syncAttention.js`: buildSyncAttentionItems, syncAttentionFailureReason, syncAttentionItemIsAuthoritativeRestore, syncAttentionState, trackerForRejection, trackerRejectedItems
 - `syncDispatchQueue.js`: SYNC_RETRY_MAX_ATTEMPTS, getActiveTargetsForConfig, syncPendingManualDispatches, syncRetryDelayMs, syncRetryEligible, traktNeedsRetry and 1 more
 - `syncFlags.js`: watchedPlayedSyncEnabled
+- `syncHistoryTargetUpdate.js`: summarizeTargetStates, updateSyncHistoryTargetOutcome
 - `syncHistoryTelemetry.js`: addTimingHistoryRow, buildProgressTelemetry, buildTelemetry, isTargetSynced, recordSyncHistory, targetTelemetryLine and 1 more
 - `syncMatchReport.js`: buildSyncMatchReport, isUnresolvedMatchSample, parseTelemetryTargetStates, unresolvedSyncMatchReport
 - `syncOrchestrator.js`: appendCanonicalTrackerDispatch, clearOutboundPlayedMarks, completeDispatchTracking, dispatchProgressKey, finishDispatchTracking, getTargetsForSource and 25 more
@@ -595,6 +596,7 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `simklClient.js`: assertSimklTrigger, fetchSimklDroppedTitleSnapshot, fetchSimklSnapshot, normalizeSimklRows, sendSimklWatched, setSimklDroppedTitleStatus and 6 more
 - `simklConnection.js`: freshSimklConnection
 - `simklDispatch.js`: dispatchSimklWatchState
+- `simklEpisodeOrder.js`: SIMKL_ORDER_SKIP, matchSimklAiredEpisode, simklEpisodeOrderIdentity, verifySimklEpisodeOrder
 - `simklFullSyncContext.js`: simklFullSyncContext, withSimklFullSyncContext
 - `simklFullSyncPolicy.js`: SIMKL_FULL_SYNC_BATCH_REQUESTS, SIMKL_FULL_SYNC_BATCH_SIZE, SIMKL_FULL_SYNC_NORMAL_POLICY, SIMKL_FULL_SYNC_SAFETY_RESERVE, SIMKL_FULL_SYNC_VERIFY_REQUESTS, estimateSimklFullSync and 1 more
 - `simklFullSyncRunner.js`: SIMKL_FULL_SYNC_PAUSE_MS, cancelSimklFullSync, kickSimklFullSyncRuns, publishSimklFullSyncRun, runSimklFullSyncSlice

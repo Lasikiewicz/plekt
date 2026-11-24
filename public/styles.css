@@ -10415,7 +10415,7 @@ html.light-mode .poster-overflow-btn {
     padding: 0.5rem;
   }
 
-  .edit-dialog:not(.fix-match-dialog):not(.edit-image-dialog) {
+  .edit-dialog:not(.fix-match-dialog):not(.edit-image-dialog):not(.confirm-dialog) {
     width: 100%;
     max-width: 100%;
     max-height: calc(100vh - 1rem);
@@ -12933,13 +12933,129 @@ html.light-mode .progress-bar-fill {
   color: #99f6e4;
 }
 
+.confirm-dialog-overlay {
+  padding: clamp(0.75rem, 3vw, 2rem);
+  background: rgba(3, 6, 8, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.confirm-dialog {
+  width: min(440px, 94vw);
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+  background: var(--panel-3);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+  animation: settingsModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.confirm-dialog-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel-3);
+}
+
+.confirm-dialog-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.confirm-dialog-content {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--panel-3);
+}
+
+.confirm-dialog-media {
+  margin: 0;
+  padding: 0.6rem 0.7rem;
+  gap: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+
+.confirm-dialog-media .confirm-modal-media-poster {
+  width: 44px;
+  height: 66px;
+}
+
 .confirm-dialog-body {
-  color: var(--muted);
+  margin: 0;
+  color: var(--soft);
   font-size: 0.88rem;
-  line-height: 1.5;
+  line-height: 1.55;
   white-space: pre-wrap;
   max-height: min(52vh, 30rem);
   overflow-y: auto;
+}
+
+.confirm-dialog-status {
+  padding: 0 var(--space-4) var(--space-3);
+  background: var(--panel-3);
+}
+
+.confirm-dialog-actions {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--panel-3);
+  gap: 0.5rem;
+}
+
+.confirm-dialog-actions button {
+  min-width: 4.5rem;
+}
+
+.confirm-dialog-actions button:focus-visible {
+  outline: none;
+}
+
+.confirm-dialog-actions .confirm-dialog-cancel:focus-visible {
+  border-color: color-mix(in srgb, var(--text) 42%, var(--line-strong));
+  color: var(--text);
+}
+
+.confirm-dialog-actions .confirm-dialog-confirm.button-primary:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.confirm-dialog-actions .confirm-dialog-confirm.button-danger:focus-visible {
+  border-color: rgba(244, 63, 94, 0.75);
+  color: #fff1f2;
+}
+
+html.light-mode .confirm-dialog {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+}
+
+html.light-mode .confirm-dialog-header {
+  background: #f1f5f9;
+  border-bottom-color: #e2e8f0;
+}
+
+html.light-mode .confirm-dialog-content,
+html.light-mode .confirm-dialog-status,
+html.light-mode .confirm-dialog-actions {
+  background: #ffffff;
+}
+
+html.light-mode .confirm-dialog-media {
+  background: var(--panel-2);
+  border-color: var(--line);
+}
+
+html.light-mode .confirm-dialog-actions .confirm-dialog-confirm.button-danger:focus-visible {
+  color: #b91c1c;
 }
 
 .up-next-add-options {
@@ -29933,6 +30049,12 @@ html.light-mode #restore-remote {
   display: none;
 }
 
+.sync-activity-episode-order-guidance {
+  display: grid;
+  gap: var(--space-2);
+  margin-block-end: var(--space-3);
+}
+
 .sync-activity-current-issues,
 .sync-activity-current-results {
   display: grid;
@@ -31101,17 +31223,17 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2) var(--space-3);
-  padding: var(--space-2) var(--space-3);
-  margin-bottom: var(--space-3);
+  gap: 0.65rem 0.9rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel-2);
 }
 
 .manual-watch-review-bulk-bar.has-selection {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-  background: color-mix(in srgb, var(--accent) 7%, var(--panel-2));
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 6%, var(--panel-2));
 }
 
 .manual-watch-review-bulk-left,
@@ -31141,7 +31263,7 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
 
 .manual-watch-review-heading-title {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 0.55rem;
   min-width: 0;
 }
@@ -31154,7 +31276,8 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
 .manual-watch-review-bulk-note {
   flex: 1 0 100%;
   margin: 0;
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 
@@ -31162,216 +31285,148 @@ html:not(.light-mode) #globalSearchDropdown .gsd-more:focus {
   color: var(--yellow);
 }
 
-.manual-watch-review-selection-dates {
+.manual-watch-review-bulk-apply-row {
   flex: 1 0 100%;
-  min-width: 0;
-}
-
-.manual-watch-review-selection-dates ul {
-  max-width: 72rem;
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.manual-watch-review-selection-dates li {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-4);
+  gap: 0.45rem 0.75rem;
+  padding-top: 0.6rem;
   border-top: 1px solid var(--line);
-  padding: var(--space-3) 0;
-  overflow-wrap: anywhere;
-  font-size: 0.85rem;
 }
 
-.manual-watch-review-selection-date-info {
-  display: grid;
-  flex: 1 1 16rem;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.manual-watch-review-selection-date-info span {
-  color: var(--soft);
-}
-
-.manual-watch-review-selection-dates .manual-watch-review-bulk-item-controls {
-  flex: 1 1 16rem;
+.manual-watch-review-bulk-shared-datetime,
+.manual-watch-review-bulk-item-datetime {
+  min-width: 11.5rem;
   max-width: 100%;
 }
 
-.manual-watch-review-selection-dates .manual-watch-review-bulk-item-select,
-.manual-watch-review-selection-dates .manual-watch-review-bulk-item-datetime {
-  width: min(100%, 17rem);
-  min-width: 0;
-}
-
-.manual-watch-review-bulk-dialog {
-  width: min(780px, 96vw);
-}
-
-.manual-watch-review-bulk-apply-all {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--panel-2);
-}
-
-.manual-watch-review-bulk-apply-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: var(--soft);
-}
-
-.manual-watch-review-bulk-apply-label select {
-  min-width: 12rem;
-}
-
-.manual-watch-review-bulk-shared-datetime {
-  min-width: 12.5rem;
-}
-
-.manual-watch-review-bulk-summary {
-  display: grid;
-  gap: 0.2rem;
-  padding: 0.55rem 0.75rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, var(--line));
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--accent) 8%, var(--panel-2));
-}
-
-.manual-watch-review-bulk-summary-title {
-  color: var(--text);
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.manual-watch-review-bulk-summary-counts {
-  color: var(--soft);
-  font-size: 0.78rem;
-}
-
-.manual-watch-review-bulk-item-list {
-  max-height: min(46vh, 380px);
-}
-
-.manual-watch-review-bulk-item-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.6rem 0.75rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.manual-watch-review-bulk-item-row:last-child {
-  border-bottom: 0;
-}
-
-.manual-watch-review-bulk-item-info {
-  display: grid;
-  gap: 0.2rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.manual-watch-review-bulk-item-heading {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.45rem;
-  min-width: 0;
-}
-
-.manual-watch-review-bulk-item-kind {
-  flex: none;
-  padding: 0.08rem 0.4rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.manual-watch-review-bulk-item-title {
-  color: var(--text);
-  font-size: 0.88rem;
-  font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.manual-watch-review-bulk-item-ep-title {
-  color: var(--soft);
-  font-size: 0.82rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.manual-watch-review-bulk-item-meta {
-  color: var(--muted);
-  font-size: 0.76rem;
-}
-
-.manual-watch-review-bulk-item-preview {
-  color: var(--accent);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.manual-watch-review-bulk-item-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.45rem;
+.manual-watch-review-top-action {
+  margin-top: 0;
+  margin-left: auto;
   flex: 0 0 auto;
 }
 
-.manual-watch-review-bulk-item-select {
-  min-width: 13.5rem;
-  max-width: 20rem;
-}
-
-.manual-watch-review-bulk-item-datetime {
-  min-width: 11.5rem;
-}
-
-.manual-watch-review-bulk-dialog-error {
-  margin: 0;
-  color: var(--red) !important;
-  font-size: 0.84rem !important;
-  font-weight: 700;
-}
-
-.manual-watch-review-bulk-dialog-footer {
+.manual-watch-review-inline-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-3);
-  padding-top: 0.25rem;
+  gap: 0.65rem 1.25rem;
+  margin-top: auto;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-3, var(--panel-2)) 72%, transparent);
 }
 
-.manual-watch-review-bulk-dialog-actions {
+.manual-watch-review-facts {
   display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
+  gap: 0.55rem 1.25rem;
+  min-width: 0;
 }
 
-html.light-mode .manual-watch-review-bulk-item-row {
-  border-bottom-color: var(--line);
+.manual-watch-review-fact {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.manual-watch-review-fact-label {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.manual-watch-review-fact-value {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.manual-watch-review-fact-value .source-badge {
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.manual-watch-review-fact-value .source-badge-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+.manual-watch-review-fact--will-save .manual-watch-review-fact-value {
+  color: var(--accent);
+}
+
+.manual-watch-review-date-options {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.manual-watch-review-bulk-apply-row .manual-watch-review-date-options {
+  flex: 0 1 auto;
+  justify-content: flex-start;
+}
+
+.manual-watch-review-date-pill {
+  min-height: 2rem;
+  padding: 0.4rem 0.72rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--soft);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.manual-watch-review-date-pill:hover:not(:disabled),
+.manual-watch-review-date-pill:focus-visible:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-strong));
+  color: var(--text);
+}
+
+.manual-watch-review-date-pill.is-selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel-2));
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.manual-watch-review-date-pill:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.manual-watch-review-confirm-action {
+  margin-top: 0;
+  flex: 0 0 auto;
+}
+
+html.light-mode .manual-watch-review-inline-bar {
+  background: color-mix(in srgb, var(--panel-2) 85%, var(--bg));
 }
 
 .library-selection-banner {
@@ -31528,14 +31583,14 @@ html.light-mode .manual-watch-review-bulk-item-row {
 
 .manual-watch-review-card {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   gap: 0;
   min-width: 0;
   padding: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--yellow) 38%, var(--line));
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--yellow) 4%, var(--panel-2));
+  background: var(--panel-2);
   transition: opacity 160ms ease, border-color 160ms ease;
 }
 
@@ -31544,8 +31599,8 @@ html.light-mode .manual-watch-review-bulk-item-row {
 }
 
 .manual-watch-review-poster-wrap {
-  flex: 0 0 clamp(7.5rem, 12vw, 10rem);
-  width: clamp(7.5rem, 12vw, 10rem);
+  flex: 0 0 clamp(5.25rem, 7vw, 6.75rem);
+  width: clamp(5.25rem, 7vw, 6.75rem);
   align-self: flex-start;
   aspect-ratio: 2 / 3;
   height: auto;
@@ -31585,9 +31640,9 @@ html.light-mode .manual-watch-review-bulk-item-row {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   min-width: 0;
-  padding: var(--space-3);
+  padding: var(--space-4);
 }
 
 .manual-watch-review-heading,
@@ -31602,6 +31657,7 @@ html.light-mode .manual-watch-review-bulk-item-row {
 .manual-watch-review-heading {
   justify-content: space-between;
   align-items: flex-start;
+  padding: 0 calc(0.9rem + 1px);
 }
 
 .manual-watch-review-heading h3 {
@@ -31618,7 +31674,7 @@ html.light-mode .manual-watch-review-bulk-item-row {
 
 .manual-watch-review-title-link:hover,
 .manual-watch-review-title-link:focus-visible {
-  color: var(--yellow);
+  color: var(--accent);
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
@@ -31630,14 +31686,15 @@ html.light-mode .manual-watch-review-bulk-item-row {
 }
 
 .manual-watch-review-meta {
+  gap: 0.35rem 0.5rem;
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
 }
 
 .manual-watch-review-meta > span + span::before {
-  content: "•";
-  margin-right: var(--space-2);
-  color: var(--line-strong);
+  content: "·";
+  margin-right: 0.5rem;
+  color: var(--muted);
 }
 
 .manual-watch-review-episode-context {
@@ -31675,15 +31732,16 @@ html.light-mode .manual-watch-review-bulk-item-row {
 
 .manual-watch-review-show {
   display: grid;
-  grid-template-columns: minmax(7.5rem, 10rem) minmax(0, 1fr);
+  grid-template-columns: clamp(5.25rem, 7vw, 6.75rem) minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
   align-items: start;
-  gap: var(--space-3);
+  gap: 0;
   min-width: 0;
-  padding: var(--space-3);
+  padding: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--yellow) 38%, var(--line));
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: color-mix(in srgb, var(--yellow) 4%, var(--panel-2));
+  background: var(--panel-2);
   transition: opacity 160ms ease, border-color 160ms ease;
 }
 
@@ -31723,14 +31781,17 @@ html.light-mode .manual-watch-review-bulk-item-row {
 }
 
 .manual-watch-review-show-poster-wrap {
+  grid-column: 1;
+  grid-row: 1 / span 2;
   width: 100%;
-  border-radius: var(--poster-radius, 8px);
+  border-radius: 0;
 }
 
 .manual-watch-review-show-content {
   grid-column: 2;
+  grid-row: 1;
   min-width: 0;
-  padding: 0;
+  padding: var(--space-4) var(--space-4) var(--space-3);
 }
 
 .manual-watch-review-show-header {
@@ -31741,7 +31802,7 @@ html.light-mode .manual-watch-review-bulk-item-row {
   justify-content: space-between;
   gap: var(--space-2) var(--space-3);
   min-width: 0;
-  padding: 0;
+  padding: 0 calc(0.9rem + 1px);
 }
 
 .manual-watch-review-show-copy {
@@ -31792,20 +31853,20 @@ html.light-mode .manual-watch-review-bulk-item-row {
 .manual-watch-review-season-heading {
   display: flex;
   flex: 1 1 auto;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: 0.55rem;
   min-width: 0;
 }
 
 .manual-watch-review-season-heading strong {
   color: var(--text);
-  font-size: 0.86rem;
+  font-size: 0.88rem;
 }
 
 .manual-watch-review-season-heading span {
   color: var(--muted);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
 }
 
 .manual-watch-review-season-actions {
@@ -31816,9 +31877,9 @@ html.light-mode .manual-watch-review-bulk-item-row {
 
 .manual-watch-review-season-details {
   overflow: hidden;
-  border: 1px solid var(--line-strong);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--panel-2), transparent 92%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel-3, var(--panel-2)) 65%, transparent);
 }
 
 .manual-watch-review-season-details > summary {
@@ -31826,27 +31887,36 @@ html.light-mode .manual-watch-review-bulk-item-row {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  min-height: 48px;
-  padding: var(--space-3) var(--space-4);
+  min-height: 44px;
+  padding: 0.65rem 0.9rem;
   color: var(--text);
   cursor: pointer;
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 700;
   list-style: none;
 }
 
 .manual-watch-review-season-details[open] > summary {
-  border-bottom: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line);
 }
 
 .manual-watch-review-season-details > summary::-webkit-details-marker {
   display: none;
 }
 
+.manual-watch-review-season-details > summary:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.manual-watch-review-season-details > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 .manual-watch-review-season-details > summary::after {
   content: "⌄";
   margin-left: var(--space-2);
-  color: var(--yellow);
+  color: var(--muted);
   font-size: 0.95rem;
   flex: 0 0 auto;
   line-height: 1;
@@ -31859,14 +31929,15 @@ html.light-mode .manual-watch-review-bulk-item-row {
 }
 
 .manual-watch-review-season-content {
-  padding: 0 var(--space-4) var(--space-3);
+  padding: 0 0.9rem 0.85rem;
 }
 
 .manual-watch-review-episodes {
-  grid-column: 1 / -1;
-  margin: var(--space-3) 0 0;
+  grid-column: 2;
+  grid-row: 2;
+  margin: 0;
   min-width: 0;
-  padding: 0;
+  padding: 0 var(--space-4) var(--space-4);
 }
 
 .manual-watch-review-episodes > summary {
@@ -31921,7 +31992,7 @@ html.light-mode .manual-watch-review-bulk-item-row {
 
 .manual-watch-review-episode-copy {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.6rem;
   min-width: 0;
 }
 
@@ -31986,6 +32057,16 @@ html.light-mode .manual-watch-review-bulk-item-row {
 
 .manual-watch-review-episode-heading {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.75rem;
+  min-width: 0;
+}
+
+.manual-watch-review-episode-heading-main {
+  display: flex;
+  flex: 1 1 auto;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.55rem;
@@ -32048,12 +32129,9 @@ html.light-mode .manual-watch-review-bulk-item-row {
   white-space: nowrap;
 }
 
-html.light-mode .manual-watch-review-card {
-  background: color-mix(in srgb, var(--yellow) 6%, var(--panel-2));
-}
-
+html.light-mode .manual-watch-review-card,
 html.light-mode .manual-watch-review-show {
-  background: color-mix(in srgb, var(--yellow) 6%, var(--panel-2));
+  background: var(--panel-2);
 }
 
 html.light-mode .manual-watch-review-season {
@@ -32089,39 +32167,31 @@ html.light-mode .manual-watch-review-season {
     align-items: stretch;
   }
 
-  .manual-watch-review-bulk-controls {
+  .manual-watch-review-bulk-controls,
+  .manual-watch-review-bulk-apply-row,
+  .manual-watch-review-inline-bar {
     width: 100%;
   }
 
-  .manual-watch-review-bulk-apply-all,
-  .manual-watch-review-bulk-item-row {
+  .manual-watch-review-inline-bar {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .manual-watch-review-bulk-apply-label {
-    justify-content: space-between;
+  .manual-watch-review-inline-bar .manual-watch-review-date-options {
+    justify-content: flex-start;
   }
 
-  .manual-watch-review-bulk-apply-label select,
+  .manual-watch-review-confirm-action {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
   .manual-watch-review-bulk-shared-datetime,
-  .manual-watch-review-bulk-item-controls,
-  .manual-watch-review-bulk-item-select,
   .manual-watch-review-bulk-item-datetime {
     width: 100%;
     min-width: 0;
-  }
-
-  .manual-watch-review-bulk-dialog-footer {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .manual-watch-review-bulk-dialog-actions {
-    width: 100%;
-    margin-left: 0;
-    flex-direction: column-reverse;
-    align-items: stretch;
+    max-width: 100%;
   }
 
   .library-selection-banner {
@@ -32152,8 +32222,8 @@ html.light-mode .manual-watch-review-season {
 
   .manual-watch-review-card > .manual-watch-review-poster-wrap,
   .manual-watch-review-show-poster-wrap {
-    flex-basis: 5.6rem;
-    width: 5.6rem;
+    flex-basis: 4.5rem;
+    width: 4.5rem;
   }
 
   .manual-watch-review-poster {
@@ -32166,18 +32236,28 @@ html.light-mode .manual-watch-review-season {
   }
 
   .manual-watch-review-show {
-    grid-template-columns: 5.6rem minmax(0, 1fr);
-    gap: var(--space-2);
-    padding: var(--space-2);
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 0;
+    padding: 0;
+  }
+
+  .manual-watch-review-show-poster-wrap {
+    grid-column: 1;
+    grid-row: 1;
   }
 
   .manual-watch-review-show-content {
     grid-column: 2;
-    padding: 0;
+    grid-row: 1;
+    padding: var(--space-3);
   }
 
   .manual-watch-review-episodes {
-    padding: 0;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin: 0;
+    padding: 0 var(--space-3) var(--space-3);
   }
 
   .manual-watch-review-actions {
@@ -32190,15 +32270,14 @@ html.light-mode .manual-watch-review-season {
     width: 100%;
   }
 
+  .manual-watch-review-heading,
   .manual-watch-review-show-header {
-    align-items: stretch;
-    flex-direction: column;
     padding: 0;
   }
 
-  .manual-watch-review-episodes {
-    grid-column: 1 / -1;
-    padding-top: var(--space-2);
+  .manual-watch-review-show-header {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .manual-watch-review-show-actions,

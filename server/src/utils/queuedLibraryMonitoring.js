@@ -10,7 +10,7 @@ export async function authorizeQueuedLibraryWatch(media, config = null) {
   if (config && !config.libraryMonitoring && !config[source]?.libraryMonitoringEnforced) return () => true;
   const current = await loadMediaConfig();
   const provenance = normalizeWatchProvenance(media.watchProvenance || media.watch_provenance);
-  const itemId = media.itemId || provenance?.item_id;
+  const itemId = media.itemId || media.providerItemId || provenance?.item_id || provenance?.itemId;
   if (!itemId) return null;
   const decision = await resolveItemLibraryMembership(source, current, {
     type: media.type || media.media_type,

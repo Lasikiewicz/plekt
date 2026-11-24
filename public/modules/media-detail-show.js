@@ -2594,14 +2594,12 @@ export function mergeShowWithLoadedHistory(show = {}) {
         ? incomingIsManual && incomingTime >= existingTime
         : incomingTime >= existingTime);
     if (shouldUseIncoming) {
-      // The dashboard/history preview is intentionally compact and does not
-      // carry playHistory. Do not let that lightweight row replace the full
-      // detail row and hide genuine repeated watches, or the Fix Match display numbers, in the show modal.
+      // Keep full detail fields (telemetry, provenance, imdb_id, playHistory, display numbers) when state.history holds a compact preview of the same row.
       const existingHistory = Array.isArray(existing?.playHistory) ? existing.playHistory : [];
       const incomingHistory = Array.isArray(row.playHistory) ? row.playHistory : [];
       byEpisode.set(key, {
-        ...row, display_season: existing?.display_season, display_episode: existing?.display_episode, numbering_review: existing?.numbering_review,
-        show_title: rowShowTitle,
+        ...(existing?.id && row.id === existing.id ? existing : {}), ...row,
+        imdb_id: row.imdb_id ?? existing?.imdb_id, display_season: existing?.display_season, display_episode: existing?.display_episode, numbering_review: existing?.numbering_review, show_title: rowShowTitle,
         ...(existingHistory.length > incomingHistory.length ? { playHistory: existingHistory } : {}),
       });
     }

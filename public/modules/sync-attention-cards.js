@@ -2,6 +2,120 @@ import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.2";
 import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.2";
 import { state } from "./state.js?v=2.3.0.0.2";
 
+function hasSimklEpisodeOrderSkip(entry) {
+  return Array.isArray(entry?.targetStates) && entry.targetStates.some(({ target, status, detail }) =>
+    target === "simkl" && status === "skipped"
+    && /^Simkl (?:does not support alternate episode orders|could not verify this episode's alternate numbering)\b/i.test(detail));
+}
+
+export function syncActivityResultSummary(entry) {
+  const summary = entry.details || "";
+  if (!hasSimklEpisodeOrderSkip(entry)) return summary;
+  const orderSkip = "Simkl skipped because of episode numbering";
+  return summary.replace(/(?:Plex & )?Simkl skipped by the historical sync policy/, (note) =>
+    note.startsWith("Plex") ? `Plex skipped by the historical sync policy. ${orderSkip}` : orderSkip);
+}
+
+export function simklEpisodeOrderGuidance(entries, groupKey) {
+  if (!groupKey || !entries.some((entry) => entry?.action === "watched" && hasSimklEpisodeOrderSkip(entry))) return "";
+  return `
+    <div class="sync-activity-row-detail sync-activity-episode-order-guidance">
+      <strong>Episodes skipped for Simkl because of alternate numbering</strong>
+      <p>Check which skipped watches match episodes on Simkl, then choose which ones to send.</p>
+      <div class="sync-activity-group-action-buttons"><button type="button" class="button-ghost" data-simkl-episode-order-review="${escapeAttribute(groupKey)}" aria-haspopup="dialog">Review Simkl updates</button></div>
+    </div>`;
+}
+
+const SIMKL_FULL_SYNC_URL = "/api/tracker-connections/simkl/full-sync";
+let simklReviewPending = false;
+
+async function postSimklFullSync(path, payload) {
+  const response = await fetch(SIMKL_FULL_SYNC_URL + path, {
+    method: "POST",
+    headers: { ...buildAuthHeaders(state.token), "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (/^FULL_SYNC_(?:PLAN_(?:STALE|EXPIRED)|PREVIEW_REQUIRED)$/.test(body.code || "")) {
+      throw new Error("The preview changed or expired. Open Review Simkl updates again to check the latest matches.");
+    }
+    throw new Error(body.error || "Could not complete the Simkl request.");
+  }
+  return body.fullSync;
+}
+
+function simklReviewItemMarkup(item) {
+  const coordinate = item.season != null && item.episode != null
+    ? `S${String(item.season).padStart(2, "0")}E${String(item.episode).padStart(2, "0")}`
+    : "";
+  const detail = [coordinate, trackerWriteWatchedAt(item), item.reason].filter(Boolean).join(" · ");
+  return `<label class="tracker-preview-item"><input type="checkbox" value="${escapeAttribute(item.id)}" ${item.selectable ? "checked" : "disabled"}><span><b>${escapeHtml(item.title)}</b>${detail ? `<small>${escapeHtml(detail)}</small>` : ""}</span></label>`;
+}
+
+async function showSimklEpisodeOrderReview(preview, openConfirmDialog) {
+  const items = preview.items.filter((item) => item.side === "tracker");
+  const hasSelectable = items.some((item) => item.selectable);
+  const description = hasSelectable ? "Send the selected watches to Simkl with their saved dates."
+    : items.length ? "No watches are ready to send." : "There are no skipped watches to review for this show.";
+  const listId = `simkl-review-${preview.id}`;
+  const selectedIds = () => [...(document.getElementById(listId)?.querySelectorAll("input:checked:not(:disabled)") || [])]
+    .map((input) => input.value);
+  const dialog = openConfirmDialog({
+    title: "Review Simkl updates",
+    mediaHtml: `<div class="confirm-modal-media-info"><p class="tracker-preview-note">${description}</p><div class="tracker-preview-groups" id="${escapeAttribute(listId)}">${items.map(simklReviewItemMarkup).join("")}</div></div>`,
+    confirmLabel: hasSelectable ? "Send selected watches" : "Close",
+    cancelLabel: "Cancel",
+    pendingLabel: "Checking and queuing the watches…",
+    runOnConfirm: hasSelectable ? async () => {
+      const ids = selectedIds();
+      if (!ids.length) return "Select at least one watch to send.";
+      document.getElementById(listId)?.querySelectorAll("input").forEach((input) => { input.disabled = true; });
+      const result = await postSimklFullSync("", { direction: "push", planId: preview.id, selectedIds: ids });
+      if (!result?.runId) throw new Error("Plekt could not confirm that the Simkl updates were queued. Check Settings → Connections → Simkl.");
+      document.dispatchEvent?.(new CustomEvent("plekt:full-sync-changed", { detail: { provider: "simkl" } }));
+      return `Queued ${ids.length} ${ids.length === 1 ? "watch" : "watches"} for Simkl. Track progress in Settings → Connections → Simkl.`;
+    } : undefined,
+  });
+  const list = document.getElementById(listId);
+  const modal = list?.closest(".confirm-dialog");
+  if (hasSelectable) {
+    const confirm = modal?.querySelector(".confirm-dialog-confirm");
+    if (confirm) list.addEventListener("change", () => { confirm.disabled = !selectedIds().length; });
+    list?.querySelector("input:not(:disabled)")?.focus();
+  } else {
+    const cancel = modal?.querySelector(".confirm-dialog-cancel");
+    if (cancel) cancel.hidden = true;
+  }
+  await dialog;
+}
+
+export function handleSimklEpisodeOrderReviewClick(event, { openConfirmDialog, setMessage }) {
+  const button = event.target.closest("[data-simkl-episode-order-review]");
+  if (!button) return false;
+  if (button.disabled || simklReviewPending || !openConfirmDialog) return true;
+  const label = button.textContent;
+  simklReviewPending = true;
+  button.disabled = true;
+  button.textContent = "Checking episodes…";
+  button.setAttribute("aria-busy", "true");
+  void postSimklFullSync("/compare", { activityGroupKey: button.dataset.simklEpisodeOrderReview })
+    .then((fullSync) => {
+      if (!fullSync?.preview?.id || !Array.isArray(fullSync.preview.items)) throw new Error("Could not load the Simkl preview.");
+      button.textContent = label;
+      button.removeAttribute("aria-busy");
+      return showSimklEpisodeOrderReview(fullSync.preview, openConfirmDialog);
+    })
+    .catch((error) => setMessage?.(error.message || "Could not review the Simkl updates.", "error"))
+    .finally(() => {
+      simklReviewPending = false;
+      button.disabled = false;
+      button.textContent = label;
+      button.removeAttribute("aria-busy");
+    });
+  return true;
+}
+
 export function handleSyncActivityRetryClick(event, { openConfirmDialog, retrySyncActivity, setMessage }) {
   const button = event.target.closest("[data-sync-activity-retry]");
   if (!button) return false;
@@ -44,10 +158,9 @@ function trackerLabel(target) {
 const trackerHistory = {
   simkl: {
     href: "https://simkl.com/my/history/watch-history/",
-    label: "View Simkl Watch History",
-    historyName: "Simkl Watch History",
+    label: "View Simkl watch history",
   },
-  trakt: { href: "https://app.trakt.tv/history", label: "Check Trakt history", historyName: "Trakt history" },
+  trakt: { href: "https://app.trakt.tv/history", label: "View Trakt watch history" },
 };
 
 function trackerWriteWatchedAt(item = {}) {
@@ -69,24 +182,23 @@ function trackerWriteTitle(item = {}) {
 
 function trackerWriteSummary(item = {}) {
   const provider = String(item.provider || "").toLowerCase();
-  const historyName = trackerHistory[provider]?.historyName || "tracker history";
   const title = trackerWriteTitle(item);
   const watchedAt = trackerWriteWatchedAt(item);
   const when = watchedAt ? ` on ${watchedAt}` : "";
   if (item.competing) {
-    return "Multiple write records could represent the same play. Plekt is holding them to avoid duplicates.";
+    return "Several updates could be for the same watch. Plekt paused them to avoid duplicates.";
   }
   const isUnsent = item.notSent ?? String(item.explanation || "").includes("It was not sent.");
   if (isUnsent) {
-    return "Plekt did not send this watch. Verify the title match and watch date before trying again.";
+    return "Plekt paused this update before sending it. Check the title match and watch date before trying again.";
   }
   if (provider === "simkl") {
-    return `Plekt will recheck Simkl for ${title}${when} and clear this hold if the watch date matches.`;
+    return `Plekt couldn’t confirm that Simkl recorded the watch for ${title}${when}. Checking the watch status clears this update when the date and time match.`;
   }
   if (provider === "trakt") {
-    return `Look for ${title}${when} in ${historyName}. If it is there, cancel this write to avoid a duplicate.`;
+    return `Plekt couldn’t confirm the watch for ${title}${when} in Trakt’s history.`;
   }
-  return `Plekt couldn't confirm delivery to the tracker. Check its history for ${title}${when} before retrying to avoid a duplicate.`;
+  return `Check for ${title}${when} in the tracker’s watch history before trying again.`;
 }
 
 function trackerWriteCard(item, state) {
@@ -96,12 +208,12 @@ function trackerWriteCard(item, state) {
   return `
     <article class="sync-attention-item sync-attention-item--tracker-write" data-sync-attention-item="${escapeAttribute(item.id)}">
       <div class="sync-attention-tracker-copy">
-        <h3>${escapeHtml(item.title || "Tracker write")}</h3>
+        <h3>${escapeHtml(item.title || "Watch update")}</h3>
         <p>${escapeHtml(trackerWriteSummary(item))}</p>
       </div>
       <div class="sync-attention-tracker-actions">
       ${history && !item.competing && !(item.notSent ?? String(item.explanation || "").includes("It was not sent.")) ? `<a class="button-ghost sync-attention-tracker-link" href="${history.href}" target="_blank" rel="noopener noreferrer">${history.label}</a>` : ""}
-        <button class="button-ghost sync-attention-skip" type="button" data-sync-attention-skip="${escapeAttribute(item.id)}" ${actionBusy ? "disabled" : ""} ${skipping ? 'aria-busy="true"' : ""}>${escapeHtml(skipping ? "Cancelling…" : "Cancel write")}</button>
+        <button class="button-ghost sync-attention-skip" type="button" data-sync-attention-skip="${escapeAttribute(item.id)}" ${actionBusy ? "disabled" : ""} ${skipping ? 'aria-busy="true"' : ""}>${escapeHtml(skipping ? "Cancelling…" : "Cancel update")}</button>
       </div>
     </article>`;
 }
@@ -175,17 +287,18 @@ export function renderTrackerWriteReview(items, renderItem) {
     const first = records[0];
     const title = first.groupTitle || first.title;
     const providers = [...new Set(records.map(({ provider }) => provider)
-      .filter(Boolean))].sort().map((provider) => provider === "simkl" ? "Simkl" : "Trakt");
+      .filter(Boolean))].sort().map(trackerLabel);
     const episodes = new Map();
     for (const item of records) {
       const code = item.episodeCode || "";
       if (!episodes.has(code)) episodes.set(code, []);
       episodes.get(code).push(item);
     }
-    const episodeCount = [...episodes.keys()].filter(Boolean).length;
+    const episodeCodes = [...episodes.keys()].filter(Boolean);
+    const episodeSummary = episodeCodes.length === 1 ? episodeCodes[0] : episodeCodes.length ? `${episodeCodes.length} episodes` : "";
     const meta = [
-      episodeCount ? `${episodeCount} ${episodeCount === 1 ? "episode" : "episodes"}` : "",
-      `${records.length} ${records.length === 1 ? "held write" : "held writes"}`,
+      episodeSummary,
+      `${records.length} ${records.length === 1 ? "update" : "updates"}`,
       providers.join(", "),
     ].filter(Boolean).join(" · ");
     const details = [...episodes].sort(([a], [b]) => a.localeCompare(b, undefined, { numeric: true }))
@@ -206,25 +319,25 @@ export function renderTrackerWriteReview(items, renderItem) {
         <label><input type="checkbox" data-tracker-review-select-all${selectedGroups.size === groups.size ? " checked" : ""}${disabled}> Select all</label>
         <span data-tracker-review-selection>${selectedGroups.size} of ${groups.size} titles selected</span>
         <div class="tracker-review-buttons">
-          <button type="button" class="button-ghost" data-tracker-review-cancel aria-describedby="trackerReviewCancelHelp"${trackerReviewBusy || !selectedGroups.size ? " disabled" : ""}>Cancel pending updates</button>
-          <button type="button" class="button-primary" data-tracker-review-recheck${disabled}>Recheck all</button>
+          <button type="button" class="button-ghost" data-tracker-review-cancel aria-describedby="trackerReviewCancelHelp"${trackerReviewBusy || !selectedGroups.size ? " disabled" : ""}>Cancel selected updates</button>
+          <button type="button" class="button-primary" data-tracker-review-recheck${disabled}>Check watch status</button>
         </div>
       </div>
-      <p id="trackerReviewCancelHelp" class="tracker-review-help">Cancel pending updates removes the held Simkl and Trakt watch updates for the movies and shows you check. Your local watch history and tracker history stay intact.</p>
+      <p id="trackerReviewCancelHelp" class="tracker-review-help">Cancelling removes the selected updates from Plekt’s sync queue and keeps watch history in Plekt and on your trackers.</p>
       <p class="tracker-review-help" data-tracker-review-status role="status"${trackerReviewStatus ? "" : " hidden"}>${escapeHtml(trackerReviewStatus)}</p>
       <div class="sync-attention-list">${groupRows}</div>
     </section>
     ${other.join("")}`;
 }
 
-async function requestTrackerReview(action, ids) {
+async function requestTrackerReview(cancel, ids) {
   const res = await fetch("/api/sync-attention", {
     method: "POST",
     headers: { ...buildAuthHeaders(state.token), "Content-Type": "application/json" },
-    body: JSON.stringify({ action, ids }),
+    body: JSON.stringify({ action: cancel ? "cancel-tracker-writes" : "recheck-tracker-writes", ids }),
   });
   const result = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(result.error || "Tracker review could not be updated.");
+  if (!res.ok) throw new Error(result.error || (cancel ? "Could not cancel the selected updates." : "Could not check watch status."));
   return result;
 }
 
@@ -259,6 +372,7 @@ export function bindTrackerWriteReview(container, { confirm, refresh, message })
     if (!button || trackerReviewBusy) return;
     const panel = button.closest("[data-tracker-review]");
     const cancel = button.hasAttribute("data-tracker-review-cancel");
+    const label = button.textContent;
     const ids = [...panel.querySelectorAll("[data-tracker-review-select]:checked")].flatMap((box) =>
       [...box.closest("[data-tracker-review-group]").querySelectorAll("[data-tracker-review-id]")].map((item) => item.dataset.trackerReviewId));
     trackerReviewBusy = true;
@@ -274,18 +388,18 @@ export function bindTrackerWriteReview(container, { confirm, refresh, message })
     };
     try {
       if (cancel && (!ids.length || !await confirm?.({
-        title: "Cancel pending watch updates?",
-        body: `Remove ${ids.length} held watch ${ids.length === 1 ? "update" : "updates"} for the checked movies and shows from Plekt’s sync queue. Your local watch history and tracker history stay intact.`,
+        title: "Cancel selected watch updates?",
+        body: `Remove ${ids.length} watch ${ids.length === 1 ? "update" : "updates"} from Plekt’s sync queue. Watch history stays in Plekt and on your trackers.`,
         confirmLabel: "Cancel updates",
         danger: true,
       }))) return;
       if (!cancel) {
-        button.textContent = "Rechecking…";
-        showStatus("Checking eligible writes against tracker history…");
+        button.textContent = "Checking…";
+        showStatus("Checking connected trackers for matching watches…");
       }
-      const result = await requestTrackerReview(cancel ? "cancel-tracker-writes" : "recheck-tracker-writes", ids);
-      const status = cancel ? `Cancelled ${result.cancelled} tracker writes.`
-        : `Recheck finished. ${result.confirmed ? `${result.confirmed} holds cleared.` : "No holds cleared."} ${result.remaining} still held. ${(result.errors || []).join(" ")}`.trim();
+      const result = await requestTrackerReview(cancel, ids);
+      const status = cancel ? `Cancelled ${result.cancelled} watch ${result.cancelled === 1 ? "update" : "updates"}.`
+        : `${result.confirmed} confirmed. ${result.remaining} still on hold. ${(result.errors || []).join(" ")}`.trim();
       showStatus(status);
       message(status, result.errors?.length ? "warning" : "success");
       if (cancel) selectedGroups.clear();
@@ -294,7 +408,7 @@ export function bindTrackerWriteReview(container, { confirm, refresh, message })
       message(error.message, "error");
     } finally {
       trackerReviewBusy = false;
-      if (!cancel) button.textContent = "Recheck all";
+      if (!cancel) button.textContent = label;
       button.removeAttribute("aria-busy");
       for (const control of controls) control.disabled = false;
       await refresh();

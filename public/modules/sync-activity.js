@@ -2,7 +2,7 @@ import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.2";
 import { state, elements } from "./state.js?v=2.3.0.0.2";
 import { escapeHtml, escapeAttribute, formatDate, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, platformName, platformIconMarkup } from "./utils.js?v=2.3.0.0.2";
 import { syncHistoryTone, syncHistoryActionLabel } from "./sync.js?v=2.3.0.0.2";
-import { bindTrackerWriteReview, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview } from "./sync-attention-cards.js?v=2.3.0.0.2";
+import { bindTrackerWriteReview, handleSimklEpisodeOrderReviewClick, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview, simklEpisodeOrderGuidance, syncActivityResultSummary } from "./sync-attention-cards.js?v=2.3.0.0.2";
 
 const REFRESH_MS = 15000;
 const SEARCH_DEBOUNCE_MS = 180;
@@ -672,7 +672,7 @@ function activityGroupRow(group = {}) {
     ? `Current issues are shown above the failed audit history when this group is expanded.`
     : hasTraktMatchIssue
       ? traktMatchIssueMessage(latest)
-      : latest.details || "";
+      : syncActivityResultSummary(latest);
   const groupActions = `
     <div class="sync-activity-group-actions" aria-label="${actionLabel}">
       <span class="sync-activity-group-actions-label">${actionLabel}</span>
@@ -755,7 +755,7 @@ function syncActivityEventRow(entry = {}, index = 0, groupKey = "", { open = ind
         ${routeLine(entry)}
         ${traktMatchIssueMessage(entry)
           ? `<div class="sync-activity-row-detail sync-activity-row-detail--warning">${escapeHtml(traktMatchIssueMessage(entry))}</div>`
-          : entry.details ? `<div class="sync-activity-row-detail">${escapeHtml(entry.details)}</div>` : ""}
+          : entry.details ? `<div class="sync-activity-row-detail">${escapeHtml(syncActivityResultSummary(entry))}</div>` : ""}
         ${historicalIssue ? `<div class="sync-activity-row-detail sync-activity-row-detail--muted">Older result for this item; only the newest result is actionable.</div>` : ""}
         ${awaitingRetry ? `<div class="sync-activity-row-detail sync-activity-row-detail--awaiting-retry" role="status">Awaiting retry — Retry all failed is working through the queue.</div>` : ""}
         <div class="sync-activity-row-actions">
@@ -838,7 +838,7 @@ function renderGroupEvents(groupKey, payload, container) {
       </div>
     </details>
   `;
-  container.innerHTML = `
+  container.innerHTML = `${failedOnly ? "" : simklEpisodeOrderGuidance(currentEvents, groupKey)}
     ${currentMarkup}
     ${historyMarkup}
   `;
@@ -2243,7 +2243,7 @@ export function renderSyncAttention() {
   const clientOnly = clientItems.length > 0 && clientItems.length === items.length;
   const trackerWriteOnly = items.length > 0 && items.every((item) => item.source === "tracker_write");
   const heading = trackerWriteOnly
-    ? "Tracker write review"
+    ? "Watch updates on hold"
     : affectedCount
     ? `${count} issue${count === 1 ? "" : "s"} · ${affectedCount} affected play${affectedCount === 1 ? "" : "s"}`
     : clientOnly
@@ -2251,8 +2251,8 @@ export function renderSyncAttention() {
       : `${count} issue${count === 1 ? "" : "s"} need${count === 1 ? "s" : ""} review`;
   const badge = blockingCount ? `${blockingCount} attention` : `${count} to review`;
   const hasMatchIssues = items.some((item) => item.source === "match_report");
-  const description = trackerWriteOnly ? `${count} held ${count === 1 ? "write" : "writes"}. Recheck them together or select groups to cancel.` : serverItems.length
-    ? (serverItems.every((item) => item.source === "unknown_tracker") ? "Your restored data includes a tracker this version can't sync." : serverItems.every((item) => item.source === "tracker_write" || item.source === "unknown_tracker") ? "Plekt is holding tracker writes it could not confirm. Review each one below." : "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below.")
+  const description = trackerWriteOnly ? "Plekt pauses watch updates it can’t safely send or confirm." : serverItems.length
+    ? (serverItems.every((item) => item.source === "unknown_tracker") ? "Your restored data includes a tracker this version can't sync." : serverItems.every((item) => item.source === "tracker_write" || item.source === "unknown_tracker") ? "Some watch updates to connected trackers are on hold." : "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below.")
     : hasMatchIssues
       ? "Choose the correct title to resolve these matches."
       : clientOnly
@@ -3363,7 +3363,7 @@ export function initSyncActivityEvents(callbacks = {}) {
       return;
     }
 
-    if (handleSyncActivityRetryClick(event, callbacks)) return;
+    if (handleSimklEpisodeOrderReviewClick(event, callbacks) || handleSyncActivityRetryClick(event, callbacks)) return;
 
     const older = event.target.closest("[data-sync-activity-group-more]");
     if (older) {

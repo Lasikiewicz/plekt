@@ -129,7 +129,7 @@ export function buildWatchProvenance(media = {}, {
     ingest_path: path,
     event: media.event,
     phase: media.phase,
-    item_id: media.item_id || media.itemId,
+    item_id: media.item_id || media.itemId || media.providerItemId || media.provider_item_id || media.watchProvenance?.item_id || media.watch_provenance?.item_id,
     session_id: media.session_id || media.sessionId,
     user: media.user,
     device: device || media.device || media.deviceName,

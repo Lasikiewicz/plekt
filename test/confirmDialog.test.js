@@ -130,8 +130,17 @@ test("clicking outside the dialog cancels without confirming", async () => {
   const previous = globalThis.document;
   const doc = globalThis.document = dialogDocument();
   try {
-    const result = openConfirmDialog();
+    const result = openConfirmDialog({
+      title: "Clear progress",
+      mediaHtml: `<div class="confirm-modal-media-info">Anaconda</div>`,
+      body: "Mark this movie unwatched and remove it from Resume across connected apps?",
+      confirmLabel: "Clear progress",
+      danger: true,
+    });
     const overlay = doc.overlays[0];
+    assert.match(overlay.innerHTML, /confirm-dialog--danger/);
+    assert.match(overlay.innerHTML, /confirm-dialog-media/);
+    assert.ok(overlay.innerHTML.indexOf("confirm-dialog-cancel") < overlay.innerHTML.indexOf("confirm-dialog-confirm"), "Cancel should appear before the confirm action");
     overlay.handlers.click({ target: overlay });
     assert.equal(await result, false);
   } finally { globalThis.document = previous; }

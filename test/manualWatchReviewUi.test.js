@@ -18,6 +18,7 @@ const {
   initManualWatchReview,
   loadManualWatchReview,
   orderManualWatchReviewGroups,
+  renderManualWatchReviewPage,
   reviewActionScopeLabel,
   manualWatchReviewConfirmation,
   manualWatchReviewNearbyLabel,
@@ -432,4 +433,248 @@ test("manual watch review summary still counts a new review after an earlier one
   state.activeView = "playlists";
   await loadManualWatchReview({ summaryOnly: true });
   assert.equal(state.manualWatchReviewCount, 1, "the approved review is no longer on the server, so it must not cancel out the new one");
+});
+
+test("manual watch review renders inline date choices without show/season confirm buttons and confirms directly without a popup", async (t) => {
+  const originalFetch = globalThis.fetch;
+  const originalDocument = globalThis.document;
+  const originalWindow = globalThis.window;
+  t.after(() => {
+    stopManualWatchReviewPolling();
+    globalThis.fetch = originalFetch;
+    globalThis.document = originalDocument;
+    globalThis.window = originalWindow;
+  });
+
+  const makeElement = () => ({
+    dataset: {},
+    innerHTML: "",
+    classList: { toggle() {} },
+    addEventListener(type, handler) {
+      this.handlers = this.handlers || {};
+      this.handlers[type] = handler;
+    },
+    querySelector() { return null; },
+    querySelectorAll() { return []; },
+    setAttribute() {},
+    removeAttribute() {},
+  });
+  const rows = makeElement();
+  const body = makeElement();
+  globalThis.document = {
+    body,
+    querySelector(selector) {
+      return selector === "#manualWatchReviewRows" ? rows : null;
+    },
+    querySelectorAll() { return []; },
+  };
+  globalThis.window = {
+    addEventListener() {},
+    setInterval() { return 1; },
+    clearInterval() {},
+  };
+
+  const episodeReview = {
+    id: "oak-s14e01",
+    media_type: "episode",
+    show_title: "The Curse of Oak Island",
+    season: 14,
+    episode: 1,
+    episode_title: "Silver Lining Playbook",
+    release_date: "2026-11-10",
+    observed_watched_at: "2026-11-10T00:00:00.000Z",
+    updated_at: Date.parse("2026-11-23T20:17:00.000Z"),
+    source: "plex",
+    episode_timing: null,
+  };
+  const movieReview = {
+    id: "movie-mongoose",
+    media_type: "movie",
+    title: "The Mongoose",
+    release_date: "2026-10-29",
+    updated_at: Date.parse("2026-11-23T20:17:00.000Z"),
+    source: "plex",
+  };
+  state.token = "test-token";
+  state.activeView = "manualWatchReview";
+  state.manualWatchReviews = [episodeReview, movieReview];
+  state.manualWatchReviewCount = 2;
+  state.manualWatchReviewLoaded = true;
+  state.manualWatchReviewLoading = false;
+  state.manualWatchReviewError = "";
+
+  const posts = [];
+  let confirmCalls = 0;
+  globalThis.fetch = async (url, options = {}) => {
+    posts.push({ url, body: JSON.parse(options.body || "{}") });
+    return { ok: true, status: 200, async json() { return { ok: true }; } };
+  };
+
+  initManualWatchReview({
+    openConfirmDialog: async () => { confirmCalls += 1; return true; },
+    setMessage() {},
+  });
+  renderManualWatchReviewPage();
+
+  // Seasons start collapsed by default on initial load
+  assert.doesNotMatch(rows.innerHTML, /manual-watch-review-season-details[^>]*\bopen\b/);
+
+  // Show and season headers have checkboxes, not duplicate Confirm/Dismiss buttons
+  assert.match(rows.innerHTML, /data-manual-watch-review-select="show"/);
+  assert.match(rows.innerHTML, /data-manual-watch-review-select="season"/);
+  assert.doesNotMatch(rows.innerHTML, /Confirm reviewed episodes/);
+  assert.doesNotMatch(rows.innerHTML, /Dismiss reviewed episodes/);
+  assert.doesNotMatch(rows.innerHTML, /Confirm Season 14/);
+  assert.doesNotMatch(rows.innerHTML, /Dismiss Season 14/);
+
+  // Both pending episode and movie show unified fact labels (Marked watched, Detected, Released, Will save),
+  // top-right Dismiss (mark unwatched), pill date options (no dropdown), and bottom-right Confirm watched
+  assert.match(rows.innerHTML, /manual-watch-review-fact-label">Marked watched<\/span>/);
+  assert.match(rows.innerHTML, /manual-watch-review-fact-label">Detected<\/span>/);
+  assert.match(rows.innerHTML, /manual-watch-review-fact-label">Released<\/span>/);
+  assert.match(rows.innerHTML, /manual-watch-review-fact-label">Will save<\/span>/);
+  assert.match(rows.innerHTML, /10 Nov 2026 \(air date\)/);
+  assert.match(rows.innerHTML, /29 Oct 2026 \(release date\)/);
+  assert.match(rows.innerHTML, /23 Nov 2026/);
+  assert.match(rows.innerHTML, /manual-watch-review-top-action[^>]*>[\s\S]*Dismiss \(mark unwatched\)/);
+  assert.match(rows.innerHTML, /manual-watch-review-confirm-action[^>]*>[\s\S]*Confirm watched/);
+  assert.doesNotMatch(rows.innerHTML, /<select\b/);
+  assert.doesNotMatch(rows.innerHTML, /Mark unwatched and clear review/);
+  assert.doesNotMatch(rows.innerHTML, /Confirm watched…/);
+
+  // Clicking inline Confirm watched on the episode saves directly with its inline air date and NO popup
+  const card = makeElement();
+  card.dataset.manualWatchReviewIds = episodeReview.id;
+  const confirmBtn = makeElement();
+  confirmBtn.disabled = false;
+  confirmBtn.closest = (selector) => selector.includes("data-manual-watch-review-id") ? card : null;
+  rows.handlers.click({
+    target: {
+      closest(selector) {
+        if (selector === "[data-manual-watch-review-confirm]") return confirmBtn;
+        return null;
+      },
+    },
+    button: 0,
+  });
+  for (let attempt = 0; attempt < 20 && !posts.length; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  assert.equal(confirmCalls, 0, "inline Confirm watched should save directly without opening a dialog");
+  assert.deepEqual(posts, [{
+    url: "/api/manual-watch-review/oak-s14e01/approve",
+    body: { mode: "release_day", watched_at: "2026-11-10T00:00:00.000Z", background_sync: true },
+  }]);
+});
+
+test("manual watch review submits bulk confirm in one background server request without requiring the page to stay open", async (t) => {
+  const makeElement = () => ({
+    dataset: {},
+    disabled: false,
+    innerHTML: "",
+    textContent: "",
+    className: "",
+    classList: { toggle() {} },
+    addEventListener(type, handler) { this.handlers = this.handlers || {}; this.handlers[type] = handler; },
+    querySelectorAll() { return []; },
+    querySelector() { return null; },
+    setAttribute() {},
+    removeAttribute() {},
+  });
+  const originalDocument = globalThis.document;
+  const originalWindow = globalThis.window;
+  const originalFetch = globalThis.fetch;
+  const rows = makeElement();
+  const status = makeElement();
+  const windowEvents = [];
+  globalThis.document = {
+    visibilityState: "visible",
+    querySelector(selector) {
+      if (selector === "#manualWatchReviewRows") return rows;
+      if (selector === "#manualWatchReviewStatus") return status;
+      return null;
+    },
+    querySelectorAll() { return []; },
+  };
+  globalThis.window = {
+    addEventListener(type) { windowEvents.push(type); },
+    setInterval() { return 1; },
+    clearInterval() {},
+  };
+  t.after(() => {
+    stopManualWatchReviewPolling();
+    globalThis.document = originalDocument;
+    globalThis.window = originalWindow;
+    globalThis.fetch = originalFetch;
+    state.manualWatchReviews = [];
+    state.manualWatchReviewCount = 0;
+  });
+
+  // Import the same versioned URL the review module uses, so both share one
+  // selection state after every develop restamp.
+  const { readFileSync } = await import("node:fs");
+  const bulkSpecifier = readFileSync(new URL("../public/modules/manual-watch-review.js", import.meta.url), "utf8")
+    .match(/"\.\/(manual-watch-review-bulk\.js\?v=[^"]+)"/)[1];
+  const { selectAllVisibleReviews, clearBulkReviewSelection } = await import(`../public/modules/${bulkSpecifier}`);
+  clearBulkReviewSelection({ clearDecisions: true });
+
+  const movie1 = { id: "bulk-m1", media_type: "movie", title: "Bulk Movie One", release_date: "2026-10-01", source: "plex" };
+  const movie2 = { id: "bulk-m2", media_type: "movie", title: "Bulk Movie Two", release_date: "2026-10-02", source: "plex" };
+  state.token = "test-token";
+  state.activeView = "manualWatchReview";
+  state.manualWatchReviews = [movie1, movie2];
+  state.manualWatchReviewCount = 2;
+  state.manualWatchReviewLoaded = true;
+  state.manualWatchReviewLoading = false;
+  state.manualWatchReviewError = "";
+
+  const posts = [];
+  const messages = [];
+  globalThis.fetch = async (url, options = {}) => {
+    posts.push({ url, method: options.method, body: JSON.parse(options.body || "{}") });
+    return {
+      ok: true,
+      status: 202,
+      async json() { return { ok: true, queued: true, background: true, accepted: 2, count: 0, reviewCount: 0 }; },
+    };
+  };
+
+  initManualWatchReview({
+    openConfirmDialog: async () => true,
+    setMessage(text, tone) { messages.push({ text, tone }); },
+  });
+  selectAllVisibleReviews([movie1, movie2], true);
+  renderManualWatchReviewPage();
+
+  const bulkBtn = makeElement();
+  bulkBtn.disabled = false;
+  bulkBtn.dataset.manualWatchReviewBulkAction = "approve";
+  rows.handlers.click({
+    target: {
+      closest(selector) {
+        if (selector === "[data-manual-watch-review-bulk-action]") return bulkBtn;
+        return null;
+      },
+    },
+    button: 0,
+  });
+  for (let i = 0; i < 10 && !posts.length; i += 1) await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+
+  assert.equal(posts.length, 1, "bulk confirm must submit all items in a single server request");
+  assert.deepEqual(posts[0], {
+    url: "/api/manual-watch-review/bulk",
+    method: "POST",
+    body: {
+      action: "approve",
+      items: [
+        { id: "bulk-m1", action: "approve", mode: "release_day", watched_at: "2026-10-01T00:00:00.000Z" },
+        { id: "bulk-m2", action: "approve", mode: "release_day", watched_at: "2026-10-02T00:00:00.000Z" },
+      ],
+    },
+  });
+  assert.equal(windowEvents.includes("beforeunload"), false, "bulk confirm must not require keeping the page open");
+  assert.doesNotMatch(rows.innerHTML, /Keep this page open/);
+  assert.match(rows.innerHTML, /No manual watch decisions are waiting/);
+  assert.match(messages.at(-1)?.text || "", /saving and syncing in the background/i);
 });

@@ -72,6 +72,7 @@ Part of the file map (with [file-map-public.md](file-map-public.md) and [file-ma
 | `retryAfter.js` | Bounded Retry-After parsing for numeric delays and HTTP dates, shared by the governor and metadata clients. |
 | `diskMaintenance.js` | Sweeps settled orphan artwork only after reading all tenants' file references; any unreadable tenant fails the sweep closed. |
 | `syncHistoryTelemetry.js` | Sync-history rows and dispatch telemetry: `recordSyncHistory`, `buildTelemetry`, `buildProgressTelemetry`, and the per-target telemetry readers. |
+| `syncHistoryTargetUpdate.js` | Updates a matching Sync Activity (`sync_history`) row's per-target status, overall status, and details in place once a queued background tracker write settles, moves to review, confirms on recheck, or is cancelled. |
 | `forceSyncRun.js` | `runForceSync`: the on-demand force sync run, its plan, and its progress. |
 | `scheduledConcurrency.js` | A small local worker pool for scheduled sync. It is kept separate from `concurrency.js` because its argument order differs. |
 | `syncOrchestrator.js` | Cross-platform propagation: `syncMediaPlaystate` / `syncMediaUnplayedPlaystate` / `syncMediaProgress` fan out normal events to the other platforms' clients, while `syncCanonicalPlaystate` replays Plekt's state to every configured destination; all use `TARGETS_BY_SOURCE` routing, echo-loop detection via `loopStore.checkAndClaim`, and result summaries written to telemetry. |

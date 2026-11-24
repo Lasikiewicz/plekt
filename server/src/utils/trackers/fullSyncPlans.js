@@ -3,6 +3,7 @@ import { db } from '../../db.js';
 import { trackerMediaIdentityKeys } from './traktClient.js';
 import { simklHistoryPayload } from './simklClient.js';
 import { SIMKL_FULL_SYNC_NORMAL_POLICY, estimateSimklFullSync } from './simklFullSyncPolicy.js';
+import { simklEpisodeOrderIdentity } from './simklEpisodeOrder.js';
 
 export const TRACKER_PREVIEW_TTL_MS=60*60_000;
 const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(k=>[k,canonical(value[k])])):value;
@@ -89,6 +90,10 @@ export function buildTrackerFullSyncItems(provider,local,remote,{pushSupported=t
     row.id=hash([side,operation,keys(media).sort(),row.watchedAt,reason]);rows.push(row);
   };
   for(const media of local) {
+    if (provider === 'simkl' && (media.simklOrderActivityId || simklEpisodeOrderIdentity(media)) && !media.simklOrderMatch) {
+      append(media,'tracker','skip',media.watched_at,'Plekt could not verify this episode on Simkl. Review its episode match.');
+      continue;
+    }
     const matches=remoteMatches(media);
     const heldWrite=holdMatches(media)[0];
     if(heldWrite) {append(media,'tracker','skip',media.watched_at,heldWrite.status==='settled'?'Recent delivery is waiting for remote state to settle':`An existing watched write is ${heldWrite.status}; resolve it in Sync Attention`);continue;}
@@ -97,6 +102,7 @@ export function buildTrackerFullSyncItems(provider,local,remote,{pushSupported=t
     if(matches.length) {
       const existing=matches[0].remoteWatchedAt;
       if(iso(media.watched_at)&&iso(existing)&&stamp(media.watched_at)!==stamp(existing))append(media,'tracker','date_difference',media.watched_at,'Existing watched date is preserved by add-only sync',existing);
+      else if (media.simklOrderActivityId) append(media,'tracker','skip',media.watched_at,'Already watched on Simkl',existing);
       continue;
     }
     if(reviewHeld(media)) {append(media,'tracker','skip',media.watched_at,'The tracker may already count this watched; resolve its review in Sync Attention');continue;}
@@ -141,7 +147,8 @@ export const trackerFullSyncFingerprint=state=>hash({connection:state.connection
   lan:Object.fromEntries(Object.entries(state.lan||{}).map(([target,items])=>[target,sorted(items)]))});
 
 export function storeTrackerFullSyncPlan(provider,state,{pushSupported=true,outboundOnly=false}={}) {
-  const items=buildTrackerFullSyncItems(provider,state.local,state.remote,{pushSupported,review:state.review,lan:state.lan,lanTargets:state.lanTargets,syncEnabled:state.syncEnabled,writeHolds:state.writeHolds});
+  const items=buildTrackerFullSyncItems(provider,state.local,state.remote,{pushSupported,review:state.review,lan:state.lan,lanTargets:state.lanTargets,syncEnabled:state.syncEnabled,writeHolds:state.writeHolds})
+    .filter(row => !state.activityGroupKey || row.side === 'tracker');
   const id=crypto.randomUUID(),createdAt=Date.now(),expiresAt=createdAt+TRACKER_PREVIEW_TTL_MS;
   const publicItems=items.map(({media,...row})=>row);
   const counts={add:items.filter(r=>r.operation==='add').length,update:0,remove:0,dateDifferences:items.filter(r=>r.operation==='date_difference').length,skip:items.filter(r=>r.operation!=='add').length};
@@ -149,7 +156,7 @@ export function storeTrackerFullSyncPlan(provider,state,{pushSupported=true,outb
   const preview={id,createdAt,expiresAt,items:publicItems,counts,requestEstimate:{batchRequests:provider==='simkl'?4*Math.ceil(sends/100):null,verificationMaxRequests:provider==='simkl'?18:null,remainingQuota:state.quotaRemaining??null,
     // Unknown allowance stays unknown in the estimate; it is never assumed.
     ...(provider==='simkl'?{pacing:estimateSimklFullSync(sends,{quotaLimit:state.quotaLimit,quotaRemaining:state.quotaRemaining,policy:SIMKL_FULL_SYNC_NORMAL_POLICY})}:{})}};
-  const plan={id,provider,createdAt,expiresAt,status:'ready',fingerprint:trackerFullSyncFingerprint(state),connection:state.connection,items,preview,outboundOnly};
+  const plan={id,provider,createdAt,expiresAt,status:'ready',fingerprint:trackerFullSyncFingerprint(state),connection:state.connection,items,preview,outboundOnly,activityGroupKey:state.activityGroupKey};
   db.prepare('INSERT INTO settings(id,data,updated_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at')
     .run(`tracker-full-sync-plan:${provider}`,JSON.stringify(plan),createdAt);
   return plan;

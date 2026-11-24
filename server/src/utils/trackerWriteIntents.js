@@ -4,6 +4,8 @@ import { getTrackerProtocolAdapter as getTrackerAdapter, trackerProviderIds } fr
 import { unknownTrackerProviderData } from "./trackerConnectionRepo.js";
 import { watchedPlayedSyncEnabled } from "./syncFlags.js";
 import { createPerUserState } from "./perUserState.js";
+import { updateSyncHistoryTargetOutcome } from "./syncHistoryTargetUpdate.js";
+import { TARGET_DECISIONS } from "./watchSyncPolicy.js";
 
 export const TRACKER_INTENT_RETENTION_MS = 30 * 86400_000;
 // Ordinary Simkl watched intents share one due time so the worker can send them
@@ -118,8 +120,19 @@ export function trackerRetryRecordIds(now = Date.now()) {
 }
 
 export function cancelTrackerWriteIntent(id) {
+  const existing = read(id);
   const now = Date.now();
-  return db.prepare("UPDATE tracker_write_intents SET status='cancelled',settled_at=?,updated_at=? WHERE id=? AND status='review'").run(now, now, id).changes === 1;
+  const changed = db.prepare("UPDATE tracker_write_intents SET status='cancelled',settled_at=?,updated_at=? WHERE id=? AND status='review'").run(now, now, id).changes === 1;
+  if (changed && existing?.provider === "simkl") {
+    updateSyncHistoryTargetOutcome(existing, {
+      target: "simkl",
+      status: "skipped",
+      detail: "Held Simkl write cancelled",
+      decision: "cancelled_by_user",
+      dismissed: true,
+    });
+  }
+  return changed;
 }
 
 // Dispatch can arrive without the row id, moments after the same watch row
@@ -197,6 +210,20 @@ export function finishTrackerWriteIntent(id, status, error = "", remoteEventId =
   if (!intent || !trackerIntentConnectionCurrent(intent)) return;
   db.prepare("UPDATE tracker_write_intents SET status=?,last_error=?,remote_event_id=COALESCE(?,remote_event_id),settled_at=?,updated_at=?,due_at=? WHERE id=?")
     .run(status, error, remoteEventId == null ? null : String(remoteEventId), terminal.has(status) ? now : null, now, now + Math.min(6 * 3600_000, 60_000 * 5 ** Math.max(0, intent.attempts - 1)), id);
+  if (intent.provider === "simkl" && ["settled", "review", "rejected", "cancelled"].includes(status)) {
+    const isPolicySkip = /alternate episode orders|alternate numbering|unwatches are not sent|historical sync policy/i.test(String(error || ""));
+    const mappedStatus = status === "settled" ? "success" : status === "review" ? "error" : "skipped";
+    const mappedDetail = status === "settled"
+      ? "Watched state confirmed on Simkl"
+      : String(error || "").trim() || (status === "review" ? "Simkl write held for review" : status === "rejected" ? "Simkl did not match this item" : "Queued Simkl write cancelled");
+    updateSyncHistoryTargetOutcome(intent, {
+      target: "simkl",
+      status: mappedStatus,
+      detail: mappedDetail,
+      decision: status === "cancelled" ? (isPolicySkip ? TARGET_DECISIONS.SKIPPED_BY_POLICY : "cancelled_by_user") : "",
+      dismissed: status === "cancelled",
+    });
+  }
 }
 
 export function settleLinkedTrackerWriteIntent(provider, connection, media = {}, action = "watched", remoteEventId = null) {
@@ -276,9 +303,9 @@ export function trackerWriteAttentionItems() {
       watchedAt: intent.watched_at,
       reason: intent.last_error || "Tracker write requires review", intentId: intent.id,
       notSent: knownUnsent, competing,
-      source: "tracker_write", status: "review", createdAt: intent.created_at, canSkip: true, skipLabel: "Cancel this write",
-      skipTitle: "Cancel this tracker write?", explanationHeading: "Why this write is held",
-      skipNote: "Cancelling means Plekt will not send this write. Local watch history is not changed.",
+      source: "tracker_write", status: "review", createdAt: intent.created_at, canSkip: true, skipLabel: "Cancel update",
+      skipTitle: "Cancel this watch update?", explanationHeading: "Why this update is on hold",
+      skipNote: "Cancelling removes the update from Plekt’s sync queue and keeps watch history in Plekt and on your trackers.",
       summary: intent.last_error || "Tracker write requires review", explanation, recommendations,
     };
   }).concat(unknownTrackerAttentionItems());

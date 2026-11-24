@@ -5,6 +5,8 @@ export const DEFAULT_BULK_REVIEW_MODE = "episode_timing";
 
 const selectedIds = new Set();
 let inlineDateItems = new Map();
+let sharedBulkMode = "";
+let sharedCustomValue = "";
 let bulkBusy = false;
 
 export function isBulkSelectableReview(review = {}) {
@@ -78,7 +80,7 @@ function formatDateDayOnly(value = "") {
   return formatted || String(value).slice(0, 10);
 }
 
-function displayUnitKey(review = {}) {
+export function displayUnitKey(review = {}) {
   if (!isEpisode(review)) return `movie:${String(review.id)}`;
   const media = review.media || {};
   const ids = review.showIds || review.show_ids || media.showIds || media.show_ids || {};
@@ -88,9 +90,11 @@ function displayUnitKey(review = {}) {
   return `ep:${showKey}:s${season}e${episode}`;
 }
 
-export function clearBulkReviewSelection() {
+export function clearBulkReviewSelection({ clearDecisions = false } = {}) {
   selectedIds.clear();
-  inlineDateItems.clear();
+  sharedBulkMode = "";
+  sharedCustomValue = "";
+  if (clearDecisions) inlineDateItems.clear();
 }
 
 export function isBulkReviewBusy() {
@@ -102,13 +106,18 @@ export function setBulkReviewBusy(busy) {
 }
 
 export function pruneBulkReviewSelection(reviews = []) {
-  const valid = new Set(
-    (Array.isArray(reviews) ? reviews : [])
-      .filter(isBulkSelectableReview)
-      .map((review) => String(review.id)),
-  );
+  const list = (Array.isArray(reviews) ? reviews : []).filter(isBulkSelectableReview);
+  const validIds = new Set(list.map((review) => String(review.id)));
+  const validKeys = new Set(list.map(displayUnitKey));
   for (const id of [...selectedIds]) {
-    if (!valid.has(id)) selectedIds.delete(id);
+    if (!validIds.has(id)) selectedIds.delete(id);
+  }
+  for (const key of [...inlineDateItems.keys()]) {
+    if (!validKeys.has(key)) inlineDateItems.delete(key);
+  }
+  if (!selectedIds.size) {
+    sharedBulkMode = "";
+    sharedCustomValue = "";
   }
 }
 
@@ -132,6 +141,8 @@ export function toggleBulkReviewIds(ids = [], checked = null) {
     if (shouldSelect) selectedIds.add(id);
     else selectedIds.delete(id);
   }
+  sharedBulkMode = "";
+  if (!selectedIds.size) sharedCustomValue = "";
 }
 
 export function selectedBulkReviews(allReviews = []) {
@@ -141,8 +152,10 @@ export function selectedBulkReviews(allReviews = []) {
 
 export function selectAllVisibleReviews(visibleReviews = [], checked = true, { cap = BULK_REVIEW_BATCH_CAP } = {}) {
   const selectable = (Array.isArray(visibleReviews) ? visibleReviews : []).filter(isBulkSelectableReview);
+  sharedBulkMode = "";
   if (!checked) {
     for (const review of selectable) selectedIds.delete(String(review.id));
+    if (!selectedIds.size) sharedCustomValue = "";
     return { selectedUnits: 0, capped: false };
   }
   const units = new Set();
@@ -204,7 +217,10 @@ export function bulkSelectionSummary(selectedReviews = []) {
 export function effectiveBulkMode(requestedMode, summary) {
   const mode = String(requestedMode || DEFAULT_BULK_REVIEW_MODE);
   if (mode === "episode_timing" && !summary?.episodeTimingAllowed) {
-    return "release_day";
+    return summary?.hasAnyReleaseDate ? "release_day" : "detected";
+  }
+  if (mode === "release_day" && summary && !summary.hasAnyReleaseDate) {
+    return "detected";
   }
   return mode;
 }
@@ -291,17 +307,6 @@ export function summarizeBulkConfirmItems(items = []) {
   return parts.join(" · ");
 }
 
-function bulkSubmitLabel(items) {
-  if (items.some((item) => item.mode === "unwatched")) return "Save watch decisions";
-  return `Mark ${items.length} item${items.length === 1 ? "" : "s"} watched`;
-}
-
-function bulkConfirmDescription(items) {
-  return items.some((item) => item.mode === "unwatched")
-    ? "Plekt will save these decisions. Items marked unwatched will be cleared from review and marked unplayed in connected apps."
-    : "Plekt will save these watch dates and sync to your connected apps.";
-}
-
 export function buildBulkConfirmItems(reviews = [], requestedMode = DEFAULT_BULK_REVIEW_MODE) {
   const list = (Array.isArray(reviews) ? reviews : []).filter(isBulkSelectableReview);
   const grouped = new Map();
@@ -355,315 +360,207 @@ export function buildBulkConfirmItems(reviews = [], requestedMode = DEFAULT_BULK
   });
 }
 
-function itemOptionHtml(value, label, { selected = false, disabled = false } = {}) {
-  return `<option value="${escapeAttribute(value)}"${selected ? " selected" : ""}${disabled ? " disabled" : ""}>${escapeHtml(label)}</option>`;
-}
-
-function itemSourceMetaText(item) {
-  const parts = [];
-  if (item.sources?.length) parts.push(`Flagged on ${item.sources.join(", ")}`);
-  if (item.releaseDate) {
-    parts.push(`${item.isEpisode ? "Aired" : "Released"} ${formatDateDayOnly(item.releaseDate)}`);
-  }
-  return parts.join(" · ");
-}
-
 function itemDisplayLabel(item) {
   if (!item.isEpisode) return item.title;
   return `${item.title} ${item.code}${item.episodeTitle ? ` - ${item.episodeTitle}` : ""}`;
 }
 
-function buildSelectedWatchDates(reviews, mode) {
-  return buildBulkConfirmItems(reviews, mode).map((item) => {
-    const previous = inlineDateItems.get(item.key);
-    if (!previous?.edited) return item;
-    return {
-      ...item,
-      mode: effectiveItemMode(previous.mode, item.hasReleaseDate, item.hasEpisodeTiming),
-      customValue: previous.customValue,
-      edited: true,
-    };
-  });
+function mergeWithStoredItem(item) {
+  const previous = inlineDateItems.get(item.key);
+  if (!previous?.edited) return item;
+  return {
+    ...item,
+    mode: effectiveItemMode(previous.mode, item.hasReleaseDate, item.hasEpisodeTiming),
+    customValue: previous.customValue || item.customValue,
+    edited: true,
+  };
 }
 
-function renderBulkItemControls(item, maxDateTime, disabled = false) {
-  const releaseLabel = `${item.isEpisode ? "Air date" : "Release date"}${item.hasReleaseDate ? "" : " (unavailable)"}`;
-  const episodeTimingLabel = item.hasEpisodeTiming
-    ? "Same as other episodes"
-    : "Same as other episodes (no watched episodes in season)";
+export function syncInlineReviewItems(reviews = []) {
+  const items = buildBulkConfirmItems(reviews, DEFAULT_BULK_REVIEW_MODE).map(mergeWithStoredItem);
+  inlineDateItems = new Map(items.map((item) => [item.key, item]));
+  return inlineDateItems;
+}
+
+export function getInlineReviewDecisionItem(reviews = []) {
+  const list = (Array.isArray(reviews) ? reviews : [reviews]).filter(isBulkSelectableReview);
+  if (!list.length) return null;
+  const built = buildBulkConfirmItems(list, DEFAULT_BULK_REVIEW_MODE)[0];
+  if (!built) return null;
+  const merged = mergeWithStoredItem(built);
+  inlineDateItems.set(merged.key, merged);
+  return merged;
+}
+
+export function validateInlineDecision(item, { now = Date.now() } = {}) {
+  if (!item) return { ok: false, error: "Watch decision is unavailable.", selector: "" };
+  const decision = bulkItemDecision(item);
+  const title = itemDisplayLabel(item);
+  if (decision.mode === "custom" && !decision.watchedAt) {
+    return {
+      ok: false,
+      error: `Choose a valid date and time for "${title}".`,
+      item,
+      selector: "[data-bulk-confirm-item-datetime]",
+    };
+  }
+  if (decision.watchedAt && Date.parse(decision.watchedAt) > now + 60_000) {
+    return {
+      ok: false,
+      error: `The watch date for "${title}" is in the future. Choose an earlier date.`,
+      item,
+      selector: item.mode === "custom" ? "[data-bulk-confirm-item-datetime]" : "[data-bulk-item-mode-choice]",
+    };
+  }
+  return { ok: true, decision };
+}
+
+export function validateBulkSelectionDecisions(items = [], { now = Date.now() } = {}) {
+  const itemDecisions = new Map();
+  for (const item of Array.isArray(items) ? items : []) {
+    const check = validateInlineDecision(item, { now });
+    if (!check.ok) return check;
+    for (const id of item.reviewIds) {
+      itemDecisions.set(id, check.decision);
+    }
+  }
+  return { ok: true, itemDecisions };
+}
+
+function dateChoicePillHtml({ value, label, selected = false, disabled = false, title = "", dataAttr = "", keyAttr = "" } = {}) {
+  return `<button class="manual-watch-review-date-pill${selected ? " is-selected" : ""}" type="button" ${dataAttr}="${escapeAttribute(value)}"${keyAttr ? ` ${keyAttr}` : ""} aria-pressed="${selected ? "true" : "false"}"${disabled ? " disabled" : ""}${title ? ` title="${escapeAttribute(title)}"` : ""}>${escapeHtml(label)}</button>`;
+}
+
+export function renderInlineReviewDecisionBarHtml(reviews = [], factsHtml = "", { disabled = false } = {}) {
+  const item = getInlineReviewDecisionItem(reviews);
+  if (!item) return "";
+  const isDisabled = disabled || bulkBusy;
+  const maxDateTime = toDateTimeInputValue(new Date());
   const label = escapeAttribute(itemDisplayLabel(item));
   const key = escapeAttribute(item.key);
-  const options = [
-    ...(item.isEpisode ? [itemOptionHtml("episode_timing", episodeTimingLabel, { selected: item.mode === "episode_timing", disabled: !item.hasEpisodeTiming })] : []),
-    itemOptionHtml("release_day", releaseLabel, { selected: item.mode === "release_day", disabled: !item.hasReleaseDate }),
-    itemOptionHtml("detected", "Detection time", { selected: item.mode === "detected" }),
-    itemOptionHtml("now", "Now", { selected: item.mode === "now" }),
-    itemOptionHtml("custom", "Pick date & time…", { selected: item.mode === "custom" }),
-    itemOptionHtml("unwatched", "Mark unwatched and clear review", { selected: item.mode === "unwatched" }),
+  const keyAttr = `data-bulk-item-key="${key}"`;
+  const pills = [
+    ...(item.isEpisode ? [dateChoicePillHtml({
+      value: "episode_timing",
+      label: "Same as other episodes",
+      selected: item.mode === "episode_timing",
+      disabled: isDisabled || !item.hasEpisodeTiming,
+      title: item.hasEpisodeTiming ? "" : "No other watched episodes in this season",
+      dataAttr: "data-bulk-item-mode-choice",
+      keyAttr,
+    })] : []),
+    dateChoicePillHtml({
+      value: "release_day",
+      label: item.isEpisode ? "Air date" : "Release date",
+      selected: item.mode === "release_day",
+      disabled: isDisabled || !item.hasReleaseDate,
+      title: item.hasReleaseDate ? "" : `${item.isEpisode ? "Air" : "Release"} date unavailable`,
+      dataAttr: "data-bulk-item-mode-choice",
+      keyAttr,
+    }),
+    dateChoicePillHtml({
+      value: "detected",
+      label: "Detection time",
+      selected: item.mode === "detected",
+      disabled: isDisabled,
+      dataAttr: "data-bulk-item-mode-choice",
+      keyAttr,
+    }),
+    dateChoicePillHtml({
+      value: "now",
+      label: "Now",
+      selected: item.mode === "now",
+      disabled: isDisabled,
+      dataAttr: "data-bulk-item-mode-choice",
+      keyAttr,
+    }),
+    dateChoicePillHtml({
+      value: "custom",
+      label: "Pick date & time…",
+      selected: item.mode === "custom",
+      disabled: isDisabled,
+      dataAttr: "data-bulk-item-mode-choice",
+      keyAttr,
+    }),
   ].join("");
-  return `
-    <div class="manual-watch-review-bulk-item-controls">
-      <select class="field manual-watch-review-bulk-item-select" data-bulk-confirm-item-mode data-bulk-item-key="${key}" aria-label="Watch decision for ${label}"${disabled ? " disabled" : ""}>
-        ${options}
-      </select>
-      <input class="field manual-watch-review-bulk-item-datetime" type="datetime-local" data-bulk-confirm-item-datetime data-bulk-item-key="${key}" value="${escapeAttribute(item.customValue)}" max="${escapeAttribute(maxDateTime)}" aria-label="Custom date and time for ${label}"${item.mode === "custom" ? "" : " hidden"}${disabled ? " disabled" : ""} />
-    </div>
-  `;
-}
-
-function syncBulkItemPreview(row, item) {
-  const preview = row?.querySelector("[data-bulk-item-preview]");
-  if (preview) preview.textContent = describeItemWatchDatePreview(item);
-}
-
-function updateBulkItemDate(target, items) {
-  const select = target.closest?.("[data-bulk-confirm-item-mode]");
-  const control = select || target.closest?.("[data-bulk-confirm-item-datetime]");
-  const item = control && items.get(control.dataset.bulkItemKey);
-  if (!item) return null;
-  const row = control.closest("[data-bulk-item-row]");
-  if (select) {
-    item.mode = effectiveItemMode(select.value, item.hasReleaseDate, item.hasEpisodeTiming);
-    const field = row?.querySelector("[data-bulk-confirm-item-datetime]");
-    if (field) field.hidden = item.mode !== "custom";
-  } else {
-    item.customValue = control.value;
-  }
-  syncBulkItemPreview(row, item);
-  return item;
-}
-
-export function renderBulkConfirmDialog({
-  items = [],
-  summary,
-  activeMode = DEFAULT_BULK_REVIEW_MODE,
-  sharedCustomValue = "",
-  maxDateTime = toDateTimeInputValue(new Date()),
-  heading = "Review watch decisions",
-} = {}) {
-  const resolvedSummary = summary || bulkSelectionSummary(items.flatMap((item) => item.reviews || []));
-  const effectiveApplyMode = effectiveBulkMode(activeMode, resolvedSummary);
-  const subject = selectionSubjectLabel(resolvedSummary);
-  const rowsHtml = items.map((item) => {
-    const sourceMeta = itemSourceMetaText(item);
-    return `
-      <li class="manual-watch-review-bulk-item-row" data-bulk-item-row data-bulk-item-key="${escapeAttribute(item.key)}">
-        <div class="manual-watch-review-bulk-item-info">
-          <div class="manual-watch-review-bulk-item-heading">
-            ${item.isEpisode
-              ? `<span class="watch-date-episode-code">${escapeHtml(item.code)}</span>`
-              : `<span class="manual-watch-review-bulk-item-kind">Movie</span>`}
-            <span class="manual-watch-review-bulk-item-title">${escapeHtml(item.title)}</span>
-            ${item.isEpisode && item.episodeTitle ? `<span class="manual-watch-review-bulk-item-ep-title">${escapeHtml(item.episodeTitle)}</span>` : ""}
-          </div>
-          ${sourceMeta ? `<div class="manual-watch-review-bulk-item-meta">${escapeHtml(sourceMeta)}</div>` : ""}
-          <div class="manual-watch-review-bulk-item-preview"><span data-bulk-item-preview aria-live="polite">${escapeHtml(describeItemWatchDatePreview(item))}</span></div>
-        </div>
-        ${renderBulkItemControls(item, maxDateTime)}
-      </li>
-    `;
-  }).join("");
-
-  const episodeAllLabel = !resolvedSummary.episodeTimingAllowed
-    ? "Same as other episodes (none available)"
-    : resolvedSummary.episodeTimingCount < resolvedSummary.displayCount
-      ? "Same as other episodes where available"
-      : "Same as other episodes";
-  const breakdown = summarizeBulkConfirmItems(items);
 
   return `
-    <div class="watch-date-overlay manual-watch-review-bulk-overlay" role="dialog" aria-modal="true" aria-label="${escapeAttribute(heading)}">
-      <div class="watch-date-dialog manual-watch-review-bulk-dialog">
-        <div class="watch-date-head">
-          <div class="watch-date-head-text">
-            <h3>${escapeHtml(heading)}</h3>
-            <p class="watch-date-sub">${escapeHtml(subject)}</p>
-          </div>
-          <button class="watch-date-close" type="button" data-bulk-confirm-cancel aria-label="Cancel">&times;</button>
+    <div class="manual-watch-review-inline-bar" data-bulk-item-row ${keyAttr}>
+      <div class="manual-watch-review-facts">
+        ${factsHtml}
+        <div class="manual-watch-review-fact manual-watch-review-fact--will-save" data-bulk-item-preview-wrap ${keyAttr}>
+          <span class="manual-watch-review-fact-label">Will save</span>
+          <span class="manual-watch-review-fact-value" data-bulk-item-preview aria-live="polite">${escapeHtml(describeItemWatchDatePreview(item))}</span>
         </div>
-        <div class="manual-watch-review-bulk-summary" aria-live="polite">
-          <span class="manual-watch-review-bulk-summary-title" data-bulk-confirm-description>${escapeHtml(bulkConfirmDescription(items))}</span>
-          <span class="manual-watch-review-bulk-summary-counts" data-bulk-confirm-summary>${escapeHtml(breakdown)}</span>
-        </div>
-        <div class="manual-watch-review-bulk-apply-all">
-          <label class="manual-watch-review-bulk-apply-label">
-            <span>Set all watch dates to</span>
-            <select class="field" data-bulk-confirm-apply-all aria-label="Set watched date option for all selected items">
-              <option value="episode_timing"${effectiveApplyMode === "episode_timing" ? " selected" : ""}${resolvedSummary.episodeTimingAllowed ? "" : " disabled"}>${escapeHtml(episodeAllLabel)}</option>
-              <option value="release_day"${effectiveApplyMode === "release_day" ? " selected" : ""}>Release / air date</option>
-              <option value="detected"${effectiveApplyMode === "detected" ? " selected" : ""}>Detection time</option>
-              <option value="now"${effectiveApplyMode === "now" ? " selected" : ""}>Now</option>
-              <option value="custom"${effectiveApplyMode === "custom" ? " selected" : ""}>Pick date &amp; time…</option>
-            </select>
-          </label>
-          <input class="field manual-watch-review-bulk-shared-datetime" type="datetime-local" data-bulk-confirm-shared-datetime value="${escapeAttribute(sharedCustomValue || "")}" max="${escapeAttribute(maxDateTime)}" aria-label="Shared custom date and time for all selected items"${effectiveApplyMode === "custom" ? "" : " hidden"} />
-        </div>
-        <div class="watch-date-episodes manual-watch-review-bulk-items">
-          <div class="watch-date-episodes-head">
-            <span>Selected items</span>
-            <span>${items.length}</span>
-          </div>
-          <ul class="watch-date-episode-list manual-watch-review-bulk-item-list">${rowsHtml}</ul>
-        </div>
-        <p class="manual-watch-review-bulk-dialog-error" data-bulk-confirm-error role="alert" hidden></p>
-        <div class="manual-watch-review-bulk-dialog-footer">
-          <div class="manual-watch-review-bulk-dialog-actions">
-            <button class="button-ghost" type="button" data-bulk-confirm-cancel>Cancel</button>
-            <button class="button-primary" type="button" data-bulk-confirm-submit>${escapeHtml(bulkSubmitLabel(items))}</button>
-          </div>
-        </div>
+      </div>
+      <div class="manual-watch-review-date-options" role="group" aria-label="Watch date options for ${label}">
+        ${pills}
+        <input class="field manual-watch-review-bulk-item-datetime" type="datetime-local" data-bulk-confirm-item-datetime ${keyAttr} value="${escapeAttribute(item.customValue)}" max="${escapeAttribute(maxDateTime)}" aria-label="Custom date and time for ${label}"${item.mode === "custom" ? "" : " hidden"}${isDisabled ? " disabled" : ""} />
+      </div>
+      <div class="manual-watch-review-confirm-action manual-watch-review-actions">
+        <button class="button-primary" type="button" data-manual-watch-review-confirm${isDisabled ? " disabled" : ""}>Confirm watched</button>
       </div>
     </div>
   `;
 }
 
-export function openBulkConfirmDialog({ reviews = [], initialMode = DEFAULT_BULK_REVIEW_MODE, items: initialItems, heading } = {}) {
-  if (typeof document === "undefined" || !document.body) return Promise.resolve(null);
-  const selectable = (Array.isArray(reviews) ? reviews : []).filter(isBulkSelectableReview);
-  if (!selectable.length) return Promise.resolve(null);
+function escapeSelectorAttr(value = "") {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") return CSS.escape(String(value));
+  return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+}
 
-  const summary = bulkSelectionSummary(selectable);
-  let applyMode = effectiveBulkMode(initialMode, summary);
-  const items = initialItems || buildBulkConfirmItems(selectable, applyMode);
-  const itemByKey = new Map(items.map((item) => [item.key, item]));
-  const sharedCustomValue = items[0]?.customValue || toDateTimeInputValue(new Date());
+function syncInlineItemUi(scopeRoot, item, { focusCustom = false } = {}) {
+  if (!scopeRoot || !item) return;
+  const escaped = escapeSelectorAttr(item.key);
+  const preview = scopeRoot.querySelector?.(`[data-bulk-item-preview-wrap][data-bulk-item-key="${escaped}"] [data-bulk-item-preview]`)
+    || scopeRoot.querySelector?.("[data-bulk-item-preview]");
+  if (preview) preview.textContent = describeItemWatchDatePreview(item);
+  const row = scopeRoot.querySelector?.(`[data-bulk-item-row][data-bulk-item-key="${escaped}"]`) || scopeRoot;
+  for (const pill of row.querySelectorAll?.("[data-bulk-item-mode-choice]") || []) {
+    const selected = pill.dataset.bulkItemModeChoice === item.mode;
+    pill.classList?.toggle?.("is-selected", selected);
+    pill.setAttribute?.("aria-pressed", selected ? "true" : "false");
+  }
+  const dt = row.querySelector?.("[data-bulk-confirm-item-datetime]");
+  if (dt) {
+    dt.hidden = item.mode !== "custom";
+    if (item.mode === "custom") {
+      if (item.customValue && dt.value !== item.customValue) dt.value = item.customValue;
+      if (focusCustom) dt.focus?.();
+    }
+  }
+}
 
-  if (document.body.querySelector(".manual-watch-review-bulk-overlay")) return Promise.resolve(null);
-  const trigger = document.activeElement;
-  document.body.insertAdjacentHTML("beforeend", renderBulkConfirmDialog({
-    items,
-    summary,
-    activeMode: applyMode,
-    sharedCustomValue,
-    ...(heading ? { heading } : {}),
-  }));
-  const overlay = document.body.querySelector(".manual-watch-review-bulk-overlay");
-  if (!overlay) return Promise.resolve(null);
-
-  const errorEl = overlay.querySelector("[data-bulk-confirm-error]");
-  const summaryEl = overlay.querySelector("[data-bulk-confirm-summary]");
-  const descriptionEl = overlay.querySelector("[data-bulk-confirm-description]");
-  const submitButton = overlay.querySelector("[data-bulk-confirm-submit]");
-  const rows = new Map([...overlay.querySelectorAll("[data-bulk-item-row]")].map((row) => [row.dataset.bulkItemKey, row]));
-  const setDialogError = (message = "") => {
-    if (!errorEl) return;
-    errorEl.textContent = message;
-    errorEl.hidden = !message;
-  };
-  const syncSummary = () => {
-    if (summaryEl) summaryEl.textContent = summarizeBulkConfirmItems(items);
-    if (descriptionEl) descriptionEl.textContent = bulkConfirmDescription(items);
-    if (submitButton) submitButton.textContent = bulkSubmitLabel(items);
-  };
-  const syncRowPreview = (item) => {
-    const row = rows.get(item.key);
-    syncBulkItemPreview(row, item);
-    return row;
-  };
-
-  return new Promise((resolve) => {
-    const cleanup = (result) => {
-      document.removeEventListener("keydown", onKeyDown);
-      overlay.remove();
-      trigger?.focus();
-      resolve(result);
-    };
-
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        cleanup(null);
-      } else if (event.key === "Tab") {
-        const controls = overlay.querySelectorAll("button:not(:disabled), select:not(:disabled), input:not(:disabled):not([hidden])");
-        const start = event.shiftKey ? controls[controls.length - 1] : controls[0];
-        const end = event.shiftKey ? controls[0] : controls[controls.length - 1];
-        if (document.activeElement === end || !overlay.contains(document.activeElement)) {
-          event.preventDefault();
-          start?.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", onKeyDown);
-    overlay.querySelector("[data-bulk-confirm-apply-all]")?.focus();
-
-    overlay.addEventListener("change", (event) => {
-      const applySelect = event.target.closest?.("[data-bulk-confirm-apply-all]");
-      if (applySelect) {
-        applyMode = effectiveBulkMode(applySelect.value, summary);
-        const sharedInput = overlay.querySelector("[data-bulk-confirm-shared-datetime]");
-        if (sharedInput) {
-          sharedInput.hidden = applyMode !== "custom";
-          if (applyMode === "custom" && !sharedInput.value) {
-            sharedInput.value = sharedCustomValue || toDateTimeInputValue(new Date());
-          }
-        }
-        for (const item of items) {
-          item.mode = effectiveItemMode(applyMode, item.hasReleaseDate, item.hasEpisodeTiming);
-          if (applyMode === "custom" && sharedInput?.value) {
-            item.customValue = sharedInput.value;
-          }
-          const row = syncRowPreview(item);
-          const select = row?.querySelector("[data-bulk-confirm-item-mode]");
-          const dt = row?.querySelector("[data-bulk-confirm-item-datetime]");
-          if (select) select.value = item.mode;
-          if (dt) {
-            dt.hidden = item.mode !== "custom";
-            if (item.mode === "custom") dt.value = item.customValue || toDateTimeInputValue(new Date());
-          }
-        }
-        syncSummary();
-        setDialogError("");
-        return;
-      }
-
-      const sharedDt = event.target.closest?.("[data-bulk-confirm-shared-datetime]");
-      if (sharedDt) {
-        for (const item of items) {
-          if (item.mode !== "custom") continue;
-          item.customValue = sharedDt.value;
-          const row = syncRowPreview(item);
-          const dt = row?.querySelector("[data-bulk-confirm-item-datetime]");
-          if (dt) dt.value = sharedDt.value;
-        }
-        syncSummary();
-        setDialogError("");
-        return;
-      }
-
-      if (updateBulkItemDate(event.target, itemByKey)) {
-        syncSummary();
-        setDialogError("");
-      }
-    });
-
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay || event.target.closest?.("[data-bulk-confirm-cancel]")) {
-        cleanup(null);
-        return;
-      }
-      if (event.target.closest?.("[data-bulk-confirm-submit]")) {
-        const itemDecisions = new Map();
-        const nowLimit = Date.now() + 60_000;
-        for (const item of items) {
-          const decision = bulkItemDecision(item);
-          const title = itemDisplayLabel(item);
-          const invalid = decision.mode === "custom" && !decision.watchedAt;
-          if (invalid || Date.parse(decision.watchedAt) > nowLimit) {
-            setDialogError(invalid
-              ? `Choose a valid date and time for "${title}".`
-              : `The watch date for "${title}" is in the future. Choose an earlier date.`);
-            const selector = item.mode === "custom" ? "[data-bulk-confirm-item-datetime]" : "[data-bulk-confirm-item-mode]";
-            rows.get(item.key)?.querySelector(selector)?.focus();
-            return;
-          }
-          for (const id of item.reviewIds) {
-            itemDecisions.set(id, decision);
-          }
-        }
-        cleanup({ mode: applyMode, watchedAt: "", itemDecisions });
-      }
-    });
+function selectedInlineItems(allReviews = []) {
+  const selected = selectedBulkReviews(allReviews);
+  return buildBulkConfirmItems(selected, DEFAULT_BULK_REVIEW_MODE).map((item) => {
+    const merged = mergeWithStoredItem(item);
+    inlineDateItems.set(merged.key, merged);
+    return merged;
   });
+}
+
+function uniformSelectedMode(items = []) {
+  if (!items.length) return "";
+  const first = items[0].mode;
+  return items.every((item) => item.mode === first) ? first : "";
+}
+
+function syncBulkBarFromInlineEdit(container, allReviews = []) {
+  if (!container?.querySelector) return;
+  const items = selectedInlineItems(allReviews);
+  if (!items.length) return;
+  const summaryEl = container.querySelector("[data-bulk-bar-summary]");
+  if (summaryEl) summaryEl.textContent = `Selected: ${summarizeBulkConfirmItems(items)}`;
+  const uniform = uniformSelectedMode(items);
+  sharedBulkMode = uniform;
+  for (const pill of container.querySelectorAll?.("[data-manual-watch-review-bulk-apply-mode]") || []) {
+    const selected = pill.dataset.manualWatchReviewBulkApplyMode === uniform;
+    pill.classList?.toggle?.("is-selected", selected);
+    pill.setAttribute?.("aria-pressed", selected ? "true" : "false");
+  }
+  const sharedDt = container.querySelector("[data-manual-watch-review-bulk-shared-datetime]");
+  if (sharedDt) sharedDt.hidden = uniform !== "custom";
 }
 
 export function reviewSelectCheckboxHtml({
@@ -692,9 +589,13 @@ export function renderBulkReviewBar({ visibleReviews = [], allReviews = [] } = {
   const selectableVisible = (Array.isArray(visibleReviews) ? visibleReviews : []).filter(isBulkSelectableReview);
   if (!selectableVisible.length) return "";
 
+  const sourceReviews = allReviews.length ? allReviews : selectableVisible;
+  syncInlineReviewItems(sourceReviews);
+
   const visibleIds = selectableVisible.map((review) => String(review.id));
-  const selected = selectedBulkReviews(allReviews.length ? allReviews : selectableVisible);
+  const selected = selectedBulkReviews(sourceReviews);
   const summary = bulkSelectionSummary(selected);
+  const selectedItems = summary.overCap ? [] : selectedInlineItems(sourceReviews);
 
   const visibleSelectedCount = visibleIds.filter((id) => selectedIds.has(id)).length;
   const visibleUnits = new Set(selectableVisible.map(displayUnitKey)).size;
@@ -705,27 +606,50 @@ export function renderBulkReviewBar({ visibleReviews = [], allReviews = [] } = {
     ? `Select first ${BULK_REVIEW_BATCH_CAP} visible`
     : `Select all (${visibleUnits})`;
 
-  const previewItems = summary.overCap ? [] : buildSelectedWatchDates(
-    selected, effectiveBulkMode(DEFAULT_BULK_REVIEW_MODE, summary),
-  );
-  if (!summary.overCap) inlineDateItems = new Map(previewItems.map((item) => [item.key, item]));
+  const uniformMode = uniformSelectedMode(selectedItems);
+  const activeApplyMode = sharedBulkMode || uniformMode;
   const maxDateTime = toDateTimeInputValue(new Date());
-  const preview = previewItems.length ? `
-    <div class="manual-watch-review-selection-dates">
-      <p class="manual-watch-review-bulk-note"><strong>Proposed watch decisions</strong></p>
-      <ul aria-label="Proposed watch decisions">
-        ${previewItems.map((item) => `
-          <li data-bulk-item-row>
-            <div class="manual-watch-review-selection-date-info">
-              <strong>${escapeHtml(itemDisplayLabel(item))}</strong>
-              <span data-bulk-item-preview aria-live="polite">${escapeHtml(describeItemWatchDatePreview(item))}</span>
-            </div>
-            ${renderBulkItemControls(item, maxDateTime, bulkBusy)}
-          </li>
-        `).join("")}
-      </ul>
-    </div>
-  ` : "";
+  const customInputValue = sharedCustomValue || selectedItems[0]?.customValue || maxDateTime;
+  const breakdown = selectedItems.length ? summarizeBulkConfirmItems(selectedItems) : "";
+  const controlsDisabled = bulkBusy || summary.overCap;
+  const bulkDatePills = summary.displayCount ? [
+    ...(summary.hasEpisodes ? [dateChoicePillHtml({
+      value: "episode_timing",
+      label: "Same as other episodes",
+      selected: activeApplyMode === "episode_timing",
+      disabled: controlsDisabled || !summary.episodeTimingAllowed,
+      title: summary.episodeTimingAllowed ? "" : "No watched episodes in the selected seasons",
+      dataAttr: "data-manual-watch-review-bulk-apply-mode",
+    })] : []),
+    dateChoicePillHtml({
+      value: "release_day",
+      label: summary.isMixed ? "Release / air date" : summary.hasEpisodes ? "Air date" : "Release date",
+      selected: activeApplyMode === "release_day",
+      disabled: controlsDisabled || !summary.hasAnyReleaseDate,
+      dataAttr: "data-manual-watch-review-bulk-apply-mode",
+    }),
+    dateChoicePillHtml({
+      value: "detected",
+      label: "Detection time",
+      selected: activeApplyMode === "detected",
+      disabled: controlsDisabled,
+      dataAttr: "data-manual-watch-review-bulk-apply-mode",
+    }),
+    dateChoicePillHtml({
+      value: "now",
+      label: "Now",
+      selected: activeApplyMode === "now",
+      disabled: controlsDisabled,
+      dataAttr: "data-manual-watch-review-bulk-apply-mode",
+    }),
+    dateChoicePillHtml({
+      value: "custom",
+      label: "Pick date & time…",
+      selected: activeApplyMode === "custom",
+      disabled: controlsDisabled,
+      dataAttr: "data-manual-watch-review-bulk-apply-mode",
+    }),
+  ].join("") : "";
 
   return `
     <div class="manual-watch-review-bulk-bar${summary.displayCount ? " has-selection" : ""}" role="region" aria-label="Bulk review actions">
@@ -742,12 +666,23 @@ export function renderBulkReviewBar({ visibleReviews = [], allReviews = [] } = {
       </div>
       ${summary.displayCount ? `
         <div class="manual-watch-review-bulk-controls">
-          <button class="button-primary" type="button" data-manual-watch-review-bulk-action="approve"${bulkBusy || summary.overCap ? " disabled" : ""}>Confirm selected (${summary.displayCount})…</button>
-          <button class="button-danger" type="button" data-manual-watch-review-bulk-action="dismiss"${bulkBusy || summary.overCap ? " disabled" : ""}>Dismiss selected (${summary.displayCount})</button>
+          <button class="button-primary" type="button" data-manual-watch-review-bulk-action="approve"${controlsDisabled ? " disabled" : ""}>Confirm selected (${summary.displayCount})</button>
+          <button class="button-danger" type="button" data-manual-watch-review-bulk-action="dismiss"${controlsDisabled ? " disabled" : ""}>Dismiss selected (${summary.displayCount})</button>
           <button class="button-ghost" type="button" data-manual-watch-review-bulk-clear${bulkBusy ? " disabled" : ""}>Clear</button>
         </div>
+        <div class="manual-watch-review-bulk-apply-row">
+          <span class="manual-watch-review-fact-label">Set selected dates</span>
+          <div class="manual-watch-review-date-options" role="group" aria-label="Set watch date for all selected items">
+            ${bulkDatePills}
+            <input class="field manual-watch-review-bulk-shared-datetime" type="datetime-local" data-manual-watch-review-bulk-shared-datetime value="${escapeAttribute(customInputValue)}" max="${escapeAttribute(maxDateTime)}" aria-label="Shared custom date and time for all selected items"${activeApplyMode === "custom" ? "" : " hidden"}${controlsDisabled ? " disabled" : ""} />
+          </div>
+        </div>
       ` : ""}
-      ${summary.overCap ? `<p class="manual-watch-review-bulk-note is-warning" role="alert">Select at most ${BULK_REVIEW_BATCH_CAP} items per batch (currently ${summary.displayCount} selected).</p>` : preview}
+      ${summary.overCap
+        ? `<p class="manual-watch-review-bulk-note is-warning" role="alert">Select at most ${BULK_REVIEW_BATCH_CAP} items per batch (currently ${summary.displayCount} selected).</p>`
+        : breakdown
+          ? `<p class="manual-watch-review-bulk-note" data-bulk-bar-summary aria-live="polite">Selected: ${escapeHtml(breakdown)}</p>`
+          : ""}
     </div>
   `;
 }
@@ -759,9 +694,10 @@ export function syncIndeterminateCheckboxes(container) {
   }
 }
 
-// Shared sequential batch runner for show, season, episode, and multi-select
-// actions. Always posts one single-item review endpoint call at a time so
-// identity revalidation, telemetry, and Trakt unwatch guards stay identical.
+// Shared sequential batch runner for single-episode multi-provider and
+// multi-select actions. Always posts one single-item review endpoint call at a
+// time so identity revalidation, telemetry, and Trakt unwatch guards stay
+// identical.
 export async function runSequentialReviewBatch(reviews, {
   action = "approve",
   mode = DEFAULT_BULK_REVIEW_MODE,
@@ -825,18 +761,81 @@ export async function runSequentialReviewBatch(reviews, {
   };
 }
 
-export function handleBulkSelectionChange(event, { getFilteredReviews, onRender } = {}) {
-  const editedItem = updateBulkItemDate(event.target, inlineDateItems);
-  if (editedItem) {
-    editedItem.edited = true;
+export function handleBulkSelectionClick(event, { getFilteredReviews, getAllReviews, onRender, container } = {}) {
+  const bulkModeBtn = event.target.closest?.("[data-manual-watch-review-bulk-apply-mode]");
+  if (bulkModeBtn && !bulkModeBtn.disabled) {
+    const allReviews = getAllReviews?.() || getFilteredReviews?.() || [];
+    const items = selectedInlineItems(allReviews);
+    const requestedMode = String(bulkModeBtn.dataset.manualWatchReviewBulkApplyMode || "");
+    if (!requestedMode || !items.length) return true;
+    sharedBulkMode = requestedMode;
+    if (requestedMode === "custom" && !sharedCustomValue) {
+      sharedCustomValue = items[0]?.customValue || toDateTimeInputValue(new Date());
+    }
+    for (const item of items) {
+      item.mode = effectiveItemMode(requestedMode, item.hasReleaseDate, item.hasEpisodeTiming);
+      if (requestedMode === "custom" && sharedCustomValue) {
+        item.customValue = sharedCustomValue;
+      }
+      item.edited = true;
+      inlineDateItems.set(item.key, item);
+    }
+    onRender?.();
     return true;
   }
+
+  const itemModeBtn = event.target.closest?.("[data-bulk-item-mode-choice]");
+  if (itemModeBtn && !itemModeBtn.disabled) {
+    const key = itemModeBtn.dataset.bulkItemKey;
+    const item = key && inlineDateItems.get(key);
+    if (!item) return true;
+    item.mode = effectiveItemMode(itemModeBtn.dataset.bulkItemModeChoice, item.hasReleaseDate, item.hasEpisodeTiming);
+    item.edited = true;
+    const card = itemModeBtn.closest?.("[data-manual-watch-review-id], [data-manual-watch-review-ids]") || container;
+    syncInlineItemUi(card, item, { focusCustom: item.mode === "custom" });
+    syncBulkBarFromInlineEdit(container, getAllReviews?.() || getFilteredReviews?.() || []);
+    return true;
+  }
+
+  return false;
+}
+
+export function handleBulkSelectionChange(event, { getFilteredReviews, getAllReviews, onRender, container } = {}) {
+  const sharedDt = event.target.closest?.("[data-manual-watch-review-bulk-shared-datetime]");
+  if (sharedDt) {
+    sharedCustomValue = sharedDt.value;
+    const allReviews = getAllReviews?.() || getFilteredReviews?.() || [];
+    const items = selectedInlineItems(allReviews);
+    for (const item of items) {
+      if (item.mode !== "custom") continue;
+      item.customValue = sharedDt.value;
+      item.edited = true;
+      inlineDateItems.set(item.key, item);
+      syncInlineItemUi(container, item);
+    }
+    syncBulkBarFromInlineEdit(container, allReviews);
+    return true;
+  }
+
+  const itemDt = event.target.closest?.("[data-bulk-confirm-item-datetime]");
+  if (itemDt) {
+    const item = inlineDateItems.get(itemDt.dataset.bulkItemKey);
+    if (!item) return false;
+    item.customValue = itemDt.value;
+    item.edited = true;
+    const card = itemDt.closest?.("[data-manual-watch-review-id], [data-manual-watch-review-ids]") || container;
+    syncInlineItemUi(card, item);
+    syncBulkBarFromInlineEdit(container, getAllReviews?.() || getFilteredReviews?.() || []);
+    return true;
+  }
+
   const selectAll = event.target.closest?.("[data-manual-watch-review-select-all]");
   if (selectAll) {
     selectAllVisibleReviews(getFilteredReviews?.() || [], selectAll.checked);
     onRender?.();
     return true;
   }
+
   const box = event.target.closest?.("[data-manual-watch-review-select]");
   if (box) {
     const ids = String(box.dataset.manualWatchReviewSelectIds || "").split(",").filter(Boolean);
@@ -850,12 +849,13 @@ export function handleBulkSelectionChange(event, { getFilteredReviews, onRender 
 export async function triggerBulkSelectionWorkflow(action, {
   getAllReviews,
   openConfirmDialog,
-  openBulkConfirm = openBulkConfirmDialog,
   runSelectionAction,
   setMessage,
+  container,
 } = {}) {
   if (bulkBusy) return;
-  const reviews = selectedBulkReviews(getAllReviews?.() || []);
+  const allReviews = getAllReviews?.() || [];
+  const reviews = selectedBulkReviews(allReviews);
   const summary = bulkSelectionSummary(reviews);
   if (!summary.displayCount) return;
   if (summary.overCap) {
@@ -864,10 +864,17 @@ export async function triggerBulkSelectionWorkflow(action, {
   }
   const initialMode = effectiveBulkMode(DEFAULT_BULK_REVIEW_MODE, summary);
   if (action === "approve") {
-    const items = buildSelectedWatchDates(reviews, initialMode);
-    const plan = await openBulkConfirm({ reviews, initialMode, items });
-    if (!plan) return;
-    return runSelectionAction?.(reviews, "approve", plan.mode, "", plan.itemDecisions);
+    const items = selectedInlineItems(allReviews);
+    const validation = validateBulkSelectionDecisions(items);
+    if (!validation.ok) {
+      setMessage?.(validation.error, "error");
+      if (validation.item && validation.selector && container?.querySelector) {
+        const escapedKey = escapeSelectorAttr(validation.item.key);
+        container.querySelector(`[data-bulk-item-row][data-bulk-item-key="${escapedKey}"] ${validation.selector}`)?.focus?.();
+      }
+      return;
+    }
+    return runSelectionAction?.(reviews, "approve", initialMode, "", validation.itemDecisions);
   }
   const confirmed = Boolean(await openConfirmDialog?.(bulkDismissConfirmation(summary)));
   if (!confirmed) return;
@@ -888,6 +895,7 @@ export async function executeBulkSelectionAction(reviews, {
   watchedAt = "",
   itemDecisions = null,
   postAction,
+  postBulkAction,
   optimisticallyRemove,
   completeOptimistic,
   restoreOptimistic,
@@ -898,8 +906,72 @@ export async function executeBulkSelectionAction(reviews, {
   const records = Array.isArray(reviews) ? reviews : [];
   if (!records.length || bulkBusy) return null;
   bulkBusy = true;
-  onRender?.();
   const appliedModes = new Set();
+  const resolveRecordDecision = (review, fallbackMode, fallbackWatchedAt) => {
+    const override = decisionFromMap(itemDecisions, review);
+    const resolvedMode = override?.mode || effectiveModeForReview(review, fallbackMode);
+    const resolvedWatchedAt = override?.watchedAt ?? (resolvedMode === "custom" ? fallbackWatchedAt : "");
+    appliedModes.add(resolvedMode);
+    return action === "dismiss" || override?.action === "dismiss"
+      ? { action: "dismiss", mode: "", watchedAt: "" }
+      : { action: "approve", mode: resolvedMode, watchedAt: resolvedWatchedAt };
+  };
+
+  if (typeof postBulkAction === "function") {
+    const payloadItems = records.map((review) => {
+      const decision = resolveRecordDecision(review, mode, watchedAt);
+      return decision.action === "dismiss"
+        ? { id: String(review.id), action: "dismiss" }
+        : {
+          id: String(review.id),
+          action: "approve",
+          mode: decision.mode,
+          ...(decision.watchedAt ? { watched_at: decision.watchedAt } : {}),
+        };
+    });
+    const optimistic = optimisticallyRemove?.(records) || [];
+    clearBulkReviewSelection();
+    onRender?.();
+    try {
+      await postBulkAction(action, payloadItems);
+      for (const review of records) completeOptimistic?.(review.id);
+    } catch (error) {
+      if (optimistic.length) {
+        restoreOptimistic?.(records);
+        onRender?.();
+      }
+      setMessage?.(error?.message || `Bulk ${action} failed.`, "error");
+      return {
+        completed: 0,
+        total: records.length,
+        failed: records.map((review) => ({ review, error })),
+        unresolved: records,
+      };
+    } finally {
+      bulkBusy = false;
+      onRender?.();
+    }
+    const hasUnwatches = appliedModes.has("unwatched");
+    const singleMode = appliedModes.size === 1 ? [...appliedModes][0] : "";
+    const label = singleMode
+      ? (typeof policyLabel === "function" ? policyLabel(singleMode) : singleMode)
+      : "per-item dates";
+    setMessage?.(
+      action === "dismiss"
+        ? `Queued ${records.length} dismissal${records.length === 1 ? "" : "s"} — updating connected apps in the background.`
+        : `Queued ${records.length} watch decision${records.length === 1 ? "" : "s"}${!hasUnwatches ? ` (${label})` : ""} — saving and syncing in the background.`,
+      "success",
+    );
+    return {
+      completed: records.length,
+      total: records.length,
+      failed: [],
+      unresolved: [],
+      queued: true,
+    };
+  }
+
+  onRender?.();
   let result;
   try {
     result = await runSequentialReviewBatch(records, {
@@ -908,15 +980,7 @@ export async function executeBulkSelectionAction(reviews, {
       watchedAt,
       continueOnError: true,
       postAction,
-      resolveItemDecision: (review, fallbackMode, fallbackWatchedAt) => {
-        const override = decisionFromMap(itemDecisions, review);
-        const resolvedMode = override?.mode || effectiveModeForReview(review, fallbackMode);
-        const resolvedWatchedAt = override?.watchedAt ?? (resolvedMode === "custom" ? fallbackWatchedAt : "");
-        appliedModes.add(resolvedMode);
-        return override?.action === "dismiss"
-          ? { action: "dismiss", mode: "", watchedAt: "" }
-          : { mode: resolvedMode, watchedAt: resolvedWatchedAt };
-      },
+      resolveItemDecision: resolveRecordDecision,
       onOptimisticRemove: (items) => {
         const removed = optimisticallyRemove?.(items) || [];
         clearBulkReviewSelection();

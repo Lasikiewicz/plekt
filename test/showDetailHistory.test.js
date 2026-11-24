@@ -162,3 +162,94 @@ test("a stale provider watch cannot repaint an episode after its local unwatch",
     elements.explorerPanel = previous.explorerPanel;
   }
 });
+
+test("mergeShowWithLoadedHistory keeps telemetry, provenance, and imdb_id when state.history holds a compact preview of the same row", () => {
+  const previousHistory = state.history;
+  const previousShowsRaw = state.showsRaw;
+  state.showsRaw = [];
+  // Compact dashboard preview row omits imdb_id, sync_dispatch_telemetry, and watch_provenance.
+  state.history = [{
+    id: "ep-s02e09",
+    title: "Outlander: Blood of My Blood - S02E09",
+    show_title: "Outlander: Blood of My Blood",
+    media_type: "episode",
+    season: 2,
+    episode: 9,
+    watched_at: "2026-11-20T23:07:50.000Z",
+    sync_action: "watched",
+    source: "plex",
+    tmdb_id: "207484",
+    tvdb_id: "429964",
+    media_key: "episode:2:9:imdb:tt18332852",
+  }, {
+    id: "ep-s02e08-newer",
+    title: "Outlander: Blood of My Blood - S02E08",
+    show_title: "Outlander: Blood of My Blood",
+    media_type: "episode",
+    season: 2,
+    episode: 8,
+    watched_at: "2026-11-21T20:00:00.000Z",
+    sync_action: "watched",
+    source: "plex",
+    tmdb_id: "207484",
+    tvdb_id: "429964",
+    media_key: "episode:2:8:imdb:tt18332852",
+  }];
+
+  try {
+    const merged = mergeShowWithLoadedHistory({
+      title: "Outlander: Blood of My Blood",
+      tmdb_id: "207484",
+      tvdb_id: "429964",
+      imdb_id: "tt18332852",
+      episodes: [{
+        id: "ep-s02e09",
+        title: "Outlander: Blood of My Blood - S02E09",
+        show_title: "Outlander: Blood of My Blood",
+        media_type: "episode",
+        season: 2,
+        episode: 9,
+        watched_at: "2026-11-20T23:07:50.000Z",
+        sync_action: "watched",
+        source: "plex",
+        imdb_id: "tt18332852",
+        tmdb_id: "207484",
+        tvdb_id: "429964",
+        media_key: "episode:2:9:imdb:tt18332852",
+        sync_dispatch_telemetry: "Origin: plex\nDispatch status: success",
+        watch_provenance: { version: 1, source: "plex", ingest_path: "plex_notification" },
+      }, {
+        id: "ep-s02e08-older",
+        title: "Outlander: Blood of My Blood - S02E08",
+        show_title: "Outlander: Blood of My Blood",
+        media_type: "episode",
+        season: 2,
+        episode: 8,
+        watched_at: "2026-11-07T19:09:59.000Z",
+        sync_action: "watched",
+        source: "plex",
+        imdb_id: "tt18332852",
+        tmdb_id: "207484",
+        tvdb_id: "429964",
+        media_key: "episode:2:8:imdb:tt18332852",
+        sync_dispatch_telemetry: "Origin: plex\nDispatch status: success\nDetails: Old row telemetry",
+        watch_provenance: { version: 1, source: "plex", ingest_path: "live_session" },
+      }],
+    });
+
+    const ep9 = merged.episodes.find((ep) => ep.season === 2 && ep.episode === 9);
+    assert.equal(ep9.imdb_id, "tt18332852");
+    assert.equal(ep9.sync_dispatch_telemetry, "Origin: plex\nDispatch status: success");
+    assert.deepEqual(ep9.watch_provenance, { version: 1, source: "plex", ingest_path: "plex_notification" });
+
+    // A genuinely newer watch row with a different id must not inherit the older row's telemetry/provenance.
+    const ep8 = merged.episodes.find((ep) => ep.season === 2 && ep.episode === 8);
+    assert.equal(ep8.id, "ep-s02e08-newer");
+    assert.equal(ep8.imdb_id, "tt18332852");
+    assert.equal(ep8.sync_dispatch_telemetry, undefined);
+    assert.equal(ep8.watch_provenance, undefined);
+  } finally {
+    state.history = previousHistory;
+    state.showsRaw = previousShowsRaw;
+  }
+});

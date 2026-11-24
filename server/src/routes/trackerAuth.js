@@ -36,7 +36,8 @@ async function handleFullSync(req, res, provider, compare) {
   try {
     if (compare) {
       if (req.method !== "POST") return methodNotAllowed(res);
-      return sendJson(res, { fullSync: await compareTrackerWithPlekt(provider) });
+      const body = await readJson(req);
+      return sendJson(res, { fullSync: await compareTrackerWithPlekt(provider, { activityGroupKey: body?.activityGroupKey ?? null }) });
     }
     if (req.method === "GET") return sendJson(res, { fullSync: getTrackerFullSync(provider) });
     if (req.method !== "POST") return methodNotAllowed(res);

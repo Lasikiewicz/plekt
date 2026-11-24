@@ -90,6 +90,12 @@ function nativeJellyfinItems(media = {}) {
   return nativeProviderItemIds(media, "jellyfin").map((Id) => ({ Id }));
 }
 
+function upNextHintJellyfinItems(media = {}) {
+  const raw = media?.upNextProviderItems?.jellyfin;
+  const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return [...new Set(values.map((value) => String(value?.id || value?.Id || value || "").trim()).filter(Boolean))].map((Id) => ({ Id }));
+}
+
 function jellyfinLibraryEnforced(config = {}) {
   return Boolean(config?.libraryMonitoringEnforced || Array.isArray(config?.monitoredLibraryIds));
 }
@@ -110,7 +116,7 @@ async function findJellyfinItemsForMutation(config, media = {}) {
   if (jellyfinLibraryEnforced(config) && !getProviderLibrarySelection(config, "jellyfin").hasSelectedLibraries) {
     return [];
   }
-  const direct = nativeJellyfinItems(media);
+  const direct = media.__skipDirectIds ? [] : nativeJellyfinItems(media);
   let items = direct;
   if (!items.length) {
     const cache = media?.restoreLookupCache;
@@ -131,6 +137,9 @@ async function findJellyfinItemsForMutation(config, media = {}) {
       });
       invalidateJellyfinSeriesIdentity(config, media);
       items = await findJellyfinItemsForMutation(config, { ...media, __identityRetry: true });
+    }
+    if (!items?.length && !media.__skipDirectIds) {
+      items = upNextHintJellyfinItems(media);
     }
   }
   if (!items?.length || !jellyfinLibraryEnforced(config)) return items || [];
@@ -501,7 +510,7 @@ export function jellyfinEpisodeMatchesCoordinates(item = {}, season, episode) {
 }
 
 export async function findJellyfinItems(config, media) {
-  const direct = nativeJellyfinItems(media);
+  const direct = media?.__skipDirectIds ? [] : nativeJellyfinItems(media);
   if (direct.length) return direct;
   if (media.type === "movie") {
     let movies = await findByProviderIds(config, media, "Movie");
@@ -578,9 +587,9 @@ export async function markJellyfinPlayed(config, media) {
     await Promise.all(markJobs);
     return { platform: "jellyfin", status: "fulfilled", itemId: items[0].Id, itemIds: items.map(i => i.Id), httpStatus: lastHttpStatus };
   } catch (error) {
-    if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
+    if (error?.status === 404 && !media.__identityRetry && (media.type === "episode" || nativeJellyfinItems(media).length > 0)) {
       invalidateJellyfinSeriesIdentity(config, media);
-      return markJellyfinPlayed(config, { ...media, __identityRetry: true });
+      return markJellyfinPlayed(config, { ...media, __identityRetry: true, __skipDirectIds: true });
     }
     console.error("Jellyfin client failed", error);
     throw error;
@@ -626,9 +635,9 @@ export async function markJellyfinUnplayed(config, media) {
     await Promise.all(markJobs);
     return { platform: "jellyfin", status: "fulfilled", itemId: items[0].Id, itemIds: items.map(i => i.Id), httpStatus: lastHttpStatus };
   } catch (error) {
-    if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
+    if (error?.status === 404 && !media.__identityRetry && (media.type === "episode" || nativeJellyfinItems(media).length > 0)) {
       invalidateJellyfinSeriesIdentity(config, media);
-      return markJellyfinUnplayed(config, { ...media, __identityRetry: true });
+      return markJellyfinUnplayed(config, { ...media, __identityRetry: true, __skipDirectIds: true });
     }
     console.error("Jellyfin client failed", error);
     throw error;
@@ -682,9 +691,9 @@ export async function setJellyfinProgress(config, media) {
     await Promise.all(progressJobs);
     return { platform: "jellyfin", status: "fulfilled", itemId: items[0].Id, itemIds: items.map(i => i.Id), positionMs, httpStatus: lastHttpStatus };
   } catch (error) {
-    if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
+    if (error?.status === 404 && !media.__identityRetry && (media.type === "episode" || nativeJellyfinItems(media).length > 0)) {
       invalidateJellyfinSeriesIdentity(config, media);
-      return setJellyfinProgress(config, { ...media, __identityRetry: true });
+      return setJellyfinProgress(config, { ...media, __identityRetry: true, __skipDirectIds: true });
     }
     console.error("Jellyfin progress client failed", error);
     throw error;

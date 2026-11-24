@@ -8,6 +8,7 @@ import { createSimklBatchBudget } from './simklBatchBudget.js';
 import { isAuthoritativeRestoreActive } from '../configStore.js';
 import { watchedPlayedSyncEnabled } from '../syncFlags.js';
 import { simklFullSyncContext } from './simklFullSyncContext.js';
+import { simklEpisodeOrderIdentity } from './simklEpisodeOrder.js';
 
 // Preserve the existing verification allowance, plus POST and two readbacks.
 export const SIMKL_BATCH_QUOTA_RESERVE = 55;
@@ -51,7 +52,13 @@ const enqueue = createSimklBatchQueue({
   claim(chunk) {
     db.transaction(() => {
       for (const item of chunk) {
-        const record=db.prepare('SELECT w.watched_at,w.sync_action,p.state FROM watch_history w LEFT JOIN playstate p ON p.media_key=w.media_key WHERE w.id=?').get(item.intent.watch_record_id||'');
+        const record=db.prepare('SELECT w.watched_at,w.sync_action,w.watch_provenance,p.state FROM watch_history w LEFT JOIN playstate p ON p.media_key=w.media_key WHERE w.id=?').get(item.intent.watch_record_id||'');
+        if (item.media.simklOrderMatch) {
+          const order = record && simklEpisodeOrderIdentity(record);
+          if (String(order?.airedId) !== item.media.simklOrderMatch.airedId || String(order?.tvdbId) !== String(item.media.ids.tvdb)) {
+            throw simklReviewRequired('The approved Simkl watch changed before sending');
+          }
+        }
         if(record&&(record.state==='unwatched'||['unwatched','unplayed'].includes(record.sync_action)||Date.parse(record.watched_at)!==Date.parse(item.intent.watched_at)))throw simklReviewRequired('Local watch changed before Simkl batch claim');
         const live = db.prepare('SELECT expires_at,due_at,media_json,watched_at FROM tracker_write_intents WHERE id=?').get(item.intent.id);
         if (!live || live.expires_at <= Date.now() || live.due_at > Date.now() || live.media_json !== item.intent.media_json || live.watched_at !== item.intent.watched_at) throw simklReviewRequired('Simkl intent changed or is no longer due before batch claim');

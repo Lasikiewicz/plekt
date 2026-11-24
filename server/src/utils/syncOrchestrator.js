@@ -429,29 +429,30 @@ function restoreBlocksSync(media = {}) {
 }
 
 function providerItemsForMedia(media = {}) {
+  const mediaType = media.type || media.mediaType || media.media_type;
   const candidate = normalizeUpNextCandidate({
     ...media,
-    media_type: media.type || media.mediaType || media.media_type,
+    media_type: mediaType,
+    ...(mediaType === "episode" && media.ids && !media.show_ids && !media.showIds ? { show_ids: media.ids } : {}),
     provider_items: media.provider_items || media.providerItems || {},
   });
   const aliases = new Set(upNextIdentityAliases(candidate));
-  const merged = {};
+  const hints = {};
   for (const observation of listActiveUpNextProviderItems()) {
     const normalized = normalizeUpNextCandidate(observation);
     if (!upNextIdentityAliases(normalized).some((alias) => aliases.has(alias))) continue;
     for (const [provider, ids] of Object.entries(normalized.provider_items || {})) {
-      merged[provider] = [...new Set([...(merged[provider] || []), ...ids.map(String).filter(Boolean)])].sort();
+      hints[provider] = [...new Set([...(hints[provider] || []), ...ids.map(String).filter(Boolean)])].sort();
     }
   }
-  for (const [provider, ids] of Object.entries(media.provider_items || media.providerItems || {})) {
-    const values = Array.isArray(ids) ? ids : [ids];
-    merged[provider] = [...new Set([...(merged[provider] || []), ...values.map(String).filter(Boolean)])].sort();
-  }
-  if (!Object.keys(merged).length) return media;
+  if (!Object.keys(hints).length) return media;
+  // Keep Up Next observations as fallback hints instead of merging them into
+  // caller-supplied provider_items: a Next Up feed often observes only one
+  // library copy (e.g. 1080p vs 4K), and treating that single id as exhaustive
+  // skips library discovery for sibling copies.
   return {
     ...media,
-    provider_items: merged,
-    providerItems: merged,
+    upNextProviderItems: hints,
     ...(media.restoreLookupCache ? { restoreLookupCache: media.restoreLookupCache } : {}),
   };
 }
@@ -1187,19 +1188,22 @@ async function includeTrackerDispatch(summary, media, state, lane = "sync", isCa
   const unmatched = skippedStates
     .filter((entry) => entry.decision !== TARGET_DECISIONS.SKIPPED_BY_POLICY)
     .map((entry) => entry.target);
+  const pending = targetStates.filter((entry) => entry.status === "pending").map((entry) => entry.target);
   const cancelled = targetStates.some((entry) => entry.status === "cancelled");
   const skipNotes = [
     unmatched.length ? `no match on ${formatTargets(unmatched)}` : "",
     policySkipped.length ? `${formatTargets(policySkipped)} skipped by the historical sync policy` : "",
   ].filter(Boolean).join("; ");
+  const onlyPending = !cancelled && !failures.length && !skipped.length && !successes.length && pending.length > 0;
   return {
     ...summary,
     targetStates,
-    status: cancelled ? "cancelled" : failures.length ? (successes.length ? "partial" : "error") : skipped.length ? (successes.length ? "partial" : "skipped") : "success",
+    status: cancelled ? "cancelled" : failures.length ? (successes.length ? "partial" : "error") : skipped.length ? (successes.length ? "partial" : "skipped") : onlyPending ? "pending" : "success",
     details: failures.length
       ? `Synced to ${formatTargets(successes)}; failed ${formatTargets(failures)}`
       : cancelled ? `Synced to ${formatTargets(successes)}; Trakt dispatch cancelled`
-        : skipped.length ? `Synced to ${formatTargets(successes)}; ${skipNotes}` : `Successfully synced to ${formatTargets(successes)}`,
+        : skipped.length ? `Synced to ${formatTargets(successes)}; ${skipNotes}`
+          : onlyPending ? `Queued for ${formatTargets(pending)}` : `Successfully synced to ${formatTargets(successes)}`,
   };
 }
 

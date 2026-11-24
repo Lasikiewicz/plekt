@@ -9,7 +9,7 @@ const { db } = await import("../server/src/db.js");
 const repo = await import("../server/src/utils/dataRepo.js");
 const { AUTH } = await import("../server/src/appConfig.js");
 const { saveMediaConfig, saveProviderLibraryMonitoring } = await import("../server/src/utils/configStore.js");
-const { handleManualWatchReview } = await import("../server/src/routes/manualWatchReview.js");
+const { handleManualWatchReview, waitForManualWatchReviewBulkIdle } = await import("../server/src/routes/manualWatchReview.js");
 const { applyManualUnwatch } = await import("../server/src/routes/sync.js");
 const { createLoopStore } = await import("../server/src/utils/loopStore.js");
 const { checkIncomingEpisodeSourceMismatch } = await import("../server/src/utils/sourceMismatch.js");
@@ -620,7 +620,13 @@ async function assertManualWatchReviewSavesTimestamp(mode, watchedAt) {
     sourceFingerprint: `emby|${itemId}|1`,
   });
   assert.equal(queued.status, "pending");
-  assert.equal(queued.review.source_item_id, null);
+  assert.equal(queued.review.source_item_id, itemId);
+  // Also simulate a legacy row stored before source_item_id fell back to
+  // watchProvenance.item_id so approveReview exercises the provenance fallback.
+  const legacyMedia = { ...queued.review.media };
+  delete legacyMedia.itemId;
+  db.prepare("UPDATE manual_watch_reviews SET source_item_id = NULL, media_json = ? WHERE id = ?")
+    .run(JSON.stringify(legacyMedia), queued.review.id);
 
   const request = {
     method: "POST",
@@ -647,7 +653,9 @@ async function assertManualWatchReviewSavesTimestamp(mode, watchedAt) {
   assert.equal(responseBody.ok, true);
   assert.equal(responseBody.mode, mode);
   assert.equal(responseBody.watchedAt, watchedAt);
-  assert.equal((await repo.getWatchRecordById(responseBody.watchRecordId)).watched_at, watchedAt);
+  const storedRecord = await repo.getWatchRecordById(responseBody.watchRecordId);
+  assert.equal(storedRecord.watched_at, watchedAt);
+  assert.equal(storedRecord.watch_provenance?.item_id, itemId);
   assert.equal(getManualWatchReview(queued.review.id).decision_mode, mode);
   assert.equal(countPendingManualWatchReviews(), 0);
 }
@@ -1187,4 +1195,191 @@ test("reviews of a title two shows share name their proven show and flag the tit
   assert.deepEqual(find(emby.id).proven_show_ids, { imdb: "tt94001", tmdb: "94001", tvdb: "94101" },
     "cached TMDB find places the episode ids on the original show, not the reboot");
   for (const review of [emby, plex, withShowIds]) setManualWatchReviewStatus(review.id, "dismissed");
+});
+
+test("manual watch reviews preserve watchProvenance.item_id on enqueue and approval so queued tracker writes keep provider item identity", async () => {
+  // Enqueueing a scanner review that only carries watchProvenance.item_id must
+  // persist source_item_id and media.itemId.
+  const enqueued = enqueueManualWatchReview({
+    title: "Provenance Movie",
+    type: "movie",
+    source: "plex",
+    ids: { imdb: "tt95001", tmdb: "95001" },
+    watchProvenance: { source: "plex", ingest_path: "plex_library_scan", item_id: "plex-prov-101" },
+    isValid: true,
+  }, { releaseDate: "2026-08-01", sourceFingerprint: "plex|prov|101" });
+  assert.equal(enqueued.queued, true);
+  assert.equal(enqueued.review.source_item_id, "plex-prov-101");
+  assert.equal(enqueued.review.media.itemId, "plex-prov-101");
+  setManualWatchReviewStatus(enqueued.review.id, "dismissed");
+
+  // Legacy pending rows already in the table have source_item_id=NULL and no
+  // top-level media.itemId, with the provider item ID only inside
+  // media.watchProvenance.item_id. Approving them must keep that item_id on
+  // watch_history.watch_provenance so queued Simkl writes pass library checks.
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["plex-lib-1"] });
+  const legacy = enqueueManualWatchReview({
+    title: "Legacy Provenance Movie",
+    type: "movie",
+    source: "plex",
+    ids: { imdb: "tt95002", tmdb: "95002" },
+    watchProvenance: { source: "plex", ingest_path: "plex_library_scan", item_id: "plex-prov-202" },
+    libraryContext: { version: 1, serverId: "plex-srv", itemId: "plex-prov-202", libraryId: "plex-lib-1", resolutionStatus: "resolved" },
+    isValid: true,
+  }, { releaseDate: "2026-08-02", sourceFingerprint: "plex|prov|202" });
+  const strippedMedia = { ...legacy.review.media };
+  delete strippedMedia.itemId;
+  db.prepare("UPDATE manual_watch_reviews SET source_item_id = NULL, media_json = ? WHERE id = ?")
+    .run(JSON.stringify(strippedMedia), legacy.review.id);
+
+  const request = {
+    method: "POST",
+    headers: { "x-api-key": AUTH.apiKey, "content-type": "application/json" },
+    cookies: {},
+    body: { mode: "release_day" },
+    get(name) { return this.headers[String(name).toLowerCase()] || ""; },
+  };
+  const reply = { statusCode: 200, body: null };
+  const response = {
+    status(code) { reply.statusCode = code; return this; },
+    set() { return this; },
+    send(payload) { reply.body = JSON.parse(payload); return this; },
+  };
+  await handleManualWatchReview(request, response, `manual-watch-review/${encodeURIComponent(legacy.review.id)}/approve`);
+  assert.equal(reply.statusCode, 200);
+  const stored = db.prepare("SELECT watch_provenance FROM watch_history WHERE id = ?").get(reply.body.watchRecordId);
+  const provenance = JSON.parse(stored.watch_provenance);
+  assert.equal(provenance.item_id, "plex-prov-202");
+});
+
+test("approving with background_sync commits watch history and marks review approved immediately", async () => {
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["plex-lib-1"] });
+  const queued = enqueueManualWatchReview({
+    title: "Background Sync Movie",
+    type: "movie",
+    source: "plex",
+    ids: { imdb: "tt95003", tmdb: "95003" },
+    watchProvenance: { source: "plex", ingest_path: "plex_library_scan", item_id: "plex-prov-303" },
+    libraryContext: { version: 1, serverId: "plex-srv", itemId: "plex-prov-303", libraryId: "plex-lib-1", resolutionStatus: "resolved" },
+    isValid: true,
+  }, { releaseDate: "2026-08-03", sourceFingerprint: "plex|prov|303" });
+
+  const request = {
+    method: "POST",
+    headers: { "x-api-key": AUTH.apiKey, "content-type": "application/json" },
+    cookies: {},
+    body: { mode: "release_day", background_sync: true },
+    get(name) { return this.headers[String(name).toLowerCase()] || ""; },
+  };
+  const reply = { statusCode: 200, body: null };
+  const response = {
+    status(code) { reply.statusCode = code; return this; },
+    set() { return this; },
+    send(payload) { reply.body = JSON.parse(payload); return this; },
+  };
+  await handleManualWatchReview(request, response, `manual-watch-review/${encodeURIComponent(queued.review.id)}/approve`);
+  assert.equal(reply.statusCode, 200);
+  assert.equal(reply.body.status, "approved");
+  assert.equal(reply.body.syncStatus, "pending");
+  assert.equal(getManualWatchReview(queued.review.id).status, "approved");
+  assert.ok(await repo.getWatchRecordById(reply.body.watchRecordId));
+});
+
+test("POST /api/manual-watch-review/bulk accepts immediately, hides in-flight items from GET, and commits them in the background", async () => {
+  saveProviderLibraryMonitoring("plex", { serverId: "plex-srv", selectedIds: ["plex-lib-1"] });
+  const first = enqueueManualWatchReview({
+    title: "Bulk Background Movie One",
+    type: "movie",
+    source: "plex",
+    ids: { imdb: "tt95101", tmdb: "95101" },
+    watchProvenance: { source: "plex", ingest_path: "plex_library_scan", item_id: "plex-bulk-101" },
+    libraryContext: { version: 1, serverId: "plex-srv", itemId: "plex-bulk-101", libraryId: "plex-lib-1", resolutionStatus: "resolved" },
+    isValid: true,
+  }, { releaseDate: "2026-08-04", sourceFingerprint: "plex|bulk|101" });
+  const second = enqueueManualWatchReview({
+    title: "Bulk Background Movie Two",
+    type: "movie",
+    source: "plex",
+    ids: { imdb: "tt95102", tmdb: "95102" },
+    watchProvenance: { source: "plex", ingest_path: "plex_library_scan", item_id: "plex-bulk-102" },
+    libraryContext: { version: 1, serverId: "plex-srv", itemId: "plex-bulk-102", libraryId: "plex-lib-1", resolutionStatus: "resolved" },
+    isValid: true,
+  }, { releaseDate: "2026-08-05", sourceFingerprint: "plex|bulk|102" });
+  const blocked = enqueueManualWatchReview({
+    title: "Bulk Blocked Unmonitored Movie",
+    type: "movie",
+    source: "plex",
+    ids: { imdb: "tt95103", tmdb: "95103" },
+    watchProvenance: { source: "plex", ingest_path: "plex_library_scan", item_id: "plex-bulk-103" },
+    libraryContext: { version: 1, serverId: "plex-srv", itemId: "plex-bulk-103", libraryId: "plex-unmonitored", resolutionStatus: "resolved" },
+    isValid: true,
+  }, { releaseDate: "2026-08-06", sourceFingerprint: "plex|bulk|103" });
+
+  const makeRes = () => {
+    const reply = { statusCode: 200, body: null };
+    return {
+      reply,
+      res: {
+        status(code) { reply.statusCode = code; return this; },
+        set() { return this; },
+        send(payload) { reply.body = JSON.parse(payload); return this; },
+      },
+    };
+  };
+
+  const bulkCall = makeRes();
+  await handleManualWatchReview({
+    method: "POST",
+    headers: { "x-api-key": AUTH.apiKey, "content-type": "application/json" },
+    cookies: {},
+    body: {
+      action: "approve",
+      items: [
+        { id: first.review.id, mode: "release_day", watched_at: "2026-08-04T00:00:00.000Z" },
+        { id: second.review.id, mode: "release_day", watched_at: "2026-08-05T00:00:00.000Z" },
+        { id: blocked.review.id, mode: "release_day", watched_at: "2026-08-06T00:00:00.000Z" },
+      ],
+    },
+    get(name) { return this.headers[String(name).toLowerCase()] || ""; },
+  }, bulkCall.res, "manual-watch-review/bulk");
+
+  assert.equal(bulkCall.reply.statusCode, 202);
+  assert.equal(bulkCall.reply.body.ok, true);
+  assert.equal(bulkCall.reply.body.queued, true);
+  assert.equal(bulkCall.reply.body.accepted, 3);
+
+  // Immediately reloading GET /api/manual-watch-review must not flash in-flight items back.
+  const immediateGet = makeRes();
+  await handleManualWatchReview({
+    method: "GET",
+    headers: { "x-api-key": AUTH.apiKey },
+    cookies: {},
+    query: { refresh: "1" },
+    get(name) { return this.headers[String(name).toLowerCase()] || ""; },
+  }, immediateGet.res, "manual-watch-review");
+  const immediateIds = new Set((immediateGet.reply.body.reviews || []).map((r) => r.id));
+  assert.equal(immediateIds.has(first.review.id), false);
+  assert.equal(immediateIds.has(second.review.id), false);
+  assert.equal(immediateIds.has(blocked.review.id), false);
+
+  await waitForManualWatchReviewBulkIdle();
+
+  assert.equal(getManualWatchReview(first.review.id).status, "approved");
+  assert.equal(getManualWatchReview(second.review.id).status, "approved");
+  assert.equal(getManualWatchReview(blocked.review.id).status, "pending", "a failed item must stay pending and reappear after the background batch completes");
+
+  const afterGet = makeRes();
+  await handleManualWatchReview({
+    method: "GET",
+    headers: { "x-api-key": AUTH.apiKey },
+    cookies: {},
+    query: { refresh: "1" },
+    get(name) { return this.headers[String(name).toLowerCase()] || ""; },
+  }, afterGet.res, "manual-watch-review");
+  const afterIds = new Set((afterGet.reply.body.reviews || []).map((r) => r.id));
+  assert.equal(afterIds.has(first.review.id), false);
+  assert.equal(afterIds.has(second.review.id), false);
+  assert.equal(afterIds.has(blocked.review.id), true);
+
+  setManualWatchReviewStatus(blocked.review.id, "dismissed");
 });

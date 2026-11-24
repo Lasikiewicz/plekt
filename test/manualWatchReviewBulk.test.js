@@ -12,17 +12,21 @@ import {
   effectiveBulkMode,
   effectiveModeForReview,
   executeBulkSelectionAction,
+  getInlineReviewDecisionItem,
   handleBulkSelectionChange,
+  handleBulkSelectionClick,
   isBulkSelectableReview,
   pruneBulkReviewSelection,
-  renderBulkConfirmDialog,
   renderBulkReviewBar,
+  renderInlineReviewDecisionBarHtml,
   runSequentialReviewBatch,
   selectAllVisibleReviews,
   selectedBulkReviews,
   summarizeBulkConfirmItems,
+  syncInlineReviewItems,
   toggleBulkReviewIds,
   triggerBulkSelectionWorkflow,
+  validateInlineDecision,
 } from "../public/modules/manual-watch-review-bulk.js";
 
 function sampleMovie(id, release_date = "2024-03-01") {
@@ -33,8 +37,8 @@ function sampleEpisode(id, { show = "Andor", season = 1, episode = 1, release_da
   return { id, media_type: "episode", show_title: show, title: `${show} - S0${season}E0${episode}`, episode_title, season, episode, release_date, source: "emby", ...(watch_context ? { watch_context } : {}) };
 }
 
-test("bulk selection defaults to episode_timing on mixed selections, omits the bar dropdown, and falls back per item", () => {
-  clearBulkReviewSelection();
+test("inline date pills render without dropdowns or duplicate unwatched options, and the bulk bar stays compact", () => {
+  clearBulkReviewSelection({ clearDecisions: true });
   assert.equal(DEFAULT_BULK_REVIEW_MODE, "episode_timing");
 
   const movie = sampleMovie("m1", "2024-03-01");
@@ -48,12 +52,10 @@ test("bulk selection defaults to episode_timing on mixed selections, omits the b
   assert.equal(isBulkSelectableReview(mismatch), false);
   assert.equal(isBulkSelectableReview(conflict), false);
 
-  // Episode-only allows episode_timing
   const epSummary = bulkSelectionSummary([ep]);
   assert.equal(epSummary.episodeTimingAllowed, true);
   assert.equal(effectiveBulkMode("episode_timing", epSummary), "episode_timing");
 
-  // Mixed movie + episode also allows episode_timing, mapping movies to release_day / detected
   const mixedSummary = bulkSelectionSummary([movie, movieNoDate, ep]);
   assert.equal(mixedSummary.isMixed, true);
   assert.equal(mixedSummary.episodeTimingAllowed, true);
@@ -68,76 +70,182 @@ test("bulk selection defaults to episode_timing on mixed selections, omits the b
   assert.equal(effectiveModeForReview(movieNoDate, "episode_timing"), "detected");
 
   const visibleReviews = [movie, ep, mismatch, conflict];
-  assert.doesNotMatch(renderBulkReviewBar({ visibleReviews }), /Proposed watch decisions/);
+  syncInlineReviewItems(visibleReviews);
+
+  // Screen 1 unified inline bar: facts + Will save + clickable option pills + Confirm watched all inline
+  const movieBarHtml = renderInlineReviewDecisionBarHtml([movie]);
+  assert.match(movieBarHtml, /manual-watch-review-inline-bar/);
+  assert.match(movieBarHtml, /manual-watch-review-fact--will-save/);
+  assert.match(movieBarHtml, /Will save/);
+  assert.match(movieBarHtml, /2024.*\(release date\)/);
+  assert.doesNotMatch(movieBarHtml, /<select\b/, "date options must not be in a dropdown");
+  assert.doesNotMatch(movieBarHtml, /Mark unwatched and clear review/, "must not duplicate Dismiss (mark unwatched)");
+  assert.match(movieBarHtml, /data-bulk-item-mode-choice="release_day"[^>]*aria-pressed="true"/);
+  assert.match(movieBarHtml, /data-bulk-item-mode-choice="detected"/);
+  assert.match(movieBarHtml, /data-bulk-item-mode-choice="now"/);
+  assert.match(movieBarHtml, /data-bulk-item-mode-choice="custom"/);
+  assert.match(movieBarHtml, />Confirm watched<\/button>/);
+  assert.doesNotMatch(movieBarHtml, /Confirm watched…/);
+
+  const epBarHtml = renderInlineReviewDecisionBarHtml([ep]);
+  assert.match(epBarHtml, /2022.*\(before S01E02\)/);
+  assert.match(epBarHtml, /data-bulk-item-mode-choice="episode_timing"[^>]*aria-pressed="true"/);
+  assert.match(epBarHtml, /Same as other episodes/);
+
+  // Bulk bar before selection
+  const idleBarHtml = renderBulkReviewBar({ visibleReviews });
+  assert.doesNotMatch(idleBarHtml, /Proposed watch decisions/);
+  assert.doesNotMatch(idleBarHtml, /data-manual-watch-review-bulk-action/);
+
+  // Bulk bar after Select all: pill buttons (no <select>, no duplicate unwatched option, no duplicate item rows)
   selectAllVisibleReviews(visibleReviews);
   const mixedBarHtml = renderBulkReviewBar({ visibleReviews });
-  assert.match(mixedBarHtml, /Proposed watch decisions/);
-  assert.match(mixedBarHtml, /Movie m1<\/strong>\s*<span data-bulk-item-preview[^>]*>.*2024.*\(release date\)/);
-  assert.match(mixedBarHtml, /Andor S01E01<\/strong>\s*<span data-bulk-item-preview[^>]*>.*2022.*\(before S01E02\)/);
-  assert.match(mixedBarHtml, /data-bulk-confirm-item-mode[^>]*aria-label="Watch decision for Movie m1"/);
-  assert.doesNotMatch(mixedBarHtml, /data-manual-watch-review-bulk-mode/, "bulk bar should not duplicate the pop-up date dropdown");
-  assert.match(mixedBarHtml, /Confirm selected \(2\)…/);
+  assert.doesNotMatch(mixedBarHtml, /<select\b/);
+  assert.doesNotMatch(mixedBarHtml, /Proposed watch decisions/);
+  assert.doesNotMatch(mixedBarHtml, /Mark unwatched and clear review/);
+  assert.match(mixedBarHtml, /data-manual-watch-review-bulk-apply-mode="release_day"/);
+  assert.match(mixedBarHtml, /Confirm selected \(2\)/);
+  assert.doesNotMatch(mixedBarHtml, /Confirm selected \(2\)…/);
   assert.match(mixedBarHtml, /Dismiss selected \(2\)/);
+  assert.match(mixedBarHtml, /Selected: 1 same as other episodes · 1 release\/air date/);
 
-  // Movies-only falls back to release_day
-  clearBulkReviewSelection();
+  clearBulkReviewSelection({ clearDecisions: true });
   const moviesSummary = bulkSelectionSummary([movie, movieNoDate]);
   assert.equal(moviesSummary.episodeTimingAllowed, false);
   assert.equal(effectiveBulkMode("episode_timing", moviesSummary), "release_day");
 });
 
-test("changing a date inline updates just that row and carries it into confirmation", async () => {
-  clearBulkReviewSelection();
+test("clicking an item's date pill updates its Will save preview immediately and Confirm selected saves directly without a popup", async () => {
+  clearBulkReviewSelection({ clearDecisions: true });
   const reviews = [sampleMovie("m1"), sampleMovie("m2")];
   selectAllVisibleReviews(reviews);
   renderBulkReviewBar({ visibleReviews: reviews });
 
   const preview = { textContent: "" };
-  const field = { hidden: true };
-  const row = {
+  const field = { hidden: true, value: "", focused: false, focus() { this.focused = true; } };
+  const pills = ["release_day", "custom"].map((mode) => ({
+    dataset: { bulkItemModeChoice: mode, bulkItemKey: "movie:m1" },
+    selected: mode === "release_day",
+    pressed: mode === "release_day" ? "true" : "false",
+    classList: {
+      toggle(_cls, force) { this.selected = force; },
+    },
+    setAttribute(name, val) { if (name === "aria-pressed") this.pressed = val; },
+  }));
+  pills[0].classList.toggle = (_c, f) => { pills[0].selected = f; };
+  pills[1].classList.toggle = (_c, f) => { pills[1].selected = f; };
+
+  const card = {
     querySelector(selector) {
-      return selector === "[data-bulk-item-preview]" ? preview : field;
+      if (selector.includes("data-bulk-item-preview")) return preview;
+      if (selector.includes("data-bulk-confirm-item-datetime")) return field;
+      if (selector.includes("data-bulk-item-row")) return card;
+      return null;
+    },
+    querySelectorAll(selector) {
+      return selector === "[data-bulk-item-mode-choice]" ? pills : [];
     },
   };
-  const select = {
-    value: "custom",
+  const customPill = {
+    disabled: false,
+    dataset: { bulkItemModeChoice: "custom", bulkItemKey: "movie:m1" },
+    closest(selector) {
+      if (selector === "[data-bulk-item-mode-choice]") return this;
+      if (selector.includes("data-manual-watch-review-id")) return card;
+      return null;
+    },
+  };
+  assert.equal(handleBulkSelectionClick({ target: customPill }, { getAllReviews: () => reviews }), true);
+  assert.equal(field.hidden, false);
+  assert.equal(field.focused, true);
+  assert.equal(pills[0].selected, false);
+  assert.equal(pills[1].selected, true);
+
+  const customInput = {
+    value: "2024-05-09T19:30",
     dataset: { bulkItemKey: "movie:m1" },
     closest(selector) {
-      if (selector === "[data-bulk-confirm-item-mode]") return this;
-      if (selector === "[data-bulk-item-row]") return row;
-      return null;
-    },
-  };
-  assert.equal(handleBulkSelectionChange({ target: select }), true);
-  assert.equal(field.hidden, false);
-
-  const custom = {
-    ...select,
-    value: "2024-05-09T19:30",
-    closest(selector) {
       if (selector === "[data-bulk-confirm-item-datetime]") return this;
-      if (selector === "[data-bulk-item-row]") return row;
+      if (selector.includes("data-manual-watch-review-id")) return card;
       return null;
     },
   };
-  assert.equal(handleBulkSelectionChange({ target: custom }), true);
+  assert.equal(handleBulkSelectionChange({ target: customInput }, { getAllReviews: () => reviews }), true);
   assert.match(preview.textContent, /2024/);
-  const html = renderBulkReviewBar({ visibleReviews: reviews });
-  assert.match(html, /value="2024-05-09T19:30"/);
+  const inlineHtml = renderInlineReviewDecisionBarHtml([reviews[0]]);
+  assert.match(inlineHtml, /value="2024-05-09T19:30"/);
 
-  let confirmation;
+  let savedArgs = null;
+  let dialogCalled = false;
   await triggerBulkSelectionWorkflow("approve", {
     getAllReviews: () => reviews,
-    openBulkConfirm: async ({ items }) => { confirmation = items.map(bulkItemDecision); return null; },
+    openConfirmDialog: async () => { dialogCalled = true; return true; },
+    runSelectionAction: async (...args) => { savedArgs = args; },
   });
-  assert.deepEqual(confirmation, [
-    { mode: "custom", watchedAt: new Date(custom.value).toISOString() },
-    { mode: "release_day", watchedAt: "2024-03-01T00:00:00.000Z" },
+  assert.equal(dialogCalled, false, "Confirm selected must save directly without opening a popup");
+  assert.equal(savedArgs[1], "approve");
+  assert.deepEqual([...savedArgs[4].entries()], [
+    ["m1", { mode: "custom", watchedAt: new Date(customInput.value).toISOString() }],
+    ["m2", { mode: "release_day", watchedAt: "2024-03-01T00:00:00.000Z" }],
   ]);
-  clearBulkReviewSelection();
+  clearBulkReviewSelection({ clearDecisions: true });
 });
 
-test("buildBulkConfirmItems and renderBulkConfirmDialog show exact server-computed episode timing dates and fall back to air date when season has no watched episodes", () => {
+test("clicking a Set selected dates pill updates every selected item's inline mode at once", () => {
+  clearBulkReviewSelection({ clearDecisions: true });
+  const m1 = sampleMovie("m1", "2024-03-01");
+  const e1 = sampleEpisode("e1", { release_date: "2022-09-21" });
+  const reviews = [m1, e1];
+  selectAllVisibleReviews(reviews);
+  renderBulkReviewBar({ visibleReviews: reviews });
+
+  let rendered = 0;
+  const applyNowBtn = {
+    disabled: false,
+    dataset: { manualWatchReviewBulkApplyMode: "now" },
+    closest(selector) {
+      return selector === "[data-manual-watch-review-bulk-apply-mode]" ? this : null;
+    },
+  };
+  assert.equal(
+    handleBulkSelectionClick(
+      { target: applyNowBtn },
+      { getAllReviews: () => reviews, onRender: () => { rendered += 1; } },
+    ),
+    true,
+  );
+  assert.equal(rendered, 1);
+  assert.equal(getInlineReviewDecisionItem([m1]).mode, "now");
+  assert.equal(getInlineReviewDecisionItem([e1]).mode, "now");
+  clearBulkReviewSelection({ clearDecisions: true });
+});
+
+test("Confirm selected blocks future custom dates with a clear error instead of submitting", async () => {
+  clearBulkReviewSelection({ clearDecisions: true });
+  const movie = sampleMovie("m1", "2024-03-01");
+  selectAllVisibleReviews([movie]);
+  const item = getInlineReviewDecisionItem([movie]);
+  item.mode = "custom";
+  item.customValue = "2099-01-01T12:00";
+  item.edited = true;
+
+  const check = validateInlineDecision(item, { now: Date.parse("2026-11-23T20:00:00Z") });
+  assert.equal(check.ok, false);
+  assert.match(check.error, /in the future/i);
+
+  let ran = false;
+  let errMsg = "";
+  await triggerBulkSelectionWorkflow("approve", {
+    getAllReviews: () => [movie],
+    runSelectionAction: async () => { ran = true; },
+    setMessage: (msg, tone) => { if (tone === "error") errMsg = msg; },
+  });
+  assert.equal(ran, false);
+  assert.match(errMsg, /in the future/i);
+  clearBulkReviewSelection({ clearDecisions: true });
+});
+
+test("buildBulkConfirmItems computes episode timing dates and falls back to air date when season has no watched episodes", () => {
   const movie = sampleMovie("m1", "2000-07-06");
   const movieNoDate = { ...sampleMovie("m2", ""), updated_at: Date.parse("2026-10-02T15:45:00Z") };
   const epWithTimingEmby = sampleEpisode("e1-emby", {
@@ -176,67 +284,10 @@ test("buildBulkConfirmItems and renderBulkConfirmDialog show exact server-comput
   assert.match(describeItemWatchDatePreview(items[2]), /2026.*after S01E02/);
   assert.match(describeItemWatchDatePreview(items[3]), /2018.*air date/);
   assert.equal(summarizeBulkConfirmItems(items), "1 same as other episodes · 2 release/air date · 1 detection time");
-
-  const html = renderBulkConfirmDialog({ items, activeMode: "episode_timing" });
-  assert.match(html, /Review watch decisions/);
-  assert.match(html, /1 same as other episodes · 2 release\/air date · 1 detection time/);
-  assert.match(html, /Same as other episodes \(no watched episodes in season\)/);
-  assert.match(html, /Release date \(unavailable\)/);
-  assert.match(html, /Mark 4 items watched/);
-});
-
-test("triggerBulkSelectionWorkflow opens the per-item popup for approve with episode_timing default and forwards per-item decisions", async () => {
-  clearBulkReviewSelection();
-  const movie = sampleMovie("m1", "2024-03-01");
-  const ep = sampleEpisode("e1", { show: "Paradise PD", season: 1, episode: 2, release_date: "2018-08-31" });
-  ep.episode_timing = { watchedAt: "2018-09-01T19:32:00.000Z", direction: "after", anchorCode: "S01E01" };
-  toggleBulkReviewIds(["m1", "e1"], true);
-
-  let popupReceived = null;
-  let actionArgs = null;
-  const decisions = new Map([
-    ["m1", { mode: "detected", watchedAt: "" }],
-    ["e1", { mode: "episode_timing", watchedAt: "" }],
-  ]);
-
-  await triggerBulkSelectionWorkflow("approve", {
-    getAllReviews: () => [movie, ep],
-    openBulkConfirm: async (payload) => {
-      popupReceived = payload;
-      return { mode: "episode_timing", watchedAt: "", itemDecisions: decisions };
-    },
-    runSelectionAction: async (...args) => {
-      actionArgs = args;
-    },
-  });
-
-  assert.equal(popupReceived.reviews.length, 2);
-  assert.equal(popupReceived.initialMode, "episode_timing");
-  assert.equal(actionArgs[1], "approve");
-  assert.equal(actionArgs[4], decisions);
-  clearBulkReviewSelection();
-});
-
-test("a batch can save a watch date and clear another review as unwatched", async () => {
-  const reviews = [sampleMovie("watched"), sampleMovie("unwatched")];
-  const items = buildBulkConfirmItems(reviews);
-  items[1].mode = "unwatched";
-  assert.match(renderBulkConfirmDialog({ items }), /Save watch decisions/);
-  assert.match(describeItemWatchDatePreview(items[1]), /Mark unwatched and clear review/);
-  const itemDecisions = new Map(items.map((item) => [item.reviewIds[0], bulkItemDecision(item)]));
-  const calls = [];
-  const result = await executeBulkSelectionAction(reviews, {
-    itemDecisions, postAction: async (...args) => { calls.push(args); },
-  });
-  assert.equal(result.completed, 2);
-  assert.deepEqual(calls, [
-    ["watched", "approve", "release_day", "2024-03-01T00:00:00.000Z"],
-    ["unwatched", "dismiss", "", ""],
-  ]);
 });
 
 test("executeBulkSelectionAction submits the dates previewed for each item, including grouped provider reviews", async () => {
-  clearBulkReviewSelection();
+  clearBulkReviewSelection({ clearDecisions: true });
   const movie = sampleMovie("m1", "2024-03-01");
   const ep = sampleEpisode("e1", { show: "Paradise PD", season: 1, episode: 1 });
   ep.episode_timing = { watchedAt: "2026-11-20T17:45:00.123Z", direction: "before", anchorCode: "S01E02" };
@@ -276,14 +327,13 @@ test("executeBulkSelectionAction submits the dates previewed for each item, incl
 });
 
 test("selectAllVisibleReviews caps at 50 items and over-cap selections disable bulk buttons", () => {
-  clearBulkReviewSelection();
+  clearBulkReviewSelection({ clearDecisions: true });
   const many = Array.from({ length: 60 }, (_, idx) => sampleMovie(`m-${idx + 1}`));
   const result = selectAllVisibleReviews(many, true);
   assert.equal(result.selectedUnits, BULK_REVIEW_BATCH_CAP);
   assert.equal(result.capped, true);
   assert.equal(selectedBulkReviews(many).length, BULK_REVIEW_BATCH_CAP);
 
-  // Manually adding one more triggers overCap warning and disables buttons
   toggleBulkReviewIds(["m-51"], true);
   const summary = bulkSelectionSummary(selectedBulkReviews(many));
   assert.equal(summary.overCap, true);
@@ -294,7 +344,7 @@ test("selectAllVisibleReviews caps at 50 items and over-cap selections disable b
 
   pruneBulkReviewSelection(many.slice(0, 5));
   assert.equal(selectedBulkReviews(many).length, 5);
-  clearBulkReviewSelection();
+  clearBulkReviewSelection({ clearDecisions: true });
 });
 
 test("runSequentialReviewBatch skips failed items and continues when continueOnError is true, restoring only failures", async () => {
@@ -335,7 +385,7 @@ test("runSequentialReviewBatch skips failed items and continues when continueOnE
   assert.deepEqual(restored.map((item) => item.id), ["b"]);
 });
 
-test("runSequentialReviewBatch stops on first failure when continueOnError is false (show/season behavior)", async () => {
+test("runSequentialReviewBatch stops on first failure when continueOnError is false", async () => {
   const items = [sampleEpisode("e1", { episode: 1 }), sampleEpisode("e2", { episode: 2 }), sampleEpisode("e3", { episode: 3 })];
   const called = [];
   let restored = [];
@@ -358,7 +408,7 @@ test("runSequentialReviewBatch stops on first failure when continueOnError is fa
 });
 
 test("executeBulkSelectionAction dismisses sequentially, clears selection, and reports summary", async () => {
-  clearBulkReviewSelection();
+  clearBulkReviewSelection({ clearDecisions: true });
   const items = [sampleMovie("d1"), sampleEpisode("d2")];
   toggleBulkReviewIds(["d1", "d2"], true);
   const confirmDialog = bulkDismissConfirmation(bulkSelectionSummary(items));

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import "./domStubs.js";
 
-const { attentionIssueMarkup, clientAttentionItemMarkup, recordClientAttention, renderSyncActivityStatus, renderSyncAttention, retryClientAttention } = await import("../public/modules/sync-activity.js");
+const { attentionIssueMarkup, clientAttentionItemMarkup, recordClientAttention, renderSyncActivityStatus, renderSyncAttention, retryClientAttention, syncAttentionItemMarkup } = await import("../public/modules/sync-activity.js");
 const { elements, state } = await import("../public/modules/state.js");
 const { renderTrackerWriteReview } = await import("../public/modules/sync-attention-cards.js");
 
@@ -13,14 +13,25 @@ test("tracker review groups episodes across providers under one show", () => {
   }));
   const html = renderTrackerWriteReview(items, (item) => `<p>${item.id}</p>`);
   assert.equal((html.match(/data-tracker-review-group=/g) || []).length, 1);
-  assert.match(html, /2 episodes · 2 held writes · Simkl, Trakt/);
+  assert.match(html, /2 episodes · 2 updates · Simkl, Trakt/);
   assert.match(html, /<h4>S01E01<\/h4>/);
   assert.match(html, /<h4>S01E02<\/h4>/);
-  assert.match(html, /Cancel pending updates/);
-  assert.match(html, /held Simkl and Trakt watch updates for the movies and shows you check/);
-  assert.match(html, /Recheck all/);
-  assert.match(html, /Your local watch history and tracker history stay intact/);
+  assert.match(html, /Cancel selected updates/);
+  assert.match(html, /Check watch status/);
+  assert.match(html, /keeps watch history in Plekt and on your trackers/);
   assert.match(html, /data-tracker-review-status role="status"/);
+});
+
+test("a held Simkl episode shows its number and explains the missing confirmation", () => {
+  const item = {
+    id: "simkl", provider: "simkl", source: "tracker_write", title: "Simkl: Example - S02E03",
+    groupTitle: "Example", groupKey: "example-show", episodeCode: "S02E03", watchedAt: "2026-10-22T12:34:56.000Z",
+  };
+  const html = renderTrackerWriteReview([item], syncAttentionItemMarkup);
+  assert.match(html, /<strong>Example<\/strong><span>S02E03 · 1 update · Simkl<\/span>/);
+  assert.match(html, /Plekt couldn’t confirm that Simkl recorded the watch for Example - S02E03/);
+  assert.match(html, /when the date and time match/);
+  assert.match(html, />Cancel update<\/button>/);
 });
 
 test("sync status reflects current activity issues after an otherwise idle run", () => {

@@ -372,8 +372,8 @@ membership and selection revision before dispatch.
      around the watched date first, acknowledges a matching play, and only resends when
      the history read succeeded and holds no match. A play that matches more than one
      open intent, a write still failing after 10 attempts, or work older than 30 days is
-     held as `review` and shown in Sync Attention, where **Cancel this write** cancels it
-     without touching local history. Settled, cancelled and match-failed intents are
+     held as `review` and shown in Sync Attention, where **Cancel update** removes it
+     from the queue and preserves watch history. Settled, cancelled and match-failed intents are
      deleted lazily 30 days after settling; unresolved intents are never deleted on a
      timer. A due intent also puts its watch record back into this retry queue.
      Reconnecting a different account clears the old account's intents. Upgrading
@@ -477,6 +477,7 @@ already in flight is not cancelled; the guard only prevents new competing outbou
 4. **Catch-up library sync** - **runs every 15 minutes** (configurable via `CATCHUP_SYNC_INTERVAL_MS` env variable) to avoid heavy redundant API queries:
    - Pulls recently-watched and continue-watching (resumable) items from each active server: `syncRecentlyWatchedFromPlex` (and the Emby/Jellyfin equivalents) in `server/src/utils/recentWatchImport.js`, and `syncRecentlyResumableFromPlex` (and the Emby/Jellyfin equivalents) in `scheduled.js`.
    - Runs a full paginated availability reconciliation after watched imports. For every active provider, an item must be present in that provider's successful library inventory, explicitly unplayed there, and canonically watched in Plekt before the scheduler marks it played. This catches bulk-added 4K/alternate-library copies, uses the exact native item id, and is positive-only: missing items, failed/partial scans, and canonical unwatches never trigger an unwatch.
+   - If an Emby or Jellyfin library entry only has episode-level provider IDs, the scan checks for a local watch at the same show, season, and episode before looking up the series IDs. It verifies the watch against the resolved series IDs before marking that copy played.
    - Refreshes the provider Up Next feeds in the same catch-up window. Plekt uses Plex's
      account-scoped **Continue Watching** hub, Emby's user-scoped **Continue Watching/Resume**
      endpoint, and Jellyfin's user-scoped **Next Up** endpoint as the three target rails. The
@@ -626,13 +627,13 @@ Simkl's quota reserve and account holds. Only existing captured
 intents qualify, so this does not discover/send old backlog or enable Simkl
 full-sync push before its preview and approval safeguards.
 
-Sync Activity groups held writes by movie or show across trackers, with episode
-and provider details inside each show.
-**Recheck all** checks eligible held writes without waiting for the next scheduled
-check. It reads the tracker and clears only verified holds. **Cancel pending updates**
-cancels the writes in the selected groups after confirmation and preserves local
-and tracker watch history. The review panel shows the recheck result and how many
-writes are still held.
+The **Watch updates on hold** panel in Sync Activity groups updates by movie or
+show and shows the destination trackers. A show with updates for one episode
+shows the episode number in its summary. **Check watch status** looks for
+matching watches on connected trackers and clears confirmed updates. The result
+shows how many were confirmed and how many are still on hold.
+**Cancel selected updates** removes the updates for the selected titles from the
+queue after confirmation and preserves local and tracker watch history.
 
 **Retry failed** on a Sync Activity item shows the watch action, the affected
 destinations and their recorded errors before retrying. Previously recorded

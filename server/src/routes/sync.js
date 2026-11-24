@@ -148,6 +148,7 @@ import {
 
 import { shouldSkipPostRestoreCompletedWebhook } from "./backups.js";
 import { activityItemKeyFor } from "../utils/syncActivityIdentity.js";
+import { summarizeTargetStates } from "../utils/syncHistoryTargetUpdate.js";
 
 const SYNC_ACTIVITY_MATCH_REPORT_TTL_MS = 3000;
 const syncActivityMatchReportByUser = createPerUserState(() => ({
@@ -1569,6 +1570,7 @@ async function retrySyncActivityEntry(rawId, retryContext = {}) {
   if (!isLibraryCurrent) throw Object.assign(new Error("This watch is local-only or its source library is no longer verified as monitored."), { status: 409 });
   const existing = await findWatchedByAnyMediaKey(media).catch(() => null);
   if (existing?.watched_at) media.watched_at = existing.watched_at;
+  if (existing?.id && !media.watchRecordId) media.watchRecordId = existing.id;
   Object.assign(media, { syncTargets: targets, reopenUnsentTrackerWrite: targets.includes("simkl") });
   const action = String(entry.action || "watched").toLowerCase();
   const loopStore = createLoopStore();
@@ -1581,14 +1583,17 @@ async function retrySyncActivityEntry(rawId, retryContext = {}) {
   }
   const mergedTargetStates = mergeTargetStates(entry.targetStates || [], summary.targetStates || [], targets, summary.details);
   const mergedStatus = statusFromTargetStates(mergedTargetStates);
+  const mergedDetails = mergedTargetStates.length
+    ? summarizeTargetStates(mergedTargetStates).details
+    : (summary.details || entry.details);
   await updateSyncHistoryStatus(entry.id, {
     status: mergedStatus,
-    details: summary.details || entry.details,
+    details: mergedDetails,
     action,
     targetStates: mergedTargetStates,
     rawPayloadDebug: { ...entry.rawPayloadDebug, ids: media.ids || {} },
   });
-  return { status: mergedStatus, details: summary.details, targetStates: mergedTargetStates, title: media.title };
+  return { status: mergedStatus, details: mergedDetails, targetStates: mergedTargetStates, title: media.title };
 }
 
 async function listCurrentSyncActivityGroupRetryableEntries(groupKey) {

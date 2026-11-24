@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import "./domStubs.js";
-const { handleSyncActivityRetryClick } = await import("../public/modules/sync-attention-cards.js");
+const { handleSimklEpisodeOrderReviewClick, handleSyncActivityRetryClick, simklEpisodeOrderGuidance, syncActivityResultSummary } = await import("../public/modules/sync-attention-cards.js");
 
 test("retry explains the failed destination and dispatches only after confirmation", async () => {
   const button = { disabled: false, dataset: {
@@ -89,6 +89,85 @@ test("a Simkl-only failure is retryable, matching the server's retry targets", (
   };
   assert.equal(isRetryableActivity(entry), true);
   assert.equal(hasRetryableActivityTarget({ status: "error", targetStates: [{ target: "unknown", status: "error" }] }), false);
+});
+
+test("alternate numbering skips offer a single watched-only review for the group", () => {
+  const entry = {
+    action: "watched",
+    status: "partial",
+    details: "Synced to Emby; Simkl skipped by the historical sync policy",
+    targetStates: [
+      { target: "emby", status: "success" },
+      { target: "simkl", status: "skipped", detail: "Simkl does not support alternate episode orders; this show's watches are not sent to Simkl" },
+    ],
+  };
+  assert.equal(isRetryableActivity(entry), false);
+  assert.equal(syncActivityResultSummary(entry), "Synced to Emby; Simkl skipped because of episode numbering");
+  assert.equal(syncActivityResultSummary({ ...entry, details: "Synced to Emby; Plex & Simkl skipped by the historical sync policy" }),
+    "Synced to Emby; Plex skipped by the historical sync policy. Simkl skipped because of episode numbering");
+  const markup = simklEpisodeOrderGuidance([entry, entry], "show|title:futurama");
+  assert.match(markup, /data-simkl-episode-order-review="show\|title:futurama"/);
+  assert.equal((markup.match(/Review Simkl updates/g) || []).length, 1);
+  assert.equal(simklEpisodeOrderGuidance([{ ...entry, action: "unwatched" }], "show|title:futurama"), "");
+  const unverified = { ...entry, targetStates: [{ target: "simkl", status: "skipped", detail: "Simkl could not verify this episode's alternate numbering" }] };
+  assert.match(simklEpisodeOrderGuidance([unverified], "show|title:futurama"), /Review Simkl updates/);
+  const otherSkip = { ...entry, targetStates: [{ target: "plex", status: "skipped", detail: "Historical Plex sync disabled" }] };
+  assert.equal(simklEpisodeOrderGuidance([otherSkip], "show|title:futurama"), "");
+  assert.equal(syncActivityResultSummary(otherSkip), otherSkip.details);
+});
+
+test("Simkl review queues only the selected watches after confirmation", async () => {
+  const groupKey = "show|title:futurama";
+  const preview = { id: "preview-id", items: [
+    { id: "selected", title: "Futurama - S02E06", side: "tracker", season: 2, episode: 6, selectable: true },
+    { id: "deselected", title: "Futurama - S02E07", side: "tracker", selectable: true },
+    { id: "held", title: "<Episode>", side: "tracker", reason: "Episode match is ambiguous", selectable: false },
+    { id: "inbound", title: "Unrelated inbound watch", side: "plekt", selectable: true },
+  ] };
+  const button = {
+    disabled: false,
+    textContent: "Review Simkl updates",
+    dataset: { simklEpisodeOrderReview: groupKey },
+    setAttribute() {},
+    removeAttribute() {},
+  };
+  const inputs = [{ value: "selected", checked: true }, { value: "deselected", checked: false }, { value: "held", disabled: true }];
+  const list = { querySelectorAll: (selector) => selector === "input" ? inputs : inputs.filter((input) => input.checked && !input.disabled), closest() {}, querySelector() {} };
+  const oldFetch = globalThis.fetch;
+  const oldDocument = globalThis.document;
+  const calls = [];
+  const errors = [];
+  globalThis.document = { getElementById: () => list };
+  globalThis.fetch = async (url, options) => {
+    calls.push([url, JSON.parse(options.body)]);
+    return { ok: true, json: async () => url.endsWith("/compare") ? { fullSync: { preview } } : { fullSync: { status: "queued", runId: "run-id" } } };
+  };
+  try {
+    for (const confirmed of [false, true]) {
+      calls.length = 0;
+      const event = { target: { closest: () => button } };
+      assert.equal(handleSimklEpisodeOrderReviewClick(event, {
+        setMessage: (message) => errors.push(message),
+        openConfirmDialog: async ({ mediaHtml, runOnConfirm }) => {
+          assert.match(mediaHtml, /Futurama - S02E06/);
+          assert.match(mediaHtml, /&lt;Episode&gt;/);
+          assert.match(mediaHtml, /Episode match is ambiguous/);
+          assert.doesNotMatch(mediaHtml, /Unrelated inbound watch/);
+          if (confirmed) assert.match(await runOnConfirm(), /Queued 1 watch for Simkl/);
+        },
+      }), true);
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(button.disabled, false);
+      assert.deepEqual(errors, []);
+      assert.deepEqual(calls, [
+        ["/api/tracker-connections/simkl/full-sync/compare", { activityGroupKey: groupKey }],
+        ...(confirmed ? [["/api/tracker-connections/simkl/full-sync", { direction: "push", planId: preview.id, selectedIds: ["selected"] }]] : []),
+      ]);
+    }
+  } finally {
+    globalThis.fetch = oldFetch;
+    globalThis.document = oldDocument;
+  }
 });
 
 test("Trakt not_found episode failures offer a show-match repair", () => {

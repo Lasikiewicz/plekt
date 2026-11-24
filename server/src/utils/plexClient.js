@@ -769,18 +769,21 @@ async function findPlexItemUncached(config, media) {
 }
 
 export async function findPlexItem(config, media) {
-  const [directRatingKey] = nativeProviderItemIds(media, "plex");
+  const [directRatingKey] = media?.__skipDirectIds ? [] : nativeProviderItemIds(media, "plex");
   if (directRatingKey) return { ratingKey: directRatingKey };
 
   const cache = media?.restoreLookupCache;
-  if (cache && typeof cache.resolve === "function") {
-    return cache.resolve(
+  const resolved = cache && typeof cache.resolve === "function"
+    ? await cache.resolve(
       restoreLookupKey("plex", config, media),
       media,
       () => findPlexItemUncached(config, media),
-    );
-  }
-  return findPlexItemUncached(config, media);
+    )
+    : await findPlexItemUncached(config, media);
+  if (resolved?.ratingKey || media?.__skipDirectIds) return resolved;
+  const rawHint = media?.upNextProviderItems?.plex;
+  const hintKey = String(Array.isArray(rawHint) ? (rawHint[0]?.id || rawHint[0] || "") : (rawHint || "")).trim();
+  return hintKey ? { ratingKey: hintKey } : resolved;
 }
 
 async function findPlexItemForMutation(config, media) {

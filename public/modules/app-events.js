@@ -737,12 +737,17 @@ function attachEvents() {
     if (!payload.id && !payload.media_key) return;
 
     const payloadMediaType = payload.media_type || payload.mediaType || "movie";
-    const title = payloadMediaType === "episode"
-      ? (payload.show_title || payload.showTitle || payload.title || "this episode")
-      : (payload.title || "this movie");
+    const isEpisode = payloadMediaType === "episode";
+    const title = isEpisode ? (payload.show_title || payload.showTitle || payload.title || "this episode") : (payload.title || "this movie");
+    const pct = Math.round(Number(payload.progress_percent ?? payload.progress ?? (payload.position_ms && payload.duration_ms ? (payload.position_ms / payload.duration_ms) * 100 : 0)));
+    const epTag = isEpisode && payload.season != null && payload.episode != null ? `<span>${escapeHtml(episodeCode(payload.display_season ?? payload.season, payload.display_episode ?? payload.episode))}</span>` : "";
+    const mediaHtml = item ? `${posterMarkup(item, "confirm-modal-media-poster")}<div class="confirm-modal-media-info"><span class="confirm-modal-media-title">${escapeHtml(title)}</span>${epTag || pct > 0 ? `<span class="confirm-modal-media-meta">${epTag}${pct > 0 ? `<span>${pct}% watched</span>` : ""}</span>` : ""}</div>` : "";
     const confirmed = await openConfirmDialog({
-      title: "Clear Progress",
-      body: `Clear saved progress for "${title}" and mark it unwatched? This removes it from Plex, Emby, and Jellyfin Resume (unlike Remove from Up Next, which hides it on supported rails while Jellyfin Next Up may still show an episode).`,
+      title: "Clear progress",
+      mediaHtml,
+      body: mediaHtml
+        ? `Mark this ${isEpisode ? "episode" : "movie"} unwatched and remove it from Resume across connected apps?`
+        : `Clear saved progress for “${title}” and mark it unwatched across connected apps?`,
       confirmLabel: "Clear progress",
       danger: true,
     });
@@ -1887,7 +1892,7 @@ function attachEvents() {
         `;
       }
 
-      const message = `This will clear the saved playback progress for "${title}", mark it as unwatched, and remove it from your Part Watched list.\n\nThe unwatched status will also be sent back to ${sourceLabel} and propagated to any other connected media servers, so it stays in sync everywhere.`;
+      const message = `Mark this ${isEpisode ? "episode" : "movie"} unwatched and remove it from Resume across ${sourceLabel} and connected apps?`;
 
       showConfirmModal(message, async () => {
         const originalText = btn.textContent;

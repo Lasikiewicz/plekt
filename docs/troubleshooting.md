@@ -197,7 +197,9 @@ When a watch looks unexpected, start with the show's **Info** export (the data b
 - `watch_provenance.source`, `ingest_path`, `event`, `phase`, `source_timestamp`,
   `captured_at`, `item_id`, `user`, `session_id`, `device`, and `client`.
 - `sync_dispatch_telemetry`, then the `watch_audit_events` entries for `source_event`,
-  `history_added`, `sync_dispatch`, and `sync_target`.
+  `history_added`, `sync_dispatch`, and `sync_target`. The export includes the latest
+  2,000 matching audit events in chronological order. Refreshing the dashboard history
+  preserves the sync telemetry and watch provenance for the same watch record.
 - A `source_event` from more than 90 days ago may have no payload: the audit row keeps its
   summary, but the payload was cleared by the retention prune. For a recent valid event, the raw
   provider body is replaced by a `trimmed` marker (`originalBytes`, `topLevelKeys`, `ids`). Only

@@ -274,6 +274,7 @@ export function manualWatchReviewWatchContext(review = {}) {
 
 function serializableMedia(media = {}) {
   const showIds = media.showIds || media.show_ids || {};
+  const provenance = media.watchProvenance || media.watch_provenance || null;
   const normalized = {
     title: text(media.title),
     showTitle: showTitleFromMedia(media),
@@ -292,7 +293,7 @@ function serializableMedia(media = {}) {
     season: integerOrNull(media.season),
     episode: integerOrNull(media.episode),
     episodeTitle: text(media.episodeTitle || media.episode_title) || undefined,
-    itemId: text(media.itemId || media.item_id) || undefined,
+    itemId: text(media.itemId || media.item_id || provenance?.item_id || provenance?.itemId) || undefined,
     posterUrl: text(media.posterUrl || media.poster_url) || undefined,
     showPosterUrl: text(media.showPosterUrl || media.show_poster_url) || undefined,
     providerItemId: text(media.providerItemId || media.provider_item_id) || undefined,
@@ -589,7 +590,12 @@ export function enqueueManualWatchReview(media = {}, {
     id: existing?.id || crypto.randomUUID(),
     media_key: mediaKey,
     source,
-    source_item_id: text(normalizedMedia.itemId || normalizedMedia.providerItemId) || null,
+    source_item_id: text(
+      normalizedMedia.itemId
+      || normalizedMedia.providerItemId
+      || normalizedMedia.watchProvenance?.item_id
+      || normalizedMedia.watchProvenance?.itemId,
+    ) || null,
     title: normalizedMedia.title || "Unknown media",
     media_type: normalizedMedia.type,
     show_title: normalizedMedia.showTitle || null,

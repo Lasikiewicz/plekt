@@ -108,6 +108,12 @@ function nativeEmbyItems(media = {}) {
   return nativeProviderItemIds(media, "emby").map((Id) => ({ Id }));
 }
 
+function upNextHintEmbyItems(media = {}) {
+  const raw = media?.upNextProviderItems?.emby;
+  const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return [...new Set(values.map((value) => String(value?.id || value?.Id || value || "").trim()).filter(Boolean))].map((Id) => ({ Id }));
+}
+
 function embyLibraryEnforced(config = {}) {
   return Boolean(config?.libraryMonitoringEnforced || Array.isArray(config?.monitoredLibraryIds));
 }
@@ -128,7 +134,7 @@ async function findEmbyItemsForMutation(config, media = {}) {
   if (embyLibraryEnforced(config) && !getProviderLibrarySelection(config, "emby").hasSelectedLibraries) {
     return [];
   }
-  const direct = nativeEmbyItems(media);
+  const direct = media.__skipDirectIds ? [] : nativeEmbyItems(media);
   let items = direct;
   if (!items.length) {
     const cache = media?.restoreLookupCache;
@@ -149,6 +155,9 @@ async function findEmbyItemsForMutation(config, media = {}) {
       });
       invalidateEmbySeriesIdentity(config, media);
       items = await findEmbyItemsForMutation(config, { ...media, __identityRetry: true });
+    }
+    if (!items?.length && !media.__skipDirectIds) {
+      items = upNextHintEmbyItems(media);
     }
   }
   if (!items?.length || !embyLibraryEnforced(config)) return items || [];
@@ -483,7 +492,7 @@ export function embyEpisodeMatchesCoordinates(item = {}, season, episode) {
 const movieMisses = new Map();
 const MOVIE_MISS_TTL_MS = 30_000;
 export async function findEmbyItems(config, media) {
-  const direct = nativeEmbyItems(media);
+  const direct = media?.__skipDirectIds ? [] : nativeEmbyItems(media);
   if (direct.length) return direct;
   if (media.type === "movie") {
     const missKey = JSON.stringify([config.baseUrl, config.userId, config.apiKey, media.ids, media.title]);
@@ -566,9 +575,9 @@ export async function markEmbyPlayed(config, media) {
     await Promise.all(markJobs);
     return { platform: "emby", status: "fulfilled", itemId: items[0].Id, itemIds: items.map(i => i.Id), httpStatus: lastHttpStatus };
   } catch (error) {
-    if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
+    if (error?.status === 404 && !media.__identityRetry && (media.type === "episode" || nativeEmbyItems(media).length > 0)) {
       invalidateEmbySeriesIdentity(config, media);
-      return markEmbyPlayed(config, { ...media, __identityRetry: true });
+      return markEmbyPlayed(config, { ...media, __identityRetry: true, __skipDirectIds: true });
     }
     console.error("Emby client failed", error);
     throw error;
@@ -612,9 +621,9 @@ export async function markEmbyUnplayed(config, media) {
     await Promise.all(markJobs);
     return { platform: "emby", status: "fulfilled", itemId: items[0].Id, itemIds: items.map(i => i.Id), httpStatus: lastHttpStatus };
   } catch (error) {
-    if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
+    if (error?.status === 404 && !media.__identityRetry && (media.type === "episode" || nativeEmbyItems(media).length > 0)) {
       invalidateEmbySeriesIdentity(config, media);
-      return markEmbyUnplayed(config, { ...media, __identityRetry: true });
+      return markEmbyUnplayed(config, { ...media, __identityRetry: true, __skipDirectIds: true });
     }
     console.error("Emby client failed", error);
     throw error;
@@ -697,9 +706,9 @@ export async function setEmbyProgress(config, media) {
     await Promise.all(progressJobs);
     return { platform: "emby", status: "fulfilled", itemId: items[0].Id, itemIds: items.map(i => i.Id), positionMs, httpStatus: lastHttpStatus };
   } catch (error) {
-    if (error?.status === 404 && media.type === "episode" && !media.__identityRetry) {
+    if (error?.status === 404 && !media.__identityRetry && (media.type === "episode" || nativeEmbyItems(media).length > 0)) {
       invalidateEmbySeriesIdentity(config, media);
-      return setEmbyProgress(config, { ...media, __identityRetry: true });
+      return setEmbyProgress(config, { ...media, __identityRetry: true, __skipDirectIds: true });
     }
     console.error("Emby progress client failed", error);
     throw error;
