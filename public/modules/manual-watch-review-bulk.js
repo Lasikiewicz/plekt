@@ -1,4 +1,4 @@
-import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, toDateTimeInputValue } from "./utils.js?v=2.3.0.0.2";
+import { escapeAttribute, escapeHtml, formatDate, formatTmdbDate, toDateTimeInputValue } from "./utils.js?v=2.3.0.0.3";
 
 export const BULK_REVIEW_BATCH_CAP = 50;
 export const DEFAULT_BULK_REVIEW_MODE = "episode_timing";

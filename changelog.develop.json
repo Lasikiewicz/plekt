@@ -1,14 +1,14 @@
 {
-  "version": "2.3.0.0.2",
-  "build": 2,
+  "version": "2.3.0.0.3",
+  "build": 3,
   "resetCommit": "941febbbdcd64af11716bfe24099ed45b93955e5",
-  "updatedAt": "2026-11-23T15:48:45.980Z",
+  "updatedAt": "2026-11-24T17:35:11.135Z",
   "entries": [
     {
-      "build": 2,
-      "date": "2026-11-23T15:48:45.980Z",
-      "commit": "499aa022093d526c5ab337af3c0e2b3aea13c1ab",
-      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries and add tracker write review, explicit library monitoring, faster background sync and clearer sync retries.",
+      "build": 3,
+      "date": "2026-11-24T17:35:11.135Z",
+      "commit": "f3c87bd17182a500a4011fa5e52821da41bcd4d3",
+      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, and review skipped Simkl episodes, redesign manual watch review and sync watches across library copies.",
       "author": "Lasikiewicz",
       "details": [
         "Importing every file from a Trakt export no longer adds a random, unrelated movie for each show. The per-show summaries in watched-shows.json are now skipped instead of being read as movies that carried the show's TMDB number.",
@@ -43,11 +43,27 @@
         "Fix dropped-only show detail visibility, sign-out and sign-in live update SSE lifecycle with backoff, stuck action buttons, stale detail render races, listener and poller leaks, and Up Next controls including per-show options, Now Playing reorder bindings, and Mirror order and hide safety",
         "Document that Emby 4.9.5.0 and 4.10.1.0 both accept rating writes without storing them and that Plekt reads back to report the failure",
         "Add two-way dropped-title sync notes for Trakt (shows) and Simkl (shows and movies), and include YouTube and optional AniDB in the Metadata sources overview",
-        "Add provider support matrix docs and migration 64 SQLite poster cache and TVDB expression indexes"
+        "Add provider support matrix docs and migration 64 SQLite poster cache and TVDB expression indexes",
+        "Shows with episodes skipped for Simkl because of alternate numbering now offer Review Simkl updates in Sync Activity",
+        "The review matches each skipped watch to a Simkl episode by title and air date, and only exact matches with the same aired numbering can be sent",
+        "Selected watches go to Simkl with their saved dates through the normal batch, backup, quota and readback checks, and their Sync Activity status updates",
+        "The held tracker write panel is now Watch updates on hold, with Check watch status and Cancel selected updates",
+        "Sync Activity results explain Simkl alternate-order skips in plain words",
+        "The Episode order dialog explains that Simkl receives watches it can match in both catalogues",
+        "Find matching Jellyfin and Emby episode copies when Up Next has seen only one copy",
+        "Repair missed episode watches during scheduled catch-up after verifying the series identity",
+        "Retry Emby and Jellyfin watch and progress updates with a fresh lookup when a saved item ID no longer exists",
+        "Keep watch source and sync results visible in Media Info and include the newest 2,000 matching audit events in the export",
+        "Redesign Manual Watch review with inline date-option buttons, collapsed season groups, flush show posters, top-right Dismiss and bottom-right Confirm watched without a second confirmation popup",
+        "Process bulk Manual Watch review confirmations and dismissals in a single background server request so leaving or refreshing the page no longer abandons pending items",
+        "Preserve provider item provenance on Manual Watch review approvals and Plex notification lookups so queued Simkl writes pass library checks and settle reliably",
+        "Update Sync Activity rows cleanly when queued Simkl writes settle, cancel, or require review, preventing stale pending states and misleading empty-target summaries",
+        "Simplify the Clear progress confirmation copy with an inline media preview and match confirmation dialogs to the site's dark and light modal theme"
       ],
       "messageFragments": [
         "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
-        "Feature - Add tracker write review, explicit library monitoring, faster background sync and clearer sync retries"
+        "Feature - Add tracker write review, explicit library monitoring, faster background sync and clearer sync retries",
+        "Feature - Review skipped Simkl episodes, redesign manual watch review and sync watches across library copies"
       ]
     }
   ]
