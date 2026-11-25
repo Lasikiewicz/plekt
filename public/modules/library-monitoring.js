@@ -211,7 +211,7 @@ function renderProviderMonitoringPanel(provider, { statusMessage = "", statusTon
         <span class="status-pill ${pillClass}">${escapeHtml(pillText)}</span>
       </div>
       <div class="library-monitoring-actions">
-        <button type="button" class="button-secondary library-monitoring-refresh" data-library-monitoring-refresh="${escapeAttribute(provider)}" ${isBusy ? "disabled" : ""}>
+        <button type="button" class="button-ghost library-monitoring-refresh" data-library-monitoring-refresh="${escapeAttribute(provider)}" ${isBusy ? "disabled" : ""}>
           ${isBusy ? "Loading…" : discovered ? "Refresh libraries" : "Load libraries"}
         </button>
         ${discovered && !discovered.error ? `

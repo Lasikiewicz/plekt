@@ -278,6 +278,12 @@ const SYNC_TUNING_SUMMARIES = Object.freeze({
   auditRetentionDays: "Set how many days of diagnostic watch-audit history to retain",
   fastLocalPacing: "Speed up bulk sync on a trusted local network",
   upNextSyncEnabled: "Keep Plekt's Up Next queue synced with media apps",
+  upNextSort: "Choose how shows are ordered in your Up Next queue",
+  upNextPartWatched: "Keep partially watched items at the front of Up Next",
+  upNextCustomFallback: "Choose where newly added shows land when using Custom order",
+  upNextMirrorPlex: "Mirror Plekt's Up Next order and hides to Plex Continue Watching",
+  upNextMirrorEmby: "Mirror Plekt's Up Next order and hides to Emby Continue Watching",
+  upNextMirrorJellyfin: "Mirror Plekt's Up Next order to Jellyfin Next Up",
 });
 
 function tuningBadges(tuning = {}) {
@@ -353,9 +359,24 @@ function renderSyncTuningFieldDisclosure(field) {
 }
 
 const UP_NEXT_MIRROR_FIELDS = [
-  { provider: "plex", key: "upNextMirrorPlex", label: "Mirror Plex Continue Watching" },
-  { provider: "emby", key: "upNextMirrorEmby", label: "Mirror Emby Continue Watching" },
-  { provider: "jellyfin", key: "upNextMirrorJellyfin", label: "Mirror Jellyfin Next Up (order only)" },
+  {
+    provider: "plex",
+    key: "upNextMirrorPlex",
+    label: "Mirror Plex Continue Watching",
+    help: "Reorders Plex Continue Watching to match Plekt's Up Next queue and can hide eligible items outside it. Enabling asks you to preview changes first.",
+  },
+  {
+    provider: "emby",
+    key: "upNextMirrorEmby",
+    label: "Mirror Emby Continue Watching",
+    help: "Reorders Emby Continue Watching to match Plekt's Up Next queue and can hide eligible items outside it. Enabling asks you to preview changes first.",
+  },
+  {
+    provider: "jellyfin",
+    key: "upNextMirrorJellyfin",
+    label: "Mirror Jellyfin Next Up (order only)",
+    help: "Reorders Jellyfin Next Up to match Plekt's Up Next queue without hiding items. Enabling asks you to preview changes first.",
+  },
 ];
 
 function settingsSessionKey() {
@@ -407,6 +428,7 @@ export function renderSyncTuningCard() {
     { ...PACING_FIELD, value: fastPacingEnabled },
     { ...UP_NEXT_SYNC_FIELD, value: upNextSyncEnabled },
     { key: "upNextSort", label: "Up Next order", type: "select", value: state.savedConfig?.upNextSync?.sort || "recently_watched",
+      help: "Sets the sort order for your Up Next queue on the Dashboard and synced media apps.",
       options: [
         { value: "recently_watched", label: "Recently watched" },
         { value: "newly_aired", label: "Newly aired first" },
@@ -415,8 +437,10 @@ export function renderSyncTuningCard() {
         { value: "custom", label: "Custom" },
       ] },
     { key: "upNextPartWatched", label: "Part watched first", type: "checkbox",
+      help: "When enabled, movies and episodes with active resume progress stay ahead of unwatched Up Next cards.",
       value: state.savedConfig?.upNextSync?.partWatchedFirst !== false },
     { key: "upNextCustomFallback", label: "Custom order for new cards", type: "select",
+      help: "Determines how newly added shows are sorted relative to each other when Up Next order is set to Custom.",
       value: state.savedConfig?.upNextSync?.customFallbackSort || "recently_watched",
       options: [
         { value: "recently_watched", label: "Recently watched" },
@@ -424,8 +448,8 @@ export function renderSyncTuningCard() {
         { value: "oldest_unwatched", label: "Oldest unwatched first" },
         { value: "closest_to_finishing", label: "Closest to finishing" },
       ] },
-    ...UP_NEXT_MIRROR_FIELDS.map(({ provider, key, label }) => ({
-      key, label, type: "checkbox", value: state.savedConfig?.upNextSync?.mirror?.[provider] === true,
+    ...UP_NEXT_MIRROR_FIELDS.map(({ provider, key, label, help }) => ({
+      key, label, help, type: "checkbox", value: state.savedConfig?.upNextSync?.mirror?.[provider] === true,
     })),
   ].map(renderSyncTuningFieldDisclosure).join("");
 

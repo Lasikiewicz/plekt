@@ -58,7 +58,7 @@ function renderProviderRows(config = currentConfig()) {
         <p>${Number(hold.missingCount)} of ${Number(hold.baselineCount)} ratings are missing on ${escapeHtml(PROVIDER_LABELS[provider])}. No ratings were cleared.</p>
         ${entry.run.last_error ? `<p>${escapeHtml(entry.run.last_error)}</p>` : ""}
         <details><summary>Review missing titles</summary><ul>${hold.items.map(item => `<li>${escapeHtml(item.title)}</li>`).join("")}</ul></details>
-        <button type="button" class="button-secondary" data-rating-hold="approve" data-provider="${escapeHtml(provider)}" data-run-id="${escapeHtml(entry.run.run_id)}">Approve these removals</button>
+        <button type="button" class="button-ghost" data-rating-hold="approve" data-provider="${escapeHtml(provider)}" data-run-id="${escapeHtml(entry.run.run_id)}">Approve these removals</button>
         <button type="button" class="button-ghost" data-rating-hold="dismiss" data-provider="${escapeHtml(provider)}" data-run-id="${escapeHtml(entry.run.run_id)}">Dismiss and keep ratings</button>
         <small>Approval rechecks this removal set. Dismissal keeps ratings; a later scan may ask again.</small></div>` : ""}
     </div>`;

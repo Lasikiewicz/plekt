@@ -5927,6 +5927,13 @@ html.light-mode #syncTuningFields .settings-modal-field:focus-within {
   text-align: center;
 }
 
+#syncTuningFields .settings-modal-field .settings-modal-field-control select.field {
+  width: auto !important;
+  min-width: 14rem;
+  max-width: 100%;
+  text-align: left;
+}
+
 #syncTuningFields .settings-field-default {
   grid-area: default;
   align-self: center;
