@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.7";
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.7";
-import { state } from "./state.js?v=2.3.0.0.7";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.8";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.8";
+import { state } from "./state.js?v=2.3.0.0.8";
 
 const API = "/api/episode-order";
 const ORDERS = ["official", "dvd", "absolute", "alternate", "regional", "altdvd", "alttwo"];

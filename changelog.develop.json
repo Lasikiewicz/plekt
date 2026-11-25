@@ -1,14 +1,14 @@
 {
-  "version": "2.3.0.0.7",
-  "build": 7,
+  "version": "2.3.0.0.8",
+  "build": 8,
   "resetCommit": "941febbbdcd64af11716bfe24099ed45b93955e5",
-  "updatedAt": "2026-11-25T13:56:23.984Z",
+  "updatedAt": "2026-11-25T14:22:10.323Z",
   "entries": [
     {
-      "build": 7,
-      "date": "2026-11-25T13:56:23.984Z",
-      "commit": "c53548a223578fb9568de576b726c17d112ffeec",
-      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, review skipped Simkl episodes, redesign manual watch review and sync watches across library copies, expand remote backup destinations and restore controls, compress encrypted full backups and publish the privacy policy, and compress local storage, add upgrading screen, and add storage tools.",
+      "build": 8,
+      "date": "2026-11-25T14:22:10.323Z",
+      "commit": "82f832d302f702f4abeb7805392e8583cb634bab",
+      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, review skipped Simkl episodes, redesign manual watch review and sync watches across library copies, expand remote backup destinations and restore controls, compress encrypted full backups and publish the privacy policy, compress local storage, add upgrading screen, and add storage tools, and make legacy backup recompression start on approval with live progress.",
       "author": "Lasikiewicz",
       "details": [
         "Importing every file from a Trakt export no longer adds a random, unrelated movie for each show. The per-show summaries in watched-shows.json are now skipped instead of being read as movies that carried the show's TMDB number.",
@@ -76,7 +76,10 @@
         "Added a Storage Optimization panel under Settings -> General -> Storage & Cache showing disk usage with controls to compact databases, optimize cached artwork, and recompress legacy uncompressed backups",
         "Added a configurable Watch Audit Retention setting under Settings -> Sync -> Sync Tuning (default 90 days, or 0 to retain diagnostic audit events forever; watch history is never deleted)",
         "Pruned unused non-Windows binaries and build sources from Windows packages (~35 MB smaller)",
-        "Keep a pre-upgrade backup before updating if you might roll back, as compressed database rows and v2 encrypted backups cannot be read by older Plekt versions"
+        "Keep a pre-upgrade backup before updating if you might roll back, as compressed database rows and v2 encrypted backups cannot be read by older Plekt versions",
+        "Fixed the Storage Optimization confirmation modal callback so clicking Recompress actually starts legacy backup recompression instead of failing silently",
+        "Added live per-file progress, percentage tracking, and specific active task labels (Compacting DB, Recompressing backups, Optimizing artwork) to the Storage Optimization status panel",
+        "Updated the Storage Optimization size breakdown to use styled gauge cards matching the Image Cache panel"
       ],
       "messageFragments": [
         "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
@@ -84,7 +87,8 @@
         "Feature - Review skipped Simkl episodes, redesign manual watch review and sync watches across library copies",
         "Feature - Expand remote backup destinations and restore controls",
         "Feature - Compress encrypted full backups and publish the privacy policy",
-        "Feature - Compress local storage, add upgrading screen, and add storage tools"
+        "Feature - Compress local storage, add upgrading screen, and add storage tools",
+        "Fix - Make legacy backup recompression start on approval with live progress"
       ]
     }
   ]

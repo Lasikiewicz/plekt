@@ -1,11 +1,11 @@
-import { state, elements } from "./state.js?v=2.3.0.0.7";
-import { escapeHtml, escapeAttribute, platformIconMarkup, storageGet } from "./utils.js?v=2.3.0.0.7";
-import { SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.3.0.0.7";
-import { renderFieldRow } from "./settings-ui.js?v=2.3.0.0.7";
-import { embyWebhookSetup, jellyfinWebhookSetup } from "./help-content.js?v=2.3.0.0.7";
-import { PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_LABEL } from "./plex-history-policy.js?v=2.3.0.0.7";
+import { state, elements } from "./state.js?v=2.3.0.0.8";
+import { escapeHtml, escapeAttribute, platformIconMarkup, storageGet } from "./utils.js?v=2.3.0.0.8";
+import { SEASON_SOURCE_FIELD } from "./settings-services.js?v=2.3.0.0.8";
+import { renderFieldRow } from "./settings-ui.js?v=2.3.0.0.8";
+import { embyWebhookSetup, jellyfinWebhookSetup } from "./help-content.js?v=2.3.0.0.8";
+import { PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_LABEL } from "./plex-history-policy.js?v=2.3.0.0.8";
 
-import { createOnboardingBackups } from "./onboarding-backups.js?v=2.3.0.0.7";
+import { createOnboardingBackups } from "./onboarding-backups.js?v=2.3.0.0.8";
 
 export function createOnboardingSections(context) {
 const { remoteDestinations, hasEnabledDestination, renderRemoteDestinationsCard, mountBackupDestinations, renderBackup, updateBackupContinueAction, setPassphraseError, saveBackupSetup } = createOnboardingBackups(context);

@@ -1,6 +1,6 @@
-import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.7";
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.7";
-import { state } from "./state.js?v=2.3.0.0.7";
+import { escapeHtml, escapeAttribute } from "./utils.js?v=2.3.0.0.8";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.8";
+import { state } from "./state.js?v=2.3.0.0.8";
 
 function hasSimklEpisodeOrderSkip(entry) {
   return Array.isArray(entry?.targetStates) && entry.targetStates.some(({ target, status, detail }) =>
