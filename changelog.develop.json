@@ -1,14 +1,14 @@
 {
-  "version": "2.3.0.0.8",
-  "build": 8,
+  "version": "2.3.0.0.9",
+  "build": 9,
   "resetCommit": "941febbbdcd64af11716bfe24099ed45b93955e5",
-  "updatedAt": "2026-11-25T14:22:10.323Z",
+  "updatedAt": "2026-11-25T14:38:44.119Z",
   "entries": [
     {
-      "build": 8,
-      "date": "2026-11-25T14:22:10.323Z",
-      "commit": "82f832d302f702f4abeb7805392e8583cb634bab",
-      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, review skipped Simkl episodes, redesign manual watch review and sync watches across library copies, expand remote backup destinations and restore controls, compress encrypted full backups and publish the privacy policy, compress local storage, add upgrading screen, and add storage tools, and make legacy backup recompression start on approval with live progress.",
+      "build": 9,
+      "date": "2026-11-25T14:38:44.119Z",
+      "commit": "ed2855c205a7ea1d107c2be9fc9cc539e2404d4a",
+      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, review skipped Simkl episodes, redesign manual watch review and sync watches across library copies, expand remote backup destinations and restore controls, compress encrypted full backups and publish the privacy policy, compress local storage, add upgrading screen, and add storage tools, make legacy backup recompression start on approval with live progress, and style Storage Optimization buttons and scroll panel into view on expand.",
       "author": "Lasikiewicz",
       "details": [
         "Importing every file from a Trakt export no longer adds a random, unrelated movie for each show. The per-show summaries in watched-shows.json are now skipped instead of being read as movies that carried the show's TMDB number.",
@@ -79,7 +79,9 @@
         "Keep a pre-upgrade backup before updating if you might roll back, as compressed database rows and v2 encrypted backups cannot be read by older Plekt versions",
         "Fixed the Storage Optimization confirmation modal callback so clicking Recompress actually starts legacy backup recompression instead of failing silently",
         "Added live per-file progress, percentage tracking, and specific active task labels (Compacting DB, Recompressing backups, Optimizing artwork) to the Storage Optimization status panel",
-        "Updated the Storage Optimization size breakdown to use styled gauge cards matching the Image Cache panel"
+        "Updated the Storage Optimization size breakdown to use styled gauge cards matching the Image Cache panel",
+        "Switched the Storage Optimization secondary action buttons from the undefined button-secondary class to Plekt's button-ghost style so Refresh, Optimize Artwork, and Recompress Legacy Backups match the rest of Settings",
+        "Automatically scroll the expanded Storage Optimization section smoothly into view when opened and after its status cards render"
       ],
       "messageFragments": [
         "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
@@ -88,7 +90,8 @@
         "Feature - Expand remote backup destinations and restore controls",
         "Feature - Compress encrypted full backups and publish the privacy policy",
         "Feature - Compress local storage, add upgrading screen, and add storage tools",
-        "Fix - Make legacy backup recompression start on approval with live progress"
+        "Fix - Make legacy backup recompression start on approval with live progress",
+        "Fix - Style Storage Optimization buttons and scroll panel into view on expand"
       ]
     }
   ]

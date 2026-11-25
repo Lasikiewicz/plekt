@@ -1,11 +1,11 @@
-import { state, elements } from "./state.js?v=2.3.0.0.8";
-import { escapeHtml, escapeAttribute, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, showEpisodeKey } from "./utils.js?v=2.3.0.0.8";
-import { tmdbProfile, tmdbPoster, hydratePosters } from "./images.js?v=2.3.0.0.8";
-import { isWatchedHistoryAction } from "./sync.js?v=2.3.0.0.8";
-import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.3.0.0.8";
-import { movieBySlugOrId, clearMediaDetailState, mediaDetailRoot, mediaDetailLoaderHtml } from "./media-detail.js?v=2.3.0.0.8";
-import { registerMediaDetailCleanup } from "./media-detail-context.js?v=2.3.0.0.8";
-import { FILMOGRAPHY_PAGE_SIZE, resolvedTmdbCache } from "./explorer.js?v=2.3.0.0.8";
+import { state, elements } from "./state.js?v=2.3.0.0.9";
+import { escapeHtml, escapeAttribute, slug, movieHref, movieTmdbHref, tvShowTmdbHref, tvShowTvdbHref, showTitleFrom, showEpisodeKey } from "./utils.js?v=2.3.0.0.9";
+import { tmdbProfile, tmdbPoster, hydratePosters } from "./images.js?v=2.3.0.0.9";
+import { isWatchedHistoryAction } from "./sync.js?v=2.3.0.0.9";
+import { fetchTmdbDetails, fetchTmdbSeasonDetails } from "./tmdb.js?v=2.3.0.0.9";
+import { movieBySlugOrId, clearMediaDetailState, mediaDetailRoot, mediaDetailLoaderHtml } from "./media-detail.js?v=2.3.0.0.9";
+import { registerMediaDetailCleanup } from "./media-detail-context.js?v=2.3.0.0.9";
+import { FILMOGRAPHY_PAGE_SIZE, resolvedTmdbCache } from "./explorer.js?v=2.3.0.0.9";
 
 let _cb = {};
 const PERSON_LIBRARY_CACHE_TTL_MS = 5 * 60 * 1000;
