@@ -1,4 +1,4 @@
-import { escapeHtml, fetchDiagnosticLogs, formatLogLineToHtml, replaceLogContent } from "./logs.js?v=2.3.0.0.6";
+import { escapeHtml, fetchDiagnosticLogs, formatLogLineToHtml, replaceLogContent } from "./logs.js?v=2.3.0.0.7";
 
 export function filterLogLines(lines, query = "") {
   const needle = query.trim().toLowerCase();

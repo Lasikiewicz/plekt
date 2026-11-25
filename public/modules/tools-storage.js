@@ -1,6 +1,6 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.6";
-import { state } from "./state.js?v=2.3.0.0.6";
-import { escapeHtml, formatNumber } from "./utils.js?v=2.3.0.0.6";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.7";
+import { state } from "./state.js?v=2.3.0.0.7";
+import { escapeHtml, formatNumber } from "./utils.js?v=2.3.0.0.7";
 
 let _setMessage = () => {};
 let _showConfirmModal = () => {};

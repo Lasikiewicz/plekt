@@ -1,7 +1,7 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.6";
-import { state, elements } from "./state.js?v=2.3.0.0.6";
-import { startInitialSyncUi, stopInitialSyncUi, loadInitialSyncSummary } from "./initial-sync.js?v=2.3.0.0.6";
-import { renderLibrarySelectionBanner, resetLibraryMonitoringCache } from "./library-monitoring.js?v=2.3.0.0.6";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.7";
+import { state, elements } from "./state.js?v=2.3.0.0.7";
+import { startInitialSyncUi, stopInitialSyncUi, loadInitialSyncSummary } from "./initial-sync.js?v=2.3.0.0.7";
+import { renderLibrarySelectionBanner, resetLibraryMonitoringCache } from "./library-monitoring.js?v=2.3.0.0.7";
 
 const REVIEW_POLL_MS = 30000;
 

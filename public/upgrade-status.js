@@ -1,7 +1,7 @@
 (function () {
   var logo = document.getElementById("upgradeLogo");
   if (document.documentElement.classList.contains("light-mode") && logo) {
-    logo.src = "/plekt_header_logo_light.png?v=2.3.0.0.6";
+    logo.src = "/plekt_header_logo_light.png?v=2.3.0.0.7";
   }
   var fill = document.getElementById("upgradeFill");
   var label = document.getElementById("upgradeLabel");
