@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.5";
-import { state, elements } from "./state.js?v=2.3.0.0.5";
-import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref, tvShowBaseHrefFromEpisode } from "./utils.js?v=2.3.0.0.5";
-import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.3.0.0.5";
-import { renderDroppedStats } from "./dropped-title-views.js?v=2.3.0.0.5";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.6";
+import { state, elements } from "./state.js?v=2.3.0.0.6";
+import { escapeHtml, escapeAttribute, platformName, formatNumber, formatDate, formatListDate, shortMonthLabel, movieHref, tvShowBaseHrefFromEpisode } from "./utils.js?v=2.3.0.0.6";
+import { posterMarkup, hydratePosterFallbacks } from "./images.js?v=2.3.0.0.6";
+import { renderDroppedStats } from "./dropped-title-views.js?v=2.3.0.0.6";
 
 let _cb = {};
 

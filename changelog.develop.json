@@ -1,14 +1,14 @@
 {
-  "version": "2.3.0.0.5",
-  "build": 5,
+  "version": "2.3.0.0.6",
+  "build": 6,
   "resetCommit": "941febbbdcd64af11716bfe24099ed45b93955e5",
-  "updatedAt": "2026-11-25T01:39:34.086Z",
+  "updatedAt": "2026-11-25T01:46:08.703Z",
   "entries": [
     {
-      "build": 5,
-      "date": "2026-11-25T01:39:34.086Z",
-      "commit": "99565f4f0ed65756e3dade432e45e876e9fe2ec3",
-      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, review skipped Simkl episodes, redesign manual watch review and sync watches across library copies, expand remote backup destinations and restore controls, add the public Plekt privacy policy, and compress encrypted full backups.",
+      "build": 6,
+      "date": "2026-11-25T01:46:08.703Z",
+      "commit": "ec57d19ec4d241f72b1b7078bf025b9bf3391d8e",
+      "message": "This update includes stop Trakt JSON imports adding unrelated movies from show summaries, add tracker write review, explicit library monitoring, faster background sync and clearer sync retries, review skipped Simkl episodes, redesign manual watch review and sync watches across library copies, expand remote backup destinations and restore controls, and compress encrypted full backups and publish the privacy policy.",
       "author": "Lasikiewicz",
       "details": [
         "Importing every file from a Trakt export no longer adds a random, unrelated movie for each show. The per-show summaries in watched-shows.json are now skipped instead of being read as movies that carried the show's TMDB number.",
@@ -65,19 +65,18 @@
         "Group remote restore results by enabled destination and show refresh controls and per-location errors.",
         "Stream large uploads to Dropbox, WebDAV, and the OneDrive adapter. Use resumable uploads for large OneDrive files.",
         "Migrate existing local full backups to the Plekt-named folder at startup.",
-        "Explain how self-hosted data, connected services, backups, install metrics, and public analytics are handled.",
-        "Provide a public privacy policy URL for the Dropbox backup integration.",
         "Encrypted full backups are now compressed and about 19 times smaller (one 943 MB backup became 50 MB), so local storage and remote uploads use far less space and time",
         "Older backups still restore. Full backups made with this version can't be restored by older Plekt releases, so keep a pre-upgrade backup if you might roll back",
-        "A full backup that decrypts but can't be decompressed now stops with a clear damaged-file error before anything is restored"
+        "A full backup that decrypts but can't be decompressed now stops with a clear damaged-file error before anything is restored",
+        "Explain how self-hosted data, connected services, backups, install metrics, and public analytics are handled in a public privacy policy",
+        "Provide a public privacy policy URL for the Dropbox backup integration"
       ],
       "messageFragments": [
         "Fix - Stop Trakt JSON imports adding unrelated movies from show summaries",
         "Feature - Add tracker write review, explicit library monitoring, faster background sync and clearer sync retries",
         "Feature - Review skipped Simkl episodes, redesign manual watch review and sync watches across library copies",
         "Feature - Expand remote backup destinations and restore controls",
-        "Docs - Add the public Plekt privacy policy",
-        "Feature - Compress encrypted full backups"
+        "Feature - Compress encrypted full backups and publish the privacy policy"
       ]
     }
   ]

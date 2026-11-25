@@ -1,5 +1,5 @@
-import { state } from "./state.js?v=2.3.0.0.5";
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.5";
+import { state } from "./state.js?v=2.3.0.0.6";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.6";
 
 let bound = false;
 let preview = null;

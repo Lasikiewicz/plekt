@@ -3,17 +3,17 @@
 // wherever possible - openServiceEditModal() for every provider connect/test
 // flow, and the webhook-guide functions - so setup and Settings never diverge
 // in behavior, only in presentation.
-import { createOnboardingSections } from "./onboarding-sections.js?v=2.3.0.0.5";
-import { createOnboardingTrackers } from "./onboarding-trackers.js?v=2.3.0.0.5";
-import { state, elements } from "./state.js?v=2.3.0.0.5";
-import { escapeHtml, escapeAttribute, isDemoMode, storageSet } from "./utils.js?v=2.3.0.0.5";
-import { setupSwitchMarkup } from "./supervisor-switch.js?v=2.3.0.0.5";
-import { openServiceEditModal } from "./settings-services.js?v=2.3.0.0.5";
-import { claimAdminAccount } from "./auth.js?v=2.3.0.0.5";
-import { lazyExport, loadRouteModule, loadedRouteModule } from "./route-modules.js?v=2.3.0.0.5";
+import { createOnboardingSections } from "./onboarding-sections.js?v=2.3.0.0.6";
+import { createOnboardingTrackers } from "./onboarding-trackers.js?v=2.3.0.0.6";
+import { state, elements } from "./state.js?v=2.3.0.0.6";
+import { escapeHtml, escapeAttribute, isDemoMode, storageSet } from "./utils.js?v=2.3.0.0.6";
+import { setupSwitchMarkup } from "./supervisor-switch.js?v=2.3.0.0.6";
+import { openServiceEditModal } from "./settings-services.js?v=2.3.0.0.6";
+import { claimAdminAccount } from "./auth.js?v=2.3.0.0.6";
+import { lazyExport, loadRouteModule, loadedRouteModule } from "./route-modules.js?v=2.3.0.0.6";
 import {
   plexHistoricalSyncEnabled,
-} from "./plex-history-policy.js?v=2.3.0.0.5";
+} from "./plex-history-policy.js?v=2.3.0.0.6";
 
 let _cb = {};
 const loadWatchBackups = lazyExport("tools-backups", "loadWatchBackups");
@@ -453,7 +453,7 @@ export function renderSetupPage() {
     root.innerHTML = `<div class="settings-content"><p class="muted-copy">Loading setup...</p></div>`;
     return;
   }
-  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.3.0.0.5" : "/plekt_header_logo_dark.png?v=2.3.0.0.5";
+  const logoSrc = document.documentElement.classList.contains("light-mode") ? "/plekt_header_logo_light.png?v=2.3.0.0.6" : "/plekt_header_logo_dark.png?v=2.3.0.0.6";
   if (restoreView) {
     renderRestoreView(root, logoSrc);
     return;
