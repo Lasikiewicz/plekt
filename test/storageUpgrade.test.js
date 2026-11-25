@@ -96,4 +96,6 @@ test("tools-storage calls showConfirmModal with (message, onApprove, options)", 
     source,
     /_showConfirmModal\(\s*`[^`]+`,\s*\(\)\s*=>\s*\{[\s\S]*?\/api\/storage\/recompress-backups[\s\S]*?\},\s*\{\s*title:\s*"Recompress Legacy Backups\?",\s*approveLabel:\s*"Recompress"\s*\},?\s*\);/,
   );
+  assert.doesNotMatch(source, /\bbutton-secondary\b/, "button-secondary is undefined in styles.css; use button-ghost or button-primary");
+  assert.match(source, /revealStorageDetails\(details\)/, "expanding Storage Optimization should scroll the expanded panel into view");
 });

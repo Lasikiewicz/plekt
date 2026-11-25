@@ -108,7 +108,7 @@ function renderStoragePanel(data) {
     ? "Recompressing Backups…"
     : `Recompress ${formatNumber(legacyCount)} Legacy Backup${legacyCount === 1 ? "" : "s"} (${fmtSize(legacyBytes)})`;
   const recompressButton = (legacyCount > 0 || data.backups?.active)
-    ? `<button id="storageRecompressBackupsButton" class="button-secondary sync-action-btn sync-tool-button" type="button" ${data.backups?.active ? "disabled" : ""}>${recompressLabel}</button>`
+    ? `<button id="storageRecompressBackupsButton" class="button-ghost sync-action-btn sync-tool-button" type="button" ${data.backups?.active ? "disabled" : ""}>${recompressLabel}</button>`
     : "";
 
   panel.innerHTML = `
@@ -130,9 +130,9 @@ function renderStoragePanel(data) {
     </div>
     ${activityLines.length ? `<div class="muted" style="margin-top: 10px; font-size: 0.85rem; line-height: 1.5;">${activityLines.map((line) => `<div>${line}</div>`).join("")}</div>` : ""}
     <div class="settings-actions" style="margin-top: 12px;">
-      <button id="storageRefreshButton" class="button-secondary sync-action-btn sync-tool-button" type="button">Refresh</button>
+      <button id="storageRefreshButton" class="button-ghost sync-action-btn sync-tool-button" type="button">Refresh</button>
       <button id="storageCompactDbButton" class="button-primary sync-action-btn sync-tool-button" type="button" ${data.db?.active ? "disabled" : ""}>${data.db?.active ? "Compacting…" : "Compact Databases"}</button>
-      <button id="storageOptimizeArtworkButton" class="button-secondary sync-action-btn sync-tool-button" type="button" ${data.artwork?.active ? "disabled" : ""}>${data.artwork?.active ? "Optimizing Artwork…" : "Optimize Artwork"}</button>
+      <button id="storageOptimizeArtworkButton" class="button-ghost sync-action-btn sync-tool-button" type="button" ${data.artwork?.active ? "disabled" : ""}>${data.artwork?.active ? "Optimizing Artwork…" : "Optimize Artwork"}</button>
       ${recompressButton}
     </div>
   `;
@@ -193,6 +193,32 @@ export async function loadStorageStatus({ quiet = false } = {}) {
   return payload;
 }
 
+function revealStorageDetails(details) {
+  if (!details?.open || typeof details.getBoundingClientRect !== "function") return;
+  const container = details.closest(".page-shell") || document.scrollingElement || document.documentElement;
+  if (!container || typeof container.getBoundingClientRect !== "function") {
+    details.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    return;
+  }
+  const isDoc = container === document.documentElement || container === document.body;
+  const viewTop = isDoc ? 0 : container.getBoundingClientRect().top;
+  const viewBottom = isDoc ? window.innerHeight : container.getBoundingClientRect().bottom;
+  const rect = details.getBoundingClientRect();
+  const pad = 16;
+  if (rect.bottom > viewBottom - pad) {
+    const maxDelta = Math.max(0, rect.top - (viewTop + pad));
+    const needed = rect.bottom - (viewBottom - pad);
+    const delta = Math.min(needed, maxDelta);
+    if (delta > 0 && typeof container.scrollBy === "function") {
+      container.scrollBy({ top: delta, behavior: "smooth" });
+      return;
+    }
+  }
+  if (rect.top < viewTop + pad || rect.bottom > viewBottom - pad) {
+    details.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+  }
+}
+
 export function initStorageTools(callbacks = {}) {
   if (callbacks.setMessage) _setMessage = callbacks.setMessage;
   if (callbacks.showConfirmModal) _showConfirmModal = callbacks.showConfirmModal;
@@ -201,7 +227,12 @@ export function initStorageTools(callbacks = {}) {
     details.dataset.storageWired = "1";
     details.addEventListener("toggle", () => {
       if (details.open) {
-        loadStorageStatus({ quiet: true }).catch(() => null);
+        requestAnimationFrame(() => revealStorageDetails(details));
+        loadStorageStatus({ quiet: true })
+          .then(() => {
+            if (details.open) requestAnimationFrame(() => revealStorageDetails(details));
+          })
+          .catch(() => null);
       } else {
         stopPolling();
       }
