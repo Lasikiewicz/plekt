@@ -674,6 +674,7 @@ export async function recompressLegacyPlektBackups({
   backupsDir = FULL_BACKUPS_DIR,
   passphrase = "",
   verify = true,
+  onProgress = null,
 } = {}) {
   if (!passphrase || !fs.existsSync(backupsDir)) {
     return { scanned: 0, recompressed: 0, skipped: 0, bytesBefore: 0, bytesAfter: 0, savedBytes: 0, errors: [] };
@@ -687,6 +688,16 @@ export async function recompressLegacyPlektBackups({
   const errors = [];
 
   const names = fs.readdirSync(backupsDir).filter((name) => FULL_BACKUP_FILE_PATTERN.test(name)).sort();
+  const legacyNames = [];
+  for (const name of names) {
+    try {
+      const env = readEncryptedEnvelope(path.join(backupsDir, name));
+      if (env && !env.gzip) legacyNames.push(name);
+    } catch { /* handled below */ }
+  }
+  const totalLegacy = legacyNames.length;
+  let legacyIndex = 0;
+
   for (const name of names) {
     scanned += 1;
     const filePath = path.join(backupsDir, name);
@@ -708,6 +719,21 @@ export async function recompressLegacyPlektBackups({
       bytesAfter += stat.size;
       continue;
     }
+
+    legacyIndex += 1;
+    const emitProgress = (currentPercent = 0) => {
+      onProgress?.({
+        index: legacyIndex,
+        totalLegacy,
+        currentFile: name,
+        currentPercent,
+        scanned,
+        recompressed,
+        skipped,
+        savedBytes: Math.max(0, bytesBefore - stat.size - bytesAfter),
+      });
+    };
+    emitProgress(0);
 
     const tempPath = `${filePath}.recompress-${process.pid}.tmp`;
     let fd = null;
@@ -781,12 +807,20 @@ export async function recompressLegacyPlektBackups({
         }
       };
 
+      let readBytes = envelope.payloadOffset;
+      let chunkCounter = 0;
       for await (const chunk of fs.createReadStream(filePath, { start: envelope.payloadOffset, highWaterMark: 1024 * 1024 })) {
+        readBytes += chunk.length;
         if (ended) continue;
         const quote = chunk.indexOf(0x22);
         const text = (quote >= 0 ? chunk.subarray(0, quote) : chunk).toString("latin1");
         if (quote >= 0) ended = true;
         feedBase64(text);
+        chunkCounter += 1;
+        if (chunkCounter % 8 === 0) {
+          emitProgress(Math.min(90, Math.round((readBytes / Math.max(1, stat.size)) * 90)));
+          await yieldToEventLoop();
+        }
       }
       if (!ended || inCarry || held.length !== 16) {
         throw new Error("Could not decrypt legacy backup payload");
@@ -808,6 +842,7 @@ export async function recompressLegacyPlektBackups({
       fd = null;
 
       if (verify) {
+        emitProgress(95);
         await verifyEncryptedV2File(tempPath, passphrase);
       }
 
@@ -816,6 +851,16 @@ export async function recompressLegacyPlektBackups({
       const newSize = fs.statSync(filePath).size;
       bytesAfter += newSize;
       recompressed += 1;
+      onProgress?.({
+        index: legacyIndex,
+        totalLegacy,
+        currentFile: name,
+        currentPercent: 100,
+        scanned,
+        recompressed,
+        skipped,
+        savedBytes: Math.max(0, bytesBefore - bytesAfter),
+      });
     } catch (error) {
       if (fd !== null) {
         try { fs.closeSync(fd); } catch { /* ignore */ }

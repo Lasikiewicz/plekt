@@ -89,3 +89,11 @@ test("renderUpgradeScreenHtml uses external CSP-compliant scripts and reflects p
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc=)[^>]*>/i);
   assert.ok(fs.existsSync(path.resolve(import.meta.dirname, "../public/upgrade-status.js")));
 });
+
+test("tools-storage calls showConfirmModal with (message, onApprove, options)", () => {
+  const source = fs.readFileSync(path.resolve(import.meta.dirname, "../public/modules/tools-storage.js"), "utf8");
+  assert.match(
+    source,
+    /_showConfirmModal\(\s*`[^`]+`,\s*\(\)\s*=>\s*\{[\s\S]*?\/api\/storage\/recompress-backups[\s\S]*?\},\s*\{\s*title:\s*"Recompress Legacy Backups\?",\s*approveLabel:\s*"Recompress"\s*\},?\s*\);/,
+  );
+});

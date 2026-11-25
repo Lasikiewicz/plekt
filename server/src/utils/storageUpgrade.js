@@ -56,6 +56,10 @@ const state = {
   backups: {
     active: false,
     scanned: 0,
+    total: 0,
+    currentIndex: 0,
+    currentFile: "",
+    currentPercent: 0,
     recompressed: 0,
     skipped: 0,
     savedBytes: 0,
@@ -406,9 +410,14 @@ export function startLegacyBackupRecompressionTask({ passphrase = "" } = {}) {
     throw Object.assign(new Error("A backup encryption passphrase is required to recompress legacy backups."), { status: 400 });
   }
 
+  const legacy = countLegacyUncompressedBackups(FULL_BACKUPS_DIR);
   state.backups = {
     active: true,
     scanned: 0,
+    total: legacy.count,
+    currentIndex: 0,
+    currentFile: "",
+    currentPercent: 0,
     recompressed: 0,
     skipped: 0,
     savedBytes: 0,
@@ -423,11 +432,22 @@ export function startLegacyBackupRecompressionTask({ passphrase = "" } = {}) {
         backupsDir: FULL_BACKUPS_DIR,
         passphrase: effectivePassphrase,
         verify: true,
+        onProgress: ({ index, totalLegacy, currentFile, currentPercent, scanned, recompressed, skipped, savedBytes }) => {
+          state.backups.currentIndex = index;
+          state.backups.total = totalLegacy;
+          state.backups.currentFile = currentFile;
+          state.backups.currentPercent = currentPercent;
+          state.backups.scanned = scanned;
+          state.backups.recompressed = recompressed;
+          state.backups.skipped = skipped;
+          state.backups.savedBytes = savedBytes;
+        },
       });
       state.backups.scanned = result.scanned;
       state.backups.recompressed = result.recompressed;
       state.backups.skipped = result.skipped;
       state.backups.savedBytes = result.savedBytes;
+      state.backups.currentPercent = 100;
       if (result.errors?.length) {
         state.backups.error = result.errors.map((e) => `${e.name}: ${e.error}`).join("; ");
       }

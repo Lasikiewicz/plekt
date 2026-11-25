@@ -236,11 +236,20 @@ test("recompressLegacyPlektBackups converts v1 encrypted backups to v2 gzipped b
   const originalMtime = new Date("2026-11-20T03:00:00.000Z");
   fs.utimesSync(filePath, originalMtime, originalMtime);
 
-  const result = await recompressLegacyPlektBackups({ backupsDir, passphrase, verify: true });
+  const progressEvents = [];
+  const result = await recompressLegacyPlektBackups({
+    backupsDir,
+    passphrase,
+    verify: true,
+    onProgress: (event) => progressEvents.push(event),
+  });
   assert.equal(result.scanned, 1);
   assert.equal(result.recompressed, 1);
   assert.equal(result.errors.length, 0);
   assert.ok(result.bytesAfter < result.bytesBefore / 3);
+  assert.ok(progressEvents.length >= 2, "expected live progress events during backup recompression");
+  assert.equal(progressEvents.at(-1).currentPercent, 100);
+  assert.equal(progressEvents.at(-1).totalLegacy, 1);
 
   const envelope = readEncryptedEnvelope(filePath);
   assert.equal(envelope.gzip, true);
