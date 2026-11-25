@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { db, parseJson, toJson } from "../db.js";
+import { db, parseJson, toCompressedJson } from "../db.js";
 import { fetchWithTimeout } from "./outbound.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
 import { readSharedTvdbToken, writeSharedTvdbToken } from "./sharedMetadataStore.js";
@@ -445,7 +445,7 @@ export async function lookupTvdbEpisodeKind(tvdbEpisodeId, { lane = "enrichment"
     id: `episode_kind_${id}`,
     tvdb_id: details.seriesId || "",
     title: "",
-    details: toJson(details),
+    details: toCompressedJson(details),
     updated_at_ms: Date.now(),
   });
   return details;
@@ -475,7 +475,7 @@ export async function resolveTvdbSeriesId({ tvdbId = "", title = "", lane = "enr
       id: cacheKey,
       tvdb_id: resolvedId,
       title: cleanedTitle,
-      details: toJson({
+      details: toCompressedJson({
         tvdb_id: resolvedId,
         matched_name: best?.name || "",
         match_schema_version: SEARCH_MATCH_SCHEMA_VERSION,
@@ -521,7 +521,7 @@ export async function searchTvdbSeriesList(query) {
       year: item.year || (item.first_air_time || "").slice(0, 4) || "",
       image_url: item.image_url || item.thumbnail || "",
     })).filter((item) => item.tvdb_id);
-    seriesSetStmt.run({ id: cacheKey, tvdb_id: "", title: cleaned, details: toJson({ results: shaped }), updated_at_ms: Date.now() });
+    seriesSetStmt.run({ id: cacheKey, tvdb_id: "", title: cleaned, details: toCompressedJson({ results: shaped }), updated_at_ms: Date.now() });
     return shaped;
   });
 }
@@ -602,7 +602,7 @@ export async function getTvdbSeriesExtended(tvdbId, { force = false, lane = "enr
       const details = cached?.details?._plektEnglishOverview
         ? { ...fetched, _plektEnglishOverview: cached.details._plektEnglishOverview }
         : fetched;
-      seriesSetStmt.run({ id: cacheId, tvdb_id: id, title: details?.name || "", details: toJson(details), updated_at_ms: Date.now() });
+      seriesSetStmt.run({ id: cacheId, tvdb_id: id, title: details?.name || "", details: toCompressedJson(details), updated_at_ms: Date.now() });
       return details;
     } catch (error) {
       if (cached?.details) return cached.details;
@@ -647,7 +647,7 @@ export async function getTvdbEnglishSeriesOverview(tvdbId, { force = false, lane
       id: cacheId,
       tvdb_id: id,
       title: row.title || details.name || "",
-      details: toJson({ ...details, _plektEnglishOverview: next }),
+      details: toCompressedJson({ ...details, _plektEnglishOverview: next }),
       // Translation refreshes must not make an old structural series row look
       // new; its normal 14/180-day TTL remains tied to the extended response.
       updated_at_ms: row.updated_at_ms,
@@ -704,7 +704,7 @@ export async function getTvdbSeasonEpisodes({ tvdbId, seasonNumber, lane = "enri
         fromSeries = seasonFromSeriesEpisodes(id, extended, number);
       }
       if (fromSeries?.fresh) {
-        seasonSetStmt.run({ id: cacheId, tvdb_id: id, season_number: number, details: toJson(fromSeries.details), updated_at_ms: fromSeries.updatedAtMs });
+        seasonSetStmt.run({ id: cacheId, tvdb_id: id, season_number: number, details: toCompressedJson(fromSeries.details), updated_at_ms: fromSeries.updatedAtMs });
         return shapeEpisodes(fromSeries.details);
       }
       const season = pickSeasonId(extended, number);
@@ -713,7 +713,7 @@ export async function getTvdbSeasonEpisodes({ tvdbId, seasonNumber, lane = "enri
         return { episodes: [] };
       }
       const seasonDetails = await upstream({ type: "season-extended", id: season.id }, {}, 0, { lane });
-      seasonSetStmt.run({ id: cacheId, tvdb_id: id, season_number: number, details: toJson(seasonDetails), updated_at_ms: Date.now() });
+      seasonSetStmt.run({ id: cacheId, tvdb_id: id, season_number: number, details: toCompressedJson(seasonDetails), updated_at_ms: Date.now() });
       return shapeEpisodes(seasonDetails);
     } catch (error) {
       if (cached?.details) return shapeEpisodes(cached.details);

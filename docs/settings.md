@@ -555,8 +555,8 @@ switch. Fixed services can be disabled but not deleted because the config API ha
 credential-clear operation.
 
 **Sync Tuning is the one exception**: its watched-flag policy, the Plex historical
-watched-sync checkbox, four numeric fields
-(watched threshold, minimum resume position, active-session TTL, outbound timeout) plus the Fast
+watched-sync checkbox, five numeric fields
+(watched threshold, minimum resume position, active-session TTL, outbound timeout, watch audit retention) plus the Fast
 Local-Network Sync and Up Next sync checkboxes render directly inline on the Sync page in a plain form
 with its own Save button - not behind a card + edit modal - since there's only ever
 one instance to edit and no add/remove/test workflow.
@@ -686,11 +686,13 @@ fall back to stored credentials when the modal secret field is blank.
 
 The **Sync Tuning** form (on the Sync page) exposes the **Sync historical watched items
 to Plex** checkbox (on by default, stored as `tuning.plexHistoricalWatchedSync`, also
-settable via the `PLEX_HISTORICAL_WATCHED_SYNC` environment variable) and four optional
-numeric settings: watched threshold, minimum resume position, active-session TTL, and
-outbound request timeout. Blank fields inherit the matching environment variable or built-in default;
-saved values take precedence. The defaults remain 90%, 60 seconds, 5 minutes, and 10
-seconds respectively. It also includes a **Sync Up Next to media apps** toggle, enabled by
+settable via the `PLEX_HISTORICAL_WATCHED_SYNC` environment variable) and five optional
+numeric settings: watched threshold, minimum resume position, active-session TTL,
+outbound request timeout, and watch audit retention (`tuning.auditRetentionDays` /
+`AUDIT_RETENTION_DAYS`, where `0` retains diagnostic audit rows indefinitely without affecting
+watch history). Blank fields inherit the matching environment variable or built-in default;
+saved values take precedence. The defaults are 90%, 60 seconds, 5 minutes, 10 seconds, and
+90 days respectively. It also includes a **Sync Up Next to media apps** toggle, enabled by
 default. When enabled, Plekt keeps its Up Next queue in sync with Plex and Emby's Continue
 Watching and Jellyfin's Next Up. Turning the toggle off leaves those app lists unchanged while
 Plekt's local Up Next view remains available.
@@ -736,7 +738,9 @@ server reached over the public internet from being overwhelmed by a large sync.
   unidentified media alongside the matching actions. Identified media that is
   simply absent from a connected library remains an availability difference,
   not an issue.
-- Storage & Cache (under Advanced) displays and clears image cache categories.
+- Storage & Cache displays and clears image cache categories and provides Storage Optimization
+  (disk usage breakdown across databases, shared metadata, artwork, logs, and backups, plus actions
+  to compact databases, optimize cached WebP artwork, and recompress legacy v1 encrypted backups).
 - Tools retains history repair, deduplication, full watch-state sync, metadata refresh,
   TV rematching, and Trakt poster backfill with their confirmations and logs, split
   across the Database Repairs and Library Rebuilds and Backfills accordions. Database

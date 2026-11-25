@@ -1,4 +1,4 @@
-import { db, parseJson, toJson } from "../db.js";
+import { db, parseJson, toCompressedJson } from "../db.js";
 import { loadMediaConfig } from "./configStore.js";
 import { fetchWithTimeout } from "./outbound.js";
 
@@ -87,7 +87,7 @@ async function fetchFanart(path) {
         result = await requestFanart(path, clientKey);
       }
       if (result.data) {
-        cacheSetStmt.run(path, toJson(result.data), 0, Date.now());
+        cacheSetStmt.run(path, toCompressedJson(result.data), 0, Date.now());
         return result.data;
       }
       if (result.status === 404) {

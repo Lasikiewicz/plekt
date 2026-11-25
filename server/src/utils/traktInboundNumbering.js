@@ -21,10 +21,16 @@ const selectOverrideRowsStmt = db.prepare(`
   WHERE media_type = 'episode' AND watch_provenance LIKE '%"trakt"%'
 `);
 const cachedShowsStmt = db.prepare(`
-  SELECT DISTINCT CAST(json_extract(m.details, '$.external_ids.tvdb_id') AS TEXT) AS tvdb_id, m.tmdb_id
+  SELECT DISTINCT
+    COALESCE(m.tvdb_id, CASE WHEN typeof(m.details) = 'text' AND json_valid(m.details) THEN CAST(json_extract(m.details, '$.external_ids.tvdb_id') AS TEXT) END) AS tvdb_id,
+    m.tmdb_id
   FROM tmdb_metadata_cache m
-  WHERE m.media_type='tv' AND json_valid(m.details) AND m.tmdb_id <> ''
-    AND EXISTS (SELECT 1 FROM tvdb_metadata_cache v WHERE v.tvdb_id=CAST(json_extract(m.details, '$.external_ids.tvdb_id') AS TEXT))
+  WHERE m.media_type='tv' AND m.tmdb_id <> ''
+    AND COALESCE(m.tvdb_id, CASE WHEN typeof(m.details) = 'text' AND json_valid(m.details) THEN CAST(json_extract(m.details, '$.external_ids.tvdb_id') AS TEXT) END) IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM tvdb_metadata_cache v
+      WHERE v.tvdb_id = COALESCE(m.tvdb_id, CASE WHEN typeof(m.details) = 'text' AND json_valid(m.details) THEN CAST(json_extract(m.details, '$.external_ids.tvdb_id') AS TEXT) END)
+    )
 `);
 
 function episodeCode(season, episode) {

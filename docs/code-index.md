@@ -138,6 +138,10 @@ Each branch of `dispatch()` in `server/src/index.js`, sorted by path. Paths are 
 | `stale-trakt-import-repair` | `handleStaleTraktImportRepair` | `routes/maintenance.js` |
 | `startsWith("webhook-test/")` | `handleWebhookTest` | `routes/webhookTest.js` |
 | `stop-force-sync` | `handleStopForceSync` | `routes/sync.js` |
+| `storage/compact-db` | `handleStorageCompactDb` | `routes/storage.js` |
+| `storage/optimize-artwork` | `handleStorageOptimizeArtwork` | `routes/storage.js` |
+| `storage/recompress-backups` | `handleStorageRecompressBackups` | `routes/storage.js` |
+| `storage/status` | `handleStorageStatus` | `routes/storage.js` |
 | `sync-activity/group` | `handleSyncActivityGroup` | `routes/sync.js` |
 | `sync-activity` | `handleSyncActivity` | `routes/sync.js` |
 | `sync-attention` | `handleSyncAttention` | `routes/syncAttention.js` |
@@ -181,6 +185,7 @@ Each branch of `dispatch()` in `server/src/index.js`, sorted by path. Paths are 
 | `upcoming` | `handleUpcoming` | `routes/metadata.js` |
 | `update-watch-dates` | `handleUpdateWatchDates` | `routes/media.js` |
 | `update-watch` | `handleUpdateWatch` | `routes/media.js` |
+| `upgrade-status` | `handleUpgradeStatus` | `routes/storage.js` |
 | `users/manage` | `handleUserManage` | `routes/users.js` |
 | `users/password` | `handleUserPassword` | `routes/users.js` |
 | `users` | `handleUsers` | `routes/users.js` |
@@ -195,7 +200,7 @@ Each branch of `dispatch()` in `server/src/index.js`, sorted by path. Paths are 
 
 ## Modules
 
-Exported names per source file, sorted. Rows with more than 6 exports list the first 6.
+Exported names per source file, sorted. Rows with more than 5 exports list the first 5.
 
 ### public/modules/
 
@@ -203,46 +208,46 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `anidb-metadata.js`: anidbAttributionHtml, anidbDisplayTitle, enrichAnidbDetails
 - `anidb-settings.js`: renderAnidbSettings
 - `app-events.js`: closeMobileMenu, initAppEvents, setMobileMenuState
-- `appearance.js`: APPEARANCE_DEFAULTS, ART_TOGGLES, ART_TOGGLE_EVENT, applyAppearanceToBody, applyTextScale, isArtEnabled and 2 more
-- `auth.js`: buildAuthHeaders, buildNowPlayingUrl, claimAdminAccount, currentUser, getWebhookPath, getWebhookToken and 7 more
-- `backup-destinations.js`: DESTINATION_FORMS, destinationLabel, openBackupDestinationModal, openBackupDestinationPicker, renderBackupDestinationAccordions, renderBackupDestinationCardGrid and 2 more
+- `appearance.js`: APPEARANCE_DEFAULTS, ART_TOGGLES, ART_TOGGLE_EVENT, applyAppearanceToBody, applyTextScale and 3 more
+- `auth.js`: buildAuthHeaders, buildNowPlayingUrl, claimAdminAccount, currentUser, getWebhookPath and 8 more
+- `backup-destinations.js`: DESTINATION_FORMS, destinationLabel, openBackupDestinationModal, openBackupDestinationPicker, renderBackupDestinationAccordions and 3 more
 - `calendar-picker.js`: calendarStateFromIso, formatCalendarDisplay, mountCalendarPicker, renderCalendarPickerHtml
-- `card-art.js`: ART_RETRY_DELAYS_MS, artKey, cardArtAttribute, mediaArtKey, observeCardArtwork, requestArtKey
+- `card-art.js`: ART_RETRY_DELAYS_MS, artKey, cardArtAttribute, mediaArtKey, observeCardArtwork and 1 more
 - `cast-disclosure.js`: hydrateDeferredCastDisclosure, renderCastActor
-- `changelog-channels.js`: OFFICIAL_LINKS, baseVersionOf, bindChangelogChannelTabs, defaultChangelogChannel, developVersionForBuild, formatBuildVersion and 8 more
-- `dashboard-modern.js`: bindDashboardRuns, createDashboardHistoryLiveRefresh, dashboardTvRowUnits, isDashboardRowCompact, renderDashboardTvRowUnit, sessionMatchesCardArt and 2 more
-- `dashboard.js`: dedupePlaybackProgress, getRowFitLimit, initDashboard, loadPartWatched, mergeDashboardHistoryEntries, observeDashboardPosters and 14 more
+- `changelog-channels.js`: OFFICIAL_LINKS, baseVersionOf, bindChangelogChannelTabs, defaultChangelogChannel, developVersionForBuild and 9 more
+- `dashboard-modern.js`: bindDashboardRuns, createDashboardHistoryLiveRefresh, dashboardTvRowUnits, isDashboardRowCompact, renderDashboardTvRowUnit and 3 more
+- `dashboard.js`: dedupePlaybackProgress, getRowFitLimit, initDashboard, loadPartWatched, mergeDashboardHistoryEntries and 15 more
 - `discover.js`: dontRecommendDiscoverItem, initDiscover, loadDiscover, renderDiscover, resetDiscover
 - `dropped-title-views.js`: fetchDroppedTitles, filterDroppedTitles, renderDroppedShowCard, renderDroppedStats, renderDroppedView
 - `dropped-titles.js`: droppedTitleActionHtml, handleDroppedTitleAction, isDroppedUnDropBusy, loadDroppedTitleState, loadDroppedTitleStates
-- `edit-dialogs.js`: apiUpdateWatch, applyArtworkToLocalWatchRecords, applyWatchedAtToLocalWatchRecord, editDateOptionsFromButton, episodeTimingFromButton, fixMatchSearchTitle and 10 more
+- `edit-dialogs.js`: apiUpdateWatch, applyArtworkToLocalWatchRecords, applyWatchedAtToLocalWatchRecord, editDateOptionsFromButton, episodeTimingFromButton and 11 more
 - `episode-order-conflict.js`: renderEpisodeOrderConflict
 - `episode-order.js`: episodeOrderButtonHtml, episodeReviewNoticeHtml, initEpisodeOrder, preflightEpisodeOrderAction
 - `explorer-page-cache.js`: cachedExplorerPage, clearPersistentExplorerPageCache, historyVersionFromRows, isStaleExplorerPage, rememberExplorerPage
-- `explorer.js`: FILMOGRAPHY_PAGE_SIZE, applyListHeaderSort, cachedShowDetail, cachedShowDetailMiss, currentExplorerSort, currentExplorerView and 50 more
-- `help-content.js`: adminTokenGuide, buildWebhookUrl, cronSyncGuide, embyCredentialGuide, embyWebhookSetup, jellyfinCredentialGuide and 7 more
+- `explorer.js`: FILMOGRAPHY_PAGE_SIZE, applyListHeaderSort, cachedShowDetail, cachedShowDetailMiss, currentExplorerSort and 51 more
+- `help-content.js`: adminTokenGuide, buildWebhookUrl, cronSyncGuide, embyCredentialGuide, embyWebhookSetup and 8 more
 - `history-day-view.js`: renderHistoryDayGroups
 - `history-poster-overlay.js`: historyPosterOverlay
-- `images.js`: batchedFallbackPosterUrl, bestTmdbLogo, bindPosterImageErrorHandler, cachedPosterLookup, clearPersistentPosterLookupCache, compactPosterUrl and 21 more
-- `initial-sync.js`: initialSyncDialogMarkup, loadInitialSyncSummary, openInitialSyncDialog, renderInitialSync, startInitialSyncUi, stopInitialSyncUi
+- `images.js`: batchedFallbackPosterUrl, bestTmdbLogo, bindPosterImageErrorHandler, cachedPosterLookup, clearPersistentPosterLookupCache and 22 more
+- `initial-sync.js`: initialSyncDialogMarkup, loadInitialSyncSummary, openInitialSyncDialog, renderInitialSync, startInitialSyncUi and 1 more
 - `install-check.js`: initInstallCheck
 - `legacy-image-banner.js`: renderLegacyImageBanner
-- `library-monitoring.js`: formatLibraryDisambiguator, formatLibraryTypeLabel, formatUnselectedBannerCopy, loadProviderLibraries, renderLibraryMonitoringPanels, renderLibrarySelectionBanner and 1 more
+- `library-monitoring.js`: formatLibraryDisambiguator, formatLibraryTypeLabel, formatUnselectedBannerCopy, loadProviderLibraries, renderLibraryMonitoringPanels and 2 more
 - `live-updates.js`: startLiveUpdates, stopLiveUpdates
 - `logs-viewer.js`: createLogsViewer, filterLogLines
-- `logs.js`: DEBUG_LOGS_KEY, MAX_DEBUG_LOGS, appendDebugLog, clearDebugLogs, clearDiagnosticLogs, escapeHtml and 6 more
-- `manual-watch-review-bulk.js`: BULK_REVIEW_BATCH_CAP, DEFAULT_BULK_REVIEW_MODE, buildBulkConfirmItems, bulkDismissConfirmation, bulkItemDecision, bulkSelectionSummary and 28 more
-- `manual-watch-review.js`: buildManualWatchReviewEpisodeCatalog, filterManualWatchReviews, groupManualWatchReviews, groupReviewsByEpisode, groupReviewsBySeason, initManualWatchReview and 15 more
+- `logs.js`: DEBUG_LOGS_KEY, MAX_DEBUG_LOGS, appendDebugLog, clearDebugLogs, clearDiagnosticLogs and 7 more
+- `manual-watch-review-bulk.js`: BULK_REVIEW_BATCH_CAP, DEFAULT_BULK_REVIEW_MODE, buildBulkConfirmItems, bulkDismissConfirmation, bulkItemDecision and 29 more
+- `manual-watch-review.js`: buildManualWatchReviewEpisodeCatalog, filterManualWatchReviews, groupManualWatchReviews, groupReviewsByEpisode, groupReviewsBySeason and 16 more
 - `media-card.js`: mediaCardHref, normalizeMediaCardRecord, renderMediaCard
-- `media-detail-context.js`: authHeaders, bumpMediaRenderToken, clearMediaDetailState, closeDebugModal, closeMediaDetail, closeMediaInfoModal and 24 more
+- `media-detail-context.js`: authHeaders, bumpMediaRenderToken, clearMediaDetailState, closeDebugModal, closeMediaDetail and 25 more
 - `media-detail-events.js`: applyLiveHistoryChanges, attachMediaDetailEvents, initLibraryForceSyncPanel, initMediaDetailEvents, refreshActiveDetailView
-- `media-detail-movie.js`: fetchWatchedMovieByTmdb, openMovieImmersiveModalByTmdbId, patchMovieWatchedState, renderMovieImmersiveModalContent, syncMovieWatchActionControls, syncRewatchHistoryToggle
-- `media-detail-shared.js`: episodeResolutionPillHtml, fetchSeerrMediaStatus, hydrateDeferredCastDisclosure, hydrateMediaAppLinks, initialMediaAppLinksContent, markDetailPrimaryReady and 28 more
-- `media-detail-show.js`: ensureAllShowEpisodeDetailsForWatch, mergeShowWithLoadedHistory, openShowImmersiveModalByTitle, openShowImmersiveModalByTmdbId, openShowImmersiveModalByTvdbId, openShowInlineDetail and 8 more
-- `media-detail.js`: clearMediaDetailState, closeDebugModal, closeMediaDetail, closeMediaInfoModal, ensureAllShowEpisodeDetailsForWatch, fetchSeerrMediaStatus and 32 more
-- `media-info-summary.js`: auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries, renderInfoWatchSync
+- `media-detail-movie.js`: fetchWatchedMovieByTmdb, openMovieImmersiveModalByTmdbId, patchMovieWatchedState, renderMovieImmersiveModalContent, syncMovieWatchActionControls and 1 more
+- `media-detail-shared.js`: episodeResolutionPillHtml, fetchSeerrMediaStatus, hydrateDeferredCastDisclosure, hydrateMediaAppLinks, initialMediaAppLinksContent and 29 more
+- `media-detail-show.js`: ensureAllShowEpisodeDetailsForWatch, mergeShowWithLoadedHistory, openShowImmersiveModalByTitle, openShowImmersiveModalByTmdbId, openShowImmersiveModalByTvdbId and 9 more
+- `media-detail.js`: clearMediaDetailState, closeDebugModal, closeMediaDetail, closeMediaInfoModal, ensureAllShowEpisodeDetailsForWatch and 33 more
+- `media-info-summary.js`: auditEventsForRecord, infoSyncSummary, infoSyncTargetStates, infoWatchDetails, mediaInfoGlanceEntries and 1 more
 - `media-lightbox.js`: initMediaLightbox
-- `media-person.js`: closePersonProfile, findLibraryItem, hydratePersonFilmographyWatchStatuses, initMediaPerson, libraryTvWatchProgress, loadCastMemberDetails and 1 more
+- `media-person.js`: closePersonProfile, findLibraryItem, hydratePersonFilmographyWatchStatuses, initMediaPerson, libraryTvWatchProgress and 2 more
 - `media-records.js`: dedupeMediaRecords, mediaRecordIdentity
 - `media-routing.js`: movieById, movieBySlugOrId, nowPlayingHref
 - `netflix-import.js`: initNetflixImport
@@ -250,72 +255,73 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `onboarding-backups.js`: createOnboardingBackups
 - `onboarding-sections.js`: createOnboardingSections
 - `onboarding-trackers.js`: createOnboardingTrackers
-- `onboarding.js`: claimWithForm, initOnboarding, loadSetupStatus, renderSetupPage, renderSidebarOnboardingCta, setClaimRequired
+- `onboarding.js`: claimWithForm, initOnboarding, loadSetupStatus, renderSetupPage, renderSidebarOnboardingCta and 1 more
 - `page-card-open.js`: (no exports)
 - `personal-media-metadata.js`: hydratePersonalMetadata, personalMetadataItems, propagatePersonalMetadata
-- `personal-media.js`: addToCustomList, addToWatchlist, closePersonalDialog, customListsForPersonalItem, getPersonalRating, handlePersonalAction and 17 more
+- `personal-media.js`: addToCustomList, addToWatchlist, closePersonalDialog, customListsForPersonalItem, getPersonalRating and 18 more
 - `playlist-episode-picker.js`: episodePickerHtml, episodesInPlaylist, openEpisodePicker, pickedEpisodes
-- `playlist-import.js`: candidateKey, importDialogBodyHtml, importMergeOption, importPicks, importResultMessage, openPlaylistImportDialog
-- `playlist-rules.js`: bindRuleEditor, choiceCardHtml, handleRuleClick, isAutomaticPlaylist, playlistRefreshIndicatorHtml, playlistRuleDetails and 6 more
-- `playlists.js`: PLAYLIST_PROVIDER_LABELS, bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog, openCreateListDialog and 14 more
-- `plex-history-policy.js`: PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_HELP_HTML, PLEX_HISTORICAL_SYNC_LABEL, PLEX_HISTORICAL_SYNC_OFF_CONSEQUENCES, PROVIDER_DATE_NOTE_HTML, mergeProviderOutcomes and 3 more
+- `playlist-import.js`: candidateKey, importDialogBodyHtml, importMergeOption, importPicks, importResultMessage and 1 more
+- `playlist-rules.js`: bindRuleEditor, choiceCardHtml, handleRuleClick, isAutomaticPlaylist, playlistRefreshIndicatorHtml and 7 more
+- `playlists.js`: PLAYLIST_PROVIDER_LABELS, bindPlaylistDragAndDrop, handlePlaylistClick, initPlaylists, openAddToListDialog and 15 more
+- `plex-history-policy.js`: PLEX_HISTORICAL_SYNC_CHOICES, PLEX_HISTORICAL_SYNC_HELP_HTML, PLEX_HISTORICAL_SYNC_LABEL, PLEX_HISTORICAL_SYNC_OFF_CONSEQUENCES, PROVIDER_DATE_NOTE_HTML and 4 more
 - `poster-menu.js`: closePosterOverflowMenu, initPosterOverflowMenu, setPosterOverflowMenuActionPending
-- `rating-sync-settings.js`: applyRatingSyncConfig, initRatingSyncSettings, refreshRatingSyncStatus, resumeRatingSyncSettings, runRatingSyncNow, stopRatingSyncSettings
-- `route-modules.js`: DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, WATCH_ROUTE_MODULES, ensureShellModules and 13 more
+- `rating-sync-settings.js`: applyRatingSyncConfig, initRatingSyncSettings, refreshRatingSyncStatus, resumeRatingSyncSettings, runRatingSyncNow and 1 more
+- `route-modules.js`: DETAIL_ROUTE_MODULES, SETTINGS_ROUTE_MODULES, SHELL_ROUTE_MODULES, STATUS_ROUTE_MODULES, WATCH_ROUTE_MODULES and 14 more
 - `season-card-sizes.js`: watchSeasonCardSizes
 - `season-posters-panel.js`: createSeasonPostersPanel
 - `settings-events.js`: initSettingsEvents, loadSettingsUsers
-- `settings-services.js`: SEASON_SOURCE_FIELD, SERVICE_DEFS, applyConfigToSettingsUi, initSettingsServices, openServiceEditModal, refreshSeerrCapabilities and 7 more
-- `settings-shell.js`: SETTINGS_SECTIONS, applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareHelpReadMore, prepareSettingsShell and 3 more
-- `settings-ui.js`: collectFieldValues, openSettingsEditModal, openSettingsPickerModal, renderFieldRow, renderInlineServicePanel, renderServiceCardGrid
+- `settings-services.js`: SEASON_SOURCE_FIELD, SERVICE_DEFS, applyConfigToSettingsUi, initSettingsServices, openServiceEditModal and 8 more
+- `settings-shell.js`: SETTINGS_SECTIONS, applySettingsRoute, focusSettingsRoute, parseSettingsRoute, prepareHelpReadMore and 4 more
+- `settings-ui.js`: collectFieldValues, openSettingsEditModal, openSettingsPickerModal, renderFieldRow, renderInlineServicePanel and 1 more
 - `settings-users.js`: initSettingsUsers, loadSettingsUsers
 - `settings.js`: connectionLabel
 - `show-season-source.js`: confirmationHtml, mountShowSeasonSource, traktConfirmationHtml
 - `sidebar-navigation.js`: attachSidebarMiddleClickNavigation, sidebarNavigationPath, sidebarUserPresentation
-- `state.js`: ACTIVE_SETTINGS_TAB_KEY, ACTIVE_VIEW_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES, EXPLORER_VIEW_KEY_SHOWS and 15 more
-- `stats.js`: busiestMonth, formatListDate, futureListDate, initStats, loadStats, mergeShowAiringMetadata and 23 more
-- `status-indicators.js`: loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary, renderSyncActivityStatus, setSyncActivityProgress, setSyncAttentionSummary and 2 more
+- `state.js`: ACTIVE_SETTINGS_TAB_KEY, ACTIVE_VIEW_KEY, EXPLORER_SORT_KEY_MOVIES, EXPLORER_SORT_KEY_SHOWS, EXPLORER_VIEW_KEY_MOVIES and 16 more
+- `stats.js`: busiestMonth, formatListDate, futureListDate, initStats, loadStats and 24 more
+- `status-indicators.js`: loadManualWatchReviewSummary, loadSyncAttentionSummary, renderManualWatchReviewSummary, renderSyncActivityStatus, setSyncActivityProgress and 3 more
 - `supervisor-switch.js`: initSupervisorSwitch, refreshSwitchUsers, setupSwitchMarkup
-- `sync-activity.js`: activityPlatform, attentionIssueMarkup, buildSyncActivityLog, canonicalShowKey, clearClientAttention, clearClientAttentionForRoute and 47 more
-- `sync-attention-cards.js`: bindTrackerWriteReview, handleSimklEpisodeOrderReviewClick, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview, simklEpisodeOrderGuidance and 1 more
+- `sync-activity.js`: activityPlatform, attentionIssueMarkup, buildSyncActivityLog, canonicalShowKey, clearClientAttention and 48 more
+- `sync-attention-cards.js`: bindTrackerWriteReview, handleSimklEpisodeOrderReviewClick, handleSyncActivityRetryClick, renderSyncAttentionItem, renderTrackerWriteReview and 2 more
 - `sync-preview.js`: initSyncPreview
-- `sync.js`: activeSessionsKey, categorizeIssues, getActiveTargets, getMediaTargetSyncStatus, getSyncStatusTone, getSyncStatusTooltip and 45 more
+- `sync.js`: activeSessionsKey, categorizeIssues, getActiveTargets, getMediaTargetSyncStatus, getSyncStatusTone and 46 more
 - `tautulli-import.js`: initTautulliImport, refreshTautulliImport
-- `tmdb.js`: anidbAttributionHtml, anidbDisplayTitle, fetchTmdbDetails, fetchTmdbSeasonDetails, normalizeTmdbLookupIds, resolveEpisodeTitleFromTmdb
-- `tools-backups.js`: createPlektBackupNow, createPlektBackupRemoteNow, createRemoteWatchBackupNow, createWatchBackupNow, deletePlektBackupFile, downloadPlektBackup and 28 more
+- `tmdb.js`: anidbAttributionHtml, anidbDisplayTitle, fetchTmdbDetails, fetchTmdbSeasonDetails, normalizeTmdbLookupIds and 1 more
+- `tools-backups.js`: createPlektBackupNow, createPlektBackupRemoteNow, createRemoteWatchBackupNow, createWatchBackupNow, deletePlektBackupFile and 29 more
 - `tools-duplicates.js`: initDuplicateWatchTools, runDuplicateWatchCleanup
 - `tools-health.js`: initHealthTools, loadSyncHealth
-- `tools-maintenance.js`: cancelFullSyncWatchstates, fetchSyncMatchReport, initMaintenanceTools, loadCacheStats, renderCachePanel, renderSyncMatchReport and 14 more
+- `tools-maintenance.js`: cancelFullSyncWatchstates, fetchSyncMatchReport, initMaintenanceTools, loadCacheStats, renderCachePanel and 15 more
 - `tools-playstate-aliases.js`: initPlaystateAliasTools, loadPlaystateAliases
 - `tools-split-episode-repair.js`: initSplitEpisodeRepairTools, loadSplitEpisodeAudit
+- `tools-storage.js`: initStorageTools, loadStorageStatus
 - `tools-wipe-data.js`: initWipeDataTools, loadWipeDataPreview, runWipeData
-- `tools.js`: APPEARANCE_DEFAULTS, appendImportLog, applyAppearanceToBody, cancelFullSyncWatchstates, createPlektBackupNow, createPlektBackupRemoteNow and 53 more
-- `tracker-full-sync.js`: fullSyncView, initTrackerFullSync, initialSyncText, previewGroupSummary, previewGroupTitle, previewGroups and 8 more
+- `tools.js`: APPEARANCE_DEFAULTS, appendImportLog, applyAppearanceToBody, cancelFullSyncWatchstates, createPlektBackupNow and 54 more
+- `tracker-full-sync.js`: fullSyncView, initTrackerFullSync, initialSyncText, previewGroupSummary, previewGroupTitle and 9 more
 - `tracker-settings.js`: initTrackerSettings, refreshTrackerPolicyNotes, refreshTrackerSettings, traktSyncCompletionMessage
-- `up-next-shared.js`: UP_NEXT_SORT_MODES, applyUpNextSyncControlState, chooseUpNextAddOptions, chooseUpNextRemovalScope, formatUpNextRelativeTime, handleUpNextDialogKey and 17 more
-- `up-next.js`: UP_NEXT_DISMISSED_KEY, addShowToUpNext, chooseUpNextRemovalScope, initUpNext, loadUpNext, openDismissedUpNextModal and 18 more
+- `up-next-shared.js`: UP_NEXT_SORT_MODES, applyUpNextSyncControlState, chooseUpNextAddOptions, chooseUpNextRemovalScope, formatUpNextRelativeTime and 18 more
+- `up-next.js`: UP_NEXT_DISMISSED_KEY, addShowToUpNext, chooseUpNextRemovalScope, initUpNext, loadUpNext and 19 more
 - `upcoming.js`: initUpcoming, loadUpcoming, openUpcomingToToday, renderUpcoming
-- `utils.js`: actualWatchHistory, addDays, appendRestInChunks, computeProgress, csvRows, episodeCode and 62 more
-- `watch-action.js`: applyWatchDateChoice, closeWatchDatePrompt, confirmAndDeleteMedia, confirmAndMarkUnwatched, dateAtMiddayIso, hasSavingWatchActionForShow and 24 more
-- `watchlist-sync-settings.js`: applyWatchlistSyncConfig, initWatchlistSyncSettings, refreshWatchlistSyncStatus, resumeWatchlistSyncSettings, runWatchlistSyncNow, stopWatchlistSyncSettings
+- `utils.js`: actualWatchHistory, addDays, appendRestInChunks, computeProgress, csvRows and 63 more
+- `watch-action.js`: applyWatchDateChoice, closeWatchDatePrompt, confirmAndDeleteMedia, confirmAndMarkUnwatched, dateAtMiddayIso and 25 more
+- `watchlist-sync-settings.js`: applyWatchlistSyncConfig, initWatchlistSyncSettings, refreshWatchlistSyncStatus, resumeWatchlistSyncSettings, runWatchlistSyncNow and 1 more
 - `webhook-test.js`: WEBHOOK_TEST_PROVIDERS, webhookTestButton, webhookTestFailureAdvice, webhookTestFailureLabel
 
 ### server/src/
 
-- `appConfig.js`: AUTH, clearTenantAuthConfigCache, getRootAdminUsername, getRootSessionSecret, isClaimRequired, isDefaultPassword and 9 more
-- `db.js`: adminDb, assertNotRealDataDirUnderTest, bumpDataVersion, bumpDiscoverVersion, bumpUpNextVersion, dataVersionTrigger and 15 more
+- `appConfig.js`: AUTH, clearTenantAuthConfigCache, getRootAdminUsername, getRootSessionSecret, isClaimRequired and 10 more
+- `db.js`: adminDb, assertNotRealDataDirUnderTest, bumpDataVersion, bumpDiscoverVersion, bumpUpNextVersion and 17 more
 - `env.js`: loadLocalEnv
 - `index.js`: backfillUnknownShowTitles, dispatch, runScheduledTick, startPlexNotificationListener, stopPlexNotificationListener
-- `paths.js`: BACKDROPS_DIR, BACKUPS_DIR, CONFIG_PATH, CREDENTIAL_KEY_PATH, DATA_DIR, DB_PATH and 16 more
-- `scheduled.js`: executeForceSyncPlan, mediaFromEmbyLikeResumableItem, mediaFromPlexResumableItem, recoverStaleSyncOperation, resumeProgressAuthorityTimestamp, resumeProgressBlockedByPlaystate and 1 more
-- `scheduler.js`: pokeLiveSessionPoller, pokePlexAdaptivePoller, resolvePlexNotificationWatchDate, restartPlexAdaptivePoller, restartPlexNotificationListener, runScheduledTick and 10 more
+- `paths.js`: BACKDROPS_DIR, BACKUPS_DIR, CONFIG_PATH, CREDENTIAL_KEY_PATH, DATA_DIR and 17 more
+- `scheduled.js`: executeForceSyncPlan, mediaFromEmbyLikeResumableItem, mediaFromPlexResumableItem, recoverStaleSyncOperation, resumeProgressAuthorityTimestamp and 2 more
+- `scheduler.js`: pokeLiveSessionPoller, pokePlexAdaptivePoller, resolvePlexNotificationWatchDate, restartPlexAdaptivePoller, restartPlexNotificationListener and 11 more
 - `workerCoordinator.js`: createWorkerCoordinator, nextTickDelayMs
 
 ### server/src/routes/
 
-- `admin.js`: __resetAppLinkProviderDown, clearEmptyAppLinksCache, fetchConfiguredAppLinks, handleAppearance, handleConfig, handleMediaAppLinks and 6 more
+- `admin.js`: __resetAppLinkProviderDown, clearEmptyAppLinksCache, fetchConfiguredAppLinks, handleAppearance, handleConfig and 7 more
 - `anidb.js`: handleAnidb
-- `backups.js`: handleBackupExport, handleBackupImport, handleImport, handlePlektBackups, handleWatchBackups, shouldSkipPostRestoreCompletedWebhook
+- `backups.js`: handleBackupExport, handleBackupImport, handleImport, handlePlektBackups, handleWatchBackups and 1 more
 - `calendarFeed.js`: handleCalendarFeed, handleCalendarFeedSettings
 - `droppedTitles.js`: handleDroppedTitles
 - `episodeOrder.js`: handleEpisodeOrder, handleEpisodeOrderPreflight
@@ -324,13 +330,13 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `legacyImage.js`: handleLegacyImage
 - `libraryMonitoring.js`: handleLibraryMonitoring
 - `liveUpdates.js`: handleLiveUpdates
-- `maintenance.js`: describePendingAlphaBuild, describePendingDevelopBuild, handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt, handleCacheStats and 27 more
+- `maintenance.js`: describePendingAlphaBuild, describePendingDevelopBuild, handleAdminFixHistory, handleBackfillStatus, handleBackfillTrakt and 28 more
 - `manualWatchReview.js`: handleManualWatchReview, waitForManualWatchReviewBulkIdle
-- `media.js`: handleAddWatchDate, handleClearMissingTelemetry, handleDeleteHistoryRecord, handleDeleteMedia, handleDeleteWatchDate, handleDeleteWatchDates and 14 more
+- `media.js`: handleAddWatchDate, handleClearMissingTelemetry, handleDeleteHistoryRecord, handleDeleteMedia, handleDeleteWatchDate and 15 more
 - `mediaAuth.js`: handleEmbyLikeAuth, handleEmbyLikeConnection, handlePlexAuth, handlePlexConnection
-- `metadata.js`: handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch, handleOmdbRating and 19 more
+- `metadata.js`: handleDiscover, handleDiscoverDismiss, handleFanartImages, handleFixMatchSearch, handleMediaSearch and 20 more
 - `netflixImport.js`: handleNetflixImport
-- `onboarding.js`: handleSetupChecklistDismiss, handleSetupComplete, handleSetupCtaDismiss, handleSetupImport, handleSetupRestart, handleSetupStatus and 1 more
+- `onboarding.js`: handleSetupChecklistDismiss, handleSetupComplete, handleSetupCtaDismiss, handleSetupImport, handleSetupRestart and 2 more
 - `personal.js`: handlePersonalMedia, personalMediaKey
 - `playstateAliases.js`: handlePlaystateAliases
 - `plektRestore.js`: handlePlektRestore, handlePlektRestoreUpload
@@ -339,7 +345,8 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `showSeasonSource.js`: handleShowSeasonSource, handleShowSeasonSourcePreview, handleShowSeasonSourceTraktPreview, handleShowSeasonSourceTraktReplace
 - `simklAuth.js`: handleSimklAuth
 - `splitEpisodeRepair.js`: handleSplitEpisodeRepair
-- `sync.js`: applyManualUnwatch, applyWatchedStateToNewItem, dismissSyncActivityEntry, formatDispatchTelemetry, handleActiveSessions, handleCronSync and 40 more
+- `storage.js`: handleStorageCompactDb, handleStorageOptimizeArtwork, handleStorageRecompressBackups, handleStorageStatus, handleUpgradeStatus
+- `sync.js`: applyManualUnwatch, applyWatchedStateToNewItem, dismissSyncActivityEntry, formatDispatchTelemetry, handleActiveSessions and 41 more
 - `syncAttention.js`: handleSyncAttention
 - `tautulli.js`: handleTautulli
 - `trackerAuth.js`: handleTrackerAuth, handleTrackerConnections
@@ -356,121 +363,122 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `anidbGateway.js`: createAnidbGateway, getAnidbAnime
 - `anidbMatches.js`: anidbMediaIdentity, createAnidbMatches, verifiedAnidbProviderCandidate
 - `anidbMovieMatches.js`: createAnidbMovieLookup, lookupAnidbMovie
-- `anidbProtocol.js`: ANIDB_MAX_BYTES, ANIDB_SCHEMA_VERSION, anidbError, normalizeAnidbId, parseAnidbAnime, readAnidbXml
+- `anidbProtocol.js`: ANIDB_MAX_BYTES, ANIDB_SCHEMA_VERSION, anidbError, normalizeAnidbId, parseAnidbAnime and 1 more
 - `anidbRepository.js`: ANIDB_DAY_MS, ANIDB_INTERVAL_MS, createAnidbRepository
-- `auth.js`: handleAuthApiKey, handleAuthClaim, handleAuthCredentials, handleAuthStatus, handleAuthWebhookSecret, handleLogin and 12 more
-- `backgroundJobs.js`: BACKGROUND_JOB_STALE_MS, appendBackgroundJobLog, cancelSyncJobsForAuthoritativeRestore, claimNextBackgroundJob, enqueueBackgroundJob, finishBackgroundJob and 7 more
-- `backup.js`: BACKUP_COLLECTIONS, BACKUP_FORMAT, BACKUP_VERSION, BROWSER_BACKUP_COLLECTIONS, backupManifest, exportCollectionPage and 3 more
-- `backupNames.js`: BACKUP_FORMAT, ENCRYPTED_BACKUP_FORMAT, ENCRYPTED_BACKUP_FORMAT_FIELD_PATTERN, FULL_BACKUP_FILE_PATTERN, FULL_BACKUP_TEMPORARY_FILE_PATTERN, LEGACY_REDACTED_SECRETS_FIELD and 13 more
+- `auth.js`: handleAuthApiKey, handleAuthClaim, handleAuthCredentials, handleAuthStatus, handleAuthWebhookSecret and 13 more
+- `backgroundJobs.js`: BACKGROUND_JOB_STALE_MS, appendBackgroundJobLog, cancelSyncJobsForAuthoritativeRestore, claimNextBackgroundJob, enqueueBackgroundJob and 8 more
+- `backup.js`: BACKUP_COLLECTIONS, BACKUP_FORMAT, BACKUP_VERSION, BROWSER_BACKUP_COLLECTIONS, backupManifest and 4 more
+- `backupNames.js`: BACKUP_FORMAT, ENCRYPTED_BACKUP_FORMAT, ENCRYPTED_BACKUP_FORMAT_FIELD_PATTERN, FULL_BACKUP_FILE_PATTERN, FULL_BACKUP_TEMPORARY_FILE_PATTERN and 14 more
 - `backupStreamScanner.js`: BackupStreamScanner
 - `brandEnv.js`: brandEnv, legacyEnvNamesInUse, logLegacyEnvNames, providerAppName
-- `cacheTelemetry.js`: cacheRebuildDebugEnabled, cacheRebuildTelemetry, recordCacheRebuild, resetCacheRebuildTelemetry, timeCacheRebuild, timeCacheRebuildAsync
-- `cacheWarmup.js`: DEFAULT_WARMUP_STEPS, REQUEST_DEFER_MAX_MS, REQUEST_QUIET_MS, WARMUP_MAX_WAIT_MS, WARMUP_QUIET_MS, createCacheWarmup and 3 more
-- `calendarFeed.js`: DEFAULT_CALENDAR_FEED_TYPES, calendarFeedTokenMatches, createCalendarFeedToken, getCalendarFeed, getCalendarFeedSettings, isPublicCalendarOrigin and 4 more
-- `compoundEpisode.js`: buildCompoundEpisodeIndex, canonicalCompoundEpisodeMedia, canonicalText, canonicalizeCompoundEpisodeRows, compoundEpisodeForMedia, compoundEpisodeForRow and 3 more
+- `cacheTelemetry.js`: cacheRebuildDebugEnabled, cacheRebuildTelemetry, recordCacheRebuild, resetCacheRebuildTelemetry, timeCacheRebuild and 1 more
+- `cacheWarmup.js`: DEFAULT_WARMUP_STEPS, REQUEST_DEFER_MAX_MS, REQUEST_QUIET_MS, WARMUP_MAX_WAIT_MS, WARMUP_QUIET_MS and 4 more
+- `calendarFeed.js`: DEFAULT_CALENDAR_FEED_TYPES, calendarFeedTokenMatches, createCalendarFeedToken, getCalendarFeed, getCalendarFeedSettings and 5 more
+- `compoundEpisode.js`: buildCompoundEpisodeIndex, canonicalCompoundEpisodeMedia, canonicalText, canonicalizeCompoundEpisodeRows, compoundEpisodeForMedia and 4 more
 - `concurrency.js`: runWithConcurrency
-- `configStore.js`: BACKGROUND_SYNC_PROGRESS_MAX_OWNER_MS, BACKGROUND_SYNC_PROGRESS_STALE_MS, DEFAULT_NOW_PLAYING, DEFAULT_RATING_SYNC, DEFAULT_TAUTULLI, DEFAULT_UP_NEXT_SYNC and 62 more
+- `configStore.js`: BACKGROUND_SYNC_PROGRESS_MAX_OWNER_MS, BACKGROUND_SYNC_PROGRESS_STALE_MS, DEFAULT_NOW_PLAYING, DEFAULT_RATING_SYNC, DEFAULT_TAUTULLI and 63 more
 - `credentialVault.js`: CREDENTIAL_VAULT_VERSION, decryptCredential, encryptCredential, loadCredentialKey, redactSecrets
-- `dataRepo.js`: SAME_EVENT_WINDOW_MS, TMDB_DETAILS_SCHEMA_VERSION, addWatchDate, auditEpisodeTitleGaps, auditLikelyFalseUnwatches, auditSplitIdentityUnwatches and 152 more
+- `dataRepo.js`: SAME_EVENT_WINDOW_MS, TMDB_DETAILS_SCHEMA_VERSION, addWatchDate, auditEpisodeTitleGaps, auditLikelyFalseUnwatches and 153 more
 - `dbMaintenance.js`: DB_OPTIMIZE_INTERVAL_MS, runDatabaseMaintenance, runDbOptimizeIfDue
 - `demoMode.js`: isDemoMode
-- `diagnosticLogger.js`: categorizeLog, clearLogs, flushPending, getLogs, isSpamLog, pruneLogArchive and 3 more
+- `diagnosticLogger.js`: categorizeLog, clearLogs, flushPending, getLogs, isSpamLog and 4 more
 - `diskMaintenance.js`: sweepOrphanArtwork
 - `dropboxAppConfig.js`: BUNDLED_DROPBOX_APP_KEY, resolveDropboxAppKey
-- `droppedTitleTrackerSync.js`: pendingDroppedTitleRowsForConnection, resolveSimklRestoreStatus, scheduleDroppedTitleTrackerDrain, shouldApplyRemoteDroppedChange, snapshotContainsDroppedIdentity, syncDroppedTitleTracker
-- `droppedTitles.js`: createDroppedTitleFilter, dropTitle, droppedTitleAliases, isSameDroppedTitle, listDroppedTitles, publishDroppedTitleMutation and 4 more
-- `embyClient.js`: UP_NEXT_SEED_DEVICE_ID, __resetEmbySeriesCache, __setEmbySeriesCacheNow, clearEmbyPersonalRating, countEmbyWatchedItems, embyDatePlayedParam and 20 more
-- `embyLikeAuth.js`: authenticateEmbyLike, embyLikeAuthorization, initiateJellyfinQuickConnect, jellyfinQuickConnectEnabled, logoutEmbyLike, pollJellyfinQuickConnect
+- `droppedTitleTrackerSync.js`: pendingDroppedTitleRowsForConnection, resolveSimklRestoreStatus, scheduleDroppedTitleTrackerDrain, shouldApplyRemoteDroppedChange, snapshotContainsDroppedIdentity and 1 more
+- `droppedTitles.js`: createDroppedTitleFilter, dropTitle, droppedTitleAliases, isSameDroppedTitle, listDroppedTitles and 5 more
+- `embyClient.js`: UP_NEXT_SEED_DEVICE_ID, __resetEmbySeriesCache, __setEmbySeriesCacheNow, clearEmbyPersonalRating, countEmbyWatchedItems and 21 more
+- `embyLikeAuth.js`: authenticateEmbyLike, embyLikeAuthorization, initiateJellyfinQuickConnect, jellyfinQuickConnectEnabled, logoutEmbyLike and 1 more
 - `embyLikePlaylists.js`: embyPlaylists, jellyfinPlaylists, normalizeEmbyLikePlaylist, normalizeEmbyLikePlaylistEntry
 - `episodeImportGuard.js`: isPlaceholderEpisodeTitle, isRemoteEpisodeImportValid, remoteEpisodeImportError
 - `episodeNumberMap.js`: buildEpisodeNumberMap, detectRowNumbering, episodeKey, planShowTranslation, translateEpisode
-- `episodeOrder.js`: annotateEpisodeOrder, assertNoDvdContainer, assertOrderInsert, changeEpisodeOrder, dvdToAired, episodeOrderDetails and 10 more
+- `episodeOrder.js`: annotateEpisodeOrder, assertNoDvdContainer, assertOrderInsert, changeEpisodeOrder, dvdToAired and 11 more
 - `episodeOrderConflict.js`: previewEpisodeOrderConflict, repairEpisodeOrderConflict
 - `episodeOrderTargets.js`: matchEpisodeOrderTarget, resolveEpisodeOrderTargets, resolveSourceOrderEpisode
-- `episodeOrderUpNext.js`: createUpNextMetadataCache, orderCoordinate, orderDetails, orderDisplayMap, orderRevision, orderSeason and 1 more
-- `episodeOrderWatch.js`: assertOrderInsert, isAlternateOrderEpisodeRow, keepOrderProvenance, plexUnwatchCheckTarget, preflightOrderRecords, prepareEpisodeOrderTarget and 3 more
+- `episodeOrderUpNext.js`: createUpNextMetadataCache, orderCoordinate, orderDetails, orderDisplayMap, orderRevision and 2 more
+- `episodeOrderWatch.js`: assertOrderInsert, isAlternateOrderEpisodeRow, keepOrderProvenance, plexUnwatchCheckTarget, preflightOrderRecords and 4 more
 - `episodeTitleRepair.js`: episodeNameFromSeason, isPlaceholderEpisodeTitleValue, resolveStoredEpisodeName, resolvedEpisodeTitleForRecord
 - `eventLoop.js`: yieldToEventLoop
-- `fanartGateway.js`: fanartBuiltInAvailable, getAllFanartMovieImages, getAllFanartTvImages, getFanartMovieArt, getFanartTvArt, getFanartTvSeasonPosters
+- `fanartGateway.js`: fanartBuiltInAvailable, getAllFanartMovieImages, getAllFanartTvImages, getFanartMovieArt, getFanartTvArt and 1 more
 - `forceSyncControl.js`: forceSyncStopAction
 - `forceSyncExecutor.js`: executeForceSyncPlan
-- `forceSyncPlanner.js`: DESTRUCTIVE_CONFIRM_COUNT, DESTRUCTIVE_CONFIRM_HISTORY_FRACTION, PLAN_TTL_MS, SYNC_SERVERS, buildForceSyncPlan, collectServerFingerprintCounts and 12 more
+- `forceSyncPlanner.js`: DESTRUCTIVE_CONFIRM_COUNT, DESTRUCTIVE_CONFIRM_HISTORY_FRACTION, PLAN_TTL_MS, SYNC_SERVERS, buildForceSyncPlan and 13 more
 - `forceSyncRun.js`: runForceSync
 - `historyCacheState.js`: historyCaches
 - `http.js`: methodNotAllowed, notFound, sendApiError, sendJson, sendOptions
 - `httpPerformance.js`: createCspImageOriginMemo, createHttpTimingMiddleware, createResponseCompression, mediaImageOrigins, setPublicAssetCacheHeaders
 - `initialOutwardSync.js`: armInitialSync, initialSyncDestinations, runInitialDestination, runInitialSync
 - `initialSyncBackup.js`: initialSyncBackupCollection, quarantineInitialSyncSetting
-- `initialSyncStore.js`: assertInitialImportsOpen, finalizeInitialSync, initialImportsCompleted, initialImportsPending, initialSyncSummary, patchInitialSync and 7 more
-- `installCheck.js`: DEFAULT_INSTALL_CHECK_URL, answerInstallCheck, installArch, installChannel, installCheckAllowed, installCheckBody and 9 more
+- `initialSyncStore.js`: assertInitialImportsOpen, finalizeInitialSync, initialImportsCompleted, initialImportsPending, initialSyncSummary and 8 more
+- `installCheck.js`: DEFAULT_INSTALL_CHECK_URL, answerInstallCheck, installArch, installChannel, installCheckAllowed and 10 more
 - `jellyfinAuth.js`: jellyfinAuthHeaders, jellyfinAuthorization, jellyfinCredential, setJellyfinApiKey
-- `jellyfinClient.js`: __resetJellyfinSeriesCache, __setJellyfinSeriesCacheNow, clearJellyfinPersonalRating, countJellyfinWatchedItems, fetchJellyfinEpisodes, fetchJellyfinEpisodesForSeries and 17 more
+- `jellyfinClient.js`: __resetJellyfinSeriesCache, __setJellyfinSeriesCacheNow, clearJellyfinPersonalRating, countJellyfinWatchedItems, fetchJellyfinEpisodes and 18 more
+- `jsonCompression.js`: decompressJsonText, isGzipBuffer, parseCompressedJson, toCompressedJson
 - `keyedLock.js`: acquireKeyedLock
 - `legacyImage.js`: LEGACY_IMAGE_MIN_SUPPORT_DATE, isLegacyImage, legacyImageNotice
 - `libraryAvailabilitySync.js`: mediaFromLibraryItem, reconcileAvailableWatchedItems
 - `libraryForceSync.js`: forceSyncLibraryState, normalizeLibraryForceSyncRequest, plannerMediaToSyncMedia, withLibrarySeriesIds
-- `librarySelection.js`: DEFAULT_LIBRARY_MONITORING, LIBRARY_MONITORING_PROVIDERS, PROVIDER_LABELS, attachProviderLibraryMonitoring, buildLibrarySkipDiagnostic, clearServerIdentityCache and 16 more
-- `liveSessionCompletion.js`: UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS, __setCompletionAfterInsertHook, __setCompletionBeforeRecheckHook, __setStoppedProgressBeforeWriteHook, refreshLiveSessions, upNextProvidersToProbeForOutage
+- `librarySelection.js`: DEFAULT_LIBRARY_MONITORING, LIBRARY_MONITORING_PROVIDERS, PROVIDER_LABELS, attachProviderLibraryMonitoring, buildLibrarySkipDiagnostic and 17 more
+- `liveSessionCompletion.js`: UP_NEXT_FAILED_FEED_RETRY_INTERVAL_MS, __setCompletionAfterInsertHook, __setCompletionBeforeRecheckHook, __setStoppedProgressBeforeWriteHook, refreshLiveSessions and 1 more
 - `liveSessionPoller.js`: createLiveSessionPoller
 - `liveSessionTenants.js`: refreshTenantLiveSessions, routePlexSessions
-- `liveSessions.js`: LIVE_SESSION_COMPLETION_MAX_AGE_MS, LIVE_SESSION_PLAYBACK_STATES, NOW_PLAYING_TERMINAL_GRACE_MS, buildCacheRow, canInferLiveSessionCompletion, fetchLiveSessions and 10 more
+- `liveSessions.js`: LIVE_SESSION_COMPLETION_MAX_AGE_MS, LIVE_SESSION_PLAYBACK_STATES, NOW_PLAYING_TERMINAL_GRACE_MS, buildCacheRow, canInferLiveSessionCompletion and 11 more
 - `logVerbose.js`: isVerboseLogging, setVerboseLogging, traceLog
 - `loopStore.js`: createLoopStore, pruneExpiredLoopKeys
-- `manualWatchReview.js`: RESOLVED_BY_LOCAL_STATE, countPendingManualWatchReviewItems, countPendingManualWatchReviews, dismissPendingManualWatchReviewsForMedia, enqueueEpisodeOrderConflict, enqueueManualWatchReview and 9 more
-- `mediaArtwork.js`: canonicalMediaArtworkCacheKey, getCanonicalPosterUrl, getCanonicalSeasonPosterUrls, mediaArtworkIdentityKeys, saveCanonicalPoster, saveCanonicalSeasonPoster and 1 more
-- `mediaConnectionRepo.js`: authoriseAuthFlow, completeAuthFlow, consumeAuthFlow, createAuthFlow, deleteExpiredAuthFlows, disableMediaConnection and 10 more
-- `mediaForceSync.js`: canonicalStateForShowHistoryRow, collectMediaForceSyncItems, earliestTrackerWatchedAt, earliestTraktWatchedAt, forceSyncMediaState, loadTrackerWatchedDateIndex and 4 more
-- `mediaForceSyncActivity.js`: appendMediaForceSyncActivity, createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested, requestMediaForceSyncCancellation
+- `manualWatchReview.js`: RESOLVED_BY_LOCAL_STATE, countPendingManualWatchReviewItems, countPendingManualWatchReviews, dismissPendingManualWatchReviewsForMedia, enqueueEpisodeOrderConflict and 10 more
+- `mediaArtwork.js`: canonicalMediaArtworkCacheKey, getCanonicalPosterUrl, getCanonicalSeasonPosterUrls, mediaArtworkIdentityKeys, saveCanonicalPoster and 2 more
+- `mediaConnectionRepo.js`: authoriseAuthFlow, completeAuthFlow, consumeAuthFlow, createAuthFlow, deleteExpiredAuthFlows and 11 more
+- `mediaForceSync.js`: canonicalStateForShowHistoryRow, collectMediaForceSyncItems, earliestTrackerWatchedAt, earliestTraktWatchedAt, forceSyncMediaState and 5 more
+- `mediaForceSyncActivity.js`: appendMediaForceSyncActivity, createMediaForceSyncActivity, finishMediaForceSyncActivity, getMediaForceSyncActivity, isMediaForceSyncCancellationRequested and 1 more
 - `netflixCatalogue.js`: createNetflixCatalogue, getNetflixCatalogue
-- `netflixCsv.js`: NETFLIX_MIN_WATCH_SECONDS, netflixCsvProfiles, parseNetflixCsv, parseNetflixDate, parseNetflixEpisodePart, readNetflixCsv and 1 more
+- `netflixCsv.js`: NETFLIX_MIN_WATCH_SECONDS, netflixCsvProfiles, parseNetflixCsv, parseNetflixDate, parseNetflixEpisodePart and 2 more
 - `netflixEpisodeAliases.js`: getNetflixEpisodeAliases, resolveNetflixVerifiedRow
-- `netflixEpisodes.js`: episodeInterpretations, episodeSuggestions, episodesInLists, evidenceKey, impliedSeasonHint, learnedNetflixSeason and 4 more
-- `netflixImport.js`: NETFLIX_MIN_WATCH_SECONDS, NETFLIX_SOURCE, clearReportedWinner, commitNetflixImport, groupNetflixReviews, learnedNetflixSeason and 11 more
+- `netflixEpisodes.js`: episodeInterpretations, episodeSuggestions, episodesInLists, evidenceKey, impliedSeasonHint and 5 more
+- `netflixImport.js`: NETFLIX_MIN_WATCH_SECONDS, NETFLIX_SOURCE, clearReportedWinner, commitNetflixImport, groupNetflixReviews and 12 more
 - `nextAiringCache.js`: cachedNextAiringFor, mergeNextAiringCacheEntries, nextAiringCacheEntryStale, nextAiringCacheKey, readNextAiringCache
 - `omdbGateway.js`: getOmdbRating
-- `onboardingImportCoordinator.js`: cancelServerImport, cancelTrackerImport, pauseTrackerImportForRestore, reconcileTrackerUntilSettled, startServerImport, startTrackerImport and 1 more
-- `onboardingStore.js`: CURRENT_ONBOARDING_VERSION, DEFAULT_TRACKER_IMPORT, claimAccount, completeOnboarding, detectAndMarkPristineInstall, getOnboardingState and 6 more
-- `outbound.js`: __setOutboundDnsLookupForTest, assertSafeOutboundUrl, boundedFetchTimeoutMs, configureOutboundGovernor, createUpstreamTimeoutError, fetchWithTimeout and 3 more
-- `outboundGovernor.js`: acquireOutboundSlot, configureOutboundGovernor, noteOutboundResponse, noteOutboundRetry, outboundGovernorProfile, outboundGovernorTelemetry and 1 more
+- `onboardingImportCoordinator.js`: cancelServerImport, cancelTrackerImport, pauseTrackerImportForRestore, reconcileTrackerUntilSettled, startServerImport and 2 more
+- `onboardingStore.js`: CURRENT_ONBOARDING_VERSION, DEFAULT_TRACKER_IMPORT, claimAccount, completeOnboarding, detectAndMarkPristineInstall and 7 more
+- `outbound.js`: __setOutboundDnsLookupForTest, assertSafeOutboundUrl, boundedFetchTimeoutMs, configureOutboundGovernor, createUpstreamTimeoutError and 4 more
+- `outboundGovernor.js`: acquireOutboundSlot, configureOutboundGovernor, noteOutboundResponse, noteOutboundRetry, outboundGovernorProfile and 2 more
 - `outboundStateLease.js`: runWithOutboundStateLease
-- `parsers.js`: buildPlexMediaFromMetadata, decodeHtmlEntities, isPlexLocalOnly, normalizeProviderIds, parseCustomWebhook, parseEmbyWebhook and 4 more
+- `parsers.js`: buildPlexMediaFromMetadata, decodeHtmlEntities, isPlexLocalOnly, normalizeProviderIds, parseCustomWebhook and 5 more
 - `pendingDispatchGuard.js`: acquirePendingDispatch
 - `perUserState.js`: createPerUserState
 - `personCreditWatchRows.js`: getPersonCreditWatchRows
 - `personalMediaKey.js`: normalizePersonalMediaType, personalMediaKey
-- `personalRatingIdentity.js`: normalizePersonalRatingMedia, normalizePersonalRatingType, personalRatingMediaAliases, personalRatingMediaKey, ratingMediaForStorage, showTitleKey
-- `personalRatingRepository.js`: PERSONAL_RATING_PROVIDERS, acknowledgePersonalRatingQueue, claimPersonalRatingQueue, deleteCanonicalPersonalRating, enqueuePersonalRatingMutation, ensureRatingSourceRow and 23 more
-- `personalRatingSync.js`: getRatingSyncStatus, pushPersonalRatings, queuePersonalRatingMutation, ratingSyncIsRunning, resolveRatingScanHold, retryRatingSync and 2 more
-- `personalWatchlistIdentity.js`: isSameWatchlistMedia, normalizePersonalWatchlistMedia, normalizePersonalWatchlistType, personalWatchlistMediaAliases, personalWatchlistMediaKey, watchlistMediaForStorage
-- `personalWatchlistRepository.js`: WATCHLIST_DESIRED_STATES, WATCHLIST_PROVIDERS, WATCHLIST_REPRESENTATIONS, acknowledgeWatchlistQueue, applyWatchlistMutation, beginWatchlistSyncRun and 41 more
+- `personalRatingIdentity.js`: normalizePersonalRatingMedia, normalizePersonalRatingType, personalRatingMediaAliases, personalRatingMediaKey, ratingMediaForStorage and 1 more
+- `personalRatingRepository.js`: PERSONAL_RATING_PROVIDERS, acknowledgePersonalRatingQueue, claimPersonalRatingQueue, deleteCanonicalPersonalRating, enqueuePersonalRatingMutation and 24 more
+- `personalRatingSync.js`: getRatingSyncStatus, pushPersonalRatings, queuePersonalRatingMutation, ratingSyncIsRunning, resolveRatingScanHold and 3 more
+- `personalWatchlistIdentity.js`: isSameWatchlistMedia, normalizePersonalWatchlistMedia, normalizePersonalWatchlistType, personalWatchlistMediaAliases, personalWatchlistMediaKey and 1 more
+- `personalWatchlistRepository.js`: WATCHLIST_DESIRED_STATES, WATCHLIST_PROVIDERS, WATCHLIST_REPRESENTATIONS, acknowledgeWatchlistQueue, applyWatchlistMutation and 42 more
 - `personalWatchlistSync.js`: getWatchlistSyncStatus, previewWatchlistSync, processWatchlistQueue, runWatchlistSync, runWatchlistSyncScheduler
 - `phantomWatchAudit.js`: auditPhantomWatchHistory
 - `phantomWatchRepair.js`: findMalformedScheduledEpisodeRows, findPhantomWatchBurstRows, repairMalformedScheduledEpisodeRows, repairPhantomWatchBursts
-- `playlistImport.js`: guessPlaylistKind, importAppPlaylists, importedPlaylistName, listPlaylistImportCandidates, mergedPlaylistKind, playlistKindsCompatible and 1 more
+- `playlistImport.js`: guessPlaylistKind, importAppPlaylists, importedPlaylistName, listPlaylistImportCandidates, mergedPlaylistKind and 2 more
 - `playlistLanguages.js`: normalizeLanguageCode, readTitleLanguages, titleLanguageDeps
-- `playlistPullEngine.js`: confirmHeldPlaylistChange, discardHeldPlaylistChange, playlistPullDeps, pullPlaylist, runPlaylistPull, syncAllPlaylists and 1 more
-- `playlistPushEngine.js`: playlistAwaitsShowConversion, playlistLibraryDeps, pushAllPlaylists, pushPlaylist, relinkLedger, runPlaylistPush and 1 more
-- `playlistRuleCatalogue.js`: CATALOGUE_CACHE_TTL_MS, TMDB_GENRES, clearLibraryCatalogueCache, genreKey, playlistRuleGenres, readEmbyLikeLibraryCatalogue and 4 more
-- `playlistRuleEngine.js`: RULE_CHECK_INTERVAL_MS, RULE_DEFAULT_LIMIT, RULE_MAX_LIMIT, RULE_TYPES, applyPlaylistRuleResult, checkDuePlaylistRules and 14 more
-- `playlistShowConversion.js`: applyShowConversion, convertAllPlaylistShows, convertPlaylistShows, episodeItemRow, fetchShowEpisodes, showConversionDeps
-- `playlistSyncTriggers.js`: PLAYLIST_SYNC_DEBOUNCE_MS, PLAYLIST_SYNC_INTERVAL_MS, cancelPendingPlaylistSyncs, playlistHasTargets, runPlaylistSyncScheduler, schedulePlaylistRuleCheck and 1 more
-- `playlistWatched.js`: applyRemoveWatched, automaticPlaylistsToMoveOn, handOffAutomaticPlaylistItem, idKeys, isHandedOff, readHandoffKeys and 3 more
+- `playlistPullEngine.js`: confirmHeldPlaylistChange, discardHeldPlaylistChange, playlistPullDeps, pullPlaylist, runPlaylistPull and 2 more
+- `playlistPushEngine.js`: playlistAwaitsShowConversion, playlistLibraryDeps, pushAllPlaylists, pushPlaylist, relinkLedger and 2 more
+- `playlistRuleCatalogue.js`: CATALOGUE_CACHE_TTL_MS, TMDB_GENRES, clearLibraryCatalogueCache, genreKey, playlistRuleGenres and 5 more
+- `playlistRuleEngine.js`: RULE_CHECK_INTERVAL_MS, RULE_DEFAULT_LIMIT, RULE_MAX_LIMIT, RULE_TYPES, applyPlaylistRuleResult and 15 more
+- `playlistShowConversion.js`: applyShowConversion, convertAllPlaylistShows, convertPlaylistShows, episodeItemRow, fetchShowEpisodes and 1 more
+- `playlistSyncTriggers.js`: PLAYLIST_SYNC_DEBOUNCE_MS, PLAYLIST_SYNC_INTERVAL_MS, cancelPendingPlaylistSyncs, playlistHasTargets, runPlaylistSyncScheduler and 2 more
+- `playlistWatched.js`: applyRemoveWatched, automaticPlaylistsToMoveOn, handOffAutomaticPlaylistItem, idKeys, isHandedOff and 4 more
 - `playstateAliasRepair.js`: PLAYSTATE_ALIAS_REPAIR_JOB, runPlaystateAliasRepairJob, runScheduledPlaystateAliasRepair
-- `playstateAliasReview.js`: dismissPlaystateAliasesForShow, dismissedPlaystateAliasKeys, foldPlaystateAliasesIntoShow, listDismissedPlaystateAliases, listUnprovenPlaystateAliases, restoreDismissedPlaystateAliases
-- `plektBackups.js`: createPlektBackup, deletePlektBackup, getPlektBackupConfigId, listPlektBackups, loadPlektBackupConfig, loadPlektBackupRuntime and 5 more
-- `plektRestore.js`: MAX_UPLOAD_BYTES, UPLOAD_FREE_SPACE_MARGIN_BYTES, getPlektRestoreJob, readEncryptedEnvelope, runPlektRestore, saveUploadedBackup and 2 more
+- `playstateAliasReview.js`: dismissPlaystateAliasesForShow, dismissedPlaystateAliasKeys, foldPlaystateAliasesIntoShow, listDismissedPlaystateAliases, listUnprovenPlaystateAliases and 1 more
+- `plektBackups.js`: createPlektBackup, deletePlektBackup, getPlektBackupConfigId, listPlektBackups, loadPlektBackupConfig and 6 more
+- `plektRestore.js`: MAX_UPLOAD_BYTES, UPLOAD_FREE_SPACE_MARGIN_BYTES, getPlektRestoreJob, readEncryptedEnvelope, runPlektRestore and 3 more
 - `plexAccountClaims.js`: otherPlektUserOnPlexAccount
 - `plexAdaptivePoller.js`: createPlexAdaptivePoller
-- `plexAuth.js`: PLEX_CLIENTS_ORIGIN, PLEX_TOKEN_REFRESH_SCOPE, createPlexPin, decodeJwtClaims, plexAuthUrl, plexClientHeaders and 4 more
-- `plexClient.js`: __resetPlexIdentityCache, __setPlexIdentityCacheNow, clearPlexPersonalRating, countPlexWatchedItems, fetchPlexContainerEpisodes, fetchPlexContinueWatching and 22 more
+- `plexAuth.js`: PLEX_CLIENTS_ORIGIN, PLEX_TOKEN_REFRESH_SCOPE, createPlexPin, decodeJwtClaims, plexAuthUrl and 5 more
+- `plexClient.js`: __resetPlexIdentityCache, __setPlexIdentityCacheNow, clearPlexPersonalRating, countPlexWatchedItems, fetchPlexContainerEpisodes and 23 more
 - `plexFetch.js`: fetchPlexWithRefresh, plexRequestHeaders
 - `plexNotificationListener.js`: createPlexNotificationListener, isPlexPlayingNotification, parsePlexNotificationRatingKeys, probePlexNotificationSocket
 - `plexPersonalWatch.js`: storePlexPersonalWatch
-- `plexPlaylists.js`: addPlexPlaylistItems, clearPlexServerIdentifierCache, createPlexPlaylist, deletePlexPlaylist, fetchPlexPlaylist, fetchPlexPlaylistItems and 7 more
+- `plexPlaylists.js`: addPlexPlaylistItems, clearPlexServerIdentifierCache, createPlexPlaylist, deletePlexPlaylist, fetchPlexPlaylist and 8 more
 - `plexTokenManager.js`: ensurePlexServerOwnership, getValidPlexServerToken, getValidPlexToken
-- `plexWatchlistClient.js`: add, addPlexWatchlistItem, capabilities, fetchPlexWatchlistRss, fetchPlexWatchlistSnapshot, listManagedItems and 6 more
-- `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, embyLikeUnplayedIsPartWatchedClear, isNewerPlexNotificationWatch, plexHeldStoredResume, plexUnplayedHasWatchEvidence, plexUnplayedIsPartWatchedClear and 2 more
-- `posterCache.js`: cacheArtworkFromUrl, cacheBackdropFromUrl, cacheLogoFromUrl, cachePosterFromUrl, cacheProfileFromUrl, getPosterCache and 5 more
+- `plexWatchlistClient.js`: add, addPlexWatchlistItem, capabilities, fetchPlexWatchlistRss, fetchPlexWatchlistSnapshot and 7 more
+- `plexWatchstate.js`: PLEX_WATCHED_ROLLBACK_GRACE_MS, embyLikeUnplayedIsPartWatchedClear, isNewerPlexNotificationWatch, plexHeldStoredResume, plexUnplayedHasWatchEvidence and 3 more
+- `posterCache.js`: ARTWORK_SIZES, ARTWORK_WEBP_EFFORT, cacheArtworkFromUrl, cacheBackdropFromUrl, cacheLogoFromUrl and 8 more
 - `processErrorHandlers.js`: installProcessErrorHandlers
 - `processRole.js`: createInstanceId, resolveProcessRole, roleHasWeb, roleHasWorker
 - `providerItemIds.js`: nativeProviderItemIds
@@ -479,53 +487,55 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `rateLimit.js`: checkRateLimit, isRateLimited, rateLimitBucketCount, resetRateLimit
 - `ratingProviderMigration.js`: addHeldRatingStatus, rebuildRatingTablesWithoutProviderCheck
 - `ratingSnapshotSafety.js`: plexRatingSnapshotPage, ratingSnapshotArray, ratingSnapshotPage
-- `recentWatchImport.js`: libraryHistoryDecision, plexHistoryItemMatchesConfiguredUser, providerWatchFingerprint, recentUnwatchBlocksLibraryImport, shouldSkipLibraryHistoryImport, syncRecentlyWatchedFromEmby and 2 more
+- `recentWatchImport.js`: libraryHistoryDecision, plexHistoryItemMatchesConfiguredUser, providerWatchFingerprint, recentUnwatchBlocksLibraryImport, shouldSkipLibraryHistoryImport and 3 more
 - `recentWatchImportInsert.js`: insertRecentWatchIfMissing
 - `recommendationExclusions.js`: createRecommendationExclusion, filterExcludedRecommendations, listRecommendationExclusions, normalizeRecommendationExclusion, recommendationExclusionKey
 - `requestBody.js`: readFormData, readJson, readRawText
 - `restoreFailureNotice.js`: retainedRestoreFailure
 - `restoreLookupCache.js`: createRestoreLookupCache, restoreLookupKey
-- `resumeAuthority.js`: playstateBlocksStoredResumeProgress, resumePositionUnchanged, resumeProgressAuthorityTimestamp, resumeProgressBlockedByPlaystate, resumeProgressEventTimestamp, resumeWebhookPhaseForPlaystate
+- `resumeAuthority.js`: playstateBlocksStoredResumeProgress, resumePositionUnchanged, resumeProgressAuthorityTimestamp, resumeProgressBlockedByPlaystate, resumeProgressEventTimestamp and 1 more
 - `retryAfter.js`: retryAfterMs
 - `scheduledConcurrency.js`: runWithConcurrency
-- `schedulerLease.js`: claimSchedulerLease, markSchedulerTick, releaseSchedulerLease, renewSchedulerLease, schedulerLeaseStatus, validateSchedulerLease
-- `seasonSource.js`: DEFAULT_SEASON_SOURCE, SEASON_SOURCES, normalizeSeasonSource, pinUnrecordedSeasonSources, readGlobalSeasonSource, readSeasonSource and 4 more
+- `schedulerLease.js`: claimSchedulerLease, markSchedulerTick, releaseSchedulerLease, renewSchedulerLease, schedulerLeaseStatus and 1 more
+- `seasonSource.js`: DEFAULT_SEASON_SOURCE, SEASON_SOURCES, normalizeSeasonSource, pinUnrecordedSeasonSources, readGlobalSeasonSource and 5 more
 - `seriesIdentity.js`: librarySeriesItemId, resetSeriesIdentityCache, resolveEpisodeSeriesItemId, resolveSeriesIds, withSeriesIdentity
-- `sharedMetadataStore.js`: clearSharedProviderCaches, closeAllSharedMetadataDatabases, getSharedMetadataDb, isSharedProviderCacheTable, migrateProviderCachesFromAdmin, providerCacheTableNames and 6 more
-- `showProgressCache.js`: clearCachedShowProgress, flushShowProgressUpdates, getCachedShowProgress, initShowProgressCache, queueShowProgressUpdate, rebuildShowProgressCache and 1 more
-- `showSeasonTranslation.js`: annotateShowNumbering, inRowNumbering, previewShowSeasonSource, showNumberMap, translatedWatchedCount, watchedEpisodeRows and 1 more
+- `sharedMetadataStore.js`: clearSharedProviderCaches, closeAllSharedMetadataDatabases, extractTmdbExternalTvdbId, extractTmdbSeasonPosters, getSharedMetadataDb and 10 more
+- `showProgressCache.js`: clearCachedShowProgress, flushShowProgressUpdates, getCachedShowProgress, initShowProgressCache, queueShowProgressUpdate and 2 more
+- `showSeasonTranslation.js`: annotateShowNumbering, inRowNumbering, previewShowSeasonSource, showNumberMap, translatedWatchedCount and 2 more
 - `showTraktHistorySafety.js`: normalizeImportedTraktRow, safeTraktReplaceItems, traktPlayKey
 - `showTraktReplace.js`: planShowTraktReplace, replaceShowOnTrakt
 - `simklAppConfig.js`: BUNDLED_SIMKL_CLIENT_ID
 - `sourceMismatch.js`: checkIncomingEpisodeSourceMismatch, clearSourceMismatchRunCache
 - `splitEpisodeRepair.js`: applySplitEpisodeRepair, auditSplitEpisodeShows, deliveredTargets, listSplitEpisodeRepairRuns, undoSplitEpisodeRepair
 - `statsPayload.js`: statsPayloadForPeriod
+- `storageCompaction.js`: compactSharedMetadataStore, compactSharedMetadataStoreAsync, compactUserDatabase, compactUserDatabaseAsync, countUncompactedSharedRows and 5 more
+- `storageUpgrade.js`: getPublicUpgradeStatus, getStorageStatus, hasPendingDatabaseUpgrade, isDatabaseUpgradeActive, markArtworkOptimizationComplete and 8 more
 - `syncActivityIdentity.js`: activityGroupCoordinates, activityGroupKeyFor, activityGroupMediaType, activityGroupTitleFromRecord, activityItemKeyFor
 - `syncActivityRetention.js`: SYNC_ACTIVITY_PAYLOAD_RETENTION_MS, countPrunableSyncActivityPayloads, pruneSyncActivityPayloads, pruneSyncActivityPayloadsIfDue
-- `syncAttention.js`: buildSyncAttentionItems, syncAttentionFailureReason, syncAttentionItemIsAuthoritativeRestore, syncAttentionState, trackerForRejection, trackerRejectedItems
-- `syncDispatchQueue.js`: SYNC_RETRY_MAX_ATTEMPTS, getActiveTargetsForConfig, syncPendingManualDispatches, syncRetryDelayMs, syncRetryEligible, traktNeedsRetry and 1 more
+- `syncAttention.js`: buildSyncAttentionItems, syncAttentionFailureReason, syncAttentionItemIsAuthoritativeRestore, syncAttentionState, trackerForRejection and 1 more
+- `syncDispatchQueue.js`: SYNC_RETRY_MAX_ATTEMPTS, getActiveTargetsForConfig, syncPendingManualDispatches, syncRetryDelayMs, syncRetryEligible and 2 more
 - `syncFlags.js`: watchedPlayedSyncEnabled
 - `syncHistoryTargetUpdate.js`: summarizeTargetStates, updateSyncHistoryTargetOutcome
-- `syncHistoryTelemetry.js`: addTimingHistoryRow, buildProgressTelemetry, buildTelemetry, isTargetSynced, recordSyncHistory, targetTelemetryLine and 1 more
+- `syncHistoryTelemetry.js`: addTimingHistoryRow, buildProgressTelemetry, buildTelemetry, isTargetSynced, recordSyncHistory and 2 more
 - `syncMatchReport.js`: buildSyncMatchReport, isUnresolvedMatchSample, parseTelemetryTargetStates, unresolvedSyncMatchReport
-- `syncOrchestrator.js`: appendCanonicalTrackerDispatch, clearOutboundPlayedMarks, completeDispatchTracking, dispatchProgressKey, finishDispatchTracking, getTargetsForSource and 25 more
-- `syncPlans.js`: PLAN_RETENTION_MS, confirmSyncPlan, createSyncPlanRecord, finishSyncPlan, getLatestSyncPlan, getSyncPlanActionsPage and 7 more
-- `syncRoles.js`: ROLE_PRESETS, STATE_MODES, SYNC_STATE_TYPES, canReceiveState, canSendState, conflictAuthority and 6 more
+- `syncOrchestrator.js`: appendCanonicalTrackerDispatch, clearOutboundPlayedMarks, completeDispatchTracking, dispatchProgressKey, finishDispatchTracking and 26 more
+- `syncPlans.js`: PLAN_RETENTION_MS, confirmSyncPlan, createSyncPlanRecord, finishSyncPlan, getLatestSyncPlan and 8 more
+- `syncRoles.js`: ROLE_PRESETS, STATE_MODES, SYNC_STATE_TYPES, canReceiveState, canSendState and 7 more
 - `tautulliClient.js`: TAUTULLI_MAX_HISTORY_ROWS, TAUTULLI_PAGE_SIZE, createTautulliClient, sanitizeTautulliError
-- `tautulliImport.js`: APPROXIMATED_MERGE_WINDOW_DAYS, REWATCH_REVIEW_WINDOW_DAYS, TAUTULLI_SOURCE, buildTautulliTelemetry, commitTautulliImport, filterTautulliRows and 7 more
-- `tenancy.js`: ACCOUNT_NAME_PATTERN, ADMINISTRATOR_ROLE, ADMIN_KEY, ADMIN_ROLE, INVALID_NAME_MESSAGE, MIN_PASSWORD_LENGTH and 32 more
-- `tenantDatabase.js`: closeAllTenantDatabases, closeTenantDatabase, getTenantDatabaseForUser, openTenantDatabase, registerTenantDatabaseInitializer, tenantDatabaseCacheSize
+- `tautulliImport.js`: APPROXIMATED_MERGE_WINDOW_DAYS, REWATCH_REVIEW_WINDOW_DAYS, TAUTULLI_SOURCE, buildTautulliTelemetry, commitTautulliImport and 8 more
+- `tenancy.js`: ACCOUNT_NAME_PATTERN, ADMINISTRATOR_ROLE, ADMIN_KEY, ADMIN_ROLE, INVALID_NAME_MESSAGE and 33 more
+- `tenantDatabase.js`: closeAllTenantDatabases, closeTenantDatabase, getTenantDatabaseForUser, openTenantDatabase, registerTenantDatabaseInitializer and 1 more
 - `tenantRouting.js`: createTenantApiHandler
 - `tmdbClient.js`: fetchPosterFromTmdb
-- `tmdbGateway.js`: discoverTmdbPage, enableTmdbMetadataWarmup, getCachedTmdbDetails, getCachedTmdbExternalIdKind, getCachedTmdbSeason, getCachedTmdbSeasonEpisodes and 19 more
+- `tmdbGateway.js`: discoverTmdbPage, enableTmdbMetadataWarmup, getCachedTmdbDetails, getCachedTmdbExternalIdKind, getCachedTmdbSeason and 20 more
 - `trackerBulkDispatch.js`: dispatchTrackerWatchBatch
-- `trackerConnectionRepo.js`: claimTrackerAuthFlowPoll, countTrackerItemStates, createTrackerAuthFlow, deleteTrackerConnection, findLatestTrackerOutboundSince, findTrackerOutboundSince and 15 more
-- `trackerDispatcher.js`: buildRestoreSeriesIdentityIndex, dispatchTrackerWatchState, dispatchTraktWatchStateBatch, mediaWithTraktOverride, partitionTraktNotFoundBatch, primeTrackerWatchStateIntents and 10 more
+- `trackerConnectionRepo.js`: claimTrackerAuthFlowPoll, countTrackerItemStates, createTrackerAuthFlow, deleteTrackerConnection, findLatestTrackerOutboundSince and 16 more
+- `trackerDispatcher.js`: buildRestoreSeriesIdentityIndex, dispatchTrackerWatchState, dispatchTraktWatchStateBatch, mediaWithTraktOverride, partitionTraktNotFoundBatch and 11 more
 - `trackerIntentMigration.js`: migrateLegacyTrackerIntents
 - `trackerIntentRequest.js`: trackerIntentRequest
 - `trackerIntentWorker.js`: syncPendingTrackerWriteIntents
-- `trackerSync.js`: TRACKER_EVENT_CHECK_THROTTLE_MS, TRAKT_UNWATCH_CONFIRMATION_MS, checkTrackersAfterMediaEvent, dedupeTrackerItemsByIdentity, partitionPendingTrackerUnwatches, partitionPendingTraktUnwatches and 6 more
-- `trackerWriteIntents.js`: SIMKL_WATCHED_COALESCE_MS, TRACKER_INTENT_RETENTION_MS, cancelTrackerWriteIntent, captureTrackerDestinations, claimTrackerWriteIntent, correlateTrackerObservation and 10 more
+- `trackerSync.js`: TRACKER_EVENT_CHECK_THROTTLE_MS, TRAKT_UNWATCH_CONFIRMATION_MS, checkTrackersAfterMediaEvent, dedupeTrackerItemsByIdentity, partitionPendingTrackerUnwatches and 7 more
+- `trackerWriteIntents.js`: SIMKL_WATCHED_COALESCE_MS, TRACKER_INTENT_RETENTION_MS, cancelTrackerWriteIntent, captureTrackerDestinations, claimTrackerWriteIntent and 11 more
 - `trackerWriteReviewActions.js`: cancelSelectedTrackerWrites, recheckAllTrackerWrites
 - `traksProxy.js`: createTraksProxyHandler, getTraksUpstreamUrl, resolveTraksCollectorOrigin
 - `traktAppConfig.js`: getTraktAppConfig, hydrateTraktAppCredentials, resolveTraktAppCredentials
@@ -536,37 +546,38 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `traktOutboundNumbering.js`: withSeasonSourceTraktOverride
 - `traktProviderReconciliation.js`: groupTraktProviderOverrideRows, reconcileTraktProviderOverrides, seasonContainsEpisodes
 - `translatedSeasonWarmup.js`: needsTranslatedSeasonWarmup, translatedRowSeasons, warmTranslatedRowSeasons
-- `tuning.js`: DEFAULT_PLEX_HISTORICAL_WATCHED_SYNC, DEFAULT_WATCH_IMPORT_MODE, WATCH_IMPORT_MODES, activeSessionTtlMs, applyTuningConfig, minResumePositionMs and 13 more
-- `tvdbGateway.js`: RELATED_TV_SEARCH_MISS_TTL_MS, getCachedTvdbEpisodeKind, getCachedTvdbSeasonEpisodes, getTvdbEnglishSeriesOverview, getTvdbSeasonEpisodes, getTvdbSeriesArtwork and 12 more
+- `tuning.js`: AUDIT_RETENTION_DAYS_RANGE, DEFAULT_AUDIT_RETENTION_DAYS, DEFAULT_PLEX_HISTORICAL_WATCHED_SYNC, DEFAULT_WATCH_IMPORT_MODE, WATCH_IMPORT_MODES and 19 more
+- `tvdbGateway.js`: RELATED_TV_SEARCH_MISS_TTL_MS, getCachedTvdbEpisodeKind, getCachedTvdbSeasonEpisodes, getTvdbEnglishSeriesOverview, getTvdbSeasonEpisodes and 13 more
 - `tvdbOrderGateway.js`: getCachedTvdbOrderCatalogue, getTvdbOrderCatalogue, normalizeTvdbOrderEpisodes
 - `tvdbOrderTypes.js`: AIRED_ORDER, ALTERNATE_ORDERS, ORDER_NAMES, ORDER_TYPES, isAlternateOrder
-- `unwatchedStatusPoll.js`: EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED, EMBY_UNWATCHED_POLL_INTERVAL_MS, JELLYFIN_UNWATCHED_POLL_ENABLED, JELLYFIN_UNWATCHED_POLL_INTERVAL_MS, PLEX_UNWATCHED_POLL_INTERVAL_MS, checkEmbyUnwatchedStatus and 9 more
-- `upNextAutoSync.js`: UP_NEXT_AUTO_SYNC_JOB, UP_NEXT_PRIORITY_SYNC_JOB, buildUpNextSyncStatusSummary, configuredUpNextProviders, pushCurrentUpNextQueue, readUpNextSyncStatus and 8 more
+- `unwatchedStatusPoll.js`: EMBY_JELLYFIN_UNWATCHED_POLL_ENABLED, EMBY_UNWATCHED_POLL_INTERVAL_MS, JELLYFIN_UNWATCHED_POLL_ENABLED, JELLYFIN_UNWATCHED_POLL_INTERVAL_MS, PLEX_UNWATCHED_POLL_INTERVAL_MS and 10 more
+- `upNextAutoSync.js`: UP_NEXT_AUTO_SYNC_JOB, UP_NEXT_PRIORITY_SYNC_JOB, buildUpNextSyncStatusSummary, configuredUpNextProviders, pushCurrentUpNextQueue and 9 more
 - `upNextCache.js`: describeProjectionChange, describeUpNextBuildRequest, getUpNextCacheSnapshot, refreshUpNextAfterMutation
-- `upNextDismissals.js`: createUpNextDismissalFilter, dismissalAliases, listUpNextDismissals, recordUpNextDismissal, restoreAllUpNextDismissals, restoreUpNextDismissal and 2 more
-- `upNextIdentity.js`: UP_NEXT_IDENTITY_VERSION, buildUpNextIdentity, canonicalUpNextKey, mergeUpNextCandidates, mergeUpNextQueueCandidates, normalizeUpNextCandidate and 7 more
-- `upNextLibraryLookup.js`: __setUpNextLibraryLookupNow, clearUpNextLibraryLookupCache, configuredProvider, createUpNextLibraryEpisodeLookup, createUpNextLibraryLookup, noteUpNextLibraryAddition and 7 more
+- `upNextDismissals.js`: createUpNextDismissalFilter, dismissalAliases, listUpNextDismissals, recordUpNextDismissal, restoreAllUpNextDismissals and 3 more
+- `upNextIdentity.js`: UP_NEXT_IDENTITY_VERSION, buildUpNextIdentity, canonicalUpNextKey, mergeUpNextCandidates, mergeUpNextQueueCandidates and 8 more
+- `upNextLibraryLookup.js`: __setUpNextLibraryLookupNow, clearUpNextLibraryLookupCache, configuredProvider, createUpNextLibraryEpisodeLookup, createUpNextLibraryLookup and 8 more
 - `upNextManual.js`: listManualUpNextShows, manualUpNextShowKey, removeManualUpNextShow, upsertManualUpNextShow
-- `upNextMirror.js`: applyUpNextMirrorHides, checkUpNextMirrorEnable, commitUpNextMirrorEnable, createUpNextDestinationCheck, finishedMirrorShows, planUpNextMirrorHides and 4 more
+- `upNextMirror.js`: applyUpNextMirrorHides, checkUpNextMirrorEnable, commitUpNextMirrorEnable, createUpNextDestinationCheck, finishedMirrorShows and 5 more
 - `upNextProviderSync.js`: planUpNextProviderSync, refreshProviderRail, refreshUpNextProviderFeeds, syncUpNextToProviders
 - `upNextRailSeed.js`: clearLegacyUpNextRailSeed, clearLegacyUpNextRailSeeds
-- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion, isPlektPrimaryUpNextFeed and 7 more
+- `upNextRepository.js`: PLEMBFIN_UP_NEXT_FEED_BY_PROVIDER, completeUpNextProviderFeed, failUpNextProviderFeed, getActiveUpNextProviderItemById, getUpNextFeedSourceVersion and 8 more
 - `upNextRewatch.js`: compareCoordinates, episodeAfter, rewatchPosition, withUpNextLanes
-- `upNextSeedLedger.js`: UP_NEXT_SEED_MATCH_TOLERANCE_MS, UP_NEXT_SEED_TTL_MS, countUpNextRailSeeds, expireUpNextRailSeeds, forgetUpNextRailSeed, isUpNextRailSeedPosition and 3 more
-- `upNextService.js`: buildUpNextItems, buildUpNextProjection, collapseUncertainEpisodeQueues, formatUpNextBuildSummary, publicUpNextItems, showIdentityIndex and 2 more
+- `upNextSeedLedger.js`: UP_NEXT_SEED_MATCH_TOLERANCE_MS, UP_NEXT_SEED_TTL_MS, countUpNextRailSeeds, expireUpNextRailSeeds, forgetUpNextRailSeed and 4 more
+- `upNextService.js`: buildUpNextItems, buildUpNextProjection, collapseUncertainEpisodeQueues, formatUpNextBuildSummary, publicUpNextItems and 3 more
 - `upNextShowOptions.js`: getUpNextShowOptions
 - `upcomingCalendarCache.js`: getUpcomingCalendarMonth, refreshUpcomingCalendarCache, sortAndDedupeEpisodes
-- `userContext.js`: getActiveDataDir, getActiveUserName, getUserContext, isNonAdminTenantContext, ownsArtworkFiles, runAsAdmin and 2 more
-- `watchAudit.js`: AUDIT_PAYLOAD_RETENTION_MS, auditSourceEventPayload, countPrunableAuditPayloads, hasWatchAuditEventForRecord, listWatchAuditEvents, pruneWatchAuditPayloads and 3 more
-- `watchDates.js`: airDayOf, dateOnlyIso, embyLikePlayedDate, episodeTimingWatchDate, episodeTimingWatchMatch, isEmbyLikeApiMarked and 12 more
+- `upgradeScreenHtml.js`: renderUpgradeScreenHtml
+- `userContext.js`: getActiveDataDir, getActiveUserName, getUserContext, isNonAdminTenantContext, ownsArtworkFiles and 3 more
+- `watchAudit.js`: AUDIT_PAYLOAD_RETENTION_MS, auditSourceEventPayload, countPrunableAuditPayloads, hasWatchAuditEventForRecord, listWatchAuditEvents and 5 more
+- `watchDates.js`: airDayOf, dateOnlyIso, embyLikePlayedDate, episodeTimingWatchDate, episodeTimingWatchMatch and 13 more
 - `watchDerivedFields.js`: decodeStoredWatchTitle, episodeCoordinatesFromStoredTitle, persistedWatchDerivedFields, repairedStoredEpisodeTitle
-- `watchHistoryBackups.js`: clearRestoreStatus, createWatchHistoryBackup, destinationAcceptsBackupType, destinationRetentionForBackupType, getBackupDestination, importWatchHistoryBackupFile and 25 more
+- `watchHistoryBackups.js`: clearRestoreStatus, createWatchHistoryBackup, destinationAcceptsBackupType, destinationRetentionForBackupType, getBackupDestination and 26 more
 - `watchProvenance.js`: buildWatchProvenance, legacyProvenanceNote, normalizeProviderOverrides, normalizeWatchProvenance, provenanceTelemetryLines
 - `watchStateTransitions.js`: applyUnwatchedTransition, applyWatchedTransition
-- `watchSyncPolicy.js`: DEFAULT_WATCH_SYNC_INTENT, HISTORICAL_WATCH_SYNC_INTENTS, PLEX_ALREADY_MATCHING_DETAIL, PLEX_POLICY_SKIP_DETAIL, TARGET_DECISIONS, WATCH_SYNC_INTENTS and 11 more
-- `watchlistAdapterUtils.js`: clean, listItems, normalizeRemoteMedia, normalizeTitle, pageResult, providerIdsFromRemote and 6 more
-- `webhookPortCheck.js`: buildWebhookPortFindings, getWebhookPortStatus, portFromUri, publishedPortFromEnv, readJellyfinWebhookDestinations, runWebhookPortCheck
-- `webhookTest.js`: WEBHOOK_TEST_ECHO_MS, WEBHOOK_TEST_HOLD_MS, WEBHOOK_TEST_SOURCES, WEBHOOK_TEST_WINDOW_MS, cancelWebhookTest, captureWebhookTestMark and 11 more
+- `watchSyncPolicy.js`: DEFAULT_WATCH_SYNC_INTENT, HISTORICAL_WATCH_SYNC_INTENTS, PLEX_ALREADY_MATCHING_DETAIL, PLEX_POLICY_SKIP_DETAIL, TARGET_DECISIONS and 12 more
+- `watchlistAdapterUtils.js`: clean, listItems, normalizeRemoteMedia, normalizeTitle, pageResult and 7 more
+- `webhookPortCheck.js`: buildWebhookPortFindings, getWebhookPortStatus, portFromUri, publishedPortFromEnv, readJellyfinWebhookDestinations and 1 more
+- `webhookTest.js`: WEBHOOK_TEST_ECHO_MS, WEBHOOK_TEST_HOLD_MS, WEBHOOK_TEST_SOURCES, WEBHOOK_TEST_WINDOW_MS, cancelWebhookTest and 12 more
 
 ### server/src/utils/backupDestinations/
 
@@ -583,33 +594,33 @@ Exported names per source file, sorted. Rows with more than 6 exports list the f
 - `backlogGate.js`: trackerBacklogSkipReason
 - `connections.js`: freshTrackerConnection, readTrackerSnapshot
 - `contract.js`: assertTrackerOperation, executeTrackerOperation, freezeTrackerValue
-- `fullSync.js`: FULL_SYNC_DIRECTIONS, compareTrackerItems, compareTrackerWithPlekt, currentWriteHolds, getTrackerFullSync, localWatchedItems and 3 more
-- `fullSyncPlans.js`: TRACKER_PREVIEW_TTL_MS, buildTrackerFullSyncItems, claimTrackerFullSyncPlan, readTrackerFullSyncPlan, storeTrackerFullSyncPlan, trackerFullSyncFingerprint
-- `generation.js`: StaleTrackerConnectionError, assertTrackerGeneration, currentTrackerGeneration, runInTrackerGeneration, trackerGenerationCurrent, trackerGenerationFence
+- `fullSync.js`: FULL_SYNC_DIRECTIONS, compareTrackerItems, compareTrackerWithPlekt, currentWriteHolds, getTrackerFullSync and 4 more
+- `fullSyncPlans.js`: TRACKER_PREVIEW_TTL_MS, buildTrackerFullSyncItems, claimTrackerFullSyncPlan, readTrackerFullSyncPlan, storeTrackerFullSyncPlan and 1 more
+- `generation.js`: StaleTrackerConnectionError, assertTrackerGeneration, currentTrackerGeneration, runInTrackerGeneration, trackerGenerationCurrent and 1 more
 - `polling.js`: createTrackerPoller
-- `registry.js`: assertTrackerEnabled, assertTrackerSafetyGate, getTrackerAdapter, getTrackerProtocolAdapter, isTrackerProvider, listTrackerCapabilities and 6 more
+- `registry.js`: assertTrackerEnabled, assertTrackerSafetyGate, getTrackerAdapter, getTrackerProtocolAdapter, isTrackerProvider and 7 more
 - `simkl.js`: classifySimklError, readSimklSnapshot, simklAdapter, writeSimklWatched
-- `simklAuth.js`: SIMKL_SCOPES, getSimklUser, pollSimklDeviceAuth, refreshSimklToken, simklDevicePollOutcome, startSimklDeviceAuth and 1 more
+- `simklAuth.js`: SIMKL_SCOPES, getSimklUser, pollSimklDeviceAuth, refreshSimklToken, simklDevicePollOutcome and 2 more
 - `simklBacklogDispatch.js`: recordSimklBacklogResult, simklBacklogIntentCurrent
 - `simklBatch.js`: SIMKL_BATCH_QUOTA_RESERVE, enqueueSimklWatched
 - `simklBatchBudget.js`: createSimklBatchBudget
 - `simklBatchClient.js`: SIMKL_HISTORY_BATCH_LIMIT, recheckSimklWatchedDates, sendSimklWatchedBatch
 - `simklBatchQueue.js`: createSimklBatchQueue
-- `simklClient.js`: assertSimklTrigger, fetchSimklDroppedTitleSnapshot, fetchSimklSnapshot, normalizeSimklRows, sendSimklWatched, setSimklDroppedTitleStatus and 6 more
+- `simklClient.js`: assertSimklTrigger, fetchSimklDroppedTitleSnapshot, fetchSimklSnapshot, normalizeSimklRows, sendSimklWatched and 7 more
 - `simklConnection.js`: freshSimklConnection
 - `simklDispatch.js`: dispatchSimklWatchState
 - `simklEpisodeOrder.js`: SIMKL_ORDER_SKIP, matchSimklAiredEpisode, simklEpisodeOrderIdentity, verifySimklEpisodeOrder
 - `simklFullSyncContext.js`: simklFullSyncContext, withSimklFullSyncContext
-- `simklFullSyncPolicy.js`: SIMKL_FULL_SYNC_BATCH_REQUESTS, SIMKL_FULL_SYNC_BATCH_SIZE, SIMKL_FULL_SYNC_NORMAL_POLICY, SIMKL_FULL_SYNC_SAFETY_RESERVE, SIMKL_FULL_SYNC_VERIFY_REQUESTS, estimateSimklFullSync and 1 more
+- `simklFullSyncPolicy.js`: SIMKL_FULL_SYNC_BATCH_REQUESTS, SIMKL_FULL_SYNC_BATCH_SIZE, SIMKL_FULL_SYNC_NORMAL_POLICY, SIMKL_FULL_SYNC_SAFETY_RESERVE, SIMKL_FULL_SYNC_VERIFY_REQUESTS and 2 more
 - `simklFullSyncRunner.js`: SIMKL_FULL_SYNC_PAUSE_MS, cancelSimklFullSync, kickSimklFullSyncRuns, publishSimklFullSyncRun, runSimklFullSyncSlice
-- `simklFullSyncStore.js`: activeSimklFullSyncRun, cancelSimklFullSyncRun, claimSimklFullSyncRun, createSimklFullSyncRun, dueSimklFullSyncRuns, getSimklFullSyncRun and 4 more
+- `simklFullSyncStore.js`: activeSimklFullSyncRun, cancelSimklFullSyncRun, claimSimklFullSyncRun, createSimklFullSyncRun, dueSimklFullSyncRuns and 5 more
 - `simklHeldWrites.js`: recheckHeldSimklWrites
-- `simklObservations.js`: completeSimklObservation, dismissSimklObservation, pendingSimklObservations, persistSimklObservations, requeueSimklObservation, settledSimklWatchedObservations and 3 more
+- `simklObservations.js`: completeSimklObservation, dismissSimklObservation, pendingSimklObservations, persistSimklObservations, requeueSimklObservation and 4 more
 - `simklRatings.js`: clearSimklPersonalRating, setSimklPersonalRating, simklRatingHoldReason, storedSimklRatingSnapshot
 - `simklSync.js`: syncSimklObservations
 - `simklTransport.js`: createSimklTransport, nextSimklDailyReset, simklQuotaMetadata, simklTransport
 - `telemetry.js`: settledDestinationLines, settledTrackerHistoryTelemetry
 - `trakt.js`: classifyTraktError, traktAdapter, traktDispatchErrorDetail, traktNotFoundCount
-- `traktClient.js`: addTraktDroppedShows, clearTraktPersonalRating, fetchTraktDroppedShows, fetchTraktHistoryWindow, fetchTraktLastActivities, fetchTraktPersonalRatingSnapshot and 18 more
+- `traktClient.js`: addTraktDroppedShows, clearTraktPersonalRating, fetchTraktDroppedShows, fetchTraktHistoryWindow, fetchTraktLastActivities and 19 more
 - `traktWrites.js`: runTraktWrite, withTraktRateLimitRetry
 - `watchedDates.js`: earliestTrackerWatchedAt, mergeTrackerWatchedDates

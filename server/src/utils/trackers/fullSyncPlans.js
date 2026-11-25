@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { db } from '../../db.js';
+import { db, parseJson, toCompressedJson } from '../../db.js';
 import { trackerMediaIdentityKeys } from './traktClient.js';
 import { simklHistoryPayload } from './simklClient.js';
 import { SIMKL_FULL_SYNC_NORMAL_POLICY, estimateSimklFullSync } from './simklFullSyncPolicy.js';
@@ -158,13 +158,13 @@ export function storeTrackerFullSyncPlan(provider,state,{pushSupported=true,outb
     ...(provider==='simkl'?{pacing:estimateSimklFullSync(sends,{quotaLimit:state.quotaLimit,quotaRemaining:state.quotaRemaining,policy:SIMKL_FULL_SYNC_NORMAL_POLICY})}:{})}};
   const plan={id,provider,createdAt,expiresAt,status:'ready',fingerprint:trackerFullSyncFingerprint(state),connection:state.connection,items,preview,outboundOnly,activityGroupKey:state.activityGroupKey};
   db.prepare('INSERT INTO settings(id,data,updated_at) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,updated_at=excluded.updated_at')
-    .run(`tracker-full-sync-plan:${provider}`,JSON.stringify(plan),createdAt);
+    .run(`tracker-full-sync-plan:${provider}`,toCompressedJson(plan),createdAt);
   return plan;
 }
 
 export function readTrackerFullSyncPlan(provider,id) {
   const row=db.prepare('SELECT data FROM settings WHERE id=?').get(`tracker-full-sync-plan:${provider}`);
-  let plan;try {plan=JSON.parse(row?.data||'null');}catch {plan=null;}
+  const plan=parseJson(row?.data,null);
   if(!plan||plan.id!==id||plan.status!=='ready')throw Object.assign(new Error('Build a new full-sync preview before applying'),{code:'FULL_SYNC_PREVIEW_REQUIRED',status:409});
   if(plan.expiresAt<=Date.now())throw Object.assign(new Error('This preview expired; build a new preview'),{code:'FULL_SYNC_PLAN_EXPIRED',status:409});
   return plan;
@@ -173,7 +173,7 @@ export function readTrackerFullSyncPlan(provider,id) {
 export function claimTrackerFullSyncPlan(provider,id) {
   return db.transaction(()=>{
     const plan=readTrackerFullSyncPlan(provider,id);plan.status='applying';
-    db.prepare('UPDATE settings SET data=?,updated_at=? WHERE id=?').run(JSON.stringify(plan),Date.now(),`tracker-full-sync-plan:${provider}`);
+    db.prepare('UPDATE settings SET data=?,updated_at=? WHERE id=?').run(toCompressedJson(plan),Date.now(),`tracker-full-sync-plan:${provider}`);
     return plan;
   }).immediate();
 }

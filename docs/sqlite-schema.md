@@ -3,8 +3,14 @@
 Reference for `data/plembfin.db`. The full authoritative schema is in
 `server/src/schema.sql`; this doc adds context on the less-obvious fields.
 
-Daily `dbMaintenance.js` work optimizes the active user's database and checkpoints
-its WAL with `TRUNCATE`. The admin pass also checkpoints `shared-metadata.db`.
+Daily `dbMaintenance.js` work compacts uncompressed large JSON blobs (provider metadata
+caches, watch-audit payloads, restore reports, and tracker full-sync plans), purges any
+legacy duplicate provider caches from the admin database, prunes expired diagnostic
+`watch_audit_events` rows (configurable via `AUDIT_RETENTION_DAYS`, default 90 days;
+`0` keeps forever), runs `VACUUM` when significant freelist space can be reclaimed,
+optimizes query plans, and checkpoints WALs with `TRUNCATE`. Large JSON payloads (>= 512 B)
+are transparently gzip-compressed as SQLite BLOBs and read back seamlessly by `parseJson`.
+The admin pass also sweeps orphan artwork and gzips closed rotated log archives.
 Both databases use a 16 MiB `journal_size_limit`; a busy reader can defer truncation
 until a later pass, and concurrent writes can grow the WAL again after a checkpoint.
 

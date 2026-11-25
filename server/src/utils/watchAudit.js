@@ -1,4 +1,5 @@
-import { db, parseJson, toJson } from "../db.js";
+import { db, parseJson, toCompressedJson } from "../db.js";
+import { auditRetentionDays } from "./tuning.js";
 
 const MAX_TEXT_LENGTH = 500;
 const MAX_TITLE_LENGTH = 500;
@@ -109,7 +110,7 @@ function insertParams(event = {}) {
     target: text(event.target),
     status: text(event.status) || "recorded",
     details: text(event.details, 1000),
-    payload: payload == null ? null : toJson(payload),
+    payload: payload == null ? null : toCompressedJson(payload),
     created_at: now,
   };
 }
@@ -207,10 +208,32 @@ export function countPrunableAuditPayloads(now = Date.now()) {
   return { rows: Number(row.rows), bytes: Number(row.bytes) };
 }
 
+const pruneExpiredEventsStmt = db.prepare(`
+  DELETE FROM watch_audit_events
+  WHERE id IN (
+    SELECT id FROM watch_audit_events
+    WHERE created_at > 0 AND created_at < ?
+    LIMIT ?
+  )
+`);
+
 // Clears source-event payloads older than the retention window in bounded batches. Summary
 // columns (type, media key, phase, source, status, timestamp) are never touched.
 export function pruneWatchAuditPayloads(now = Date.now(), batchSize = AUDIT_PAYLOAD_PRUNE_BATCH) {
   return prunePayloadStmt.run(now - AUDIT_PAYLOAD_RETENTION_MS, batchSize).changes;
+}
+
+// Deletes diagnostic watch_audit_events rows older than the configured
+// retention window in bounded batches. watch_history and playstate are never
+// touched. Setting auditRetentionDays to 0 disables row deletion.
+export function pruneExpiredWatchAuditEvents(
+  now = Date.now(),
+  { retentionDays = auditRetentionDays(), batchSize = AUDIT_PAYLOAD_PRUNE_BATCH } = {},
+) {
+  const days = Math.round(Number(retentionDays));
+  if (!Number.isFinite(days) || days <= 0) return 0;
+  const cutoff = now - days * 24 * 60 * 60 * 1000;
+  return pruneExpiredEventsStmt.run(cutoff, batchSize).changes;
 }
 
 export function recordWatchAuditEvent(event = {}) {

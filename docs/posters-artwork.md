@@ -75,8 +75,8 @@ The first candidate that downloads successfully goes through `cacheArtworkFromUr
 
 - Plex tokens are stripped from the URL and sent as an `X-Plex-Token` header
 - body limits (10 MiB, counted while streaming even without Content-Length), content-type checks, 12s timeout
-- resized with **sharp** to webp - poster 340w/q80, backdrop 1600w/q82, profile
-  780w/q82, logo 800w/q90 (falls back to the original bytes if sharp fails)
+- resized with **sharp** to webp (effort 6) - poster 340w/q78, backdrop 1280w/q78, profile
+  420w/q78, logo 800w/q85 (falls back to the original bytes if sharp fails)
 - newly fetched artwork is written atomically (`<path>.<pid>.<rand>.tmp` then renamed) to
   `data/media/posters|backdrops|profiles|logos/<sha256>.<ext>` and served at
   `/media/...`. In single-user mode `<sha256>` hashes `mediaKey[:variant]`; once multi-user

@@ -24,6 +24,7 @@ import { UP_NEXT_AUTO_SYNC_JOB, UP_NEXT_PRIORITY_SYNC_JOB, requestUpNextAutoSync
 import { db } from "./db.js";
 import { setRuntimeState } from "./utils/configStore.js";
 import { yieldToEventLoop } from "./utils/eventLoop.js";
+import { waitForStartupDatabaseUpgrade } from "./utils/storageUpgrade.js";
 import { brandEnv } from "./utils/brandEnv.js";
 import { listActiveTenants } from "./utils/tenancy.js";
 import { runWithUserContext } from "./utils/userContext.js";
@@ -113,6 +114,7 @@ export function createWorkerCoordinator({ holderId, role }) {
 
   async function runStartupMaintenance(generation) {
     try {
+      await waitForStartupDatabaseUpgrade();
       // Keep leadership acquisition and the first authenticated HTTP requests
       // cheap. The historical-title/season backfills are synchronous SQLite
       // work and can monopolize the event loop for seconds on a large library,

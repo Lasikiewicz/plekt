@@ -34,7 +34,7 @@ import { runPlaylistSyncScheduler } from "./utils/playlistSyncTriggers.js";
 import { pruneSyncPlans } from "./utils/syncPlans.js";
 import { runDbOptimizeIfDue } from "./utils/dbMaintenance.js";
 import { sendInstallCheckIfDue } from "./utils/installCheck.js";
-import { pruneWatchAuditPayloads } from "./utils/watchAudit.js";
+import { pruneExpiredWatchAuditEvents, pruneWatchAuditPayloads } from "./utils/watchAudit.js";
 import { pruneSyncActivityPayloadsIfDue } from "./utils/syncActivityRetention.js";
 import { runScheduledPlaystateAliasRepair } from "./utils/playstateAliasRepair.js";
 import { pruneLiveChangesIfDue } from "./db.js";
@@ -456,7 +456,10 @@ async function runScheduledTickSteps({ isLeader = () => true } = {}) {
   }, 5_000);
   await runWithTimeBudget("Database optimize", () => runDbOptimizeIfDue(), 10_000);
   await runWithTimeBudget("Install check", () => sendInstallCheckIfDue(), 15_000);
-  await runWithTimeBudget("Audit payload prune", () => ({ changed: pruneWatchAuditPayloads() }), 10_000);
+  await runWithTimeBudget("Audit payload prune", () => ({
+    changed: pruneWatchAuditPayloads(),
+    expiredRows: pruneExpiredWatchAuditEvents(),
+  }), 10_000);
   await runWithTimeBudget("Sync Activity payload prune", () => ({ changed: pruneSyncActivityPayloadsIfDue() }), 10_000);
   if (!isLeader()) return { skipped: true, reason: "lease-lost" };
   // A Trakt/TMDB-only split is deliberately an escape hatch for provider

@@ -7,7 +7,7 @@ import { readFormData, readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout, assertSafeOutboundUrl } from "../utils/outbound.js";
 import { AUTH, verifyWebhookToken } from "../appConfig.js";
-import { db, parseJson, toJson, writeAuditLog } from "../db.js";
+import { db, parseJson, toCompressedJson, toJson, writeAuditLog } from "../db.js";
 import { createLoopStore } from "../utils/loopStore.js";
 import { listActiveSessions, deleteActiveSession, upsertActiveSession } from "../utils/activeSessions.js";
 import { hydrateCachedSession, loadLiveTrackingCache } from "../utils/liveSessions.js";
@@ -1662,7 +1662,7 @@ export async function handleYoutubeMeta(req, res) {
   // Only cache when at least the oEmbed call answered - an all-empty payload
   // usually means a transient failure, not an empty video.
   if (title || channelName) {
-    youtubeMetaSetStmt.run(videoId, toJson(payload), Date.now());
+    youtubeMetaSetStmt.run(videoId, toCompressedJson(payload), Date.now());
   }
   return sendJson(res, payload);
 }

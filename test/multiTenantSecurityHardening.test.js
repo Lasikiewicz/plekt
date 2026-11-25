@@ -360,7 +360,7 @@ test("Step 3: hardened build-check static guards catch auth/route/outbound bypas
       handlerBodies.set(name, { file, body });
     }
   }
-  const publicHandlers = new Set(["handlePing", "handleChangelog", "handleLogin", "handleLogout", "handleAuthStatus", "handleAuthClaim", "handleCalendarFeed"]);
+  const publicHandlers = new Set(["handlePing", "handleUpgradeStatus", "handleChangelog", "handleLogin", "handleLogout", "handleAuthStatus", "handleAuthClaim", "handleCalendarFeed"]);
   const authOffenders = [];
   for (const handler of routedHandlers) {
     const def = handlerBodies.get(handler);

@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import util from "node:util";
+import zlib from "node:zlib";
 import { DATA_DIR } from "../paths.js";
 import { db, parseJson, toJson } from "../db.js";
 import { isDemoMode } from "./demoMode.js";
@@ -40,12 +41,32 @@ export function redactSecrets(value = "") {
   return text;
 }
 
+function gzipFileInPlace(sourcePath) {
+  const targetPath = `${sourcePath}.gz`;
+  const tempPath = `${targetPath}.${process.pid}.tmp`;
+  try {
+    const stat = fs.statSync(sourcePath);
+    const raw = fs.readFileSync(sourcePath);
+    const compressed = zlib.gzipSync(raw, { level: 6 });
+    fs.writeFileSync(tempPath, compressed, { mode: 0o600 });
+    fs.utimesSync(tempPath, stat.atime, stat.mtime);
+    fs.renameSync(tempPath, targetPath);
+    fs.rmSync(sourcePath, { force: true });
+    return true;
+  } catch {
+    try { fs.rmSync(tempPath, { force: true }); } catch { /* ignore */ }
+    return false;
+  }
+}
+
 function rotateIfNeeded() {
   try {
     if (fs.statSync(logFile).size < MAX_FILE_BYTES) return;
     const rotated = `${logFile}.1`;
     try { fs.rmSync(rotated, { force: true }); } catch { /* ignore */ }
+    try { fs.rmSync(`${rotated}.gz`, { force: true }); } catch { /* ignore */ }
     fs.renameSync(logFile, rotated);
+    gzipFileInPlace(rotated);
   } catch { /* missing/new file */ }
 }
 
@@ -147,30 +168,57 @@ function addLog(level, args) {
   scheduleFlush();
 }
 
-// Delete archive files older than the retention window. Mirrors
-// applyRetention() in watchHistoryBackups.js. Nothing pruned this directory
-// before, so it grew one file per process start indefinitely.
+function isPidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return error?.code === "EPERM";
+  }
+}
+
+function isLiveSiblingDiagnosticLog(filename) {
+  // Active session files follow diagnostic-<role>-<pid>-<startedAt>.jsonl.
+  // Never compress or unlink a sibling process's active log while that PID is
+  // still running (e.g. split-role web + worker deployments).
+  const match = /^diagnostic-[^-]+-(\d+)-\d+\.jsonl$/.exec(filename);
+  if (!match) return false;
+  return isPidAlive(Number(match[1]));
+}
+
+// Delete archive files older than the retention window and gzip-compress
+// closed archive files from previous runs or rotated access logs so on-disk
+// forensics stay compact while preserving the full 14-day window.
 export function pruneLogArchive() {
   let removed = 0;
   try {
     const cutoff = Date.now() - ARCHIVE_MAX_AGE_MS;
-    const files = fs.readdirSync(LOGS_DIR)
-      .filter((name) => /^diagnostic-.*\.jsonl(?:\.1)?$/.test(name))
-      .filter((name) => name !== path.basename(logFile))
-      .map((name) => {
-        const full = path.join(LOGS_DIR, name);
-        let mtime = 0;
-        try { mtime = fs.statSync(full).mtimeMs; } catch { /* vanished */ }
-        return { full, mtime };
-      })
-      .sort((a, b) => b.mtime - a.mtime);
+    const activeName = path.basename(logFile);
+    const entries = fs.readdirSync(LOGS_DIR);
 
-    const doomed = files.filter((file) => file.mtime < cutoff);
-    for (const file of doomed) {
-      try {
-        fs.rmSync(file.full, { force: true });
-        removed++;
-      } catch { /* ignore */ }
+    for (const name of entries) {
+      if (name === activeName) continue;
+      const isDiagnostic = /^diagnostic-.*\.jsonl(?:\.1)?(?:\.gz)?$/.test(name);
+      const isRotatedAccess = /^\d{8}-\d{4}-\d{2}-access(?:-[^/\\]+)?\.log(?:\.gz)?$/.test(name);
+      if (!isDiagnostic && !isRotatedAccess) continue;
+      if (isDiagnostic && isLiveSiblingDiagnosticLog(name)) continue;
+
+      const full = path.join(LOGS_DIR, name);
+      let mtime = 0;
+      try { mtime = fs.statSync(full).mtimeMs; } catch { continue; }
+
+      if (mtime < cutoff) {
+        try {
+          fs.rmSync(full, { force: true });
+          removed++;
+        } catch { /* ignore */ }
+        continue;
+      }
+
+      if (!name.endsWith(".gz")) {
+        gzipFileInPlace(full);
+      }
     }
   } catch { /* ignore */ }
   return removed;

@@ -26,6 +26,7 @@
     "seed:demo": "node scripts/seed-demo-content.js",
     "updates:refresh": "node scripts/update-local-updates.js",
     "server:restart": "node scripts/restart-server.js",
+    "storage:compact": "node scripts/compact-storage.js",
     "check:website-impact": "node scripts/site-impact.js",
     "prepare": "node scripts/install-git-hooks.js",
     "push:prepare": "node scripts/prepare-push.js",

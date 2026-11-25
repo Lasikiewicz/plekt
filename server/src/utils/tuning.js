@@ -58,6 +58,18 @@ function readWatchImportModeEnv() {
 export const DEFAULT_PLEX_HISTORICAL_WATCHED_SYNC = true;
 const PLEX_HISTORICAL_WATCHED_SYNC_ENV = "PLEX_HISTORICAL_WATCHED_SYNC";
 
+export const DEFAULT_AUDIT_RETENTION_DAYS = 90;
+export const AUDIT_RETENTION_DAYS_RANGE = Object.freeze([0, 3650]);
+const AUDIT_RETENTION_DAYS_ENV = "AUDIT_RETENTION_DAYS";
+
+function readAuditRetentionDaysEnv() {
+  const raw = process.env[AUDIT_RETENTION_DAYS_ENV];
+  if (raw === undefined || String(raw).trim() === "") return DEFAULT_AUDIT_RETENTION_DAYS;
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return DEFAULT_AUDIT_RETENTION_DAYS;
+  return Math.min(AUDIT_RETENTION_DAYS_RANGE[1], Math.max(AUDIT_RETENTION_DAYS_RANGE[0], Math.round(num)));
+}
+
 function readPlexHistoricalWatchedSyncEnv() {
   const raw = String(process.env[PLEX_HISTORICAL_WATCHED_SYNC_ENV] ?? "").trim().toLowerCase();
   if (!raw) return DEFAULT_PLEX_HISTORICAL_WATCHED_SYNC;
@@ -95,6 +107,7 @@ let effective = {
 };
 let effectiveWatchImportMode = readWatchImportModeEnv();
 let effectivePlexHistoricalWatchedSync = readPlexHistoricalWatchedSyncEnv();
+let effectiveAuditRetentionDays = readAuditRetentionDaysEnv();
 
 // Stored settings use null for "use the environment/default". Invalid values
 // are normalized to null here and rejected by configStore.validateConfig when
@@ -114,6 +127,12 @@ export function normalizePlexHistoricalWatchedSync(value) {
   if (["0", "false", "no", "off"].includes(normalized)) return false;
   if (["1", "true", "yes", "on"].includes(normalized)) return true;
   return null;
+}
+
+export function normalizeAuditRetentionDays(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.round(num) : null;
 }
 
 // Normalizes a raw stored/incoming tuning section (numbers-or-null/blank) into
@@ -152,6 +171,10 @@ export function applyTuningConfig(section = {}) {
   effectiveWatchImportMode = normalizeWatchImportMode(section?.watchImportMode) || readWatchImportModeEnv();
   const historicalOverride = normalizePlexHistoricalWatchedSync(section?.plexHistoricalWatchedSync);
   effectivePlexHistoricalWatchedSync = historicalOverride === null ? readPlexHistoricalWatchedSyncEnv() : historicalOverride;
+  const auditOverride = normalizeAuditRetentionDays(section?.auditRetentionDays);
+  effectiveAuditRetentionDays = auditOverride === null
+    ? readAuditRetentionDaysEnv()
+    : Math.min(AUDIT_RETENTION_DAYS_RANGE[1], Math.max(AUDIT_RETENTION_DAYS_RANGE[0], auditOverride));
   return effective;
 }
 
@@ -167,6 +190,7 @@ export function resetTuningForTests() {
   };
   effectiveWatchImportMode = readWatchImportModeEnv();
   effectivePlexHistoricalWatchedSync = readPlexHistoricalWatchedSyncEnv();
+  effectiveAuditRetentionDays = readAuditRetentionDaysEnv();
 }
 
 export function watchedThresholdPercent() {
@@ -199,6 +223,14 @@ export function plexHistoricalWatchedSyncEnabled() {
 
 export function plexHistoricalWatchedSyncDefault() {
   return readPlexHistoricalWatchedSyncEnv();
+}
+
+export function auditRetentionDays() {
+  return effectiveAuditRetentionDays;
+}
+
+export function auditRetentionDaysDefault() {
+  return readAuditRetentionDaysEnv();
 }
 
 export function tuningDefaults() {

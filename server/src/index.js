@@ -40,6 +40,7 @@ import { handleNetflixImport } from "./routes/netflixImport.js";
 import { handleAnidb } from "./routes/anidb.js";
 import { handlePlektRestore, handlePlektRestoreUpload } from "./routes/plektRestore.js";
 import { handleUsers, handleUserPassword, handleUserManage } from "./routes/users.js";
+import { handleStorageCompactDb, handleStorageOptimizeArtwork, handleStorageRecompressBackups, handleStorageStatus, handleUpgradeStatus } from "./routes/storage.js";
 import { noteRequestActivity } from "./utils/cacheWarmup.js";
 
 function routePath(req) {
@@ -50,7 +51,7 @@ function routePath(req) {
 // Reachable before a pristine install's administrator account is claimed.
 // Everything else returns 403 CLAIM_REQUIRED so an unclaimed instance can't
 // be driven through any other API surface.
-const CLAIM_GATE_WHITELIST = new Set(["ping", "changelog", "login", "logout", "auth/status", "auth-status", "auth/claim"]);
+const CLAIM_GATE_WHITELIST = new Set(["ping", "upgrade-status", "changelog", "login", "logout", "auth/status", "auth-status", "auth/claim"]);
 
 // The hosted demo is an immutable catalogue. Read-only catalogue routes are
 // still available, but anything that could expose credentials, create a
@@ -62,7 +63,7 @@ const DEMO_DISABLED_ROUTE_PATTERNS = Object.freeze([
   /^auth\/(?:apikey|webhook-secret|credentials|claim|sessions\/revoke-all)(?:\/|$)/i,
   /^(?:media-auth|media-connections|tracker-auth|tracker-connections)(?:\/|$)/i,
   /^(?:backup|watch-backups|plembfin-backups)(?:\/|$)/i,
-  /^(?:import|delete-media|wipe-data|clear-cache|cache-stats)(?:\/|$)/i,
+  /^(?:import|delete-media|wipe-data|clear-cache|cache-stats|storage)(?:\/|$)/i,
   /^(?:force-sync|full-sync-watchstates|cron-sync|stop-force-sync)(?:\/|$)/i,
   /^(?:sync-jobs|sync\/|sync-match-report|health\/sync|sync-attention|sync-activity|sync-history|manual-watch-review|retry-sync)(?:\/|$)/i,
   /^(?:test-connection|test-plex-notifications|seerr)(?:\/|$)/i,
@@ -319,6 +320,11 @@ async function dispatch(req, res) {
     if (path === "tmdb-profile") return handleTmdbProfile(req, res);
     if (path === "remote-artwork") return handleRemoteArtwork(req, res);
     if (path === "poster") return handlePoster(req, res);
+    if (path === "upgrade-status") return handleUpgradeStatus(req, res);
+    if (path === "storage/status") return handleStorageStatus(req, res);
+    if (path === "storage/compact-db") return handleStorageCompactDb(req, res);
+    if (path === "storage/optimize-artwork") return handleStorageOptimizeArtwork(req, res);
+    if (path === "storage/recompress-backups") return handleStorageRecompressBackups(req, res);
     if (path === "cache-stats") return handleCacheStats(req, res);
     if (path === "clear-cache") return handleClearCache(req, res);
     if (path === "wipe-data/preview") return handleWipeDataPreview(req, res);

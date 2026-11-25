@@ -172,23 +172,31 @@ export async function markPosterMissing(mediaKey = "", source = "unknown", detai
   });
 }
 
+export const ARTWORK_SIZES = Object.freeze({
+  poster: Object.freeze({ width: 340, quality: 78 }),
+  backdrop: Object.freeze({ width: 1280, quality: 78 }),
+  profile: Object.freeze({ width: 420, quality: 78 }),
+  logo: Object.freeze({ width: 800, quality: 85 }),
+});
+export const ARTWORK_WEBP_EFFORT = 6;
+
 export async function cachePosterFromUrl(mediaKey = "", remoteUrl = "", source = "unknown") {
-  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "poster", width: 340, quality: 80 });
+  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "poster", ...ARTWORK_SIZES.poster });
 }
 
 export async function cacheBackdropFromUrl(mediaKey = "", remoteUrl = "", source = "unknown") {
-  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "backdrop", width: 1600, quality: 82 });
+  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "backdrop", ...ARTWORK_SIZES.backdrop });
 }
 
 export async function cacheProfileFromUrl(mediaKey = "", remoteUrl = "", source = "unknown") {
-  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "profile", width: 780, quality: 82 });
+  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "profile", ...ARTWORK_SIZES.profile });
 }
 
 export async function cacheLogoFromUrl(mediaKey = "", remoteUrl = "", source = "unknown") {
-  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "logo", width: 800, quality: 90 });
+  return cacheArtworkFromUrl(mediaKey, remoteUrl, source, { variant: "logo", ...ARTWORK_SIZES.logo });
 }
 
-export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source = "unknown", { variant = "poster", width = 340, quality = 80 } = {}) {
+export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source = "unknown", { variant = "poster", width = ARTWORK_SIZES.poster.width, quality = ARTWORK_SIZES.poster.quality } = {}) {
   if (!mediaKey || !remoteUrl) return null;
 
   const recordCached = (storagePath, contentType, sizeBytes, originalUrl, cached) => {
@@ -223,7 +231,7 @@ export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source 
     try {
       finalBuffer = await sharp(buffer)
         .resize({ width, withoutEnlargement: true })
-        .webp({ quality })
+        .webp({ quality, effort: ARTWORK_WEBP_EFFORT })
         .toBuffer();
       finalContentType = "image/webp";
       extension = "webp";
@@ -351,12 +359,6 @@ export async function cacheArtworkFromUrl(mediaKey = "", remoteUrl = "", source 
   }
 }
 
-const ARTWORK_SIZES = {
-  poster: { width: 340, quality: 80 },
-  backdrop: { width: 1600, quality: 82 },
-  profile: { width: 780, quality: 82 },
-  logo: { width: 800, quality: 90 },
-};
 const selectByStoragePathStmt = db.prepare(
   "SELECT media_key, variant, source, original_url FROM poster_cache WHERE storage_path = ? AND status = 'cached' LIMIT 1",
 );

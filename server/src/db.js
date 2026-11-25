@@ -16,8 +16,10 @@ import {
   closeAllSharedMetadataDatabases,
   getSharedMetadataDb,
   migrateProviderCachesFromAdmin,
+  purgeMigratedProviderCachesFromAdmin,
   sqlTargetsSharedProviderCache,
 } from "./utils/sharedMetadataStore.js";
+import { parseCompressedJson, toCompressedJson } from "./utils/jsonCompression.js";
 
 // A test that imports this module before pointing DATA_DIR at a temp folder
 // would read and write the developer's real database. Under the node test
@@ -1971,9 +1973,11 @@ try {
 }
 
 // Migrate any warm provider metadata caches from the admin DB into the
-// install-wide shared metadata store once on boot.
+// install-wide shared metadata store once on boot, then drop the dead copy
+// left behind in adminDb so it cannot duplicate hundreds of megabytes.
 try {
   migrateProviderCachesFromAdmin(adminDb, DATA_DIR);
+  purgeMigratedProviderCachesFromAdmin(adminDb, DATA_DIR);
 } catch (error) {
   console.warn("Shared metadata migration skipped:", error?.message || error);
 }
@@ -2298,19 +2302,15 @@ export function bumpUpNextVersion() {
 
 // JSON column helpers -------------------------------------------------------
 export function parseJson(value, fallback = null) {
-  if (value == null) return fallback;
-  if (typeof value === "object") return value;
-  try {
-    return JSON.parse(value);
-  } catch {
-    return fallback;
-  }
+  return parseCompressedJson(value, fallback);
 }
 
 export function toJson(value) {
   if (value == null) return null;
   return JSON.stringify(value);
 }
+
+export { toCompressedJson };
 
 export function now() {
   return Date.now();

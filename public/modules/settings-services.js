@@ -216,6 +216,7 @@ const TUNING_FIELD_DEFS = [
   { key: "minResumePositionSec", label: "Minimum Resume Position", unit: "sec", help: "Minimum playback position before a stopped play is saved as a resume point." },
   { key: "activeSessionTtlMin", label: "Active Session TTL", unit: "min", help: `How long a "now playing" session is kept without an update before it's considered stale.` },
   { key: "outboundTimeoutSec", label: "Outbound Request Timeout", unit: "sec", help: "How long Plekt waits for a response from Plex, Emby, or Jellyfin before giving up." },
+  { key: "auditRetentionDays", label: "Watch Audit Retention", unit: "days", help: "How many days of diagnostic watch-audit events to keep (0 keeps them forever). Watch history is never deleted." },
 ];
 const WATCH_IMPORT_FIELD = {
   key: "watchImportMode",
@@ -274,6 +275,7 @@ const SYNC_TUNING_SUMMARIES = Object.freeze({
   minResumePositionSec: "Set the minimum playback position saved as a resume point",
   activeSessionTtlMin: "Set how long inactive now-playing sessions remain valid",
   outboundTimeoutSec: "Set how long requests wait for a media server response",
+  auditRetentionDays: "Set how many days of diagnostic watch-audit history to retain",
   fastLocalPacing: "Speed up bulk sync on a trusted local network",
   upNextSyncEnabled: "Keep Plekt's Up Next queue synced with media apps",
 });

@@ -1,4 +1,4 @@
-import { db } from "../db.js";
+import { db, parseJson } from "../db.js";
 import { getTmdbDetails } from "./tmdbGateway.js";
 import { runWithConcurrency } from "./concurrency.js";
 
@@ -40,10 +40,13 @@ function readCachedLanguages(ids) {
   for (let start = 0; start < ids.length; start += SQL_CHUNK) {
     const chunk = ids.slice(start, start + SQL_CHUNK);
     const rows = db.prepare(`
-      SELECT id, COALESCE(original_language, CASE WHEN json_valid(details) THEN json_extract(details, '$.original_language') END) AS language
+      SELECT id, original_language, CASE WHEN original_language IS NULL THEN details ELSE NULL END AS fallback_details
       FROM tmdb_metadata_cache WHERE id IN (${chunk.map(() => "?").join(",")})
     `).all(...chunk);
-    for (const row of rows) found.set(row.id, normalizeLanguageCode(row.language) || null);
+    for (const row of rows) {
+      const lang = row.original_language ?? parseJson(row.fallback_details)?.original_language;
+      found.set(row.id, normalizeLanguageCode(lang) || null);
+    }
   }
   return found;
 }

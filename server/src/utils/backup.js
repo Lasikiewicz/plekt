@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { bumpDataVersion, bumpUpNextVersion, db, parseJson, toJson } from "../db.js";
+import { bumpDataVersion, bumpUpNextVersion, db, parseJson, toCompressedJson, toJson } from "../db.js";
+import { extractTmdbExternalTvdbId, extractTmdbSeasonPosters } from "./sharedMetadataStore.js";
 import { clearWatchlistRemoteProjection, getWatchlistRestoreState, markWatchlistRestorePending } from "./personalWatchlistRepository.js";
 import { activityGroupKeyFor, activityItemKeyFor } from "./syncActivityIdentity.js";
 import { BACKUP_FORMAT, LEGACY_REDACTED_SECRETS_FIELD, REDACTED_SECRETS_FIELD, TYPE_FIELD, backupValueType } from "./backupNames.js";
@@ -289,7 +290,7 @@ const collections = {
         status: d.status || "recorded", details: d.details || null, device: d.device || null, device_id: d.deviceId || null,
         client: d.client || null, client_version: d.clientVersion || null, user_name: d.user || null, session_id: d.sessionId || null,
         item_id: d.itemId || null, imdb_id: d.ids?.imdb || null, tmdb_id: d.ids?.tmdb || null, tvdb_id: d.ids?.tvdb || null,
-        season: d.season ?? null, episode: d.episode ?? null, payload: d.payload == null ? null : toJson(d.payload), created_at: toMs(d.createdAt) ?? Date.now(),
+        season: d.season ?? null, episode: d.episode ?? null, payload: d.payload == null ? null : toCompressedJson(d.payload), created_at: toMs(d.createdAt) ?? Date.now(),
       };
     },
   },
@@ -322,10 +323,30 @@ const collections = {
     return { show_key: id, season_source: d.seasonSource, recorded_at: toMs(d.recordedAt), row_numbering: d.rowNumbering ?? null, overridden_at: toMs(d.overriddenAt) };
   }),
   posterCache: simpleCollection("poster_cache", "id", (r) => ({ mediaKey: r.media_key, variant: r.variant, status: r.status, source: r.source, detail: r.detail, originalUrl: r.original_url, storagePath: r.storage_path, contentType: r.content_type, sizeBytes: r.size_bytes, url: r.url, updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO poster_cache (id,media_key,variant,status,source,detail,original_url,storage_path,content_type,size_bytes,url,updated_at_ms) VALUES (@id,@media_key,@variant,@status,@source,@detail,@original_url,@storage_path,@content_type,@size_bytes,@url,@updated_at_ms)", (id, d) => ({ id, media_key: d.mediaKey || null, variant: d.variant || "poster", status: d.status || "missing", source: d.source || "unknown", detail: d.detail || null, original_url: d.originalUrl || null, storage_path: d.storagePath || null, content_type: d.contentType || null, size_bytes: d.sizeBytes ?? null, url: d.url || null, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
-  tmdbMetadataCache: simpleCollection("tmdb_metadata_cache", "id", (r) => ({ tmdbId: r.tmdb_id, mediaType: r.media_type, title: r.title, details: parseJson(r.details), schemaVersion: r.schema_version, updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_metadata_cache (id,tmdb_id,media_type,title,details,schema_version,updated_at_ms) VALUES (@id,@tmdb_id,@media_type,@title,@details,@schema_version,@updated_at_ms)", (id, d) => ({ id, tmdb_id: d.tmdbId != null ? String(d.tmdbId) : null, media_type: d.mediaType || null, title: d.title || null, details: d.details == null ? null : toJson(d.details), schema_version: d.schemaVersion ?? null, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
-  tmdbSearchCache: simpleCollection("tmdb_search_cache", "id", (r) => ({ query: r.query, mediaType: r.media_type, page: r.page, response: parseJson(r.response), missing: Boolean(r.missing), updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_search_cache (id,query,media_type,page,response,missing,updated_at_ms) VALUES (@id,@query,@media_type,@page,@response,@missing,@updated_at_ms)", (id, d) => ({ id, query: d.query || "", media_type: d.mediaType || null, page: d.page ?? 1, response: toJson(d.response), missing: d.missing ? 1 : 0, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
-  tmdbSeasonCache: simpleCollection("tmdb_season_cache", "id", (r) => ({ tmdbId: r.tmdb_id, seasonNumber: r.season_number, showStatus: r.show_status, details: parseJson(r.details), updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_season_cache (id,tmdb_id,season_number,show_status,details,updated_at_ms) VALUES (@id,@tmdb_id,@season_number,@show_status,@details,@updated_at_ms)", (id, d) => ({ id, tmdb_id: d.tmdbId != null ? String(d.tmdbId) : null, season_number: d.seasonNumber ?? null, show_status: d.showStatus || null, details: toJson(d.details), updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
-  tmdbPersonCache: simpleCollection("tmdb_person_cache", "id", (r) => ({ personId: r.person_id, details: parseJson(r.details), schemaVersion: r.schema_version, updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_person_cache (id,person_id,details,schema_version,updated_at_ms) VALUES (@id,@person_id,@details,@schema_version,@updated_at_ms)", (id, d) => ({ id, person_id: d.personId != null ? String(d.personId) : null, details: toJson(d.details), schema_version: d.schemaVersion ?? null, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
+  tmdbMetadataCache: simpleCollection("tmdb_metadata_cache", "id", (r) => ({ tmdbId: r.tmdb_id, mediaType: r.media_type, title: r.title, details: parseJson(r.details), schemaVersion: r.schema_version, updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_metadata_cache (id,tmdb_id,tvdb_id,media_type,title,details,season_posters,original_language,status,poster_path,cached_poster_url,backdrop_path,cached_backdrop_url,tvdb_poster_url,schema_version,updated_at_ms) VALUES (@id,@tmdb_id,@tvdb_id,@media_type,@title,@details,@season_posters,@original_language,@status,@poster_path,@cached_poster_url,@backdrop_path,@cached_backdrop_url,@tvdb_poster_url,@schema_version,@updated_at_ms)", (id, d) => {
+    const details = d.details && typeof d.details === "object" && !Array.isArray(d.details) ? d.details : {};
+    return {
+      id,
+      tmdb_id: d.tmdbId != null ? String(d.tmdbId) : null,
+      tvdb_id: extractTmdbExternalTvdbId(details),
+      media_type: d.mediaType || null,
+      title: d.title || null,
+      details: d.details == null ? null : toCompressedJson(d.details),
+      season_posters: extractTmdbSeasonPosters(details),
+      original_language: typeof details.original_language === "string" && details.original_language ? details.original_language.toLowerCase() : null,
+      status: details.status || null,
+      poster_path: details.poster_path || null,
+      cached_poster_url: details.cached_poster_url || details.cachedPosterUrl || null,
+      backdrop_path: details.backdrop_path || null,
+      cached_backdrop_url: details.cached_backdrop_url || details.cachedBackdropUrl || null,
+      tvdb_poster_url: details.tvdb_poster_url || details.tvdbPosterUrl || null,
+      schema_version: d.schemaVersion ?? null,
+      updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt),
+    };
+  }),
+  tmdbSearchCache: simpleCollection("tmdb_search_cache", "id", (r) => ({ query: r.query, mediaType: r.media_type, page: r.page, response: parseJson(r.response), missing: Boolean(r.missing), updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_search_cache (id,query,media_type,page,response,missing,updated_at_ms) VALUES (@id,@query,@media_type,@page,@response,@missing,@updated_at_ms)", (id, d) => ({ id, query: d.query || "", media_type: d.mediaType || null, page: d.page ?? 1, response: toCompressedJson(d.response), missing: d.missing ? 1 : 0, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
+  tmdbSeasonCache: simpleCollection("tmdb_season_cache", "id", (r) => ({ tmdbId: r.tmdb_id, seasonNumber: r.season_number, showStatus: r.show_status, details: parseJson(r.details), updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_season_cache (id,tmdb_id,season_number,show_status,details,updated_at_ms) VALUES (@id,@tmdb_id,@season_number,@show_status,@details,@updated_at_ms)", (id, d) => ({ id, tmdb_id: d.tmdbId != null ? String(d.tmdbId) : null, season_number: d.seasonNumber ?? null, show_status: d.showStatus || null, details: toCompressedJson(d.details), updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
+  tmdbPersonCache: simpleCollection("tmdb_person_cache", "id", (r) => ({ personId: r.person_id, details: parseJson(r.details), schemaVersion: r.schema_version, updatedAtMs: r.updated_at_ms }), "INSERT OR REPLACE INTO tmdb_person_cache (id,person_id,details,schema_version,updated_at_ms) VALUES (@id,@person_id,@details,@schema_version,@updated_at_ms)", (id, d) => ({ id, person_id: d.personId != null ? String(d.personId) : null, details: toCompressedJson(d.details), schema_version: d.schemaVersion ?? null, updated_at_ms: d.updatedAtMs ?? toMs(d.updatedAt) })),
   droppedTitles: rawCollection("dropped_titles", "id", ["media_type", "aliases_json", "title", "year", "tmdb_id", "tvdb_id", "imdb_id", "snapshot_json", "dropped_at", "updated_at"]),
   personalWatchlist: rawCollection("personal_watchlist", "media_key", ["media_type", "title", "tmdb_id", "tvdb_id", "imdb_id", "poster_url", "overview", "release_date", "created_at", "updated_at"]),
   personalWatchlistMutations: rawCollection("personal_watchlist_mutations", "id", ["media_key", "media_json", "desired_state", "origin", "reason", "canonical_revision", "event_fingerprint", "source_timestamp", "created_at", "superseded_at", "applied_at", "tombstone"]),

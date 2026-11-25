@@ -400,6 +400,7 @@ function checkRoutedHandlersAuthenticate() {
 
   const publicHandlers = new Set([
     "handlePing",
+    "handleUpgradeStatus",
     "handleChangelog",
     "handleLogin",
     "handleLogout",

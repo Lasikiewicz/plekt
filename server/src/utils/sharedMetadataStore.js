@@ -28,6 +28,7 @@ const SHARED_SCHEMA = `
 CREATE TABLE IF NOT EXISTS tmdb_metadata_cache (
   id TEXT PRIMARY KEY,
   tmdb_id TEXT,
+  tvdb_id TEXT,
   media_type TEXT,
   title TEXT,
   details TEXT,
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS tmdb_metadata_cache (
   backdrop_path TEXT,
   cached_backdrop_url TEXT,
   tvdb_poster_url TEXT,
+  season_posters TEXT,
   original_language TEXT,
   schema_version INTEGER,
   updated_at_ms INTEGER
@@ -104,11 +106,46 @@ CREATE TABLE IF NOT EXISTS shared_provider_keys (
 
 const SHARED_INDEXES = `
 CREATE INDEX IF NOT EXISTS idx_tmdb_metadata_cache_type_tmdb_id ON tmdb_metadata_cache(media_type, tmdb_id, updated_at_ms);
-CREATE INDEX IF NOT EXISTS idx_tmdb_metadata_cache_tv_tvdb_id ON tmdb_metadata_cache((CASE WHEN json_valid(details) THEN json_extract(details, '$.external_ids.tvdb_id') END), updated_at_ms) WHERE media_type = 'tv';
+CREATE INDEX IF NOT EXISTS idx_tmdb_metadata_cache_tv_tvdb_id ON tmdb_metadata_cache(COALESCE(tvdb_id, CASE WHEN typeof(details) = 'text' AND json_valid(details) THEN CAST(json_extract(details, '$.external_ids.tvdb_id') AS TEXT) END), updated_at_ms) WHERE media_type = 'tv';
 CREATE INDEX IF NOT EXISTS idx_tmdb_season_cache_show ON tmdb_season_cache(tmdb_id, season_number);
 CREATE INDEX IF NOT EXISTS idx_tvdb_metadata_cache_tvdb_id ON tvdb_metadata_cache(tvdb_id, updated_at_ms);
 CREATE INDEX IF NOT EXISTS idx_tvdb_season_cache_show ON tvdb_season_cache(tvdb_id, season_number);
 `;
+
+export function extractTmdbExternalTvdbId(details) {
+  if (!details || typeof details !== "object" || Array.isArray(details)) return null;
+  const external = details.external_ids;
+  if (!external || typeof external !== "object") return null;
+  const raw = external.tvdb_id ?? external.tvdbId;
+  if (raw == null) return null;
+  const clean = String(raw).trim();
+  if (!clean || clean === "0") return null;
+  return clean;
+}
+
+export function extractTmdbSeasonPosters(details) {
+  if (!details || typeof details !== "object" || !Array.isArray(details.seasons)) return null;
+  const entries = [];
+  for (const season of details.seasons) {
+    if (!season || typeof season !== "object") continue;
+    const seasonNumber = Number(season.season_number);
+    if (!Number.isInteger(seasonNumber) || seasonNumber < 0) continue;
+    const poster = [
+      season.poster_url,
+      season.posterUrl,
+      season.cached_poster_url,
+      season.cachedPosterUrl,
+      season.poster_path,
+      season.posterPath,
+      season.image_url,
+      season.imageUrl,
+      season.image,
+      season.poster?.path,
+    ].map((v) => String(v ?? "").trim()).find(Boolean) || "";
+    if (poster) entries.push([seasonNumber, poster]);
+  }
+  return entries.length ? JSON.stringify(entries) : null;
+}
 
 const PROVIDER_KEYS_ROW_ID = "providerKeys";
 const TVDB_TOKEN_ROW_ID = "tvdbToken";
@@ -161,6 +198,18 @@ export function getSharedMetadataDb(rootDataDir = DATA_DIR) {
   }
   if (!tmdbCols.has("status")) {
     database.exec("ALTER TABLE tmdb_metadata_cache ADD COLUMN status TEXT");
+  }
+  if (!tmdbCols.has("tvdb_id")) {
+    database.exec("ALTER TABLE tmdb_metadata_cache ADD COLUMN tvdb_id TEXT");
+  }
+  if (!tmdbCols.has("season_posters")) {
+    database.exec("ALTER TABLE tmdb_metadata_cache ADD COLUMN season_posters TEXT");
+  }
+  const existingTvdbIdx = database
+    .prepare("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_tmdb_metadata_cache_tv_tvdb_id'")
+    .get();
+  if (existingTvdbIdx?.sql && !existingTvdbIdx.sql.includes("COALESCE(tvdb_id")) {
+    database.exec("DROP INDEX IF EXISTS idx_tmdb_metadata_cache_tv_tvdb_id");
   }
   // Show-level lookups (every season of a show, a series' newest details) run
   // per show in loops such as the Trakt inbound numbering map. Without these
@@ -276,6 +325,27 @@ export function migrateProviderCachesFromAdmin(adminDb, rootDataDir = DATA_DIR) 
     }
   }
   return { migrated: copied > 0, copied };
+}
+
+// Once provider caches live in shared-metadata.db, all routed SQL reads and
+// writes go there. Clearing the migrated copy from the admin DB eliminates
+// hundreds of megabytes of dead duplicate rows. Only runs when shared-metadata
+// already holds data so an unmigrated database is never cleared early.
+export function purgeMigratedProviderCachesFromAdmin(adminDb, rootDataDir = DATA_DIR) {
+  if (!adminDb) return { purged: false, deleted: 0, reason: "no-admin-db" };
+  const shared = getSharedMetadataDb(rootDataDir);
+  if (sharedStoreIsEmpty(shared)) return { purged: false, deleted: 0, reason: "shared-empty" };
+
+  let deleted = 0;
+  const clearAll = adminDb.transaction(() => {
+    for (const table of PROVIDER_CACHE_TABLES) {
+      try {
+        deleted += adminDb.prepare(`DELETE FROM ${table}`).run().changes;
+      } catch { /* table missing */ }
+    }
+  });
+  clearAll();
+  return { purged: deleted > 0, deleted };
 }
 
 export function clearSharedProviderCaches(rootDataDir = DATA_DIR) {

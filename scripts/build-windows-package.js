@@ -154,6 +154,59 @@ function compileTrayHelper(destination, iconPath) {
   ]);
 }
 
+export function pruneWindowsNodeModules(nodeModulesDir, arch = process.arch) {
+  const removeIfExists = (target) => {
+    if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
+  };
+
+  // Drop npm temp directories left behind by interrupted installs (both top-level
+  // and inside scoped @org/ folders such as @img/.sharp-win32-x64-*).
+  if (fs.existsSync(nodeModulesDir)) {
+    for (const entry of fs.readdirSync(nodeModulesDir, { withFileTypes: true })) {
+      if (/^\.[^.]/.test(entry.name) && entry.name !== ".bin") {
+        removeIfExists(path.join(nodeModulesDir, entry.name));
+      } else if (entry.isDirectory() && entry.name.startsWith("@")) {
+        const scopeDir = path.join(nodeModulesDir, entry.name);
+        for (const scoped of fs.readdirSync(scopeDir)) {
+          if (/^\.[^.]/.test(scoped)) removeIfExists(path.join(scopeDir, scoped));
+        }
+      }
+    }
+  }
+
+  // Drop better-sqlite3 build sources (sqlite3.c, C++ sources) and every
+  // prebuild except the Windows binary matching this package's architecture.
+  const sqliteDir = path.join(nodeModulesDir, "better-sqlite3");
+  removeIfExists(path.join(sqliteDir, "deps"));
+  removeIfExists(path.join(sqliteDir, "src"));
+  const prebuildsDir = path.join(sqliteDir, "prebuilds");
+  const keepPrebuild = `win32-${arch}.node`;
+  if (fs.existsSync(prebuildsDir)) {
+    for (const entry of fs.readdirSync(prebuildsDir, { withFileTypes: true })) {
+      const fullPath = path.join(prebuildsDir, entry.name);
+      if (entry.isFile() && entry.name !== keepPrebuild) {
+        removeIfExists(fullPath);
+      } else if (entry.isDirectory()) {
+        for (const nested of fs.readdirSync(fullPath)) {
+          if (nested !== keepPrebuild) removeIfExists(path.join(fullPath, nested));
+        }
+      }
+    }
+  }
+
+  // Drop WebAssembly and non-Windows sharp binaries under @img/.
+  const imgDir = path.join(nodeModulesDir, "@img");
+  if (fs.existsSync(imgDir)) {
+    const keepSuffix = `win32-${arch}`;
+    for (const entry of fs.readdirSync(imgDir)) {
+      const lower = entry.toLowerCase();
+      if (lower.includes("wasm") || (!lower.includes(keepSuffix) && (lower.startsWith("sharp-")))) {
+        removeIfExists(path.join(imgDir, entry));
+      }
+    }
+  }
+}
+
 async function main() {
   if (process.platform !== "win32") {
     fail("run this script on a Windows runner or Windows development machine");
@@ -196,6 +249,7 @@ async function main() {
   run(process.execPath, [path.join(root, "scripts", "asset-versions.js"),
     "--write", `--version=${assetVersion}`, `--public-dir=${path.join(appDir, "public")}`]);
   copy(path.join(root, "node_modules"), path.join(appDir, "node_modules"));
+  pruneWindowsNodeModules(path.join(appDir, "node_modules"), process.arch);
   copy(path.join(root, "package.json"), path.join(appDir, "package.json"));
   copy(path.join(root, "package-lock.json"), path.join(appDir, "package-lock.json"));
   copy(path.join(root, "LICENSE.md"), path.join(appDir, "LICENSE.md"));
@@ -236,6 +290,8 @@ async function main() {
   console.log(`Prepared Plekt ${metadata.displayVersion} in ${appDir}`);
 }
 
-main().catch((error) => {
-  fail(error?.stack || error?.message || error);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  main().catch((error) => {
+    fail(error?.stack || error?.message || error);
+  });
+}

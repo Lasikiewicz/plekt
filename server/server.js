@@ -62,6 +62,14 @@ const { createWorkerCoordinator } = await import("./src/workerCoordinator.js");
 const { flushPending: flushDiagnosticLogs } = await import("./src/utils/diagnosticLogger.js");
 const { startCacheWarmup, stopCacheWarmup } = await import("./src/utils/cacheWarmup.js");
 const { runWebhookPortCheck } = await import("./src/utils/webhookPortCheck.js");
+const {
+  getPublicUpgradeStatus,
+  isDatabaseUpgradeActive,
+  scheduleBackgroundArtworkOptimization,
+  startStartupDatabaseUpgrade,
+  stopStorageUpgrade,
+} = await import("./src/utils/storageUpgrade.js");
+const { renderUpgradeScreenHtml } = await import("./src/utils/upgradeScreenHtml.js");
 
 ensureDataDirs();
 if (!DEMO_MODE) enableTmdbMetadataWarmup();
@@ -122,6 +130,7 @@ const accessLogStream = DEMO_MODE
     size: "10M",
     path: LOGS_DIR,
     maxFiles: 14,
+    compress: "gzip",
   });
 
 // Keep upstream connections (Plex/Emby/Jellyfin/TMDB) warm.
@@ -241,6 +250,28 @@ app.use(async (_req, res, next) => {
 // has no compressing proxy. The live update stream opts out explicitly; its
 // no-transform cache directive remains a second independent safeguard.
 app.use(createResponseCompression());
+
+// While one-time startup database compaction is running, keep health checks,
+// upgrade status, and static assets used by the upgrading page reachable,
+// show the Upgrading Plekt screen to HTML navigations, and return a clean
+// retryable 503 for other API calls.
+const UPGRADE_PASSTHROUGH_RE = /^\/(?:health\/?|api\/(?:ping|upgrade-status|version)|(?:u\/[^/]+\/)?api\/(?:ping|upgrade-status)|theme-boot\.js|upgrade-status\.js|icon-192(?:-dark)?\.png|favicon\.(?:png|svg)|plekt_header_logo_(?:dark|light)\.png)$/i;
+app.use((req, res, next) => {
+  if (!isDatabaseUpgradeActive()) return next();
+  const pathname = (req.path || "/");
+  if (UPGRADE_PASSTHROUGH_RE.test(pathname)) return next();
+  res.setHeader("Retry-After", "5");
+  res.setHeader("Cache-Control", "no-store");
+  if (pathname.startsWith("/api/") || /^\/u\/[^/]+\/api\//.test(pathname)) {
+    return res.status(503).json({
+      error: "Plekt is upgrading its database storage. Retry shortly.",
+      code: "UPGRADE_IN_PROGRESS",
+      upgrading: true,
+      upgrade: getPublicUpgradeStatus(),
+    });
+  }
+  return res.status(503).type("html").send(renderUpgradeScreenHtml(getPublicUpgradeStatus()));
+});
 
 // Normalize the path before matching rate limits and body caps. Preserve the
 // query string, which may itself legitimately contain repeated slashes.
@@ -587,12 +618,23 @@ server?.on("listening", async () => {
     });
     return;
   }
+  // Start one-time startup database compaction in yielded batches and acquire
+  // worker leadership right away so Docker health checks stay green while
+  // scheduled ticks wait on waitForStartupDatabaseUpgrade(). Fresh and already-
+  // upgraded installs skip compaction in <1ms and never show the upgrade page.
+  const upgradePromise = (!DEMO_MODE && roleHasWorker(ROLE)) ? startStartupDatabaseUpgrade() : null;
+  await coordinator?.start().catch((error) => console.error("Failed to start worker coordinator", error));
+  if (upgradePromise) {
+    await upgradePromise.catch((error) => console.error("Startup database upgrade failed", error));
+  }
+  if (!DEMO_MODE && roleHasWorker(ROLE)) {
+    scheduleBackgroundArtworkOptimization({ delayMs: 15_000, throttleMs: 75 });
+  }
   // Only the process that serves pages warms the page caches; a ROLE=worker
   // process has no readers for them.
   startCacheWarmup();
   // Non-blocking: the port advisory never delays startup, and a failed check is logged only.
   runWebhookPortCheck().catch((error) => console.error("Webhook port check failed", error));
-  await coordinator?.start().catch((error) => console.error("Failed to start worker coordinator", error));
 });
 
 server?.on("error", (error) => {
@@ -614,6 +656,7 @@ async function shutdown(signal) {
     process.exit(1);
   }, 5000);
   timer.unref();
+  await stopStorageUpgrade().catch(() => null);
   await stopCacheWarmup().catch(() => null);
   await coordinator?.stop().catch((error) => console.error("Worker shutdown failed", error));
   const finish = () => {
@@ -633,5 +676,12 @@ installProcessErrorHandlers({ flush: () => flushDiagnosticLogs() });
 
 if (!server) {
   console.log(`plekt worker started (role=${ROLE})`);
+  const upgradePromise = !DEMO_MODE ? startStartupDatabaseUpgrade() : null;
   await coordinator?.start();
+  if (upgradePromise) {
+    await upgradePromise.catch((error) => console.error("Startup database upgrade failed", error));
+  }
+  if (!DEMO_MODE) {
+    scheduleBackgroundArtworkOptimization({ delayMs: 15_000, throttleMs: 75 });
+  }
 }

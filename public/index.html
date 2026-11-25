@@ -1135,6 +1135,19 @@
                             </div>
                           </div>
                         </details>
+                        <details id="storageOptimizationDetails" class="sync-tool-details">
+                          <summary class="accordion-header">
+                            <div class="sync-tool-summary-title">
+                              <svg class="accordion-chevron" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4l4 4-4 4"/></svg>
+                              <b>Storage Optimization</b>
+                            </div>
+                            <span id="storageOptimizationStatus" class="status-pill status-muted">Inspect</span>
+                            <span>Compress databases, optimize cached artwork, and recompress legacy backups</span>
+                          </summary>
+                          <div class="tool-item-row">
+                            <div id="storageOptimizationPanel" aria-live="polite"><p class="muted">Open to inspect storage usage.</p></div>
+                          </div>
+                        </details>
                       </div>
                     </article>
                   </div>
@@ -1151,6 +1164,10 @@
                               <b>Image Cache</b>
                               <span>Stores locally fetched posters, backdrops, cast profiles, logos, and other artwork used throughout the movie and TV detail pages.</span>
                               <span>Clearing the cache removes only the local image files. Plekt fetches them again automatically as you browse.</span>
+                            </li>
+                            <li>
+                              <b>Storage Optimization</b>
+                              <span>Shows disk usage across your databases, shared metadata cache, cached artwork, logs, and backups, and lets you compact databases, optimize cached WebP artwork, or recompress legacy v1 encrypted backups.</span>
                             </li>
                           </ul>
                         </div>

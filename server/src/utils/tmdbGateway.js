@@ -1,5 +1,6 @@
 import crypto from "node:crypto"; import { episodeOrderSeason } from "./episodeOrder.js";
-import { bumpDiscoverVersion, db, parseJson, toJson } from "../db.js";
+import { bumpDiscoverVersion, db, parseJson, toCompressedJson, toJson } from "../db.js";
+import { extractTmdbExternalTvdbId, extractTmdbSeasonPosters } from "./sharedMetadataStore.js";
 import { fetchWithTimeout } from "./outbound.js";
 import { retryAfterMs } from "./retryAfter.js";
 import { loadMediaConfig, loadRuntimeState, setRuntimeState } from "./configStore.js";
@@ -59,26 +60,27 @@ const metaGetByTmdbIdStmt = db.prepare("SELECT * FROM tmdb_metadata_cache WHERE 
 // cache-only lookup for that identity as well. JSON1 is already required by
 // the metadata-column migration in db.js.
 const metaGetByTvdbIdStmt = db.prepare(
-  // The CASE expression must match idx_tmdb_metadata_cache_tv_tvdb_id in
+  // The COALESCE expression must match idx_tmdb_metadata_cache_tv_tvdb_id in
   // sharedMetadataStore.js exactly, or the lookup scans every TV row's JSON.
-  "SELECT * FROM tmdb_metadata_cache WHERE media_type = 'tv' AND (CASE WHEN json_valid(details) THEN json_extract(details, '$.external_ids.tvdb_id') END) = ? ORDER BY updated_at_ms DESC, rowid ASC LIMIT 1",
+  "SELECT * FROM tmdb_metadata_cache WHERE media_type = 'tv' AND COALESCE(tvdb_id, CASE WHEN typeof(details) = 'text' AND json_valid(details) THEN CAST(json_extract(details, '$.external_ids.tvdb_id') AS TEXT) END) = ? ORDER BY updated_at_ms DESC, rowid ASC LIMIT 1",
 );
-// `status`, `poster_path` and the backdrop/poster URLs are mirrored out of the
-// details blob into their own columns so grid and card paths can read the two
-// or three fields they need without parsing a blob that averages 64KB for a TV
-// entry. They must be written on every cache write, not only backfilled by the
-// migration, or a title refreshed after the upgrade would read back NULL and
-// lose its poster and status.
+// `status`, `poster_path`, `tvdb_id`, `season_posters` and the backdrop/poster
+// URLs are mirrored out of the details blob into their own columns so grid,
+// card, and lookup paths can read them without decompressing or parsing a blob
+// that averages 64KB for a TV entry. They must be written on every cache write,
+// not only backfilled by the migration, or a title refreshed after the upgrade
+// would read back NULL and lose its poster and status.
 const metaSetStmt = db.prepare(
-  `INSERT INTO tmdb_metadata_cache (id, tmdb_id, media_type, title, details, status, poster_path, cached_poster_url,
-     backdrop_path, cached_backdrop_url, tvdb_poster_url, original_language, schema_version, updated_at_ms)
-   VALUES (@id, @tmdb_id, @media_type, @title, @details, @status, @poster_path, @cached_poster_url,
-     @backdrop_path, @cached_backdrop_url, @tvdb_poster_url, @original_language, @schema_version, @updated_at_ms)
-   ON CONFLICT(id) DO UPDATE SET tmdb_id=excluded.tmdb_id, media_type=excluded.media_type, title=excluded.title,
+  `INSERT INTO tmdb_metadata_cache (id, tmdb_id, tvdb_id, media_type, title, details, status, poster_path, cached_poster_url,
+     backdrop_path, cached_backdrop_url, tvdb_poster_url, season_posters, original_language, schema_version, updated_at_ms)
+   VALUES (@id, @tmdb_id, @tvdb_id, @media_type, @title, @details, @status, @poster_path, @cached_poster_url,
+     @backdrop_path, @cached_backdrop_url, @tvdb_poster_url, @season_posters, @original_language, @schema_version, @updated_at_ms)
+   ON CONFLICT(id) DO UPDATE SET tmdb_id=excluded.tmdb_id, tvdb_id=excluded.tvdb_id, media_type=excluded.media_type, title=excluded.title,
      details=excluded.details, status=excluded.status, poster_path=excluded.poster_path,
      cached_poster_url=excluded.cached_poster_url, backdrop_path=excluded.backdrop_path,
      cached_backdrop_url=excluded.cached_backdrop_url, tvdb_poster_url=excluded.tvdb_poster_url,
-     original_language=excluded.original_language, schema_version=excluded.schema_version, updated_at_ms=excluded.updated_at_ms`,
+     season_posters=excluded.season_posters, original_language=excluded.original_language,
+     schema_version=excluded.schema_version, updated_at_ms=excluded.updated_at_ms`,
 );
 function metaGet(id) {
   const row = metaGetStmt.get(id);
@@ -102,15 +104,17 @@ function metaSet(id, value) {
   metaSetStmt.run({
     id,
     tmdb_id: value.tmdbId != null ? String(value.tmdbId) : null,
+    tvdb_id: extractTmdbExternalTvdbId(details),
     media_type: value.mediaType || null,
     title: value.title || null,
-    details: value.details != null ? toJson(value.details) : null,
+    details: value.details != null ? toCompressedJson(value.details) : null,
     status: details.status || null,
     poster_path: details.poster_path || null,
     cached_poster_url: details.cached_poster_url || details.cachedPosterUrl || null,
     backdrop_path: details.backdrop_path || null,
     cached_backdrop_url: details.cached_backdrop_url || details.cachedBackdropUrl || null,
     tvdb_poster_url: details.tvdb_poster_url || details.tvdbPosterUrl || null,
+    season_posters: extractTmdbSeasonPosters(details),
     original_language: typeof details.original_language === "string" && details.original_language ? details.original_language.toLowerCase() : null,
     schema_version: value.schemaVersion ?? null,
     updated_at_ms: value.updatedAtMs ?? Date.now(),
@@ -1084,7 +1088,7 @@ export async function searchTmdb({ query, page = 1, mediaType = "multi" }) {
     try {
       const response = await upstream(`search/${type}`, { query, page: safePage, include_adult: false });
       const cleaned = { ...response, results: (response.results || []).filter((item) => ["movie", "tv", "person"].includes(item.media_type || type)) };
-      searchSetStmt.run({ id: cacheKey, query, media_type: type, page: safePage, response: toJson(cleaned), missing: cleaned.results.length ? 0 : 1, updated_at_ms: Date.now() });
+      searchSetStmt.run({ id: cacheKey, query, media_type: type, page: safePage, response: toCompressedJson(cleaned), missing: cleaned.results.length ? 0 : 1, updated_at_ms: Date.now() });
       return cleaned;
     } catch (error) {
       if (cached?.response) return { ...cached.response, cache_stale: true };
@@ -1105,7 +1109,7 @@ export async function searchTmdbCollections({ query, page = 1 }) {
     try {
       const response = await upstream("search/collection", { query: cleanQuery, page: safePage, include_adult: false });
       const cleaned = { ...response, results: (response.results || []).filter((item) => item?.id) };
-      searchSetStmt.run({ id: cacheKey, query: cleanQuery, media_type: "collection", page: safePage, response: toJson(cleaned), missing: cleaned.results.length ? 0 : 1, updated_at_ms: Date.now() });
+      searchSetStmt.run({ id: cacheKey, query: cleanQuery, media_type: "collection", page: safePage, response: toCompressedJson(cleaned), missing: cleaned.results.length ? 0 : 1, updated_at_ms: Date.now() });
       return cleaned;
     } catch (error) {
       if (cached?.response) return { ...cached.response, cache_stale: true };
@@ -1193,7 +1197,7 @@ async function getTmdbRecommendationsForId(type, tmdbId) {
         query: String(tmdbId),
         media_type: `recommendations:${type}`,
         page: 1,
-        response: toJson(cleaned),
+        response: toCompressedJson(cleaned),
         missing: cleaned.results.length ? 0 : 1,
         updated_at_ms: Date.now(),
       });
@@ -1418,7 +1422,7 @@ async function refreshDiscoveryCache(request) {
     query: request.genre,
     media_type: `discover:${request.type}`,
     page: 1,
-    response: toJson(payload),
+    response: toCompressedJson(payload),
     missing: hasResults ? 0 : 1,
     updated_at_ms: Date.now(),
   });
@@ -1587,7 +1591,7 @@ export async function getTmdbSeasonEpisodes({ tmdbId, seasonNumber, lane = "enri
     if (Number(error?.status) !== 404) throw error;
     season = { episodes: [] };
   }
-  tmdbSeasonSetStmt.run({ id: cacheId, tmdb_id: id, season_number: number, show_status: null, details: toJson(season), updated_at_ms: Date.now() });
+  tmdbSeasonSetStmt.run({ id: cacheId, tmdb_id: id, season_number: number, show_status: null, details: toCompressedJson(season), updated_at_ms: Date.now() });
   return shapeTmdbSeason(season);
 }
 
@@ -1722,7 +1726,7 @@ export async function getTmdbPerson(personId, { lane = "enrichment" } = {}) {
         images: { profiles: (fetched.images?.profiles || []).slice(0, 200) },
         tagged_images: boundedResults(fetched.tagged_images, 250) || { results: [] },
       };
-      personSetStmt.run({ id: `person_${id}`, person_id: id, details: toJson(details), schema_version: PERSON_SCHEMA_VERSION, updated_at_ms: Date.now() });
+      personSetStmt.run({ id: `person_${id}`, person_id: id, details: toCompressedJson(details), schema_version: PERSON_SCHEMA_VERSION, updated_at_ms: Date.now() });
       return details;
     } catch (error) {
       if (cached?.details) return { ...cached.details, cache_stale: true };

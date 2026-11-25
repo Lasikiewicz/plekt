@@ -14,61 +14,48 @@ const selectArtworkRecordByIdentityStmt = db.prepare(
 );
 const selectTmdbMetadataStmt = db.prepare("SELECT details FROM tmdb_metadata_cache WHERE id = ?");
 const selectTmdbPosterFieldsStmt = db.prepare("SELECT poster_path, cached_poster_url, tvdb_poster_url FROM tmdb_metadata_cache WHERE id = ?");
-const selectCachedTvSeasonPostersStmt = db.prepare(`
-  WITH selected_metadata AS (
-    SELECT id, details
-    FROM tmdb_metadata_cache
-    WHERE media_type = 'tv'
-      AND (
-        (
-          @tmdb_id <> ''
-          AND id = 'tv_' || @tmdb_id
-          AND (@tvdb_id = '' OR CASE WHEN json_valid(details) THEN json_extract(details, '$.external_ids.tvdb_id') END = @tvdb_id)
-        )
-        OR (
-          @tvdb_id <> ''
-          AND id = 'tv_tvdb_' || @tvdb_id
-          AND CASE WHEN json_valid(details) THEN json_extract(details, '$.external_ids.tvdb_id') END = @tvdb_id
-        )
+const selectCachedTvSeasonMetaStmt = db.prepare(`
+  SELECT id, season_posters, details
+  FROM tmdb_metadata_cache
+  WHERE media_type = 'tv'
+    AND (
+      (
+        @tmdb_id <> ''
+        AND id = 'tv_' || @tmdb_id
+        AND (@tvdb_id = '' OR COALESCE(tvdb_id, CASE WHEN typeof(details) = 'text' AND json_valid(details) THEN CAST(json_extract(details, '$.external_ids.tvdb_id') AS TEXT) END) = @tvdb_id)
       )
-    ORDER BY CASE WHEN id = 'tv_' || @tmdb_id THEN 0 ELSE 1 END
-    LIMIT 1
-  )
-  SELECT
-    CAST(json_extract(season.value, '$.season_number') AS INTEGER) AS season_number,
-    COALESCE(
-      NULLIF(json_extract(season.value, '$.poster_url'), ''),
-      NULLIF(json_extract(season.value, '$.posterUrl'), ''),
-      NULLIF(json_extract(season.value, '$.cached_poster_url'), ''),
-      NULLIF(json_extract(season.value, '$.cachedPosterUrl'), ''),
-      NULLIF(json_extract(season.value, '$.poster_path'), ''),
-      NULLIF(json_extract(season.value, '$.posterPath'), ''),
-      NULLIF(json_extract(season.value, '$.image_url'), ''),
-      NULLIF(json_extract(season.value, '$.imageUrl'), ''),
-      NULLIF(json_extract(season.value, '$.image'), ''),
-      NULLIF(json_extract(season.value, '$.poster.path'), '')
-    ) AS poster
-  FROM selected_metadata AS metadata
-  JOIN json_each(
-    CASE WHEN json_valid(metadata.details) THEN metadata.details ELSE '{"seasons":[]}' END,
-    '$.seasons'
-  ) AS season
+      OR (
+        @tvdb_id <> ''
+        AND id = 'tv_tvdb_' || @tvdb_id
+        AND COALESCE(tvdb_id, CASE WHEN typeof(details) = 'text' AND json_valid(details) THEN CAST(json_extract(details, '$.external_ids.tvdb_id') AS TEXT) END) = @tvdb_id
+      )
+    )
+  ORDER BY CASE WHEN id = 'tv_' || @tmdb_id THEN 0 ELSE 1 END
+  LIMIT 1
 `);
 const selectPosterCacheStmt = db.prepare(
   "SELECT url FROM poster_cache WHERE media_key = ? AND variant = 'poster' AND status = 'cached' LIMIT 1",
 );
 const selectTvdbMetadataStmt = db.prepare("SELECT details FROM tvdb_metadata_cache WHERE id = ?");
-// Only the tvdb id is needed to index every cached TV entry. Parsing each
-// details blob in JavaScript to reach it blocked the event loop for about
-// 350 ms on a real library; SQLite extracts it in about a third of that.
-// Empty and zero ids fall through to tvdbId, as the JavaScript || chain did.
+// Only the tvdb id is needed to index every cached TV entry. The mirrored
+// tvdb_id column avoids touching compressed details blobs; legacy uncompressed
+// rows without tvdb_id still fall back to json_extract.
 const selectCachedTvTvdbIdsStmt = db.prepare(`
   SELECT id, COALESCE(
-    NULLIF(NULLIF(json_extract(details, '$.external_ids.tvdb_id'), ''), 0),
-    json_extract(details, '$.external_ids.tvdbId')
+    NULLIF(NULLIF(tvdb_id, ''), '0'),
+    CASE WHEN typeof(details) = 'text' AND json_valid(details) THEN
+      COALESCE(
+        NULLIF(NULLIF(json_extract(details, '$.external_ids.tvdb_id'), ''), 0),
+        json_extract(details, '$.external_ids.tvdbId')
+      )
+    END
   ) AS tvdb_id
   FROM tmdb_metadata_cache
-  WHERE media_type = 'tv' AND details IS NOT NULL AND json_valid(details)
+  WHERE media_type = 'tv'
+    AND (
+      (tvdb_id IS NOT NULL AND tvdb_id <> '' AND tvdb_id <> '0')
+      OR (typeof(details) = 'text' AND json_valid(details))
+    )
   ORDER BY rowid
 `);
 const selectSeasonArtworkByKeyStmt = db.prepare(
@@ -232,25 +219,52 @@ function cachedSeasonPosterUrl(rawPoster, tmdbId = "") {
 }
 
 // Season art belongs to an episode's season, while getCanonicalPosterUrl
-// continues to resolve the artwork shared by the show itself. Read only the
-// compact season poster fields from cached metadata so episode-card rendering
-// does not parse a full TV details blob for every show.
+// continues to resolve the artwork shared by the show itself. Read the
+// compact season_posters column when present so episode-card rendering does
+// not decompress or parse a full TV details blob; fall back to details for
+// legacy rows that predate the column.
 export function getCanonicalSeasonPosterUrls(item = {}) {
   const identity = showArtworkIdentity(item);
   const hasProviderIdentity = Boolean(identity.tmdb_id || identity.tvdb_id || identity.imdb_id);
-  const rows = hasProviderIdentity
-    ? selectCachedTvSeasonPostersStmt.all({
+  const metaRow = hasProviderIdentity
+    ? selectCachedTvSeasonMetaStmt.get({
       tmdb_id: identity.tmdb_id,
       tvdb_id: identity.tvdb_id,
     })
-    : [];
+    : null;
   const posters = new Map();
-  for (const row of rows) {
-    if (row.season_number == null) continue;
-    const seasonNumber = Number(row.season_number);
-    if (!Number.isInteger(seasonNumber) || seasonNumber < 0) continue;
-    const posterUrl = cachedSeasonPosterUrl(row.poster, identity.tmdb_id);
-    if (posterUrl) posters.set(seasonNumber, posterUrl);
+  if (metaRow) {
+    const compact = metaRow.season_posters ? parseJson(metaRow.season_posters, null) : null;
+    if (Array.isArray(compact)) {
+      for (const pair of compact) {
+        if (!Array.isArray(pair) || pair.length < 2) continue;
+        const seasonNumber = Number(pair[0]);
+        if (!Number.isInteger(seasonNumber) || seasonNumber < 0) continue;
+        const posterUrl = cachedSeasonPosterUrl(pair[1], identity.tmdb_id);
+        if (posterUrl) posters.set(seasonNumber, posterUrl);
+      }
+    } else if (metaRow.details) {
+      const details = parseJson(metaRow.details, null);
+      for (const season of Array.isArray(details?.seasons) ? details.seasons : []) {
+        if (!season || season.season_number == null) continue;
+        const seasonNumber = Number(season.season_number);
+        if (!Number.isInteger(seasonNumber) || seasonNumber < 0) continue;
+        const rawPoster = [
+          season.poster_url,
+          season.posterUrl,
+          season.cached_poster_url,
+          season.cachedPosterUrl,
+          season.poster_path,
+          season.posterPath,
+          season.image_url,
+          season.imageUrl,
+          season.image,
+          season.poster?.path,
+        ].map(clean).find(Boolean) || "";
+        const posterUrl = cachedSeasonPosterUrl(rawPoster, identity.tmdb_id);
+        if (posterUrl) posters.set(seasonNumber, posterUrl);
+      }
+    }
   }
   // A chosen season poster outranks the provider art cached above.
   const identityKeys = mediaArtworkIdentityKeys(item, { includeTitle: false });

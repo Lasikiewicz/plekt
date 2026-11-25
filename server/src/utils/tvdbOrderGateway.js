@@ -1,4 +1,4 @@
-import { db, parseJson, toJson } from "../db.js";
+import { db, parseJson, toCompressedJson } from "../db.js";
 import { getTvdbSeriesExtended, requestTvdbOrderEndpoint } from "./tvdbGateway.js";
 import { AIRED_ORDER, ORDER_TYPES } from "./tvdbOrderTypes.js";
 
@@ -174,7 +174,7 @@ async function loadSeasonTypes(loadEndpoint) {
   const dvdId = positiveInt(types.find((item) => item?.type === "dvd")?.id);
   if (!officialId || !dvdId) throw new Error("TVDB season types response is missing an exact order type");
   const fetchedAt = Date.now();
-  cacheSet.run({ id: key, tvdb_id: "", title: "", details: toJson({ types, fetchedAt }), updated_at_ms: fetchedAt });
+  cacheSet.run({ id: key, tvdb_id: "", title: "", details: toCompressedJson({ types, fetchedAt }), updated_at_ms: fetchedAt });
   return types;
 }
 
@@ -217,7 +217,7 @@ async function fetchCatalogue(id, { force, loadEndpoint, loadSeries }) {
     id: key,
     tvdb_id: String(id),
     title: String(extended.name || ""),
-    details: toJson(catalogue),
+    details: toCompressedJson(catalogue),
     updated_at_ms: catalogue.fetchedAt,
   });
   return catalogue;

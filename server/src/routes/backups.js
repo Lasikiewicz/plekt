@@ -7,7 +7,7 @@ import { requireInstallAdmin } from "../utils/auth.js";
 import { readJson } from "../utils/requestBody.js";
 import { sendJson, sendOptions, methodNotAllowed } from "../utils/http.js";
 import { fetchWithTimeout } from "../utils/outbound.js";
-import { db, writeAuditLog } from "../db.js";
+import { db, parseJson, toCompressedJson, writeAuditLog } from "../db.js";
 import { createLoopStore } from "../utils/loopStore.js";
 import { listActiveSessions } from "../utils/activeSessions.js";
 import { claimSyncOperation, clearRestoreSyncState, isAuthoritativeRestoreActive, loadMediaConfig, loadRuntimeState, releaseSyncOperation, RESTORE_KIND_BACKUP, setRuntimeState, appendRuntimeLog, touchSyncOperation } from "../utils/configStore.js";
@@ -84,8 +84,8 @@ function saveRestoreReport(runId, result, log = []) {
   db.transaction(() => {
     insertRestoreReportStmt.run(
       String(runId),
-      JSON.stringify(result || null),
-      JSON.stringify(Array.isArray(log) ? log : []),
+      toCompressedJson(result || null),
+      toCompressedJson(Array.isArray(log) ? log : []),
       now,
       now,
     );
@@ -96,10 +96,8 @@ function saveRestoreReport(runId, result, log = []) {
 function loadRestoreReport(runId) {
   const row = selectRestoreReportStmt.get(String(runId || ""));
   if (!row) return null;
-  let result = null;
-  let log = [];
-  try { result = row.result_json ? JSON.parse(row.result_json) : null; } catch { /* ignore corrupt report */ }
-  try { log = row.log_json ? JSON.parse(row.log_json) : []; } catch { /* ignore corrupt report */ }
+  const result = row.result_json ? parseJson(row.result_json, null) : null;
+  const log = row.log_json ? parseJson(row.log_json, []) : [];
   return { result, log: Array.isArray(log) ? log : [], createdAt: row.created_at, updatedAt: row.updated_at };
 }
 

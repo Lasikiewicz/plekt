@@ -1,6 +1,19 @@
 import { adminDb, bumpUpNextVersion, db, parseJson, toJson } from "../db.js";
 import { assertSafeOutboundUrl, normalizeHttpUrl, configureOutboundGovernor, sameServerUrl } from "./outbound.js";
-import { applyTuningConfig, normalizePlexHistoricalWatchedSync, normalizeTuningSection, normalizeWatchImportMode, plexHistoricalWatchedSyncDefault, tuningClamps, tuningEnvDefaults, watchImportModeDefault, WATCH_IMPORT_MODES } from "./tuning.js";
+import {
+  applyTuningConfig,
+  AUDIT_RETENTION_DAYS_RANGE,
+  auditRetentionDaysDefault,
+  normalizeAuditRetentionDays,
+  normalizePlexHistoricalWatchedSync,
+  normalizeTuningSection,
+  normalizeWatchImportMode,
+  plexHistoricalWatchedSyncDefault,
+  tuningClamps,
+  tuningEnvDefaults,
+  watchImportModeDefault,
+  WATCH_IMPORT_MODES,
+} from "./tuning.js";
 import { normalizeSyncRoles, validateSyncRolesSection, normalizeAuthority } from "./syncRoles.js";
 import { getMediaConnection, resolveConnectedProviderConfig } from "./mediaConnectionRepo.js";
 import { getValidPlexServerToken, getValidPlexToken } from "./plexTokenManager.js";
@@ -373,6 +386,7 @@ export function normalizeStoredConfig(stored = {}) {
       ...normalizeTuningSection(stored.tuning || {}),
       watchImportMode: normalizeWatchImportMode(stored.tuning?.watchImportMode),
       plexHistoricalWatchedSync: normalizePlexHistoricalWatchedSync(stored.tuning?.plexHistoricalWatchedSync),
+      auditRetentionDays: normalizeAuditRetentionDays(stored.tuning?.auditRetentionDays),
     },
     syncScope: normalizeSyncScope(stored.syncScope || {}),
     authority: normalizeAuthority(stored.authority || {}),
@@ -647,6 +661,15 @@ function publicTuningConfig(storedTuning = {}) {
     value: historicalOverride === null ? historicalDefault : historicalOverride,
     default: historicalDefault,
     overridden: historicalOverride !== null,
+  };
+  const auditOverride = normalizeAuditRetentionDays(storedTuning.auditRetentionDays);
+  const auditDefault = auditRetentionDaysDefault();
+  result.auditRetentionDays = {
+    value: auditOverride === null ? auditDefault : auditOverride,
+    default: auditDefault,
+    overridden: auditOverride !== null,
+    min: AUDIT_RETENTION_DAYS_RANGE[0],
+    max: AUDIT_RETENTION_DAYS_RANGE[1],
   };
   return result;
 }
@@ -959,6 +982,14 @@ export function validateConfig(config = {}) {
       const normalizedMode = String(requestedWatchImportMode).trim().toLowerCase();
       if (!WATCH_IMPORT_MODES.includes(normalizedMode)) {
         errors.push(`tuning.watchImportMode must be one of ${WATCH_IMPORT_MODES.join(", ")}`);
+      }
+    }
+    const requestedAuditRetention = config.tuning.auditRetentionDays;
+    if (requestedAuditRetention !== null && requestedAuditRetention !== undefined && String(requestedAuditRetention).trim() !== "") {
+      const num = Number(requestedAuditRetention);
+      const [minDays, maxDays] = AUDIT_RETENTION_DAYS_RANGE;
+      if (!Number.isFinite(num) || num < minDays || num > maxDays) {
+        errors.push(`tuning.auditRetentionDays must be between ${minDays} and ${maxDays}`);
       }
     }
   }

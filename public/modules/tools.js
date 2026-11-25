@@ -8,6 +8,7 @@ import { initDuplicateWatchTools } from "./tools-duplicates.js?v=2.3.0.0.6";
 import { initWipeDataTools } from "./tools-wipe-data.js?v=2.3.0.0.6";
 import { initPlaystateAliasTools } from "./tools-playstate-aliases.js?v=2.3.0.0.6";
 import { initSplitEpisodeRepairTools } from "./tools-split-episode-repair.js?v=2.3.0.0.6";
+import { initStorageTools } from "./tools-storage.js?v=2.3.0.0.6";
 // Callbacks injected by app.js at startup to avoid circular imports.
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -37,6 +38,7 @@ export function initTools(callbacks) {
   initWipeDataTools(callbacks);
   initPlaystateAliasTools(callbacks);
   initSplitEpisodeRepairTools(callbacks);
+  initStorageTools(callbacks);
 }
 function authHeaders() {
   return buildAuthHeaders(state.token);
