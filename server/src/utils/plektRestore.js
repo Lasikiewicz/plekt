@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { pipeline } from "node:stream/promises";
 import { StringDecoder } from "node:string_decoder";
 import { promisify } from "node:util";
@@ -20,7 +21,9 @@ import { pauseCronSync, resumeCronSync } from "./watchHistoryBackups.js";
 // passes; the second pass imports through importCollectionBatch, the same
 // rules as the browser restore.
 
-const ENCRYPTED_VERSION = 1;
+// Version 1 payloads are plain JSON; version 2 payloads are gzip (written by
+// the server since full backups were compressed). Browser exports stay version 1.
+const ENCRYPTED_VERSIONS = new Set([1, 2]);
 const DEFAULT_ITERATIONS = 250000;
 const HEADER_PEEK_BYTES = 64 * 1024;
 const READ_CHUNK_BYTES = 1024 * 1024;
@@ -31,6 +34,7 @@ const UPLOAD_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f
 const STALE_UPLOAD_MS = 24 * 60 * 60 * 1000;
 const RESTORED_COLLECTIONS = new Set(BROWSER_BACKUP_COLLECTIONS);
 const DECRYPT_ERROR = "Could not decrypt this Plekt backup. Check the passphrase and file.";
+const DECOMPRESS_ERROR = "This Plekt backup decrypted but could not be decompressed. The file is damaged.";
 const DATABASE_RECOVERY_OPTIONS = Object.freeze([
   "Cancel the restore and keep the current database files for recovery.",
   "Preserve the database file (plekt.db, or plembfin.db on an older install) and its -wal/-shm sidecars, start Plekt with a clean database, then retry this backup. The backup replaces its supported collections and may not include the newest changes.",
@@ -68,8 +72,13 @@ export function readEncryptedEnvelope(filePath) {
     throw new Error("This is not a supported encrypted Plekt backup file.");
   }
   const encryption = envelope.encryption || {};
-  if (!isEncryptedBackupFormat(envelope.format) || Number(envelope.version) !== ENCRYPTED_VERSION) {
+  const version = Number(envelope.version);
+  if (!isEncryptedBackupFormat(envelope.format) || !ENCRYPTED_VERSIONS.has(version)) {
     throw new Error("This is not a supported encrypted Plekt backup file.");
+  }
+  const compression = envelope.compression ?? "";
+  if (version === 1 ? compression !== "" : compression !== "gzip") {
+    throw new Error("This encrypted backup uses an unsupported compression method.");
   }
   if (encryption.algorithm !== "AES-256-GCM" || encryption.kdf !== "PBKDF2" || (encryption.hash && encryption.hash !== "SHA-256")) {
     throw new Error("This encrypted backup uses an unsupported encryption method.");
@@ -77,6 +86,7 @@ export function readEncryptedEnvelope(filePath) {
   const iterations = Number(encryption.iterations);
   return {
     payloadOffset: match.index + match[0].length,
+    gzip: compression === "gzip",
     salt: Buffer.from(String(encryption.salt || ""), "base64"),
     iv: Buffer.from(String(encryption.iv || ""), "base64"),
     iterations: Number.isInteger(iterations) && iterations >= 10000 && iterations <= 10000000 ? iterations : DEFAULT_ITERATIONS,
@@ -128,6 +138,44 @@ async function* decryptedChunks(filePath, envelope, key, onBytes) {
     throw new Error(DECRYPT_ERROR);
   }
   if (last.length) yield last;
+}
+
+// Inflates a gzip payload as it is decrypted. If gunzip fails, the rest of the
+// payload is still decrypted so a wrong passphrase or changed file reports the
+// auth tag failure (DECRYPT_ERROR) rather than a gzip error.
+async function* gunzipChunks(source) {
+  const gunzip = zlib.createGunzip();
+  let sourceError = null;
+  let gunzipError = null;
+  let stopped = false;
+  gunzip.on("error", (error) => { if (!sourceError) gunzipError = error; });
+  const feeding = (async () => {
+    try {
+      for await (const chunk of source) {
+        if (stopped) break;
+        if (gunzipError) continue;
+        if (!gunzip.write(chunk) && !gunzipError) {
+          await new Promise((resolve) => { gunzip.once("drain", resolve); gunzip.once("error", resolve); gunzip.once("close", resolve); });
+        }
+      }
+      if (!gunzipError && !stopped) gunzip.end();
+    } catch (error) {
+      sourceError = error;
+      gunzip.destroy();
+    }
+  })();
+  try {
+    try {
+      for await (const plain of gunzip) yield plain;
+    } catch { /* reported below */ }
+    await feeding;
+    if (sourceError) throw sourceError;
+    if (gunzipError) throw new Error(DECOMPRESS_ERROR);
+  } finally {
+    stopped = true;
+    gunzip.destroy();
+    await feeding;
+  }
 }
 
 // With drainOnError, a scan error still reads the rest of the stream, so a wrong
@@ -359,7 +407,9 @@ export async function runPlektRestore({ filePath, passphrase = "", label = "", r
     const open = () => {
       job.bytesRead = 0;
       const onBytes = (count) => { job.bytesRead += count; };
-      return envelope ? decryptedChunks(filePath, envelope, key, onBytes) : plainChunks(filePath, onBytes);
+      if (!envelope) return plainChunks(filePath, onBytes);
+      const decrypted = decryptedChunks(filePath, envelope, key, onBytes);
+      return envelope.gzip ? gunzipChunks(decrypted) : decrypted;
     };
 
     const { portable, counts } = await verifyBackup(open);

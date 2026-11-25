@@ -1,6 +1,6 @@
-import { elements } from "./state.js?v=2.3.0.0.4";
-import { escapeAttribute } from "./utils.js?v=2.3.0.0.4";
-import { renderBackupDestinationCardGrid } from "./backup-destinations.js?v=2.3.0.0.4";
+import { elements } from "./state.js?v=2.3.0.0.5";
+import { escapeAttribute } from "./utils.js?v=2.3.0.0.5";
+import { renderBackupDestinationCardGrid } from "./backup-destinations.js?v=2.3.0.0.5";
 
 export function createOnboardingBackups({
   getBackupData,

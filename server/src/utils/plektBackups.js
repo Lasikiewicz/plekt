@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { db, parseJson, toJson } from "../db.js";
 import { FULL_BACKUPS_DIR } from "../paths.js";
 import { fullBackupJsonChunks } from "./backup.js";
@@ -17,6 +18,7 @@ const FILE_PATTERN = FULL_BACKUP_FILE_PATTERN;
 const TEMPORARY_FILE_PATTERN = FULL_BACKUP_TEMPORARY_FILE_PATTERN;
 const STALE_TEMPORARY_MS = 10 * 60 * 1000;
 const WRITE_CHUNK_CHARS = 1024 * 1024;
+const ENCRYPTED_BACKUP_VERSION = 2;
 const SCHEDULED_ATTEMPTS_PER_DAY = 3;
 const SCHEDULED_RETRY_GAP_MS = 60 * 60 * 1000;
 
@@ -183,8 +185,10 @@ function removeStaleTemporaryFiles(now = Date.now()) {
   }
 }
 
-// Writes the same file JSON.stringify(encryptedObject, null, 2) used to produce,
-// but encrypts and base64-encodes the backup in chunks straight to disk. Building
+// Writes the same layout JSON.stringify(encryptedObject, null, 2) used to produce,
+// but gzips, encrypts and base64-encodes the backup in chunks straight to disk.
+// Each write chunk is its own gzip member; gunzip reads the concatenated members
+// as one stream. Version 2 marks the gzip payload; version 1 files were plain JSON. Building
 // it in memory needed several copies of the whole backup (about 3 GB for a 490 MB
 // file), which got the process killed. Everything here is synchronous so the
 // backup's row iterators never overlap other queries on the shared connection.
@@ -196,7 +200,8 @@ export function writeEncryptedPlektBackup(filePath, passphrase, { chunks = fullB
   const encryptedAt = new Date().toISOString();
   const envelope = JSON.stringify({
     format: ENCRYPTED_BACKUP_FORMAT,
-    version: 1,
+    version: ENCRYPTED_BACKUP_VERSION,
+    compression: "gzip",
     encryptedAt,
     encryption: {
       algorithm: "AES-256-GCM",
@@ -232,12 +237,12 @@ export function writeEncryptedPlektBackup(filePath, passphrase, { chunks = fullB
       pending.push(chunk);
       pendingLength += chunk.length;
       if (pendingLength >= WRITE_CHUNK_CHARS) {
-        writeEncrypted(cipher.update(pending.join(""), "utf8"));
+        writeEncrypted(cipher.update(zlib.gzipSync(pending.join(""))));
         pending = [];
         pendingLength = 0;
       }
     }
-    if (pending.length) writeEncrypted(cipher.update(pending.join(""), "utf8"));
+    if (pending.length) writeEncrypted(cipher.update(zlib.gzipSync(pending.join(""))));
     writeEncrypted(cipher.final());
     writeEncrypted(cipher.getAuthTag());
     if (carry.length) write(carry.toString("base64"));

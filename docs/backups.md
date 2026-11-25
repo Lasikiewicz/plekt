@@ -13,7 +13,7 @@ live under **Settings → Restore → Local / Remote** (`/settings/restore#resto
 | Subsystem | What it saves | Format | Files |
 | --- | --- | --- | --- |
 | Watch-history backups | `watch_history`, `playstate`, `playback_progress` + manifest | gzip JSON (`plekt-watch-history-<stamp>.json.gz`) | `server/src/utils/watchHistoryBackups.js` |
-| Encrypted full backups | Every portable collection, including canonical personal watchlist mutations, provider ledger, queue, runs, and activity (but no provider secret) | AES-256-GCM encrypted JSON (`plekt-backup-<stamp>.encrypted.json`) | `server/src/utils/plektBackups.js` |
+| Encrypted full backups | Every portable collection, including canonical personal watchlist mutations, provider ledger, queue, runs, and activity (but no provider secret) | AES-256-GCM encrypted, gzip-compressed JSON (`plekt-backup-<stamp>.encrypted.json`) | `server/src/utils/plektBackups.js` |
 | Full export/import | Same portable collections, plain JSON, paged over the API | `plekt-backup` v1 document | `server/src/utils/backup.js` |
 
 Saved show and season poster choices are included as database records. Artwork binaries,
@@ -166,10 +166,16 @@ Nightly encrypted snapshots of the entire portable backup document.
   failed day is retried at most 3 times, at least an hour apart, and an attempt that
   kills the process is reported on the card after the restart ("stopped before
   finishing") instead of being retried every tick.
-- **Writing** - the backup is encrypted and base64-encoded in chunks straight to a
-  `.tmp-<pid>` file and renamed when complete, so memory stays small whatever the
-  library size (building it in memory needed about 3 GB for a 490 MB file). The file
-  layout is unchanged. Leftover `.tmp-*` files older than 10 minutes, from a backup
+- **Writing** - the backup is gzip-compressed, encrypted and base64-encoded in chunks
+  straight to a `.tmp-<pid>` file and renamed when complete, so memory stays small
+  whatever the library size (building it in memory needed about 3 GB for a 490 MB
+  file). Each 1 MB write chunk is its own gzip member and restore inflates them as
+  one stream. The envelope keeps the same JSON layout, with `"version": 2` and
+  `"compression": "gzip"`; compression cuts a typical backup about 19 times (a
+  943 MB backup became 50 MB), since most of the size is raw webhook payloads in the
+  watch audit log. Restore still reads version 1 files (uncompressed, from older
+  server backups and from browser exports, which stay version 1). Plekt releases
+  before compression cannot restore a version 2 file. Leftover `.tmp-*` files older than 10 minutes, from a backup
   that was killed mid-write, are deleted at the start of the next backup.
 - **Restoring** - every restore on the Restore page (a listed local backup, a remote
   backup pulled to local storage first, or an uploaded file) runs on the server, so a

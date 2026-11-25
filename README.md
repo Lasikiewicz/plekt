@@ -597,7 +597,7 @@ Plekt runs automated daily backups; each type has its own schedule, retention, a
 manual Back Up Now button.
 
 - **Watch history backups** - snapshots of history, playstates, and resume markers (`data/backups/watch-history`)
-- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plekt`; existing `data/backups/plembfin` folders are migrated automatically on startup); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
+- **Full Plekt backups** - gzip-compressed and AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plekt`; existing `data/backups/plembfin` folders are migrated automatically on startup); restore checks SQLite integrity before import and explains recovery options if the database is corrupt
 - **Personal watchlist recovery** - full backups include the local canonical watchlist and sync ledger; restore pauses provider delivery until an explicit publish, while watch-history-only backups exclude it
 - **Remote backups** - optional mirrored copies of either type to Backblaze B2, S3-compatible buckets (Cloudflare R2, AWS S3, MinIO, Wasabi, etc.), WebDAV, Dropbox, or an external mounted folder, with per-type schedules and retention settings (Settings → Backup → Remote)
 

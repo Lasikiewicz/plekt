@@ -1,0 +1,46 @@
+---
+import SiteLayout from "../layouts/SiteLayout.astro";
+---
+
+<SiteLayout title="Privacy policy" description="How Plekt handles app, backup, and website data.">
+  <main id="main-content" class="container">
+    <article class="article-body privacy-policy">
+      <h1>Plekt privacy policy</h1>
+      <p>This policy covers the self-hosted Plekt app, its optional integrations, and the public Plekt website. Plekt is maintained by Lasikiewicz.</p>
+
+      <h2>Your Plekt instance</h2>
+      <p>Plekt stores app accounts and settings, watch history, playback progress, ratings, lists, connection credentials, and diagnostic information on the server where it is installed. It uses that data to sign you in, show your library and viewing activity, run the sync jobs you configure, and help diagnose problems. Your instance administrator manages access, local data, logs, and backups.</p>
+
+      <h2>Connected services</h2>
+      <p>When you configure media servers, watch trackers, metadata services, or request services, your instance exchanges the information needed for the features you enable. That can include library or title identifiers, search terms, playback and watch history, ratings, list entries, and media requests. Each service handles the information it receives under its own privacy policy.</p>
+
+      <h2>Backups</h2>
+      <p>Plekt stores local backups on your server. If you configure remote backups, your instance sends the backup types you select to the destination you specify. Watch-history backups contain viewing history, watched status, and resume progress. Full-instance backups are encrypted before upload and can contain your watch history, settings, and saved credentials.</p>
+
+      <h2>Dropbox backups</h2>
+      <p>When you connect Dropbox, you sign in on Dropbox and authorize Plekt to use its dedicated app folder. Your Plekt instance stores the authorization token needed to run backups. Your Dropbox password is entered on Dropbox.</p>
+      <p>Plekt uses backup files and their metadata, such as names, sizes, and modification dates, to upload backups, list and download them for restoration, test the connection, and remove old backups according to your retention settings. The integration uses Dropbox’s App Folder access, which limits it to the folder allocated to Plekt.</p>
+
+      <p>Your Plekt instance sends backups directly to Dropbox when you run a backup or enable a schedule.</p>
+      <p>Plekt’s maintainers do not receive your Dropbox authorization token or backup files through this integration. Dropbox handles files in your account under its <a href="https://www.dropbox.com/privacy">privacy policy</a>.</p>
+
+      <h2>Retention and disconnecting</h2>
+      <p>Plekt prunes older backup files based on the retention settings you choose. To stop Plekt from using Dropbox, remove the destination in Settings → Backup and revoke Plekt’s access in your Dropbox connected apps. Removing the destination leaves uploaded backups in your Dropbox account. You can delete those files in Dropbox.</p>
+
+      <h2>Install metrics, website, and public demo</h2>
+      <p>The self-hosted app’s optional daily install check is off by default. If enabled, it reports the app version, release channel, CPU architecture, and flags used to count new and active installs. The report contains no instance identifier, watch history, or library data. You can turn it off in Settings → General → Privacy.</p>
+      <p>The public Plekt website and public demo use Traks to measure site and demo usage. This is separate from the optional install check in the self-hosted app. The website saves your theme preference in your browser.</p>
+
+      <h2>Contact</h2>
+      <p>The Plekt project is responsible for how its Dropbox integration handles data. For privacy questions about the software or website, contact the maintainer through the <a href="https://github.com/Lasikiewicz/plekt">Plekt project on GitHub</a>. If someone else hosts your instance, contact its administrator about access to or deletion of your instance data. Keep credentials and backup contents out of public issues.</p>
+    </article>
+  </main>
+</SiteLayout>
+
+<style>
+  .privacy-policy {
+    max-width: 72ch;
+    margin-inline: auto;
+    padding-block: 3rem;
+  }
+</style>

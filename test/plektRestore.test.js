@@ -57,6 +57,23 @@ function writeBrowserStyleBackup(filePath, document, passphrase) {
   }));
 }
 
+// A server backup written before compression: version 1, plain JSON payload.
+function writeServerStyleBackup(filePath, payload, passphrase, { version = 1, compression } = {}) {
+  const salt = crypto.randomBytes(16);
+  const iv = crypto.randomBytes(12);
+  const key = crypto.pbkdf2Sync(passphrase, salt, 100000, 32, "sha256");
+  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(payload), cipher.final(), cipher.getAuthTag()]);
+  fs.writeFileSync(filePath, JSON.stringify({
+    format: "plekt-encrypted-backup",
+    version,
+    ...(compression ? { compression } : {}),
+    encryptedAt: new Date().toISOString(),
+    encryption: { algorithm: "AES-256-GCM", kdf: "PBKDF2", hash: "SHA-256", iterations: 100000, salt: salt.toString("base64"), iv: iv.toString("base64") },
+    payload: encrypted.toString("base64"),
+  }, null, 2));
+}
+
 function scanEvents(text, pieceSizes) {
   const events = [];
   const scanner = new BackupStreamScanner({
@@ -126,6 +143,37 @@ test("a server-written encrypted backup restores through the server", async () =
   assert.equal(runtimeRow("restoreAddedLater"), null, "the runtimeState collection is replaced");
   assert.equal(loadWatchBackupRuntime().cronSyncPausedUntil, undefined, "cron is resumed after the restore");
   assert.equal(fs.existsSync(filePath), true, "a listed backup is kept");
+  fs.rmSync(filePath);
+});
+
+test("an uncompressed version 1 server backup still restores", async () => {
+  const filePath = backupFile("plekt-backup-20260927T000002Z.encrypted.json");
+  const document = {
+    format: "plekt-backup", version: 1, portable: false,
+    collections: { runtimeState: [{ id: "legacyServerBackup", data: { kept: "café" } }] },
+  };
+  writeServerStyleBackup(filePath, Buffer.from(JSON.stringify(document)), PASSPHRASE);
+  const job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
+  assert.equal(job.status, "complete", job.error);
+  assert.deepEqual(runtimeRow("legacyServerBackup"), { kept: "café" });
+  fs.rmSync(filePath);
+});
+
+test("a gzip backup whose payload is not gzip, or a mismatched compression field, changes nothing", async () => {
+  upsertRuntime.run("restoreGzipMarker", JSON.stringify({ untouched: true }), 1);
+  const filePath = backupFile("plekt-backup-20260927T000003Z.encrypted.json");
+  const document = { format: "plekt-backup", version: 1, portable: false, collections: { runtimeState: [] } };
+  writeServerStyleBackup(filePath, Buffer.from(JSON.stringify(document)), PASSPHRASE, { version: 2, compression: "gzip" });
+  let job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
+  assert.equal(job.status, "failed");
+  assert.match(job.error, /could not be decompressed/);
+  assert.deepEqual(runtimeRow("restoreGzipMarker"), { untouched: true });
+
+  writeServerStyleBackup(filePath, Buffer.from(JSON.stringify(document)), PASSPHRASE, { version: 2 });
+  job = await runPlektRestore({ filePath, passphrase: PASSPHRASE });
+  assert.equal(job.status, "failed");
+  assert.match(job.error, /unsupported compression/);
+  assert.deepEqual(runtimeRow("restoreGzipMarker"), { untouched: true });
   fs.rmSync(filePath);
 });
 

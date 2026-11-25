@@ -1442,7 +1442,7 @@
           1
         ],
         [
-          "- **Full Plekt backups** - AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plekt`; existing `data/backups/plembfin` folders are migrated automatically on startup); restore checks SQLite integrity before import and explains recovery options if the database is corrupt",
+          "- **Full Plekt backups** - gzip-compressed and AES-256-GCM encrypted, includes settings/keys/credentials/history (`data/backups/plekt`; existing `data/backups/plembfin` folders are migrated automatically on startup); restore checks SQLite integrity before import and explains recovery options if the database is corrupt",
           1
         ]
       ]

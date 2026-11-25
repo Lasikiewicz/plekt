@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 
 import { makeTempDataDir } from "./helpers.js";
 
@@ -62,7 +63,7 @@ function decryptFile(filePath, passphrase) {
   const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
   decipher.setAuthTag(payload.subarray(payload.length - 16));
   const plain = Buffer.concat([decipher.update(payload.subarray(0, payload.length - 16)), decipher.final()]);
-  return { envelope, plain: plain.toString("utf8") };
+  return { envelope, plain: (envelope.compression === "gzip" ? zlib.gunzipSync(plain) : plain).toString("utf8") };
 }
 
 function writeRuntime(values) {
@@ -85,7 +86,7 @@ test("streamed backup JSON is the same document getFullBackup builds", () => {
   assert.ok(JSON.parse(streamed).collections.runtimeState.some((row) => row.id === "streamTestA"));
 });
 
-test("encrypted backup file keeps the old layout and decrypts across chunk and base64 boundaries", () => {
+test("encrypted backup file keeps the old layout, gzips its payload and decrypts across chunk and base64 boundaries", () => {
   fs.mkdirSync(FULL_BACKUPS_DIR, { recursive: true });
   const filePath = path.join(FULL_BACKUPS_DIR, "stream-test.json");
   // Odd-sized pieces well past the 1 MB write chunk, so buffered writes and the
@@ -98,6 +99,9 @@ test("encrypted backup file keeps the old layout and decrypts across chunk and b
   const { envelope, plain } = decryptFile(filePath, PASSPHRASE);
   assert.equal(plain, pieces.join(""));
   assert.equal(envelope.format, "plekt-encrypted-backup");
+  assert.equal(envelope.version, 2);
+  assert.equal(envelope.compression, "gzip");
+  assert.ok(Buffer.from(envelope.payload, "base64").length < Buffer.byteLength(pieces.join("")) / 10, "the repetitive payload is compressed");
   assert.equal(text, JSON.stringify(envelope, null, 2));
   fs.rmSync(filePath);
 });

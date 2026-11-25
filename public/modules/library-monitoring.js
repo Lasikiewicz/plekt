@@ -1,9 +1,9 @@
 // Per-user, per-server library monitoring checklist under Settings > Media
 // Servers and the persistent app-wide warning banner when a connected server
 // has zero selected libraries.
-import { state } from "./state.js?v=2.3.0.0.4";
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.4";
-import { escapeAttribute, escapeHtml } from "./utils.js?v=2.3.0.0.4";
+import { state } from "./state.js?v=2.3.0.0.5";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.5";
+import { escapeAttribute, escapeHtml } from "./utils.js?v=2.3.0.0.5";
 
 const PROVIDERS = ["plex", "emby", "jellyfin"];
 const PROVIDER_LABELS = { plex: "Plex", emby: "Emby", jellyfin: "Jellyfin" };
