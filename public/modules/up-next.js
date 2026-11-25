@@ -1,18 +1,18 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.0.9";
-import { state, elements } from "./state.js?v=2.3.0.0.9";
-import { escapeAttribute, escapeHtml, openConfirmDialog, registerConfirmDialog, releaseConfirmDialog, slug } from "./utils.js?v=2.3.0.0.9";
-import { hydratePosters } from "./images.js?v=2.3.0.0.9";
-import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.3.0.0.9";
-import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.3.0.0.9";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.1.0";
+import { state, elements } from "./state.js?v=2.3.0.1.0";
+import { escapeAttribute, escapeHtml, openConfirmDialog, registerConfirmDialog, releaseConfirmDialog, slug } from "./utils.js?v=2.3.0.1.0";
+import { hydratePosters } from "./images.js?v=2.3.0.1.0";
+import { hydrateMediaAppLinks } from "./media-detail-shared.js?v=2.3.0.1.0";
+import { renderDashboardUpNextCard, updateDashboardRowWithMotion } from "./dashboard.js?v=2.3.0.1.0";
 import {
   manualShowMatches, isShowInUpNext, provenDifferentShow, upNextShowActionHtml, chooseUpNextAddOptions,
   upNextCoordinateDismissalKey, upNextShowDismissalKeys, upNextDismissalKeys, nowPlayingFirst, oneCardPerEpisode, upNextRemovalMatches,
   upNextSortMode, sortUpNextDisplayItems, applyUpNextSyncControlState, handleUpNextDialogKey,
-} from "./up-next-shared.js?v=2.3.0.0.9";
-export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.3.0.0.9";
-import { renderMediaCard } from "./media-card.js?v=2.3.0.0.9";
-import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.3.0.0.9";
-import { openSettingsEditModal } from "./settings-ui.js?v=2.3.0.0.9";
+} from "./up-next-shared.js?v=2.3.0.1.0";
+export { chooseUpNextRemovalScope, upNextHasSiblingCard } from "./up-next-shared.js?v=2.3.0.1.0";
+import { renderMediaCard } from "./media-card.js?v=2.3.0.1.0";
+import { handleDroppedTitleAction } from "./dropped-titles.js?v=2.3.0.1.0";
+import { openSettingsEditModal } from "./settings-ui.js?v=2.3.0.1.0";
 
 const UP_NEXT_TIMEOUT_MS = 20000;
 const UP_NEXT_DROP_SLIDE_MS = 600;

@@ -1,6 +1,6 @@
-import { readStoredAdminToken } from "./auth.js?v=2.3.0.0.9";
-import { readStoredDebugLogs } from "./logs.js?v=2.3.0.0.9";
-import { isDemoMode, storageGet } from "./utils.js?v=2.3.0.0.9";
+import { readStoredAdminToken } from "./auth.js?v=2.3.0.1.0";
+import { readStoredDebugLogs } from "./logs.js?v=2.3.0.1.0";
+import { isDemoMode, storageGet } from "./utils.js?v=2.3.0.1.0";
 
 const TOKEN_KEY = "adminToken";
 const LEGACY_UPPER_TOKEN_KEY = "ADMIN_TOKEN";
