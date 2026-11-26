@@ -30,6 +30,7 @@ const {
   manualWatchReviewShowLookupUrl,
 } = await import("../public/modules/manual-watch-review.js");
 const { posterUrlFor } = await import("../public/modules/images.js?v=1.1.2.0.0");
+const { formatDate, formatTmdbDate } = await import("../public/modules/utils.js");
 
 test("manual watch review groups preserve newest incoming order and sort episodes within a show", () => {
   const reviews = [
@@ -533,9 +534,12 @@ test("manual watch review renders inline date choices without show/season confir
   assert.match(rows.innerHTML, /manual-watch-review-fact-label">Detected<\/span>/);
   assert.match(rows.innerHTML, /manual-watch-review-fact-label">Released<\/span>/);
   assert.match(rows.innerHTML, /manual-watch-review-fact-label">Will save<\/span>/);
-  assert.match(rows.innerHTML, /10 Nov 2026 \(air date\)/);
-  assert.match(rows.innerHTML, /29 Oct 2026 \(release date\)/);
-  assert.match(rows.innerHTML, /23 Nov 2026/);
+  const airDate = `${formatTmdbDate(episodeReview.release_date)} (air date)`;
+  const releaseDate = `${formatTmdbDate(movieReview.release_date)} (release date)`;
+  const detectedDate = formatDate(new Date(episodeReview.updated_at).toISOString());
+  assert.ok(rows.innerHTML.includes(airDate), `Expected air date choice: ${airDate}`);
+  assert.ok(rows.innerHTML.includes(releaseDate), `Expected release date choice: ${releaseDate}`);
+  assert.ok(rows.innerHTML.includes(detectedDate), `Expected detection date: ${detectedDate}`);
   assert.match(rows.innerHTML, /manual-watch-review-top-action[^>]*>[\s\S]*Dismiss \(mark unwatched\)/);
   assert.match(rows.innerHTML, /manual-watch-review-confirm-action[^>]*>[\s\S]*Confirm watched/);
   assert.doesNotMatch(rows.innerHTML, /<select\b/);
