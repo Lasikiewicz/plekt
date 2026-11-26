@@ -1,7 +1,24 @@
 {
-  "version": "2.3.0.1.0",
-  "build": 0,
+  "version": "2.3.0.1.1",
+  "build": 1,
   "resetCommit": "3c0d36f2367165722c51cbc348e5b94540ad5459",
-  "updatedAt": "2026-11-25T15:49:44.404Z",
-  "entries": []
+  "updatedAt": "2026-11-26T13:14:16.613Z",
+  "entries": [
+    {
+      "build": 1,
+      "date": "2026-11-26T13:14:16.613Z",
+      "commit": "f9e9b1aaee2469d99dbab4d5f80a4ece4503a2cc",
+      "message": "Feature - Add 90-day Remember me sign-in, PlektVR stop webhook parser, and automatic held tracker rechecks",
+      "author": "Lasikiewicz",
+      "details": [
+        "Added a Remember me for 90 days checkbox on the sign-in screen that extends browser sessions from 7 days to 90 days while keeping sign-out revocation and user-switching expiry intact",
+        "Enabled standard username and current-password autocomplete attributes on the sign-in form so password managers can fill credentials cleanly, and refined sign-in panel heading alignment, spacing, and input height",
+        "Added a parser for PlektVR headset stop webhooks that derives watched completion at the 90% threshold and passes through known IMDb, TMDB, and TVDB identifiers alongside season, episode, position, duration, and device fields",
+        "Added automatic 6-hour background verification for held Trakt writes alongside Simkl so confirmed watches clear without manual checks",
+        "Added a read-only /sync/all-items date_from fallback when Simkl /sync/watched reports an episode as unwatched, confirming episodes Simkl filed into a secondary watch-through record when the timestamp matches to the second",
+        "Closed unsent Trakt intents immediately when dispatch skips them for missing IDs or policy, cleaned up previously leaked unsent skipped rows, and labelled unsent Trakt holds accurately",
+        "Updated the Watch updates on hold panel copy to note automatic 6-hour rechecks for both Trakt and Simkl"
+      ]
+    }
+  ]
 }

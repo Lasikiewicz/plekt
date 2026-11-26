@@ -1,13 +1,13 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.1.0";
-import { state, elements } from "./state.js?v=2.3.0.1.0";
-import { escapeHtml, escapeAttribute, safeHttpUrl, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, formatRemainingDuration, isDemoMode } from "./utils.js?v=2.3.0.1.0";
-import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.3.0.1.0";
-import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.3.0.1.0";
-import { dedupeMediaRecords } from "./media-records.js?v=2.3.0.1.0";
-import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.3.0.1.0";
-import { cardArtAttribute } from "./card-art.js?v=2.3.0.1.0";
-import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.3.0.1.0";
-import { upNextCardCuesHtml } from "./up-next-shared.js?v=2.3.0.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.1.1";
+import { state, elements } from "./state.js?v=2.3.0.1.1";
+import { escapeHtml, escapeAttribute, safeHttpUrl, slug, showTitleFrom, showName, movieHref, movieTmdbHref, tvShowBaseHrefFromEpisode, sourceBadgeHtml, formatDate, resolveEpisodeTitle, episodeTitle, episodeCode, normalizePlatformSource, platformBadge, sourceClass, platformIconMarkup, platformSourceValues, computeProgress, formatRemainingDuration, isDemoMode } from "./utils.js?v=2.3.0.1.1";
+import { posterMarkup, posterOverflowMenu, hydratePosters, lookupPosterUrl, bindPosterImageErrorHandler, safePosterElementUrl, isLocalArtworkUrl } from "./images.js?v=2.3.0.1.1";
+import { initialMediaAppLinksContent } from "./media-detail-shared.js?v=2.3.0.1.1";
+import { dedupeMediaRecords } from "./media-records.js?v=2.3.0.1.1";
+import { bindDashboardRuns, dashboardTvRowUnits, renderDashboardTvRowUnit, createDashboardHistoryLiveRefresh } from "./dashboard-modern.js?v=2.3.0.1.1";
+import { cardArtAttribute } from "./card-art.js?v=2.3.0.1.1";
+import { droppedTitleActionHtml } from "./dropped-titles.js?v=2.3.0.1.1";
+import { upNextCardCuesHtml } from "./up-next-shared.js?v=2.3.0.1.1";
 
 const PART_WATCHED_DASHBOARD_LIMIT = 30;
 const EXPLORER_PAGE_SIZE = 240;

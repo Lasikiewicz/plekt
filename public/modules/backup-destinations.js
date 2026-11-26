@@ -2,15 +2,15 @@
 // status-card grid (/setup), edit modal, and built-in Dropbox PKCE OAuth flow.
 // Shared by Settings → Backup → Remote (`tools-backups.js`) and `/setup`
 // (`onboarding-backups.js`, `onboarding.js`).
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.1.0";
-import { state } from "./state.js?v=2.3.0.1.0";
-import { escapeHtml, escapeAttribute, formatDate } from "./utils.js?v=2.3.0.1.0";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.1.1";
+import { state } from "./state.js?v=2.3.0.1.1";
+import { escapeHtml, escapeAttribute, formatDate } from "./utils.js?v=2.3.0.1.1";
 import {
   collectFieldValues,
   openSettingsEditModal,
   openSettingsPickerModal,
   renderServiceCardGrid,
-} from "./settings-ui.js?v=2.3.0.1.0";
+} from "./settings-ui.js?v=2.3.0.1.1";
 
 function authHeaders() {
   return buildAuthHeaders(state.token);
