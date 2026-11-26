@@ -3011,7 +3011,7 @@ async function unlockWithToken(password, email = elements.adminEmail?.value) {
     return;
   }
 
-  const result = await signInAdmin(cleanEmail, cleanPassword);
+  const result = await signInAdmin(cleanEmail, cleanPassword, document.getElementById("rememberMe")?.checked === true);
   state.currentUser = result.user;
   state.token = result.token;
   if (elements.settingsUsername) elements.settingsUsername.value = cleanEmail;

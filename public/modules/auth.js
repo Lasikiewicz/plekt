@@ -108,12 +108,12 @@ export function onAuthChange(callback) {
   return () => {};
 }
 
-export async function signInAdmin(username, password) {
+export async function signInAdmin(username, password, remember = false) {
   const res = await fetch("/api/login", {
     method: "POST",
     credentials: "same-origin",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username: String(username || "").trim(), password: String(password || "") }),
+    body: JSON.stringify({ username: String(username || "").trim(), password: String(password || ""), remember }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {

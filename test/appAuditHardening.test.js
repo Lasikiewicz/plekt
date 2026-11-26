@@ -32,6 +32,22 @@ test("logout revokes only that cookie", async () => {
   assert.ok(verifySession(second));
 });
 
+test("remembered login expires after 90 days and logout remains revoked", async t => {
+  const now = Date.now();
+  const clock = t.mock.method(Date, "now", () => now);
+  const normal = signSession(AUTH.username);
+  const remembered = signSession(AUTH.username, { remember: true });
+  clock.mock.mockImplementation(() => now + 8 * 86400000);
+  assert.equal(verifySession(normal), null);
+  assert.ok(verifySession(remembered));
+  await handleLogout(request({ token: remembered }), response());
+  clock.mock.mockImplementation(() => now + 89 * 86400000);
+  assert.equal(verifySession(remembered), null);
+  const another = signSession(AUTH.username, { expiresAt: now + 90 * 86400000 });
+  clock.mock.mockImplementation(() => now + 90 * 86400000);
+  assert.equal(verifySession(another), null);
+});
+
 test("account recreation, rename and password reset invalidate earlier cookies", () => {
   assert.equal(addUserAccount({ name: "audituser", password: "password-one" }).status, 201);
   const old = signSession("audituser", { role: "user" });
@@ -61,6 +77,20 @@ test("successful logins do not exhaust the failed-login allowance", async () => 
   const blocked = response();
   await handleLogin(request({ body: { username: AUTH.username, password: "wrong" } }), blocked);
   assert.equal(blocked.statusCode, 429);
+});
+
+test("login applies the requested cookie lifetime", async () => {
+  updateAdminCredentials({ username: AUTH.username, password: "remember-test-password" });
+  for (const [remember, days] of [[false, 7], [true, 90]]) {
+    const res = response();
+    res.cookie = (_name, token, options) => { res.token = token; res.options = options; };
+    const req = request({ body: { username: AUTH.username, password: "remember-test-password", remember } });
+    req.ip = "remember-login-test";
+    await handleLogin(req, res);
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.options.maxAge, days * 86400000);
+    assert.ok(verifySession(res.token));
+  }
 });
 
 test("unknown usernames still perform a password hash", async t => {

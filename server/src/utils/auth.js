@@ -39,6 +39,7 @@ export function sessionCookieName() {
   return COOKIE_NAME;
 }
 const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const REMEMBERED_SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
 const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
 const AUTH_RATE_LIMIT = { max: 10, windowMs: 15 * 60_000 };
 const DUMMY_PASSWORD_HASH = `scrypt$00000000000000000000000000000000$${"00".repeat(64)}`;
@@ -92,7 +93,7 @@ function sleep(ms) {
 }
 
 // --- Stateless signed session cookie --------------------------------------
-export function signSession(username, { role = ADMIN_ROLE, activeUser = null } = {}) {
+export function signSession(username, { role = ADMIN_ROLE, activeUser = null, expiresAt = null, remember = false } = {}) {
   const effectiveRole = role === USER_ROLE ? USER_ROLE : ADMIN_ROLE;
   const effectiveActive = effectiveRole === USER_ROLE
     ? normalizeUserName(username)
@@ -102,6 +103,7 @@ export function signSession(username, { role = ADMIN_ROLE, activeUser = null } =
     role: effectiveRole,
     activeUser: effectiveActive,
     iat: Date.now(),
+    exp: expiresAt || (Date.now() + (remember ? REMEMBERED_SESSION_TTL_MS : SESSION_TTL_MS)),
     nonce: crypto.randomBytes(16).toString("hex"),
   })).toString("base64url");
   const secret = getRootSessionSecret();
@@ -114,7 +116,7 @@ export function setSessionCookie(res, username, options = {}) {
     httpOnly: true,
     sameSite: "lax",
     secure: COOKIE_SECURE,
-    maxAge: SESSION_TTL_MS,
+    maxAge: options.expiresAt ? Math.max(0, options.expiresAt - Date.now()) : (options.remember ? REMEMBERED_SESSION_TTL_MS : SESSION_TTL_MS),
     path: "/",
   });
 }
@@ -132,7 +134,8 @@ export function verifySession(token = "") {
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
   try {
     const data = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (!data.iat || Date.now() - data.iat > SESSION_TTL_MS) return null;
+    const expiresAt = data.exp || data.iat + SESSION_TTL_MS;
+    if (!data.iat || !Number.isFinite(expiresAt) || expiresAt <= Date.now() || expiresAt > data.iat + REMEMBERED_SESSION_TTL_MS + 1000) return null;
     if (revokedSessionLookup.get(crypto.createHash("sha256").update(token).digest("hex"))) return null;
     const role = data.role === USER_ROLE ? USER_ROLE : ADMIN_ROLE;
     if (role === USER_ROLE) {
@@ -144,6 +147,7 @@ export function verifySession(token = "") {
         role: USER_ROLE,
         activeUser: user.name,
         iat: data.iat,
+        expiresAt,
       };
     }
     const loginUsername = String(data.u || getRootAdminUsername()).trim();
@@ -161,6 +165,7 @@ export function verifySession(token = "") {
       role: ADMIN_ROLE,
       activeUser,
       iat: data.iat,
+      expiresAt,
     };
   } catch {
     return null;
@@ -234,6 +239,7 @@ export function resolveAdminPrincipal(req) {
       loginUsername: session.username,
       role: session.role,
       activeUser: session.activeUser,
+      expiresAt: session.expiresAt,
       via: "session",
     };
   }
@@ -312,7 +318,7 @@ export async function handleLogin(req, res) {
       const adminUsername = getRootAdminUsername();
       resetRateLimit(`login:${ip}`);
       if (!isDemoMode()) runAsAdmin(() => writeAuditLog("login.success", { ip, detail: { username: adminUsername, role: ADMIN_ROLE } }));
-      setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY });
+      setSessionCookie(res, adminUsername, { role: ADMIN_ROLE, activeUser: ADMIN_KEY, remember: body.remember === true });
       return sendJson(res, { ok: true, username: adminUsername, role: ADMIN_ROLE, activeUser: ADMIN_KEY });
     }
   } else {
@@ -325,7 +331,7 @@ export async function handleLogin(req, res) {
       if (!isDemoMode()) {
         runAsAdmin(() => writeAuditLog("login.success", { ip, detail: { username: user.name, role } }));
       }
-      setSessionCookie(res, user.name, { role, activeUser: user.name });
+      setSessionCookie(res, user.name, { role, activeUser: user.name, remember: body.remember === true });
       return sendJson(res, { ok: true, username: user.name, role, activeUser: user.name });
     }
   }
@@ -341,7 +347,7 @@ export async function handleLogout(req, res) {
   const session = token && verifySession(token);
   if (session) {
     adminDb.prepare("DELETE FROM revoked_sessions WHERE expires_at <= ?").run(Date.now());
-    adminDb.prepare("INSERT OR IGNORE INTO revoked_sessions (token_hash, expires_at) VALUES (?, ?)").run(crypto.createHash("sha256").update(token).digest("hex"), session.iat + SESSION_TTL_MS);
+    adminDb.prepare("INSERT OR IGNORE INTO revoked_sessions (token_hash, expires_at) VALUES (?, ?)").run(crypto.createHash("sha256").update(token).digest("hex"), session.expiresAt);
   }
   res.clearCookie(COOKIE_NAME, { path: "/" });
   return sendJson(res, { ok: true });

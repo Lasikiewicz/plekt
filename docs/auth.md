@@ -59,7 +59,7 @@ All accounts share one login form (`POST /api/login`) and one Node process:
 ## Sessions
 
 - Stateless: the cookie value is `base64url(payload).hmacSHA256(payload,
-  sessionSecret)` with `{ u, role, activeUser, iat }` inside; 7-day TTL checked on verify.
+  sessionSecret)` with `{ u, role, activeUser, iat, exp }` inside. Sessions expire after 7 days by default, or 90 days when **Remember me** is selected at login. Older cookies without `exp` retain their 7-day limit. Switching user preserves the original expiry.
 - Cookie flags: `HttpOnly`, `SameSite=Lax`, `Secure` when `COOKIE_SECURE=true`,
   path `/`.
 - Revocation: rotating `sessionSecret` (`POST /api/auth/sessions/revoke-all`) invalidates every cookie across the install and issues the admin caller a fresh cookie. For an individual non-admin user, the admin can click **Sign out now** or **Disable sign-in** in **Settings → Users**, which updates `sessionsValidAfter` / `disabled` in `data/users.json` and immediately invalidates that user's existing cookies.

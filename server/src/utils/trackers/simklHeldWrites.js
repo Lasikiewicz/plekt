@@ -46,7 +46,13 @@ export async function recheckHeldSimklWrites(logger = console.log, { ids = null 
         return [];
       }
     });
-    const confirmed = new Set((await recheckSimklWatchedDates(fresh, media)).map((item) => item.trackerWriteIntentId));
+    const earliestAt = intents.reduce((min, intent) => {
+      const stamp = Number(intent.created_at);
+      return Number.isFinite(stamp) && stamp > 1000 ? Math.min(min, stamp) : min;
+    }, Infinity);
+    const confirmed = new Set((await recheckSimklWatchedDates(fresh, media, {
+      earliestAt: Number.isFinite(earliestAt) ? Math.max(2000, earliestAt - 60_000) : null,
+    })).map((item) => item.trackerWriteIntentId));
     let completed = 0;
     let telemetryWritten = false;
     for (const intent of intents) {

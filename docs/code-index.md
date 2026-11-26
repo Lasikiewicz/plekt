@@ -441,7 +441,7 @@ Exported names per source file, sorted. Rows with more than 5 exports list the f
 - `outbound.js`: __setOutboundDnsLookupForTest, assertSafeOutboundUrl, boundedFetchTimeoutMs, configureOutboundGovernor, createUpstreamTimeoutError and 4 more
 - `outboundGovernor.js`: acquireOutboundSlot, configureOutboundGovernor, noteOutboundResponse, noteOutboundRetry, outboundGovernorProfile and 2 more
 - `outboundStateLease.js`: runWithOutboundStateLease
-- `parsers.js`: buildPlexMediaFromMetadata, decodeHtmlEntities, isPlexLocalOnly, normalizeProviderIds, parseCustomWebhook and 5 more
+- `parsers.js`: buildPlexMediaFromMetadata, decodeHtmlEntities, isPlexLocalOnly, normalizeProviderIds, parseCustomWebhook and 6 more
 - `pendingDispatchGuard.js`: acquirePendingDispatch
 - `perUserState.js`: createPerUserState
 - `personCreditWatchRows.js`: getPersonCreditWatchRows
@@ -535,8 +535,8 @@ Exported names per source file, sorted. Rows with more than 5 exports list the f
 - `trackerIntentRequest.js`: trackerIntentRequest
 - `trackerIntentWorker.js`: syncPendingTrackerWriteIntents
 - `trackerSync.js`: TRACKER_EVENT_CHECK_THROTTLE_MS, TRAKT_UNWATCH_CONFIRMATION_MS, checkTrackersAfterMediaEvent, dedupeTrackerItemsByIdentity, partitionPendingTrackerUnwatches and 7 more
-- `trackerWriteIntents.js`: SIMKL_WATCHED_COALESCE_MS, TRACKER_INTENT_RETENTION_MS, cancelTrackerWriteIntent, captureTrackerDestinations, claimTrackerWriteIntent and 11 more
-- `trackerWriteReviewActions.js`: cancelSelectedTrackerWrites, recheckAllTrackerWrites
+- `trackerWriteIntents.js`: SIMKL_WATCHED_COALESCE_MS, TRACKER_INTENT_RETENTION_MS, cancelTrackerWriteIntent, captureTrackerDestinations, claimTrackerWriteIntent and 12 more
+- `trackerWriteReviewActions.js`: cancelSelectedTrackerWrites, recheckAllTrackerWrites, recheckHeldTraktWrites
 - `traksProxy.js`: createTraksProxyHandler, getTraksUpstreamUrl, resolveTraksCollectorOrigin
 - `traktAppConfig.js`: getTraktAppConfig, hydrateTraktAppCredentials, resolveTraktAppCredentials
 - `traktClient.js`: * from ./trackers/traktClient.js

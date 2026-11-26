@@ -253,17 +253,18 @@
         <section id="authPanel" class="auth-panel glass-panel hidden">
         <div id="authPanelSignIn">
           <div>
-            <h2>Please log in</h2>
+            <h2>Sign in to Plekt</h2>
           </div>
-          <form id="authForm" class="auth-form" method="post" autocomplete="off" data-lpignore="true" data-1p-ignore="true">
+          <form id="authForm" class="auth-form" method="post">
             <label class="field-label" for="adminEmail">
-              Admin email or username
-              <input id="adminEmail" name="adminEmail" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" class="field" />
+              Email or username
+              <input id="adminEmail" name="username" type="text" autocomplete="username" class="field" />
             </label>
             <label class="field-label" for="adminToken">
               Password
-              <input id="adminToken" name="adminToken" type="password" autocomplete="off" data-lpignore="true" data-1p-ignore="true" class="field" />
+              <input id="adminToken" name="password" type="password" autocomplete="current-password" class="field" />
             </label>
+            <label class="auth-remember"><input id="rememberMe" type="checkbox" /> <span>Remember me for 90 days</span></label>
             <details class="auth-recovery-help">
               <summary>Forgot your password?</summary>
               <div class="auth-recovery-help-body">

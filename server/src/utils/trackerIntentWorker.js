@@ -5,6 +5,7 @@ import { invalidateHistoryDerivedCaches } from './dataRepo.js';
 import { db } from '../db.js';
 import { authorizeQueuedLibraryWatch } from "./queuedLibraryMonitoring.js";
 import { recheckHeldSimklWrites } from "./trackers/simklHeldWrites.js";
+import { recheckHeldTraktWrites } from "./trackerWriteReviewActions.js";
 
 const deferUnverifiedIntent = db.prepare(`UPDATE tracker_write_intents SET due_at = ?
   WHERE id = ? AND status = ? AND due_at = ?`);
@@ -49,9 +50,10 @@ export async function syncPendingTrackerWriteIntents(logger = console.log) {
   // chunk. Retain sequential delivery for other trackers and their play logs.
   const simkl=listDueTrackerWriteIntents(Date.now(),100,'simkl',{includeLinked:true});
   await Promise.all(simkl.map(dispatch));
+  const recheckedTrakt = await recheckHeldTraktWrites(logger);
   const rechecked = await recheckHeldSimklWrites(logger);
   // Only a changed row moves the data version; an unchanged pass must not
   // make every history cache rebuild.
   if(telemetryWritten || rechecked.telemetryWritten)await invalidateHistoryDerivedCaches('simkl-backlog-dispatch');
-  return completed + rechecked.completed;
+  return completed + rechecked.completed + recheckedTrakt.completed;
 }

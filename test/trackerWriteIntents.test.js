@@ -444,3 +444,67 @@ test("a dispatch whose every item is already settled reports alreadySent without
   assert.equal(posts, 0);
   assert.equal(result.alreadySent, true);
 });
+
+test("worker automatically rechecks due held Trakt writes and defers inconclusive ones", async (t) => {
+  const connection = repo.saveTrackerConnection({
+    provider: "trakt", remoteUserId: "auto-recheck-account", clientId: "offline-client",
+    accessToken: "offline-token", refreshToken: "offline-refresh", accessTokenExpiresAt: Date.now() + 3600000,
+  });
+  const confirmedMedia = media("2026-10-01T12:00:00.000Z");
+  const missingMedia = media("2026-10-02T12:00:00.000Z");
+  const confirmedIntent = create(connection, confirmedMedia, "trakt-held-confirmed");
+  const missingIntent = create(connection, missingMedia, "trakt-held-missing");
+  const unsentIntent = create(connection, media("2026-10-03T12:00:00.000Z"), "trakt-held-unsent");
+  const due = Date.now() - 1000;
+  db.prepare("UPDATE tracker_write_intents SET status='review',attempts=1,due_at=?,last_error='Trakt reported not_found' WHERE id IN (?,?)").run(due, confirmedIntent.id, missingIntent.id);
+  db.prepare("UPDATE tracker_write_intents SET status='review',attempts=0,due_at=?,last_error='Unresolved tracker write is older than 30 days' WHERE id=?").run(due, unsentIntent.id);
+
+  // Unsent Trakt review intent is labelled notSent accurately instead of claiming Trakt history couldn't be confirmed.
+  const attention = ledger.trackerWriteAttentionItems();
+  assert.equal(attention.find((item) => item.intentId === unsentIntent.id)?.notSent, true);
+  assert.equal(attention.find((item) => item.intentId === confirmedIntent.id)?.notSent, false);
+
+  const previousFetch = globalThis.fetch;
+  const requests = [];
+  t.after(() => { globalThis.fetch = previousFetch; });
+  globalThis.fetch = async (url) => {
+    const parsed = new URL(url);
+    requests.push(parsed.pathname);
+    if (parsed.searchParams.get("start_at")?.startsWith("2026-10-01")) {
+      return Response.json([{ id: 4321, watched_at: confirmedMedia.watched_at, movie: { title: confirmedMedia.title, ids: { tmdb: 123 } } }]);
+    }
+    return Response.json([]);
+  };
+
+  assert.equal(await syncPendingTrackerWriteIntents(() => {}), 1);
+  assert.equal(get(confirmedIntent.id).status, "settled");
+  assert.equal(get(missingIntent.id).status, "review");
+  assert.equal(get(unsentIntent.id).status, "review");
+  assert.equal(requests.length, 2, "only attempted held Trakt writes should be queried");
+
+  // Second pass immediately after does not re-query the deferred inconclusive intent.
+  assert.equal(await syncPendingTrackerWriteIntents(() => {}), 0);
+  assert.equal(requests.length, 2);
+});
+
+test("unsent skipped Trakt intents close on maintenance and via closeUnsentTrackerWriteIntent", () => {
+  const connection = connect();
+  const bare = { type: "movie", title: "Tenet", ids: {}, source: "plex", watched_at: media().watched_at };
+  db.prepare("INSERT INTO watch_history (id,title,media_type,source,watched_at,sync_action,sync_dispatch_telemetry,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)")
+    .run("tenet-skip", "Tenet", "movie", "plex", bare.watched_at, "watched",
+      "Target trakt status: skipped - Trakt needs a Trakt, IMDb, TMDB, or TVDB ID for this item\nDispatch status: error", 1, 1);
+  const leaked = create(connection, bare, "tenet-skip", Date.now() - ledger.TRACKER_INTENT_RETENTION_MS - 5000);
+  db.prepare("UPDATE tracker_write_intents SET status='review',attempts=0,last_error='Unresolved tracker write is older than 30 days' WHERE id=?").run(leaked.id);
+  ledger.maintainTrackerWriteIntents();
+  assert.equal(get(leaked.id).status, "cancelled");
+  assert.equal(ledger.trackerWriteAttentionItems().length, 0);
+
+  const pendingUnsent = create(connection, bare, "direct-skip");
+  assert.equal(ledger.closeUnsentTrackerWriteIntent("trakt", { ...bare, watchRecordId: "direct-skip" }, "watched", "rejected", "Not sent: missing IDs"), true);
+  assert.equal(get(pendingUnsent.id).status, "rejected");
+
+  const attempted = create(connection, media(), "already-attempted");
+  db.prepare("UPDATE tracker_write_intents SET attempts=1 WHERE id=?").run(attempted.id);
+  assert.equal(ledger.closeUnsentTrackerWriteIntent("trakt", { ...media(), watchRecordId: "already-attempted" }, "watched", "cancelled", "skip"), false);
+  assert.equal(get(attempted.id).status, "pending");
+});

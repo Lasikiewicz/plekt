@@ -913,7 +913,47 @@ export function parseEmbyWebhook(json) {
   }
 }
 
+// PlektVR headset stop event. The phase is derived from the position and duration
+// the headset reports, using the same 90% watched threshold as other sources.
+// Title and year resolution to TMDB/TVDB is a separate step; ids are passed through
+// only when the headset already knows them.
+const PLEKTVR_WATCHED_FRACTION = 0.9;
+
+export function parsePlektVrWebhook(json) {
+  const type = normalizeType(json.type);
+  const title = String(json.title || "").trim();
+  const positionMs = Number(json.positionMs);
+  const durationMs = Number(json.durationMs);
+  const hasDuration = Number.isFinite(durationMs) && durationMs > 0;
+  const offsetMs = Number.isFinite(positionMs) ? Math.max(0, positionMs) : 0;
+  const phase = hasDuration && offsetMs / durationMs >= PLEKTVR_WATCHED_FRACTION ? "completed" : "ended";
+  const knownIds = json.ids && typeof json.ids === "object" ? json.ids : {};
+  const ids = {
+    imdb: knownIds.imdb ? String(knownIds.imdb) : undefined,
+    tmdb: knownIds.tmdb ? String(knownIds.tmdb) : undefined,
+    tvdb: knownIds.tvdb ? String(knownIds.tvdb) : undefined,
+  };
+
+  return buildPayload({
+    type,
+    source: "plektvr",
+    title,
+    ids,
+    season: json.season != null && json.season !== "" ? Number(json.season) : undefined,
+    episode: json.episode != null && json.episode !== "" ? Number(json.episode) : undefined,
+    event: "stop",
+    phase,
+    progress: hasDuration ? Math.round((offsetMs / durationMs) * 100) : 0,
+    offsetMs,
+    durationMs: hasDuration ? durationMs : 0,
+    device: json.device,
+    ingestPath: "plektvr_webhook",
+    rawPayloadDebug: json,
+  });
+}
+
 export function parseCustomWebhook(json) {
+  if (json?.source === "plektvr") return parsePlektVrWebhook(json);
   if (!json || json.source !== "plex" || json.event !== "media.unscrobble") {
     return { isValid: false };
   }

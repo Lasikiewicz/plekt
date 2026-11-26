@@ -12,7 +12,7 @@ import { dispatchSimklWatchState } from "./trackers/simklDispatch.js";
 import { trackerBacklogSkipReason } from "./trackers/backlogGate.js";
 import { TARGET_DECISIONS } from "./watchSyncPolicy.js"; import { resolveOrderWatch } from "./episodeOrderWatch.js"; import { loadMediaConfig } from "./configStore.js";
 import { partitionTraktNotFoundBatch } from "./traktNotFoundPartition.js";
-import { settleLinkedTrackerWriteIntent } from "./trackerWriteIntents.js";
+import { closeUnsentTrackerWriteIntent, settleLinkedTrackerWriteIntent } from "./trackerWriteIntents.js";
 import { simklFullSyncContext } from "./trackers/simklFullSyncContext.js";
 
 export { withTraktRateLimitRetry } from "./trackers/traktWrites.js";
@@ -1277,6 +1277,7 @@ async function dispatchTrakt(media, state, lane = "sync", isCancelled = () => fa
     [trackerMedia] = await trackerDispatchMediaCandidates(media, { includeTitleFallback: true });
   }
   if (!trackerMedia) {
+    closeUnsentTrackerWriteIntent("trakt", media, state, "rejected", "Not sent: Trakt needs a Trakt, IMDb, TMDB, or TVDB ID for this item");
     throw Object.assign(new Error("Trakt needs a Trakt, IMDb, TMDB, or TVDB ID for this item"), { code: "not_found" });
   }
   if (checkHistoryFirst) {
@@ -1430,11 +1431,20 @@ export async function dispatchTrackerWatchState(media, state, { lane = "sync", i
       const adapter = assertTrackerEnabled(provider);
       if (isCancelled()) return { target: provider, status: "cancelled", detail: `${adapter.label} dispatch was cancelled before it started` };
       // Suppress source tracker echoes to avoid duplicate plays.
-      if (trackerProviderForSource(media.source) === provider) return { target: provider, status: "skipped", detail: "Source tracker echo suppressed" };
-      if (provider === "simkl" && (media.watch_provenance || media.watchProvenance)?.episode_order && (media.type || media.media_type || media.mediaType) !== "episode") return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: "Simkl does not support alternate episode orders for this item" };
+      if (trackerProviderForSource(media.source) === provider) {
+        closeUnsentTrackerWriteIntent(provider, media, state, "cancelled", "Source tracker echo suppressed");
+        return { target: provider, status: "skipped", detail: "Source tracker echo suppressed" };
+      }
+      if (provider === "simkl" && (media.watch_provenance || media.watchProvenance)?.episode_order && (media.type || media.media_type || media.mediaType) !== "episode") {
+        closeUnsentTrackerWriteIntent(provider, media, state, "cancelled", "Simkl does not support alternate episode orders for this item");
+        return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: "Simkl does not support alternate episode orders for this item" };
+      }
       const backlog = trackerBacklogSkipReason(connection, media, adapter.label, { sourceTracker: trackerProviderForSource(media.source) });
       // Recorded as a deliberate, non-retryable skip so the row's telemetry is complete.
-      if (backlog) return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: backlog };
+      if (backlog) {
+        closeUnsentTrackerWriteIntent(provider, media, state, "cancelled", backlog);
+        return { target: provider, status: "skipped", decision: TARGET_DECISIONS.SKIPPED_BY_POLICY, dismissed: true, detail: backlog };
+      }
       return await trackerDispatchHandlers.get(provider)(media, state, lane, isCancelled);
     } catch (error) {
       if (!error.stale) updateTrackerConnectionStatus(provider, { lastError: error.message, connectionId: generation });

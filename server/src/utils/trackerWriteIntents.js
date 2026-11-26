@@ -36,6 +36,16 @@ const recoverSimklSends = db.prepare(`UPDATE tracker_write_intents SET status='r
     AND EXISTS (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id)`);
 const pruneSettledIntents = db.prepare(`DELETE FROM tracker_write_intents WHERE ${KNOWN} AND settled_at IS NOT NULL AND settled_at<? AND status IN ('settled','cancelled','rejected')`);
 const recoverExpiredSends = db.prepare(`UPDATE tracker_write_intents SET status='uncertain',last_error='Interrupted send; correlate before retry',updated_at=? WHERE ${KNOWN} AND status='sending' AND due_at<=?`);
+// Unsent Trakt intents whose linked watch row already recorded a terminal
+// skip (for example missing provider IDs or a policy skip) must close rather
+// than rotting for 30 days and surfacing as "could not confirm" review holds.
+const closeSkippedUnsentTraktIntents = db.prepare(`UPDATE tracker_write_intents SET status='cancelled',settled_at=?,updated_at=?,
+    last_error=CASE WHEN COALESCE(last_error,'')='' OR last_error='Unresolved tracker write is older than 30 days'
+      THEN 'Not sent: Trakt skipped this watch during dispatch' ELSE last_error END
+    WHERE provider='trakt' AND attempts=0 AND status IN ('pending','review') AND watch_record_id IS NOT NULL
+    AND EXISTS (SELECT 1 FROM watch_history w WHERE w.id=watch_record_id
+      AND COALESCE(w.sync_dispatch_telemetry,'') NOT LIKE '%Dispatch status: pending%'
+      AND (w.sync_dispatch_telemetry LIKE '%Target trakt status: skipped%' OR w.sync_dispatch_telemetry LIKE '%Trakt status: skipped%'))`);
 const reviewExpiredIntents = db.prepare(`UPDATE tracker_write_intents SET status='review',last_error='Unresolved tracker write is older than 30 days',updated_at=? WHERE ${KNOWN} AND settled_at IS NULL AND created_at<? AND status NOT IN ('review','sending')`);
 
 export function maintainTrackerWriteIntents(now = Date.now(), { prune = true } = {}) {
@@ -43,6 +53,7 @@ export function maintainTrackerWriteIntents(now = Date.now(), { prune = true } =
   const cutoff = now - TRACKER_INTENT_RETENTION_MS;
   recoverAuditRejections.run(now);
   recoverSimklSends.run(now, now + 5 * 60_000, now);
+  closeSkippedUnsentTraktIntents.run(now, now);
   const maintenance = intentMaintenanceState();
   if (prune || maintenance.lastPruneAt === null || now < maintenance.lastPruneAt || now - maintenance.lastPruneAt >= INTENT_PRUNE_INTERVAL_MS) {
     pruneSettledIntents.run(providers, cutoff);
@@ -226,6 +237,26 @@ export function finishTrackerWriteIntent(id, status, error = "", remoteEventId =
   }
 }
 
+export function closeUnsentTrackerWriteIntent(provider, media = {}, action = "watched", status = "cancelled", detail = "") {
+  if (!["cancelled", "rejected"].includes(status)) return false;
+  const now = Date.now();
+  if (media.trackerWriteIntentId) {
+    return db.prepare(`UPDATE tracker_write_intents SET status=?,last_error=?,settled_at=?,updated_at=?
+      WHERE id=? AND provider=? AND action=? AND status='pending' AND attempts=0`)
+      .run(status, detail, now, now, String(media.trackerWriteIntentId), provider, action).changes === 1;
+  }
+  if (!media.watchRecordId) return false;
+  const linked = db.prepare(`SELECT id,watched_at FROM tracker_write_intents
+    WHERE provider=? AND watch_record_id=? AND action=? AND status='pending' AND attempts=0 ORDER BY created_at,id`)
+    .all(provider, String(media.watchRecordId), action);
+  const dispatchDate = media.watched_at || media.watchedAt;
+  const matching = linked.filter((item) => !dispatchDate || Date.parse(item.watched_at) === Date.parse(dispatchDate));
+  if (matching.length !== 1) return false;
+  return db.prepare(`UPDATE tracker_write_intents SET status=?,last_error=?,settled_at=?,updated_at=?
+    WHERE id=? AND status='pending' AND attempts=0`)
+    .run(status, detail, now, now, matching[0].id).changes === 1;
+}
+
 export function settleLinkedTrackerWriteIntent(provider, connection, media = {}, action = "watched", remoteEventId = null) {
   if (!connection?.id) return false;
   if (media.trackerWriteIntentId) {
@@ -275,8 +306,8 @@ export function trackerWriteAttentionItems() {
   return db.prepare(`SELECT * FROM tracker_write_intents WHERE status='review' AND (${KNOWN} OR (provider='simkl' AND EXISTS
     (SELECT 1 FROM tracker_connections c WHERE c.provider='simkl' AND c.id=connection_id AND c.remote_user_id=account_id))) ORDER BY created_at`).all(known()).map((intent) => {
     const reason = String(intent.last_error || "");
-    const knownUnsent = intent.provider === "simkl"
-      && (reason.startsWith("Not sent:") || (intent.attempts === 0 && !reason.startsWith("Not watched on Simkl current progress after")));
+    const knownUnsent = reason.startsWith("Not sent:")
+      || (intent.attempts === 0 && !reason.startsWith("Not watched on Simkl current progress after"));
     const competing = /^(?:Ambiguous provider event |Competing Simkl watched intents)/.test(reason);
     const media = JSON.parse(intent.media_json);
     const title = media.title || intent.media_key;
@@ -287,12 +318,13 @@ export function trackerWriteAttentionItems() {
     const titleKey = groupTitle.normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
     const season = media.season == null ? NaN : Number(media.season);
     const episode = media.episode == null ? NaN : Number(media.episode);
+    const providerLabel = getTrackerAdapter(intent.provider).label;
     const explanation = knownUnsent
-      ? "Plekt stopped this write before contacting Simkl. It was not sent."
+      ? `Plekt stopped this write before contacting ${providerLabel}. It was not sent.`
       : "Plekt cannot tell whether this write reached the tracker, so it will not send it again automatically. Another send could create a duplicate play.";
     const recommendations = knownUnsent
       ? ["Correct this title's identity or watch date in Plekt, then create a new sync write if it is still needed.", "Cancel this held write to remove the warning. Local watch history is not changed."]
-      : [`Check this title's history on ${getTrackerAdapter(intent.provider).label}.`, "If the play is there, or you do not want it sent, cancel this write. Local watch history is not changed."];
+      : [`Plekt rechecks ${providerLabel} automatically every 6 hours and clears this hold when it confirms the watch.`, "If the play is already there, or you do not want it sent, cancel this write. Local watch history is not changed."];
     return {
       id: `tracker-intent-${intent.id}`, kind: "tracker_write_review", provider: intent.provider, severity: "warning",
       title: `${getTrackerAdapter(intent.provider).label}: ${title}`,

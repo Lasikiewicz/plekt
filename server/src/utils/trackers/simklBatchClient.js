@@ -267,7 +267,47 @@ function confirmedWatchedAt(row, item) {
   return episodes.length === 1 && episodes[0].watched === true ? observedTime(episodes[0].last_watched_at) : null;
 }
 
-export async function recheckSimklWatchedDates(connection, media) {
+function confirmedDeltaWatchedAt(delta, item) {
+  if (!delta || typeof delta !== "object") return null;
+  if (item.type === "movie") {
+    for (const entry of Array.isArray(delta.movies) ? delta.movies : []) {
+      if (entry?.status !== "completed") continue;
+      const ids = entry.movie?.ids;
+      if (!ids || typeof ids !== "object") continue;
+      try {
+        if (!sameIdentity(item, identity({ ...item.media, ids }))) continue;
+      } catch {
+        continue;
+      }
+      const time = observedTime(entry.last_watched_at);
+      if (time != null && Math.floor(time / 1000) === Math.floor(item.watchedTime / 1000)) return time;
+    }
+    return null;
+  }
+  if (item.type !== "episode") return null;
+  const lists = [...(Array.isArray(delta.shows) ? delta.shows : []), ...(Array.isArray(delta.anime) ? delta.anime : [])];
+  for (const entry of lists) {
+    const title = entry?.show || entry?.anime;
+    const ids = title?.ids;
+    if (!ids || typeof ids !== "object") continue;
+    try {
+      if (!sameIdentity(item, identity({ ...item.media, ids }))) continue;
+    } catch {
+      continue;
+    }
+    for (const season of Array.isArray(entry.seasons) ? entry.seasons : []) {
+      if (season?.number !== item.media.season) continue;
+      for (const episode of Array.isArray(season.episodes) ? season.episodes : []) {
+        if (episode?.number !== item.media.episode) continue;
+        const time = observedTime(episode.watched_at);
+        if (time != null && Math.floor(time / 1000) === Math.floor(item.watchedTime / 1000)) return time;
+      }
+    }
+  }
+  return null;
+}
+
+export async function recheckSimklWatchedDates(connection, media, { earliestAt = null, request = null } = {}) {
   const entries = media.slice(0, MAX_BATCH).flatMap((record) => {
     try {
       const item = identity(record);
@@ -278,16 +318,43 @@ export async function recheckSimklWatchedDates(connection, media) {
     }
   });
   if (!entries.length) return [];
-  const watched = await readWatchedTitles(connection, watchedTitles(entries), (scope, path, options) =>
-    simklRequest(scope, path, { ...options, allowUnknownQuota: true }));
-  return entries.flatMap(({ item }) => {
+  const call = request || ((scope, path, options) => simklRequest(scope, path, { ...options, allowUnknownQuota: true }));
+  const watched = await readWatchedTitles(connection, watchedTitles(entries), call);
+  const confirmed = [];
+  const missingFromWatched = [];
+  for (const { item } of entries) {
     const title = watched.titles.find((row) => row.type === (item.type === "movie" ? "movie" : "show") && sameIdentity(row, item));
     const timestamp = title ? confirmedWatchedAt(title.row, item) : null;
     // Simkl can return dates at second precision. A different recorded second
     // is evidence of a different play, even when the title is already watched.
-    if (timestamp == null || Math.floor(timestamp / 1000) !== Math.floor(item.watchedTime / 1000)) return [];
-    return [item.media];
-  });
+    if (timestamp != null && Math.floor(timestamp / 1000) === Math.floor(item.watchedTime / 1000)) {
+      confirmed.push(item.media);
+    } else if (timestamp == null) {
+      missingFromWatched.push(item);
+    }
+  }
+  // When a show has multiple watch-through records on Simkl, POST /sync/history
+  // can file new episodes into the secondary record while /sync/watched keeps
+  // reporting the primary record as unwatched. A bounded read-only delta from
+  // before the earliest held write confirms exact-second matches without resending.
+  if (missingFromWatched.length && Number.isFinite(earliestAt) && earliestAt > 1000) {
+    try {
+      const delta = await requestWithMetadata(call, connection, "/sync/all-items", {
+        query: {
+          extended: "full",
+          include_all_episodes: "original",
+          episode_watched_at: "yes",
+          date_from: new Date(earliestAt).toISOString(),
+        },
+      });
+      for (const item of missingFromWatched) {
+        if (confirmedDeltaWatchedAt(delta.data, item) != null) confirmed.push(item.media);
+      }
+    } catch {
+      // Keep any /sync/watched confirmations if the delta fallback is unavailable or hits max_items.
+    }
+  }
+  return confirmed;
 }
 
 /**

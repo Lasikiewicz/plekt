@@ -193,10 +193,10 @@ function trackerWriteSummary(item = {}) {
     return "Plekt paused this update before sending it. Check the title match and watch date before trying again.";
   }
   if (provider === "simkl") {
-    return `Plekt couldn’t confirm that Simkl recorded the watch for ${title}${when}. Checking the watch status clears this update when the date and time match.`;
+    return `Plekt couldn’t confirm that Simkl recorded the watch for ${title}${when}. Plekt rechecks automatically every 6 hours and clears this update when the date and time match.`;
   }
   if (provider === "trakt") {
-    return `Plekt couldn’t confirm the watch for ${title}${when} in Trakt’s history.`;
+    return `Plekt couldn’t confirm the watch for ${title}${when} in Trakt’s history. Plekt rechecks automatically every 6 hours, or you can check now.`;
   }
   return `Check for ${title}${when} in the tracker’s watch history before trying again.`;
 }

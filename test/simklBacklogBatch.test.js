@@ -282,3 +282,72 @@ test('queued Simkl outcomes update sync_history target_states on settle, review 
   assert.match(supersededRow.targetStates.find((t) => t.target === 'simkl')?.detail || '', /Local watch changed/);
 });
 
+test('Simkl held write recheck confirms split watch-through episodes via /sync/all-items delta fallback', async () => {
+  reset();
+  const matching = data.insertWatchRecordSync({
+    type: 'episode', title: 'The Curse of Oak Island - S14E02', show_title: 'The Curse of Oak Island',
+    season: 14, episode: 2, ids: { tmdb: '60603', tvdb: '276515', imdb: 'tt3455408' },
+    tmdb_id: '60603', tvdb_id: '276515', imdb_id: 'tt3455408',
+    watched_at: '2026-11-17T12:00:00.000Z', source: 'manual', sync_action: 'watched',
+    sync_dispatch_telemetry: 'Target simkl status: pending\nDispatch status: pending',
+  });
+  const different = data.insertWatchRecordSync({
+    type: 'episode', title: 'The Curse of Oak Island - S14E03', show_title: 'The Curse of Oak Island',
+    season: 14, episode: 3, ids: { tmdb: '60603', tvdb: '276515', imdb: 'tt3455408' },
+    tmdb_id: '60603', tvdb_id: '276515', imdb_id: 'tt3455408',
+    watched_at: '2026-11-24T12:00:00.000Z', source: 'manual', sync_action: 'watched',
+    sync_dispatch_telemetry: 'Target simkl status: pending\nDispatch status: pending',
+  });
+  const intents = [matching.id, different.id].map((id) => {
+    const row = db.prepare("SELECT * FROM tracker_write_intents WHERE watch_record_id=? AND provider='simkl'").get(id);
+    db.prepare("UPDATE tracker_write_intents SET status='review',attempts=1,due_at=?,last_error='Simkl batch item was not confirmed by readback' WHERE id=?")
+      .run(Date.now() - 1000, row.id);
+    return row;
+  });
+
+  const previous = globalThis.fetch;
+  const calls = [];
+  simklTransport.resetForTests();
+  globalThis.fetch = async (url, init = {}) => {
+    const parsed = new URL(url);
+    calls.push({ path: parsed.pathname, query: Object.fromEntries(parsed.searchParams) });
+    if (parsed.pathname === '/sync/watched') {
+      // Primary /sync/watched record shows S14 as unwatched.
+      return Response.json([{
+        ids: { tmdb: '60603', tvdb: '276515', imdb: 'tt3455408' },
+        result: true, list: 'watching',
+        seasons: [{ number: 14, episodes: [
+          { number: 2, watched: false, aired: true, last_watched_at: null },
+          { number: 3, watched: false, aired: true, last_watched_at: null },
+        ] }],
+      }], { headers: { 'x-ratelimit-remaining': '400' } });
+    }
+    if (parsed.pathname === '/sync/all-items') {
+      // Secondary record returned by date_from delta holds exact-second S14E02, different second for S14E03.
+      return Response.json({
+        shows: [{
+          status: 'watching',
+          show: { title: 'The Curse of Oak Island', ids: { simkl: 46016, tmdb: '60603', tvdb: '276515', imdb: 'tt3455408' } },
+          seasons: [{ number: 14, episodes: [
+            { number: 2, watched_at: '2026-11-17T12:00:00Z' },
+            { number: 3, watched_at: '2026-11-24T12:00:05Z' },
+          ] }],
+        }],
+      }, { headers: { 'x-ratelimit-remaining': '399' } });
+    }
+    throw new Error(`Unexpected Simkl path: ${parsed.pathname}`);
+  };
+  try {
+    const result = await recheckHeldSimklWrites(() => {});
+    assert.equal(result.completed, 1);
+  } finally {
+    globalThis.fetch = previous;
+    simklTransport.resetForTests();
+  }
+
+  assert.deepEqual(calls.map((c) => c.path), ['/sync/watched', '/sync/all-items']);
+  assert.ok(calls[1].query.date_from);
+  assert.equal(db.prepare('SELECT status FROM tracker_write_intents WHERE id=?').get(intents[0].id).status, 'settled');
+  assert.equal(db.prepare('SELECT status FROM tracker_write_intents WHERE id=?').get(intents[1].id).status, 'review');
+});
+

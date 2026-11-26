@@ -620,18 +620,22 @@ intent worker gathers up to 100 due Simkl intents per run, including intents lin
 to surviving watch rows. It records each result on that row without dropping other
 providers' telemetry. Changed dates/unwatched state cancel stale queued work;
 interrupted or uncertain writes stay held. The queue checks up to 100 due held Simkl
-watches per pass with a read-only progress lookup. It clears a hold only when Simkl
-reports the movie or exact episode at the same watch timestamp, to the second. Inconclusive
-checks remain held and are eligible for another check after six hours. Rechecks respect
-Simkl's quota reserve and account holds. Only existing captured
+watches per pass with a read-only progress lookup (falling back to a read-only
+`date_from` `/sync/all-items` delta when `/sync/watched` reports an item as
+unwatched, so episodes Simkl files into a secondary watch-through record still
+confirm), and up to 20 due held Trakt watches per pass against Trakt's history
+window. It clears a hold only when the tracker reports the movie or exact
+episode at the same watch timestamp, to the second. Inconclusive checks remain
+held and are eligible for another automatic check after six hours. Rechecks
+respect Simkl's quota reserve and account holds. Only existing captured
 intents qualify, so this does not discover/send old backlog or enable Simkl
 full-sync push before its preview and approval safeguards.
 
 The **Watch updates on hold** panel in Sync Activity groups updates by movie or
 show and shows the destination trackers. A show with updates for one episode
-shows the episode number in its summary. **Check watch status** looks for
-matching watches on connected trackers and clears confirmed updates. The result
-shows how many were confirmed and how many are still on hold.
+shows the episode number in its summary. Both Simkl and Trakt holds are
+rechecked automatically every six hours; **Check watch status** runs that check
+immediately and shows how many were confirmed and how many are still on hold.
 **Cancel selected updates** removes the updates for the selected titles from the
 queue after confirmation and preserves local and tracker watch history.
 

@@ -460,6 +460,9 @@ instance by creating its administrator username and password. Claiming can only 
 once. Plekt then opens the guided `/setup` wizard. You can return to it later with
 **Reopen Onboarding** on the Settings → Tools page, and your progress is saved as you go.
 
+Select **Remember me for 90 days** on the login screen to extend that browser's sign-in
+from the usual seven days. Signing out revokes the session.
+
 The wizard has nine stages:
 
 **1. Overview.** Review what the wizard configures. Only a tested Plex, Emby, or

@@ -2251,7 +2251,7 @@ export function renderSyncAttention() {
       : `${count} issue${count === 1 ? "" : "s"} need${count === 1 ? "s" : ""} review`;
   const badge = blockingCount ? `${blockingCount} attention` : `${count} to review`;
   const hasMatchIssues = items.some((item) => item.source === "match_report");
-  const description = trackerWriteOnly ? "Plekt pauses watch updates it can’t safely send or confirm." : serverItems.length
+  const description = trackerWriteOnly ? "Plekt pauses watch updates it can’t safely send or confirm, and rechecks connected trackers automatically every 6 hours." : serverItems.length
     ? (serverItems.every((item) => item.source === "unknown_tracker") ? "Your restored data includes a tracker this version can't sync." : serverItems.every((item) => item.source === "tracker_write" || item.source === "unknown_tracker") ? "Some watch updates to connected trackers are on hold." : "The restore or initial sync is paused to protect your canonical watch history. Review the explanation and recommended fixes below.")
     : hasMatchIssues
       ? "Choose the correct title to resolve these matches."

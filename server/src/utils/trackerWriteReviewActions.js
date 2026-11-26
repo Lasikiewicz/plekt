@@ -9,13 +9,39 @@ import { fetchTraktHistoryWindow, trackerMediaMatches } from "./trackers/traktCl
 import { recheckHeldSimklWrites } from "./trackers/simklHeldWrites.js";
 
 const recheckState = createPerUserState(() => ({ work: null }));
+const TRAKT_RECHECK_INTERVAL_MS = 6 * 3600_000;
 const readIntent = db.prepare("SELECT * FROM tracker_write_intents WHERE id=? AND status='review' AND provider='trakt' AND action='watched'");
+const listDueTrakt = db.prepare(`SELECT i.* FROM tracker_write_intents i
+  WHERE i.provider='trakt' AND i.connection_id=? AND i.account_id=?
+    AND i.action='watched' AND i.status='review'
+    AND (i.attempts>0 OR i.last_error LIKE 'Ambiguous provider event %')
+    AND COALESCE(i.last_error,'') NOT LIKE 'Not sent:%'
+    AND ((? IS NULL AND i.due_at<=?) OR i.id IN (SELECT value FROM json_each(?)))
+  ORDER BY i.due_at,i.created_at,i.id LIMIT ?`);
+const deferTrakt = db.prepare("UPDATE tracker_write_intents SET due_at=? WHERE id=? AND status='review' AND due_at=?");
+const readWatchIds = db.prepare("SELECT imdb_id, tmdb_id, tvdb_id FROM watch_history WHERE id=?");
 const settleDuplicate = db.prepare(`UPDATE tracker_write_intents AS i SET status='settled',last_error='',settled_at=?,updated_at=?
   WHERE i.id=? AND i.status='review' AND i.provider='trakt' AND i.action='watched'
     AND EXISTS (SELECT 1 FROM tracker_play_history p WHERE p.provider='trakt' AND p.history_id=?
       AND p.watch_record_id=i.watch_record_id AND unixepoch(p.watched_at)=unixepoch(i.watched_at) AND p.media_key=i.media_key)
     AND EXISTS (SELECT 1 FROM tracker_connections c WHERE c.provider=i.provider AND c.id=i.connection_id
       AND c.remote_user_id=i.account_id AND c.status='connected')`);
+
+function hydrateIntentMediaIds(intent, media) {
+  const existing = media.ids && typeof media.ids === "object" ? media.ids : {};
+  if (existing.imdb || existing.tmdb || existing.tvdb || existing.trakt || !intent.watch_record_id) return media;
+  const row = readWatchIds.get(intent.watch_record_id);
+  if (!row || (!row.imdb_id && !row.tmdb_id && !row.tvdb_id)) return media;
+  return {
+    ...media,
+    ids: {
+      ...existing,
+      ...(row.imdb_id ? { imdb: String(row.imdb_id) } : {}),
+      ...(row.tmdb_id ? { tmdb: String(row.tmdb_id) } : {}),
+      ...(row.tvdb_id ? { tvdb: String(row.tvdb_id) } : {}),
+    },
+  };
+}
 
 export function cancelSelectedTrackerWrites(ids) {
   const selected = new Set(ids);
@@ -24,12 +50,11 @@ export function cancelSelectedTrackerWrites(ids) {
     .filter((item) => cancelTrackerWriteIntent(item.intentId)).length).immediate();
 }
 
-async function recheckTraktWrites(items) {
+async function recheckTraktIntents(intents, connection) {
   let confirmed = 0;
   const pending = [];
   const competingByEvent = new Map();
-  for (const item of items) {
-    const intent = readIntent.get(item.intentId);
+  for (const intent of intents) {
     if (!intent || !trackerIntentConnectionCurrent(intent)) continue;
     const eventId = /^Ambiguous provider event (\d+)/.exec(intent.last_error || "")?.[1];
     if (eventId) {
@@ -40,29 +65,34 @@ async function recheckTraktWrites(items) {
         if (!competingByEvent.has(eventId)) competingByEvent.set(eventId, []);
         competingByEvent.get(eventId).push(intent);
       }
-    } else if (!item.competing) {
+    } else if (!/^Ambiguous provider event /.test(intent.last_error || "")) {
       pending.push({ intent });
     }
   }
-  for (const [eventId, intents] of competingByEvent) {
-    const [first] = intents;
+  for (const [eventId, competing] of competingByEvent) {
+    const [first] = competing;
     if (!first.watch_record_id) continue;
     const involved = new Set(first.last_error.split("; competing intents: ")[1]?.split(", "));
-    if (intents.length < 2 || involved.size !== intents.length || intents.some((intent) =>
+    if (competing.length < 2 || involved.size !== competing.length || competing.some((intent) =>
       !involved.has(intent.id) || intent.watch_record_id !== first.watch_record_id
       || intent.media_key !== first.media_key || intent.watched_at !== first.watched_at)) continue;
-    pending.push({ intent: first, eventId, duplicates: intents });
+    pending.push({ intent: first, eventId, duplicates: competing });
   }
   if (!pending.length) return confirmed;
-  const connection = await freshTrackerConnection("trakt");
-  if (connection?.status !== "connected") return confirmed;
+  const fresh = connection || await freshTrackerConnection("trakt");
+  if (fresh?.status !== "connected") return confirmed;
   for (const { intent, eventId, duplicates } of pending) {
-    if (isAuthoritativeRestoreActive() || !trackerIntentConnectionCurrent(intent) || intent.connection_id !== connection.id) continue;
-    const media = JSON.parse(intent.media_json);
+    if (isAuthoritativeRestoreActive() || !trackerIntentConnectionCurrent(intent) || intent.connection_id !== fresh.id) continue;
+    let media;
+    try {
+      media = hydrateIntentMediaIds(intent, JSON.parse(intent.media_json));
+    } catch {
+      continue;
+    }
     const type = media.type || media.media_type;
     const time = Date.parse(intent.watched_at);
     if (!["movie", "episode"].includes(type) || !Number.isFinite(time)) continue;
-    const plays = await fetchTraktHistoryWindow(connection, type, {
+    const plays = await fetchTraktHistoryWindow(fresh, type, {
       startAt: new Date(time - 1000).toISOString(), endAt: new Date(time + 1000).toISOString(),
     });
     if (isAuthoritativeRestoreActive() || !readIntent.get(intent.id) || !trackerIntentConnectionCurrent(intent)) continue;
@@ -86,10 +116,36 @@ async function recheckTraktWrites(items) {
       }).immediate();
       continue;
     }
-    const result = correlateTrackerObservation("trakt", connection, matches[0]);
+    const result = correlateTrackerObservation("trakt", fresh, matches[0]);
     if (result.status === "acknowledged" && result.intentId === intent.id) confirmed++;
   }
   return confirmed;
+}
+
+export async function recheckHeldTraktWrites(logger = console.log, { ids = null } = {}) {
+  if (isAuthoritativeRestoreActive()) return { completed: 0, checked: 0 };
+  const connection = await freshTrackerConnection("trakt");
+  if (connection?.status !== "connected") return { completed: 0, checked: 0 };
+  const now = Date.now();
+  const nextCheck = now + TRAKT_RECHECK_INTERVAL_MS;
+  const selected = ids == null ? null : JSON.stringify(ids);
+  const limit = ids == null ? 20 : Math.max(ids.length, 1);
+  const intents = db.transaction(() => listDueTrakt.all(connection.id, connection.remoteUserId || "", selected, now, selected, limit)
+    .filter((intent) => deferTrakt.run(nextCheck, intent.id, intent.due_at).changes)).immediate();
+  if (!intents.length) return { completed: 0, checked: 0 };
+  try {
+    const completed = await recheckTraktIntents(intents, connection);
+    return { completed, checked: intents.length };
+  } catch (error) {
+    logger(`Held Trakt writes could not be verified: ${error.message}`);
+    return { completed: 0, checked: intents.length };
+  }
+}
+
+async function recheckTraktWrites(items) {
+  const intents = items.map((item) => readIntent.get(item.intentId)).filter(Boolean);
+  if (!intents.length) return 0;
+  return recheckTraktIntents(intents, null);
 }
 
 async function recheckAll() {
