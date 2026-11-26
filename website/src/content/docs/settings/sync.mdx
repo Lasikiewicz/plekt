@@ -3,7 +3,7 @@ title: Sync
 description: Tune synchronization, run controlled repair tools, and review delivery history.
 category: Settings
 order: 5.6
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -56,6 +56,11 @@ kept:
 - **Minimum Resume Position (sec)** prevents very short pauses from becoming resume markers.
 - **Active Session TTL (min)** controls when an inactive Now Playing session is considered stale.
 - **Outbound Request Timeout (sec)** controls how long Plekt waits for a media-server response.
+- **Watch Audit Retention (days)** sets how long diagnostic watch-audit events are retained
+  (default 90 days; set `0` to retain diagnostic audit events forever — watch history is never
+  deleted).
+- **Sync historical watched items to Plex** controls whether older watched items are pushed to
+  Plex during sync operations (enabled by default).
 - **Fast Local-Network Sync** removes most outbound pacing delays for bulk sync operations.
   Enable it only when Plex, Emby, and Jellyfin are all self-hosted on the same trusted local
   network as Plekt. It is not safe for servers reached over the public internet.
@@ -66,8 +71,9 @@ Change one value at a time, save it, and verify the next event in Sync Activity.
 
 The **Sync Up Next to media apps** toggle is on by default. When it is enabled, Plekt pushes
 the unified Up Next queue to Plex Continue Watching, Emby Continue Watching, and Jellyfin Next
-Up without removing anything already there. An item leaves a media app only when you clear its
-progress or remove it in Plekt.
+Up without removing anything already there. Optional Mirror mode controls and per-show Up Next
+overrides let you fine-tune ordering and safe hiding behavior. An item leaves a media app only
+when you clear its progress or remove it in Plekt.
 
 Queue additions, removals, reorderings, and resume-progress changes queue one coalesced
 background push using the latest queue content. The push runs through the worker even when the

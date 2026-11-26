@@ -3,7 +3,7 @@ title: Now Playing
 description: See live sessions from Plex, Emby, and Jellyfin, with source, position, and progress.
 category: Features
 order: 3.1
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/modules/dashboard.js
   - public/modules/up-next.js
@@ -58,9 +58,11 @@ service, the current position and duration, and a progress bar. Select the title
 - **Active Session TTL** in [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning)
   controls when an inactive session is treated as stale.
 
-Each user sees their own playback. A provider failure is kept separate from a genuinely empty
-result, so a temporary connection problem does not claim that playback stopped. Disappearing from
-Now Playing does not, by itself, create a completed watch.
+Each user sees their own playback from their [monitored libraries](/docs/settings/media-servers/#monitored-libraries).
+If a connected media server has no monitored libraries selected, a warning banner appears above
+the dashboard until you choose at least one. A provider failure is kept separate from a
+genuinely empty result, so a temporary connection problem does not claim that playback stopped.
+Disappearing from Now Playing does not, by itself, create a completed watch.
 
 ## Panel options
 

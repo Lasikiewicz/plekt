@@ -3,7 +3,7 @@ title: Manual Watch review
 description: Resolve uncertain watch events, correct provider state, and recheck stale reviews.
 category: Features
 order: 6.5
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/manual-watch-review.js
@@ -48,12 +48,15 @@ media servers. The link is shown while there are decisions to make, including wh
 item is flagged after you already decided an earlier review.
 
 
-Episode reviews are grouped by show, while movies appear as individual items. Use the search
-field to narrow the queue, then open a show group when you want to process its episodes together.
+Episode reviews are grouped by show with flush show posters and collapsed season groups, while
+movies appear as individual items. Use the search field to narrow the queue, then expand a show
+or season group when you want to process its episodes together.
 
 ## Choose a watch date
 
-For a movie or a single episode, choose the date policy that matches what happened:
+For a movie or a single episode, inline date-option buttons let you pick the policy that matches
+what happened (with nearby-episode options showing which neighbouring episode each suggestion is
+based on):
 
 - **Mark watched now** records the current date and time.
 - **Use release day** uses the movie or episode release date.
@@ -64,8 +67,9 @@ Each season and show group has one watched and one unwatched button, such as **M
 reviewed episodes watched** and **Mark all reviewed episodes unwatched**. The watched button
 opens the same date popup as the [media page's season and show actions](/docs/tv-shows/media-page/#watch-state-actions),
 and the unwatched button uses the same unwatch confirmation. Only the episodes waiting for
-review change; other episodes of the season or show keep their state. Review the resulting date
-before confirming it.
+review change; other episodes of the season or show keep their state. Bulk confirmations and
+dismissals run as a single background request that continues even if you leave or refresh the
+page. Review the resulting date before confirming it.
 
 Each review names the show its provider ids prove, and shows no poster rather than the wrong
 show's. A review without provider ids is looked up through the reporting app and stays pending
@@ -85,11 +89,11 @@ or progress state may move with that watch. If no candidate can be verified, lea
 
 ## Correct provider state
 
-Choose **Confirm** to record the watch in Plekt and send the normal watched-state
-correction to the connected providers. Until that decision, Plekt does not propagate the
-provider's watched flag. Choose **Dismiss & mark unwatched** when the provider event was
-wrong; Plekt clears the local review and corrects the provider state before closing the
-item.
+Choose **Confirm watched** (bottom-right) to record the watch in Plekt and send the normal
+watched-state correction to the connected providers directly, without a second confirmation
+popup. Until that decision, Plekt does not propagate the provider's watched flag. Choose
+**Dismiss** (top-right) when the provider event was wrong; Plekt clears the local review and
+corrects the provider state before closing the item.
 
 Use the show-level buttons when every pending episode in a group should receive the same
 decision. If a provider correction fails, the review remains pending so it can be retried. An

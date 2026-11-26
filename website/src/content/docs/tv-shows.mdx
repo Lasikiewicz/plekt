@@ -3,7 +3,7 @@ title: TV Shows
 description: Browse tracked series, inspect episode progress, and open a show media page.
 category: Features
 order: 3
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/explorer.js
@@ -71,7 +71,8 @@ but the selected show's media page is where title-level actions live.
 If your media server numbers a show differently from TheTVDB's aired order, the administrator
 can choose that show's order from **Options → Episode order**. Plekt then translates each watch
 to the aired episode before saving it. See [Episode order](/docs/tv-shows/media-page/#episode-order),
-including why a show in a non-Aired order is not sent to Simkl.
+including how Simkl receives watches it can match in both catalogues and how skipped episodes
+can be reviewed in Sync Activity.
 
 Plex, Emby and Jellyfin background checks keep a verified alternate-order watch associated
 with the correct episode. Earlier watches whose identity is uncertain can be resolved in

@@ -3,7 +3,7 @@ title: Integrations
 description: Connect media servers, Trakt, Tautulli, Seerr, and metadata providers with the right expectations.
 category: Connect services
 order: 4
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/plex.md
   - docs/emby.md
@@ -72,7 +72,9 @@ Add the other services once the first connection is healthy.
 | Emby | Library state, playback, watch history, resume progress, and playlists | Webhooks plus polling |
 | Jellyfin | Library state, playback, watch history, resume progress, and playlists | Plekt plugin or Webhooks plugin, plus polling |
 
-The server running Plekt must reach each configured URL.
+The server running Plekt must reach each configured URL. Each media server card also lets you
+select which [monitored libraries](/docs/settings/media-servers/#monitored-libraries) Plekt
+tracks across playback, Up Next, ratings, and sync.
 
 [Playlists](/docs/playlists/) can sync two ways with any of the three servers, chosen per
 playlist. Automatic playlists are sent one way, from Plekt to the apps.
@@ -114,9 +116,13 @@ activity log.
 
 ## Private-list and rating sync
 
-Personal Rating Sync is optional and uses the authenticated Plex, Emby, Jellyfin, and Trakt
-accounts for two-way rating reconciliation. Plekt remains the conflict authority, and
-provider outages do not change local ratings or watched state.
+Personal Rating Sync is optional and uses the authenticated Plex, Emby, Jellyfin, Trakt, and
+Simkl accounts for two-way rating reconciliation. Plekt remains the conflict authority, and
+provider outages do not change local ratings or watched state. Note that Emby 4.9.5.0 and
+4.10.1.0 accept rating write requests without saving them; Plekt reads back after writing and
+reports the failure instead of marking it successful.
+
+Dropped titles also sync two ways with Trakt (TV shows) and Simkl (TV shows and movies).
 
 Plex Watchlist Sync is a separate optional toggle. Its first pass safely unions Plekt's
 canonical movie/show Watchlist with Plex's account Watchlist; later complete snapshots

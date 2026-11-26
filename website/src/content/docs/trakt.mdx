@@ -4,7 +4,7 @@ seoTitle: "Trakt Sync for Plex, Jellyfin & Emby (No VIP, Per-User Accounts)"
 description: Two-way Trakt watch-history and rating sync for Plex, Jellyfin and Emby. No Trakt VIP or personal API app, and a separate Trakt account for each user.
 category: Connect services
 order: 4.4
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/plex.md
   - docs/settings.md
@@ -59,4 +59,7 @@ skips only that destination and preserves the local archive.
 
 When **Personal Rating Sync** is enabled under [Settings → Sync](/docs/settings/sync/), Trakt also participates
 in the separate two-way 1–10 rating sync. That rating domain has its own queue and conflict
-rules; it is not the watched-state sync described above.
+rules; it is not the watched-state sync described above. Dropped TV shows also sync two ways
+with Trakt (movies stay local). When uploading a Trakt JSON export, only the watch-history file
+(`watched-history.json` or `history.json`) is needed; per-show watched summaries and collection
+files are skipped so unplayed movies are never imported as watches.

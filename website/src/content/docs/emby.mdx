@@ -4,7 +4,7 @@ seoTitle: "Emby Watched Status Sync with Plex, Jellyfin & Trakt"
 description: Connect Emby to sync watched status and resume progress with Plex and Jellyfin, and watch history with Trakt and Simkl.
 category: Connect services
 order: 4.2
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/emby.md
   - docs/webhooks.md
@@ -52,4 +52,10 @@ and enable:
 
 Leave unrelated event categories off until the core event path works. To confirm a manual mark
 reaches Plekt, use the [webhook Test button](/docs/settings/webhooks/#test-an-emby-or-jellyfin-sender).
+
+Choose which Emby movie and TV libraries Plekt monitors under
+[Settings → Media servers](/docs/settings/media-servers/#monitored-libraries). For personal
+ratings, note that Emby 4.9.5.0 and 4.10.1.0 accept rating write requests without storing the
+rating; Plekt reads back after writing and reports the failure rather than showing a false
+success.
 

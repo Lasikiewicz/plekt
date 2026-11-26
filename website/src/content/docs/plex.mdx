@@ -4,7 +4,7 @@ seoTitle: "Plex Watch History Sync (No Plex Pass Needed)"
 description: Connect Plex to sync watched status and resume progress across media servers, with Trakt and Simkl history sync. No Plex Pass required.
 category: Connect services
 order: 4.1
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/plex.md
   - docs/webhooks.md
@@ -58,7 +58,10 @@ In Plex, turn off **Refresh library metadata periodically**.
 During a rematch, Plex can reset watched state, and Plekt would otherwise treat that reset
 as a real unwatch.
 
-Configure the connection in [Settings → Media servers](/docs/settings/media-servers/).
+Configure the connection and choose which movie and TV libraries Plekt monitors in
+[Settings → Media servers](/docs/settings/media-servers/#monitored-libraries). Newly selected
+Plex libraries take effect immediately and are checked for manual watched marks on the next
+poll.
 
 The Plex card also contains the optional **Sync watchlist with Plex** toggle. It uses Plex's
 account-level Universal Watchlist; Plex is the only provider used for Watchlist sync.

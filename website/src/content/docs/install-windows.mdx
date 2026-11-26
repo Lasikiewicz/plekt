@@ -3,7 +3,7 @@ title: Install on Windows
 description: Install Plekt as a Windows service using the Plekt installer.
 category: Start here
 order: 2
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - packaging/windows/README.md
   - README.md
@@ -13,8 +13,9 @@ screenshots: []
 ## Install with the Windows installer
 
 On 64-bit Windows, download the latest [Plekt installer from GitHub Releases](https://github.com/Lasikiewicz/plekt/releases/latest)
-and run it as an administrator. It includes the Plekt server, Node.js runtime, and
-Windows native dependencies, then registers the server as a background service.
+and run it as an administrator. It packages only the Plekt server, Node.js runtime, and
+Windows-specific native dependencies needed for a compact install, then registers the server as
+a background service.
 
 The installer keeps the runtime database, artwork cache, logs, and backups in
 `%ProgramData%\Plekt`, separate from any source checkout. An existing Plembfin service and

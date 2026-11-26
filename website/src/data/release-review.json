@@ -1,11 +1,4 @@
 {
-  "publishedVersion": "2.2.4",
-  "unchanged": {
-    "movies": "Reviewed 9cc5165: cancellation and storage resilience do not change the normal movie controls or instructions.",
-    "navigation": "Reviewed 9cc5165: the retiring-image notice moves on narrower screens, but the sidebar routes and navigation instructions remain the same; no notice is shown in this guide.",
-    "onboarding": "Reviewed 9cc5165: confirmation and storage handling changed internally, not the documented Guided Setup steps.",
-    "settings": "Reviewed dd4c1a6: the settings index and its links remain accurate; changed connection-test behavior is described in the provider guides.",
-    "trakt": "Reviewed dd4c1a6: Force Sync preserves an existing Trakt play; the guide's connection, retry and history guidance remains accurate.",
-    "upgrading-from-plembfin": "Reviewed 9cc5165: notice placement and a startup log line changed, but the image-switch and data-preservation steps did not."
-  }
+  "publishedVersion": "2.3.0",
+  "unchanged": {}
 }

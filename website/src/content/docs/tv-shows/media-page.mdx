@@ -3,7 +3,7 @@ title: TV Shows media page
 description: Read and use a single TV show media page in Plekt.
 category: Features
 order: 3.1
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/app.js
   - public/index.html
@@ -302,11 +302,11 @@ or sending it on. This covers live playback, Plex library-change notifications, 
 scheduled recently-watched import for Plex, Emby, and Jellyfin. A watch that cannot be
 translated is skipped and logged with the reason, and the rest of the run carries on.
 
-Plex, Emby, Jellyfin, and Trakt still receive the show's watches. Simkl cannot confirm which
-episode a non-Aired watch is, so Plekt does not send that show's watches to Simkl while the
-order is in use; other shows are unaffected. When Simkl is connected, the dialog explains this
-and requires you to tick a checkbox before the order can be used. Without Simkl it shows a
-shorter note. See [Simkl](/docs/simkl/).
+Plex, Emby, Jellyfin, and Trakt still receive the show's watches. Simkl receives watches it can
+match in both catalogues, while episodes that cannot be verified automatically are skipped and
+can be reviewed via **Review Simkl updates** in [Sync Activity](/docs/sync-tools/#review-simkl-updates).
+When Simkl is connected, the Episode order dialog explains this before you switch; other shows
+are unaffected. See [Simkl](/docs/simkl/).
 
 #### Merge
 

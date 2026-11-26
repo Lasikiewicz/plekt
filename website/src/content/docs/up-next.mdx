@@ -3,7 +3,7 @@ title: Up Next
 description: One queue of resume cards and next episodes, pushed to the Plex, Emby, and Jellyfin rails.
 category: Features
 order: 3.2
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/modules/up-next.js
   - public/modules/dropped-titles.js
@@ -86,8 +86,10 @@ commits locally first and then goes out through the normal sync path.
 
 When **Sync Up Next to media apps** is on in
 [Settings → Sync → Sync tuning](/docs/settings/sync/#sync-tuning) (it is by default), Plekt queues
-one background push whenever the queue changes, even with the Dashboard closed. Use **Sync Up
-Next** for an immediate push.
+one background push whenever the queue changes, even with the Dashboard closed. Queue builds
+and pushes respect your [monitored library selection](/docs/settings/media-servers/#monitored-libraries)
+for each server, and optional Mirror mode ordering and per-show Up Next overrides let you tune
+how each show appears. Use **Sync Up Next** for an immediate push.
 
 The Dashboard's [Now Playing and Up Next options cog](/docs/dashboard/#now-playing-panel-options)
 controls the same saved setting.

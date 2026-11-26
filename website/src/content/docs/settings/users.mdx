@@ -3,7 +3,7 @@ title: Users
 description: Add household users, manage their separate instances, and control sign-in and administrator access.
 category: Settings
 order: 5.15
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-users.js
@@ -13,8 +13,9 @@ sourcePaths:
 ---
 
 Users lets an administrator add more people to one Plekt server. Each user gets their own
-Plekt instance with separate watch history, connections, settings, backups, and webhook path.
-Shared artwork and metadata are reused across users.
+isolated Plekt instance with separate watch history, watch-history backup folder, in-memory
+state, connections, settings, artwork restores, browser caches, and webhook path. Shared
+artwork and metadata are reused across users.
 
 Only administrators see **Users**. A standard user's Settings shows their own account,
 appearance, media-server and personal connection settings, webhook setup, and sync history.

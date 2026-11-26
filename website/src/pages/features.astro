@@ -151,8 +151,13 @@ const featureGroups = [
       },
       {
         title: "Automated backups",
-        text: "Daily local backups, with optional scheduled offsite copies to a remote destination.",
+        text: "Daily local backups and compressed encrypted full backups, with scheduled offsite copies to Dropbox, Backblaze B2, S3-compatible storage, WebDAV, or external folders.",
         href: "/docs/settings/backup/#local-backups",
+      },
+      {
+        title: "Storage optimization",
+        text: "Inspect disk usage gauges, compact local SQLite databases, optimize cached artwork, and recompress legacy backups.",
+        href: "/docs/settings/general/#storage-and-cache",
       },
       {
         title: "Metadata and artwork",
@@ -161,7 +166,7 @@ const featureGroups = [
       },
       {
         title: "Hardened by default",
-        text: "Strict Content Security Policy, scrypt password hashing, rate limiting, and signed sessions.",
+        text: "Strict Content Security Policy, scrypt password hashing, rate limiting, signed sessions, and optional 90-day Remember me sign-in.",
         href: "/docs/operations/#security-basics",
       },
       {

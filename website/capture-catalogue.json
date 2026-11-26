@@ -80,6 +80,17 @@
       "framing": {
         "type": "viewport"
       },
+      "steps": [
+        {
+          "waitFor": "#nowPlayingGrid .modern-idle-feature, #nowPlayingGrid [data-now-playing-card-id]"
+        },
+        {
+          "waitFor": "[data-up-next-card-id]"
+        },
+        {
+          "wait": 1000
+        }
+      ],
       "automation": "auto",
       "sources": [
         "public/modules/dashboard.js",
@@ -2442,11 +2453,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 108,
+          "height": 167,
           "width": 1231
         },
         "light": {
-          "height": 108,
+          "height": 167,
           "width": 1231
         }
       }
@@ -3045,11 +3056,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 556,
+          "height": 629,
           "width": 1231
         },
         "light": {
-          "height": 556,
+          "height": 629,
           "width": 1231
         }
       }
@@ -3160,6 +3171,11 @@
           "height": 320
         }
       },
+      "steps": [
+        {
+          "waitFor": "#backup-remote"
+        }
+      ],
       "automation": "auto",
       "sources": [
         "public/modules/settings-shell.js",
@@ -3169,11 +3185,11 @@
       ],
       "sizes": {
         "dark": {
-          "height": 227,
+          "height": 271,
           "width": 733
         },
         "light": {
-          "height": 227,
+          "height": 271,
           "width": 733
         }
       }
@@ -3195,6 +3211,11 @@
         },
         "padding": 0
       },
+      "steps": [
+        {
+          "waitFor": "[data-settings-panel='backups']:not(.hidden)"
+        }
+      ],
       "automation": "auto",
       "sources": [
         "public/modules/settings-shell.js",
@@ -3612,6 +3633,17 @@
       "framing": {
         "type": "viewport"
       },
+      "steps": [
+        {
+          "waitFor": "#nowPlayingGrid .modern-idle-feature, #nowPlayingGrid [data-now-playing-card-id]"
+        },
+        {
+          "waitFor": "[data-up-next-card-id]"
+        },
+        {
+          "wait": 4000
+        }
+      ],
       "automation": "auto",
       "sources": [
         "public/modules/dashboard.js",

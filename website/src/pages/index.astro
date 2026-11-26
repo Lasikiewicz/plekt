@@ -131,25 +131,21 @@ const comparisonFeatures = [
   <div class="simple-home">
     <div class="modern-home-intro">
     <section class="simple-home-hero" aria-labelledby="home-title">
-      <p class="simple-eyebrow">SELF-HOSTED WATCH HISTORY</p>
-        <div class="simple-home-title">
-          <img
-            class="simple-home-logo"
-            data-theme-image
-            data-dark-src="/assets/optimized/plembfin_header_logo_dark-376.webp"
-            data-light-src="/assets/optimized/plembfin_header_logo_light-376.webp"
-            src="/assets/optimized/plembfin_header_logo_dark-376.webp"
-            alt="Plekt"
-            width="376"
-            height="61"
-          />
-          <h1 id="home-title">The local brain for your<br /><span>media stack.</span></h1>
-        </div>
-      <div class="simple-home-lede">
-        <p>Sync watch history across Plex, Jellyfin &amp; Emby from one private archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild.</p>
-      <p>Plekt also syncs with <a href="/docs/trakt/">Trakt</a> and <a href="/docs/simkl/">Simkl</a> and can <a href="/docs/import-netflix-viewing-history/">import Netflix viewing history</a>. Each Plekt user can connect a separate Trakt account; no Trakt VIP or Plex Pass is required.</p>
-      <p>Free and open source under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0</a>, Plekt runs on your own hardware via Docker, Docker Compose, Portainer, Unraid Community Apps, the Windows installer, or Node.js.</p>
+      <div class="simple-home-title">
+        <img
+          class="simple-home-logo"
+          data-theme-image
+          data-dark-src="/assets/optimized/plembfin_header_logo_dark-376.webp"
+          data-light-src="/assets/optimized/plembfin_header_logo_light-376.webp"
+          src="/assets/optimized/plembfin_header_logo_dark-376.webp"
+          alt="Plekt"
+          width="376"
+          height="61"
+        />
+        <h1 id="home-title">The local brain for your<br /><span>media stack.</span></h1>
+        <p class="simple-meta">v{release.version} · local SQLite storage · your hardware</p>
       </div>
+      <p class="simple-home-lede">Sync watch history across Plex, Jellyfin &amp; Emby from one private archive. Plekt preserves watched status, playback progress, and rewatches, ready to restore after a library rebuild.</p>
       <div class="simple-actions">
         <a class="simple-button simple-button--primary" href="/docs/getting-started/">Get started <span aria-hidden="true">↗</span></a>
         <a class="simple-button" href="/features/">View features <span aria-hidden="true">→</span></a>
@@ -158,7 +154,6 @@ const comparisonFeatures = [
       <p class="simple-demo-note">
         Public demo login: <code>demo</code> / <code>demo</code> · actions are simulated and nothing is saved.
       </p>
-      <p class="simple-meta">v{release.version} · local SQLite storage · your hardware</p>
     </section>
 
     <section class="simple-home-preview" aria-labelledby="preview-title">
@@ -219,7 +214,7 @@ const comparisonFeatures = [
           </tbody>
         </table>
       </div>
-      <p class="simple-home-comparison-note">* Ticks mark each app’s documented core capabilities, accurate as of 12 November 2026. Other projects release updates often, so check their documentation for the latest.</p>
+      <p class="simple-home-comparison-note">* Ticks mark each app’s documented core capabilities, accurate as of 26 November 2026. Other projects release updates often, so check their documentation for the latest.</p>
     </section>
 
     <section class="simple-home-up-next" aria-labelledby="up-next-home-title">
@@ -323,7 +318,7 @@ const comparisonFeatures = [
       <div class="simple-home-hub-copy">
         <p class="simple-eyebrow">BUILT AROUND YOUR STACK</p>
         <h2 id="stack-title">Everything talks to Plekt.</h2>
-        <p>Watch state syncs across your servers, Trakt, and Simkl. Metadata and request tools connect through Plekt.</p>
+        <p>Sync watch state across your servers, <a href="/docs/trakt/">Trakt</a>, and <a href="/docs/simkl/">Simkl</a>, or <a href="/docs/import-netflix-viewing-history/">import Netflix viewing history</a>. Each Plekt user can connect a separate Trakt account with no Trakt VIP or Plex Pass required.</p>
         <div class="simple-service-list" aria-label="Watch-state services">
           {syncServices.map((service) => (
             <span><img src={service.icon} alt="" aria-hidden="true" width="20" height="20" />{service.name}</span>

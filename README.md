@@ -24,7 +24,7 @@
 
 ---
 
-> **v2.3.0.** Plekt writes watched state and playback progress to connected media
+> **v2.4.0.** Plekt writes watched state and playback progress to connected media
 > servers, so **back up first** (Settings → Backup → Local). Report
 > issues on the [issue tracker](https://github.com/Lasikiewicz/plekt/issues).
 
@@ -134,7 +134,7 @@ None of these talk to each other - they all talk to Plekt.
 - **Automated backups** - Built-in daily local backups with optional scheduled remote backups to Backblaze B2, S3-compatible storage (Cloudflare R2, AWS S3, MinIO, Wasabi, and others), WebDAV, Dropbox, or an external mounted folder; full restores first save a SQLite recovery snapshot, safety watch snapshots survive at least seven days, and interrupted restore fences recover after a three-minute stale heartbeat, while failure notices remain until dismissed
 - **Guided first-run setup** - A one-time account claim replaces the old generated-password dead end, followed by a resumable `/setup` wizard that offers enabled watch trackers together, connects media servers, adds metadata, configures webhooks, and tunes watch and Up Next sync. Continue on Import & sync starts an add-only initial outward pass after selected imports finish; its progress chip shows destination counts and remaining items, with interrupted or uncertain sends kept for review
 - **Self-hosted & private** - Runs entirely on your own hardware with dedicated SQLite storage and full data ownership
-- **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, cross-site mutation checks and HMAC session signing; logout revokes the individual session across restarts
+- **Enterprise-grade security** - Hardened with strict Content Security Policy (CSP), scrypt password hashing, rate limiting, cross-site mutation checks, HMAC session signing, and an optional 90-day Remember me sign-in; logout revokes the individual session across restarts
 - **High-performance artwork cache** - Fast local caching for high-resolution posters, backdrops, and logos from TMDB, TheTVDB, and Fanart.tv; metadata is warmed in the background as media is discovered or a TV show is rematched so the dashboard stays cache-first
 - **Storage optimization** - Compresses large JSON payloads in local SQLite databases and shared metadata caches (showing an Upgrading Plekt progress screen during one-time upgrade compaction), optimizes cached artwork to smaller WebP files in the background, gzips rotated logs, and provides a Storage Optimization panel under Settings → General → Storage & Cache to inspect disk usage, compact databases, optimize artwork, and recompress legacy backups
 - **Comprehensive metadata** - Precision episode titles, season numbering, and air dates from TheTVDB, or season and episode structure from TMDB (a global default in Settings and per show in Fix Match, where stored watches are never renumbered and replacing the show on Trakt is a separate, optional confirmation); choose Aired or DVD order for a show and review DVD-to-aired episode links before new watches are saved; choose and save a poster per season in Edit Images, and use season posters on episode cards when available; rich cast, trailers, and reviews from TMDB; optional AniDB titles and descriptions for anime you confirm, movies uniquely linked by Wikidata, or shows TheTVDB clearly links, with episode numbering unchanged

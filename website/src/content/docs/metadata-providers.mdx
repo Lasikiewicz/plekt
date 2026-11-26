@@ -3,7 +3,7 @@ title: Metadata providers
 description: Configure TMDB, TheTVDB, Fanart.tv, OMDb, and YouTube for metadata and artwork.
 category: Connect services
 order: 4.8
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/metadata.md
 screenshots:
@@ -29,7 +29,8 @@ import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
   [Episode order](/docs/tv-shows/media-page/#episode-order) dialog, under TheTVDB's own names.
 - **Fanart.tv** supplies community-curated poster, backdrop, and logo fallbacks.
 - **OMDb** is optional and can provide IMDb rating badges.
-- **YouTube** is optional and can supply trailer metadata.
+- **YouTube** is optional and can supply trailer metadata and fallback matching.
+- **AniDB** is optional for anime metadata enrichment.
 
 Plekt caches metadata and artwork locally. A cached poster whose file has gone missing is
 downloaded again the next time it is needed, so the artwork is restored without a manual reset.

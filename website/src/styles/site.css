@@ -92,6 +92,22 @@ html.light-mode {
   box-sizing: border-box;
 }
 
+:is(h1, h2, h3, h4, h5, h6) {
+  letter-spacing: 0.01em;
+}
+
+h1,
+h2 {
+  font-weight: 600;
+}
+
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 550;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 5.75rem;
@@ -685,8 +701,7 @@ html.light-mode .button-secondary:focus-visible {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(2.15rem, 3.6vw, 3.25rem);
-  font-weight: 800;
-  letter-spacing: -0.055em;
+  font-weight: 600;
   line-height: 0.94;
 }
 
@@ -841,7 +856,6 @@ html.light-mode .button-secondary:focus-visible {
   color: var(--text);
   font-family: var(--font-display);
   font-size: 1.25rem;
-  letter-spacing: -0.025em;
 }
 
 .support-tier-amount {
@@ -969,8 +983,7 @@ html.light-mode .button-secondary:focus-visible {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 2.8vw, 2.75rem);
-  font-weight: 800;
-  letter-spacing: -0.045em;
+  font-weight: 600;
   line-height: 0.96;
 }
 
@@ -1005,7 +1018,7 @@ html.light-mode .button-secondary:focus-visible {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 2.4vw, 2.25rem);
-  font-weight: 700;
+  font-weight: 550;
   line-height: 0.95;
 }
 
@@ -1075,8 +1088,7 @@ html.light-mode .button-secondary:focus-visible {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.75rem, 2.8vw, 2.75rem);
-  font-weight: 700;
-  letter-spacing: -0.045em;
+  font-weight: 550;
   line-height: 0.96;
 }
 
@@ -1342,8 +1354,7 @@ html.light-mode .button-secondary:focus-visible {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(2rem, 3vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-weight: 600;
   line-height: 0.96;
 }
 
@@ -1782,8 +1793,7 @@ html.light-mode .docs-page-outline-link.active {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 2.5vw, 2.5rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-weight: 600;
   line-height: 0.96;
 }
 
@@ -1859,7 +1869,6 @@ html.light-mode .docs-page-outline-link.active {
   font-family: var(--font-display);
   font-size: 1.5rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
 }
 
 .docs-search-results-header p {
@@ -1985,7 +1994,6 @@ html.light-mode .docs-page-outline-link.active {
   font-family: var(--font-display);
   font-size: 1.35rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
 }
 
 .docs-category > p {
@@ -2141,8 +2149,7 @@ html.light-mode .docs-page-outline-link.active {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.8rem, 3vw, 2.7rem);
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -2170,7 +2177,7 @@ html.light-mode .docs-page-outline-link.active {
   margin: 0 0 var(--space-2);
   color: var(--text);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 550;
 }
 
 .docs-topic-link {
@@ -2362,7 +2369,6 @@ html.light-mode .docs-page-outline-link.active {
   color: var(--text);
   font-family: var(--font-display);
   font-weight: 600;
-  letter-spacing: -0.02em;
   line-height: 1;
   scroll-margin-top: 6.5rem;
 }
@@ -2698,7 +2704,7 @@ html.light-mode .docs-page-outline-link.active {
   margin: 0;
   color: var(--text);
   font-size: 0.9rem;
-  font-weight: 700;
+  font-weight: 550;
 }
 
 .changelog-subgroups {
@@ -2715,7 +2721,7 @@ html.light-mode .docs-page-outline-link.active {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 550;
 }
 
 .changelog-subgroup ul {
@@ -3180,8 +3186,7 @@ html.light-mode .docs-page-outline-link.active {
   margin: 0;
   color: var(--text);
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.075em;
+  font-weight: 600;
   line-height: 0.88;
 }
 
@@ -3741,8 +3746,7 @@ html.light-mode .docs-page-outline-link.active {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.3rem, 2.2vw, 1.8rem);
-  font-weight: 650;
-  letter-spacing: -0.04em;
+  font-weight: 550;
   line-height: 1;
 }
 
@@ -3799,8 +3803,7 @@ html.light-mode .docs-page-outline-link.active {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.5rem, 3vw, 2.5rem);
-  font-weight: 650;
-  letter-spacing: -0.055em;
+  font-weight: 550;
   line-height: 0.95;
 }
 
@@ -3949,8 +3952,7 @@ html.light-mode .docs-page-outline-link.active {
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.7rem, 3vw, 3rem);
-  font-weight: 650;
-  letter-spacing: -0.06em;
+  font-weight: 550;
   line-height: 0.92;
 }
 
@@ -4917,8 +4919,7 @@ html:root main :is(.section-header h2, .simple-section-heading h2, .simple-why-b
   max-width: none;
   font-family: var(--font-display);
   font-size: clamp(1.4rem, 2.2vw, 1.85rem);
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 600;
   line-height: 1.08;
 }
 
@@ -4926,21 +4927,18 @@ html:root main :is(.simple-features-hero h1, .simple-why-hero h1, .hero-copy h1,
   max-width: 18ch;
   font-family: var(--font-display);
   font-size: clamp(2.65rem, 5vw, 3.5rem);
-  font-weight: 700;
-  letter-spacing: -0.06em;
+  font-weight: 600;
   line-height: 0.98;
 }
 
 html:root main .article-header h1 {
   max-width: none;
   font-size: clamp(1.75rem, 2.7vw, 2.35rem);
-  letter-spacing: -0.045em;
   line-height: 1.06;
 }
 
 html:root main .docs-intro h1 {
   font-size: clamp(1.75rem, 2.7vw, 2.35rem);
-  letter-spacing: -0.045em;
   line-height: 1.06;
 }
 
@@ -4956,7 +4954,6 @@ html:root main .docs-category h2 {
 html:root .simple-why-hero h1 {
   max-width: none;
   font-size: clamp(2rem, 3.4vw, 3rem);
-  letter-spacing: -0.05em;
   line-height: 1.02;
   white-space: nowrap;
 }
@@ -5041,8 +5038,7 @@ html:root .simple-feature-group-title {
   margin: 0;
   color: var(--text);
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-weight: 600;
 }
 
 .simple-home-hero h1,
@@ -5597,7 +5593,7 @@ html:root .modern-home-intro .simple-home-hero {
   grid-template-areas:
     "title lede"
     "title actions"
-    "meta note";
+    "title note";
   column-gap: clamp(2rem, 7vw, 7rem);
   row-gap: 1rem;
   align-items: start;
@@ -5620,7 +5616,6 @@ html:root .simple-home h2 {
   max-width: none;
   font-size: clamp(1.4rem, 2.2vw, 1.85rem);
   line-height: 1.08;
-  letter-spacing: -0.04em;
 }
 
 html:root .simple-home-image-description {
@@ -5650,12 +5645,12 @@ html:root .modern-home-intro .simple-home-hero h1 {
   margin: 0;
   font-size: clamp(2.65rem, 5vw, 3.5rem);
   line-height: 0.98;
-  letter-spacing: -0.06em;
 }
 
 html:root .modern-home-intro .simple-home-title {
   display: grid;
   grid-area: title;
+  align-self: center;
   justify-items: center;
   gap: clamp(0.9rem, 1.8vw, 1.4rem);
   text-align: center;
@@ -5674,7 +5669,7 @@ html:root .modern-home-intro .simple-home-hero h1 span {
 
 html:root .modern-home-intro .simple-home-lede {
   grid-area: lede;
-  max-width: 36ch;
+  max-width: 48ch;
   margin: 0;
   align-self: start;
   font-size: clamp(0.94rem, 1.2vw, 1.08rem);
@@ -5687,17 +5682,13 @@ html:root .modern-home-intro .simple-actions {
   margin: 0.35rem 0 0;
 }
 
-html:root .modern-home-intro .simple-demo-note,
-html:root .modern-home-intro .simple-meta {
+html:root .modern-home-intro .simple-demo-note {
   grid-area: note;
-  margin-inline: 0;
-  text-align: left;
+  margin: 0;
 }
 
-html:root .modern-home-intro .simple-meta {
-  grid-area: meta;
-  align-self: center;
-  text-align: center;
+html:root .modern-home-intro .simple-home-title .simple-meta {
+  margin: 0;
 }
 
 html:root .modern-home-intro .simple-home-preview {
@@ -5719,7 +5710,6 @@ html:root .modern-home-intro .simple-section-heading h2 {
   margin-top: 0;
   font-size: clamp(1.4rem, 2.2vw, 1.85rem);
   line-height: 1.08;
-  letter-spacing: -0.04em;
 }
 
 html:root .modern-home-intro .simple-section-heading > p {
@@ -5906,13 +5896,14 @@ html:root .modern-home-intro .screenshot-frame img {
 
 @media (max-width: 900px) {
   html:root .modern-home-intro .simple-home-hero {
-    grid-template-columns: minmax(0, 1fr) minmax(14rem, 0.85fr);
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
-      "eyebrow eyebrow"
-      "title title"
-      "lede lede"
-      "actions actions"
-      "meta note";
+      "title"
+      "lede"
+      "actions"
+      "note";
+    max-width: 38rem;
+    margin-inline: auto;
     row-gap: 0.85rem;
   }
 
@@ -5941,14 +5932,6 @@ html:root .modern-home-intro .screenshot-frame img {
   }
 
   html:root .modern-home-intro .simple-home-hero {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "eyebrow"
-      "title"
-      "lede"
-      "actions"
-      "note"
-      "meta";
     padding-inline: 0;
   }
 
@@ -6231,7 +6214,6 @@ html:root .modern-home-intro .screenshot-frame img {
 .docs-home-shell .docs-intro h1 {
   max-width: 13ch;
   font-size: clamp(2.5rem, 5.2vw, 4.5rem);
-  letter-spacing: -0.055em;
   line-height: 0.98;
 }
 
@@ -6260,7 +6242,6 @@ html:root .modern-home-intro .screenshot-frame img {
   color: var(--text);
   font-family: var(--font-display);
   font-size: 1.35rem;
-  letter-spacing: -0.025em;
 }
 
 .docs-home-start-copy p,
@@ -6337,22 +6318,22 @@ html:root .modern-home-intro .screenshot-frame img {
 }
 
 .docs-home-category-heading {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
+  display: grid;
+  gap: var(--space-1);
 }
 
-.docs-home-category-heading > span {
-  color: var(--accent-strong);
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
+.docs-home-category-heading > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
 }
 
 .docs-home-category-heading h3 {
   margin: 0;
   color: var(--text);
   font-size: 1rem;
-  font-weight: 650;
+  font-weight: 550;
 }
 
 .docs-home-guide-list { display: grid; }
@@ -6370,7 +6351,7 @@ html:root .modern-home-intro .screenshot-frame img {
 }
 
 .docs-home-guide-copy { display: grid; gap: 0.18rem; }
-.docs-home-guide-copy strong { color: var(--soft); font-size: 0.9rem; font-weight: 650; }
+.docs-home-guide-copy strong { color: var(--soft); font-size: 0.9rem; font-weight: 550; }
 .docs-home-guide-copy > span { color: var(--muted); font-size: 0.78rem; line-height: 1.45; }
 .docs-home-guide-arrow { color: var(--dim); font-size: 1rem; }
 .docs-home-guide:hover .docs-home-guide-copy strong,
@@ -6426,7 +6407,7 @@ html:root .modern-home-intro .screenshot-frame img {
   max-width: none;
   padding: 0.65rem 0 0.8rem;
 }
-.docs-home-shell .docs-intro h1 { max-width: none; font-size: 1.8rem; line-height: 1.1; letter-spacing: -0.035em; }
+.docs-home-shell .docs-intro h1 { max-width: none; font-size: 1.8rem; line-height: 1.1; }
 .docs-home-shell .docs-intro > p:last-child { margin-top: 0.35rem; font-size: 0.88rem; }
 .docs-home-start {
   grid-template-columns: minmax(0, 1fr) minmax(17rem, 1fr);
@@ -6447,7 +6428,6 @@ html:root .modern-home-intro .screenshot-frame img {
   gap: 1rem;
   padding: 0.7rem 0;
 }
-.docs-home-category-heading { gap: 0.45rem; }
 .docs-home-category-heading h3 { font-size: 0.84rem; }
 .docs-home-guide { gap: 0.5rem; padding: 0.42rem 0.55rem; }
 .docs-home-guide-copy { gap: 0.08rem; }
@@ -6794,8 +6774,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(2.3rem, 4vw, 3.6rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -6991,8 +6970,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.6rem, 2.5vw, 2.25rem);
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 600;
   line-height: 1.05;
 }
 
@@ -7200,8 +7178,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.45rem, 2.3vw, 2rem);
-  font-weight: 700;
-  letter-spacing: -0.04em;
+  font-weight: 550;
   line-height: 1;
 }
 
@@ -7284,8 +7261,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   color: var(--text);
   font-family: var(--font-display);
   font-size: clamp(1.85rem, 3.3vw, 3rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -7469,8 +7445,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   margin: 0;
   color: var(--text);
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.06em;
+  font-weight: 600;
 }
 
 .overview-copy h1,
@@ -7761,8 +7736,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   color: var(--text);
   font-family: var(--font-display);
   font-size: 1.2rem;
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  font-weight: 550;
   line-height: 1.1;
 }
 
@@ -7953,8 +7927,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   margin: 0;
   color: var(--text);
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.06em;
+  font-weight: 600;
 }
 
 .product-home-hero h1,
@@ -8190,8 +8163,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   color: var(--text);
   font-family: var(--font-display);
   font-size: 1.35rem;
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  font-weight: 550;
   line-height: 1.1;
 }
 
@@ -8512,8 +8484,7 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
   margin: 0;
   color: var(--text);
   font-family: var(--font-display);
-  font-weight: 700;
-  letter-spacing: -0.055em;
+  font-weight: 600;
 }
 
 .home-native-hero h1 {
@@ -9019,7 +8990,6 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
 .home-hero h1 {
   max-width: 20ch;
   font-size: clamp(2.45rem, 3.6vw, 4.1rem);
-  letter-spacing: -0.055em;
   line-height: 1;
 }
 
@@ -9058,7 +9028,6 @@ html.light-mode .docs-page-outline-link.active { color: var(--blue); background:
 .home-cta h2 {
   max-width: 22ch;
   font-size: clamp(1.9rem, 3vw, 3.25rem);
-  letter-spacing: -0.055em;
   line-height: 1;
 }
 
@@ -9448,8 +9417,6 @@ html:root .simple-feature-group + .simple-feature-group {
   }
 }
 
-.docs-home-hero { display: flex; justify-content: center; padding: clamp(2rem, 5vw, 4rem) 0 1.5rem; }
-.docs-home-logo { display: block; width: min(15rem, 65vw); height: auto; }
 .docs-home-directory { padding-top: 0.75rem; }
 .docs-home-feature { display: grid; gap: 0.5rem; margin: 0 0 2.5rem; padding: clamp(1.25rem, 3vw, 2rem); border: 1px solid var(--line-strong); border-radius: 0.85rem; background: linear-gradient(115deg, color-mix(in srgb, var(--accent) 9%, var(--surface)), var(--surface)); color: inherit; text-decoration: none; transition: border-color 150ms ease, transform 150ms ease; }
 .docs-home-feature:hover { border-color: var(--accent); transform: translateY(-2px); }
@@ -9473,14 +9440,6 @@ html:root .simple-feature-group + .simple-feature-group {
   align-items: center;
   min-height: 2.75rem;
   padding-right: 1rem;
-}
-
-html:root .modern-home-intro .simple-home-lede p {
-  margin: 0;
-}
-
-html:root .modern-home-intro .simple-home-lede p + p {
-  margin-top: 0.75rem;
 }
 
 @media (max-width: 900px) {
@@ -9514,5 +9473,5 @@ html:root .modern-home-intro .simple-home-lede p + p {
 .install-choice-card > span:not(.install-choice-action) { color: var(--muted); font-size: 0.9rem; line-height: 1.5; }
 .install-choice-action { align-self: end; margin-top: auto; color: var(--accent-strong); font-size: 0.88rem; font-weight: 650; }
 .install-next-step { margin-top: 2rem; }
-@media (max-width: 760px) { .docs-home-collections { grid-template-columns: 1fr; } .docs-home-hero { padding-top: 1.25rem; } }
+@media (max-width: 760px) { .docs-home-collections { grid-template-columns: 1fr; } }
 @media (max-width: 760px) { .install-choice-grid { grid-template-columns: 1fr; } .install-choice-card { min-height: 0; } }

@@ -3,7 +3,7 @@ title: Backup
 description: Schedule local backups and configure remote destinations for watch history and full instance data.
 category: Settings
 order: 5.7
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/tools-backups.js
@@ -39,9 +39,15 @@ For Watch History, set the local backup time, retention count, and daily-backup 
 use **Save Schedule** or **Back Up Now**.
 
 For a full encrypted Plekt backup, use a passphrase of at least 12 characters. **Remember
-passphrase** allows scheduled backups to run without a browser open, but stores the secret in
-server configuration. Leave it off when the passphrase must stay browser-only; in that mode
-only **Back Up Now** is available.
+passphrase** allows scheduled backups to run without a browser open, storing the passphrase
+encrypted in server configuration. Leave it off when the passphrase must stay browser-only; in
+that mode only **Back Up Now** is available.
+
+Full encrypted backups are gzip-compressed and streamed in chunks, keeping files small (around
+19 times smaller on typical libraries) and checking for damaged files before restore. Older
+uncompressed backups still restore cleanly, while compressed full backups require a Plekt
+release with backup compression support. Keep a pre-upgrade backup before rolling back to an
+older release.
 
 Losing the passphrase means the encrypted backup cannot be decrypted. A full backup can contain
 saved settings, API keys, and server credentials, so keep files and passphrases protected.
@@ -58,20 +64,40 @@ Manual watched-status edits remain available. See [Restore](/docs/settings/resto
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-backup-remote-dark.png"
   lightSrc="/assets/app-captures/settings-backup-remote-light.png"
-  alt="Plekt Backup settings showing remote Backblaze B2 destination controls"
-  caption="Remote backups mirror the selected backup family to an enabled destination."
+  alt="Plekt Backup settings showing remote backup schedule, encryption, and destination controls"
+  caption="Remote backups mirror Watch History and encrypted full backups to one or more enabled destinations."
 />
 
-Remote backups mirror the selected backup family to an enabled destination. The destination
-workflow supports a name, enabled state, region or endpoint, bucket, key ID, optional prefix,
-and application key.
+Remote backups mirror the selected backup family to any enabled destination using streaming
+uploads. Plekt supports five destination types in Settings and [Guided Setup](/docs/onboarding/):
 
-To add or update one:
+- **Dropbox** — one-click sign-in through Plekt's built-in OAuth flow (default folder
+  `/Plekt Backups`; defaults to retaining 2 full backups unless overridden). See the
+  [Privacy Policy](/privacy/) for how Plekt handles connected services and backups.
+- **Backblaze B2** — S3-compatible endpoint, bucket, key ID, optional prefix, and application key.
+- **S3-Compatible** — AWS S3, Cloudflare R2, MinIO, Wasabi, and other S3-compatible providers.
+- **WebDAV** — Nextcloud, ownCloud, Hetzner Storage Box, or NAS WebDAV servers.
+- **External / Mounted Folder** — an absolute path outside Plekt's built-in `data/backups/`
+  directory, such as a NAS share, external drive, Docker mount, or synced folder.
 
-1. Open **Remote** and add a destination or open an existing card.
-2. Enter the destination fields and enable it.
-3. Save, then use **Test**.
-4. Run a backup and verify the status and remote object.
+The shared **Remote Schedule & Encryption** section sets the daily upload time, default
+retention, and encryption passphrase. Added destinations appear as expandable cards, with enabled
+destinations listed first. Each destination independently configures:
 
-Deleting a destination record does not delete files already stored in the remote bucket. Treat
-application keys as secrets and rotate them at the provider when necessary.
+- whether to receive **Watch History** backups, **Full Encrypted Plekt** backups, or both;
+- optional per-type retention overrides;
+- on-demand **Back Up Now** actions and latest upload status per backup type; and
+- a collapsible **Setup Guide** with provider-specific instructions.
+
+To add or update a destination:
+
+1. Open **Remote** and choose **+ Add remote destination** (or expand an existing card).
+2. Select the destination type, complete the connection or sign-in fields, and enable it.
+3. Choose which backup families to mirror and any retention overrides.
+4. Save, then use **Test** to verify access.
+5. Run **Back Up Now** and verify the upload status and remote file.
+
+Deleting a destination record does not delete files already stored remotely. Destination secrets
+are stored encrypted at rest and never prefilled in the browser; changing a destination's URL,
+endpoint, or app credentials clears previously stored secrets so they cannot be sent to a
+different host.

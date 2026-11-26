@@ -3,7 +3,7 @@ title: Sync Activity and tools
 description: Read grouped per-destination results, retry safely, run repairs, and understand match reports.
 category: Sync and maintain
 order: 8
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/sync-activity.js
@@ -56,7 +56,10 @@ history.
 Open a group to load its current activity inline. The expanded group shows the newest current
 result for each movie or episode, resume checkpoints, and target results, newest first, with
 **Load older events** for the full audit history. Expected missing-library and unconfigured-target
-skips remain separate from real failures.
+skips remain separate from real failures. Sync Activity retains every row, retry, and dismissal
+while trimming recognized raw request and response bodies after 90 days (configurable under
+[Watch Audit Retention](/docs/settings/sync/#sync-tuning)), and pauses periodic refreshes while
+the browser tab is hidden before refreshing on return.
 The title button opens the matching local or provider detail route without collapsing the
 group.
 
@@ -94,8 +97,12 @@ Use a row-level retry after correcting the specific cause:
 2. Find the newest row for the title.
 3. Expand or open the row and read the destination reason.
 4. Correct the match, connection, or provider setting named by that reason.
-5. Choose **Retry failed** or the available item retry. For a Trakt `not_found` result, use
-   the show-match repair described below.
+5. Choose **Retry failed** or the available item retry. The popup displays the watch action,
+   affected apps, and their recorded errors before retrying, then stays open to show the outcome
+   and any updated app errors. **Retry failed** covers media servers, Trakt, and Simkl (including
+   Simkl updates that were never sent because the watch arrived without IDs), and only offers
+   retry for apps that can be retried; a refused retry displays the server's specific reason.
+   For a Trakt `not_found` result, use the show-match repair described below.
 6. Confirm that the result updates in place and shows success or a useful reason.
 
 Retrying is safe because duplicate delivery is protected by the event and media identity. A
@@ -105,16 +112,36 @@ skips rows that do not need it.
 When Trakt rejects only some items in a batch, the accepted items keep their success and only
 the rejected ones show a Trakt `not_found` result for the repair below.
 
-A Simkl result of **skipped** with a policy reason is final: for example, a show in a non-Aired
-[episode order](/docs/tv-shows/media-page/#episode-order) is closed as skipped instead of being
-resent every minute. Plex, Emby, Jellyfin, and Trakt still receive that show's watches.
+A Simkl result of **skipped** with an alternate-order policy reason explains the skip in plain
+words and is not resent automatically every minute. Shows with episodes skipped for Simkl
+because of alternate numbering offer **Review Simkl updates** in Sync Activity (see below), while
+Plex, Emby, Jellyfin, and Trakt continue receiving that show's watches.
 
 Do not use a full replay to fix one wrong title when a targeted retry is available.
 
-The retry preserves the previous outcome in the raw debug data. Targets that are now
-unconfigured are reported as **skipped**, and targets that were not retried keep their prior
-result, so the resolved group can leave the failed count without creating a stale duplicate
-row.
+The retry preserves the previous outcome in the raw debug data. Targets that are unconfigured
+are reported as **skipped**, and targets that were not retried keep their prior result, so the
+resolved group can leave the failed count without creating a stale duplicate row.
+
+## Watch updates on hold
+
+When an outbound Trakt or Simkl watch update cannot be confirmed immediately, Sync Activity
+groups it in the **Watch updates on hold** panel by movie or show rather than resending blindly
+and risking duplicates.
+
+- **Automatic 6-hour verification:** Plekt checks both Trakt and Simkl in the background every 6
+  hours (including a read-only Simkl history delta check for episodes Simkl filed into a
+  secondary watch-through record) and clears confirmed watches automatically.
+- **Check watch status:** runs that verification check immediately.
+- **Cancel selected updates:** closes the selected holds in Plekt while keeping your local and
+  tracker watch history untouched.
+
+### Review Simkl updates
+
+For a TV show using a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order) that
+has episodes skipped for Simkl, **Review Simkl updates** in Sync Activity matches each skipped
+watch by episode title and air date and sends only exact aired-number matches through Plekt's
+normal batch, backup, quota, and readback checks.
 
 ## Retry all failed
 

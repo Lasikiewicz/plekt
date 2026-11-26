@@ -4,7 +4,7 @@ seoTitle: "Sync Plex, Jellyfin & Emby with Simkl"
 description: Import and sync watch history and ratings between Simkl and Plex, Jellyfin or Emby. No Plex Pass required.
 category: Connect services
 order: 4.5
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/modules/help-content.js
 screenshots: []
@@ -16,5 +16,7 @@ import ScreenshotFigure from "../../components/ScreenshotFigure.astro";
 
 Connect Simkl in [Settings → Connections](/docs/settings/connections/#simkl) using Plekt's
 sign-in flow. Review the first full-sync preview before importing existing watches; later
-checks can run on demand and after media-server events. Optional rating sync also supports
-Simkl.
+checks run on demand and after media-server events. Optional rating sync and two-way dropped
+title sync (shows and movies) also support Simkl. Held Simkl updates are verified automatically
+every 6 hours in [Sync Activity](/docs/sync-tools/#watch-updates-on-hold), and alternate-order
+shows skipped for Simkl can be reviewed episode by episode using **Review Simkl updates**.

@@ -3,7 +3,7 @@ title: Backups and operations
 description: Keep Plekt recoverable with backups, safe imports, hardening, and routine maintenance.
 category: Sync and maintain
 order: 6
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/backups.md
   - docs/watch-history-backups.md
@@ -48,12 +48,17 @@ valuable operational data.
 Plekt supports two local backup families:
 
 - **Watch-history backups** include history, playstate, and resume markers.
-- **Full Plekt backups** are encrypted and include settings, keys, credentials, history,
-  Watchlist, Ratings, Playlists, and other instance state.
+- **Full Plekt backups** are compressed, encrypted snapshots (~19x smaller on typical libraries)
+  that include settings, keys, credentials, history, Watchlist, Ratings, Playlists, and other
+  instance state. Older uncompressed backups restore cleanly, while compressed backups require a
+  release with backup compression support.
 
 Each has its own schedule, retention, and **Back Up Now** action.
 
-The remote backup option can mirror either type to Backblaze B2 on its own schedule.
+Remote backups can mirror either type on its own schedule to **Dropbox**, **Backblaze B2**,
+**S3-Compatible** storage, **WebDAV**, or an **External / Mounted Folder**, with per-destination
+retention overrides and streaming uploads. See [Settings → Backup](/docs/settings/backup/) and
+the [Privacy Policy](/privacy/).
 
 Watch-history snapshots that Plekt takes as a safety net before an import or sync are kept for
 at least seven days, even when the retention count would otherwise remove them. One backup file
@@ -70,8 +75,8 @@ cleaned up.
 <ScreenshotFigure
     darkSrc="/assets/app-captures/settings-backup-remote-dark.png"
     lightSrc="/assets/app-captures/settings-backup-remote-light.png"
-  alt="Plekt Remote backups settings showing the Backblaze B2 destination controls"
-  caption="Remote backups sends the selected backup family to an enabled Backblaze B2 destination."
+  alt="Plekt Remote backups settings showing schedule, encryption, and configured remote destinations"
+  caption="Remote backups sends the selected backup family to any enabled destination, including Dropbox, Backblaze B2, S3-compatible storage, WebDAV, or an external folder."
 />
 
 For scheduled encrypted backups, provide a passphrase of at least 12 characters and enable
@@ -162,9 +167,15 @@ Once a week or after an upgrade:
 - check provider keys and rate-limit errors if artwork is missing; and
 - keep one known-good restore point before changing release channels.
 
-Plekt also tidies its own disk use. Diagnostic log files are kept for 14 days, artwork files
-that no record refers to any more are removed daily, and the database's write-ahead log
-file is trimmed so it stops growing without limit. You do not need to clean these up by hand.
+Plekt also tidies its own disk use. Diagnostic and rotated access log files are gzip-compressed
+and kept for 14 days, artwork files that no record refers to any more are removed daily, cached
+artwork is optimized to WebP, large JSON payloads in local SQLite databases and shared metadata
+caches are compressed, and the database's write-ahead log file is trimmed so it stops growing
+without limit. When an upgrade runs one-time database compaction, Plekt shows an **Upgrading
+Plekt** screen with live progress and opens automatically when finished; keep a pre-upgrade
+backup if you may need to roll back. You can inspect disk usage gauges or run compaction,
+artwork optimization, and legacy backup recompression anytime under
+[Settings → General → Storage and cache](/docs/settings/general/#storage-and-cache).
 
 ## Security basics
 
@@ -185,7 +196,10 @@ file is trimmed so it stops growing without limit. You do not need to clean thes
 - Remove private-list titles and runtime/build details before sharing screenshots or logs.
 
 Plekt applies password hashing, signed sessions, rate limits, security headers, and
-authenticated routes. Logging out ends that session for good, even after a restart. Changes sent
+authenticated routes. Standard browser sessions last 7 days; ticking **Remember me for 90 days**
+on the sign-in screen extends the session to 90 days while keeping sign-out revocation and
+user-switching expiry intact. Logging out ends that session for good, even after a restart.
+Saved backup passphrases and remote destination secrets are encrypted at rest. Changes sent
 from another website or an untrusted origin are rejected, while Plekt's own pages and
 server-to-server callers such as webhooks keep working. Redirects to another site do not carry
 your tokens, API keys, or request bodies with them.

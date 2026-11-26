@@ -4,7 +4,7 @@ seoTitle: "Jellyfin Watched Status Sync with Plex, Emby & Trakt"
 description: Connect Jellyfin to sync watched status and resume progress with Plex and Emby, and watch history with Trakt and Simkl.
 category: Connect services
 order: 4.3
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - docs/jellyfin.md
   - docs/webhooks.md
@@ -67,4 +67,6 @@ a Watchlist provider. Explicit watched and unwatched events remain authoritative
 polling used as a conservative backstop when webhook delivery is unavailable.
 
 Plekt keeps the native item ID from a Jellyfin playback event available when it sends a
-watched-state update back to that server.
+watched-state update back to that server, and retries with a fresh lookup if a saved item ID
+changes or another library copy exists. Choose which movie and TV libraries Plekt monitors
+under [Settings → Media servers](/docs/settings/media-servers/#monitored-libraries).

@@ -3,7 +3,7 @@ title: Media details and actions
 description: Understand the detail page, watch dates, Fix Match, artwork, the Options menu, and provider content.
 category: Features
 order: 5
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/modules/media-detail.js
   - public/modules/media-detail-context.js
@@ -67,7 +67,7 @@ actions together so a correction can be made against the correct record.
 | Emby | Yes | The same actions work, and the original watch date is kept. |
 | Jellyfin | Yes | The same actions work, and the original watch date is kept. |
 | Trakt | Partly | Watched state is pushed to Trakt, but Force Sync never pulls it back. |
-| Simkl | Partly | Marking watched is pushed. Unwatching is disabled. Whether Force Sync can pull from it is not documented. A TV show set to a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order) is not sent to Simkl at all. |
+| Simkl | Partly | Marking watched is pushed. Unwatching is disabled. For a TV show set to a non-Aired [episode order](/docs/tv-shows/media-page/#episode-order), Simkl receives watches it can match in both catalogues, and skipped episodes can be reviewed via **Review Simkl updates** in Sync Activity. |
 
 Delete and Merge change only Plekt's record, whichever app a title came from. They never remove
 files or items from your media servers. Merge is for TV shows only.
@@ -409,9 +409,9 @@ For wider scope, use **Repair Recent Items**, **Set Plekt as Source of Truth**, 
   caption="Info is read-only evidence for the selected title, including per-destination results and audit details."
 />
 
-Choose **Info** to inspect the latest watched date, the current watch status, destination
-results, and available audit events. Use **Export** when you need to preserve the panel for
-an investigation. Info does not change the title.
+Choose **Info** to inspect the latest watched date, watch source, current watch status,
+destination sync results, and available audit events. Use **Export** to save the panel along
+with the newest 2,000 matching audit events for an investigation. Info does not change the title.
 
 #### Edit Images from Tools
 

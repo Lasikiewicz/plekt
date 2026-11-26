@@ -1,9 +1,9 @@
 ---
 title: General
-description: Manage the administrator account, inspect system health, choose the optional anonymous install check, and maintain the local artwork cache.
+description: Manage the administrator account, inspect system health, choose the optional anonymous install check, and optimize local storage and artwork cache.
 category: Settings
 order: 5.1
-sourceVersion: "2.3.0"
+sourceVersion: "2.4.0"
 sourcePaths:
   - public/index.html
   - public/modules/settings-shell.js
@@ -97,15 +97,26 @@ develop builds.
 <ScreenshotFigure
   darkSrc="/assets/app-captures/settings-general-storage-cache-dark.png"
   lightSrc="/assets/app-captures/settings-general-storage-cache-light.png"
-  alt="Plekt General Storage and cache settings showing cache statistics and cleanup controls"
-  caption="Storage and cache reports local data usage and lets you refresh or clear derived artwork cache."
+  alt="Plekt General Storage and cache settings showing artwork cache cleanup and Storage Optimization gauges and controls"
+  caption="Storage and cache reports local disk usage and provides artwork cache cleanup and Storage Optimization controls."
 />
 
-Storage and cache reports the data directory and artwork cache.
+Storage and cache manages the local artwork cache and provides **Storage Optimization** for the
+data directory.
 
 Use **Refresh Cache Stats** when you need an up-to-date count or size. Clearing the image cache
-removes cached posters, backdrops, and cast profiles, but it does not remove watch history.
-Plekt fetches the images again when a page needs them.
+removes cached posters, backdrops, and cast profiles, without removing watch history. Plekt
+fetches the images again when a page needs them.
+
+Expand **Storage Optimization** to inspect card-based disk usage gauges across databases, shared
+metadata, artwork, logs, and backups, and run targeted maintenance with live progress:
+
+- **Compact databases** reclaims unused SQLite space after compression or cleanup without losing
+  data. Plekt also compresses large JSON payloads in local SQLite databases and shared metadata
+  caches automatically.
+- **Optimize cached artwork** converts cached images into smaller, sharper WebP files.
+- **Recompress legacy backups** compresses older uncompressed encrypted full backups with live
+  per-file progress.
 
 If artwork is still missing after a refresh, check [Metadata](/docs/settings/metadata/) and
 then follow [the metadata troubleshooting guide](/docs/troubleshooting/#refresh-metadata-did-not-update-a-title).
