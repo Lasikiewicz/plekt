@@ -1,8 +1,8 @@
-import { buildAuthHeaders } from "./auth.js?v=2.3.0.1.1";
-import { state, elements } from "./state.js?v=2.3.0.1.1";
-import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.3.0.1.1";
-import { DESTINATION_FORMS, openBackupDestinationModal as openDestinationModalShared, renderBackupDestinationAccordions, renderRemoteRestoreGroups } from "./backup-destinations.js?v=2.3.0.1.1";
-import { applyAppearanceToBody } from "./appearance.js?v=2.3.0.1.1";
+import { buildAuthHeaders } from "./auth.js?v=2.3.0.2.0";
+import { state, elements } from "./state.js?v=2.3.0.2.0";
+import { escapeHtml, escapeAttribute, formatNumber, formatDate } from "./utils.js?v=2.3.0.2.0";
+import { DESTINATION_FORMS, openBackupDestinationModal as openDestinationModalShared, renderBackupDestinationAccordions, renderRemoteRestoreGroups } from "./backup-destinations.js?v=2.3.0.2.0";
+import { applyAppearanceToBody } from "./appearance.js?v=2.3.0.2.0";
 
 let _setMessage = () => {};
 let _openConfirmDialog = async () => false;
@@ -1010,14 +1010,14 @@ export async function saveAppearanceSettings() {
   applyAppearanceToBody(prefs);
 
   if (state.activeShowModalKey) {
-    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.3.0.1.1");
+    const { openShowInlineDetail, renderImmersiveShowModal } = await import("./media-detail-show.js?v=2.3.0.2.0");
     if (state.mediaDetailInline) {
       openShowInlineDetail(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     } else {
       renderImmersiveShowModal(state.activeShowModalKey, state.activeShowModalSeason).catch(() => null);
     }
   } else if (state.activeMovieTmdbId || state.activeMovieModalId) {
-    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.3.0.1.1");
+    const { openMovieImmersiveModalByTmdbId, openMovieImmersiveModal } = await import("./media-detail-movie.js?v=2.3.0.2.0");
     if (state.activeMovieTmdbId) {
       openMovieImmersiveModalByTmdbId(state.activeMovieTmdbId).catch(() => null);
     } else if (state.activeMovieModalId) {

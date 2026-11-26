@@ -1,10 +1,62 @@
 {
   "baseVersion": "2.3.0",
-  "build": 1,
-  "version": "2.3.0.1.0",
-  "updatedAt": "2026-11-25T15:49:44.404Z",
+  "build": 2,
+  "version": "2.3.0.2.0",
+  "updatedAt": "2026-11-26T13:24:53.960Z",
   "releaseMessage": "",
   "entries": [
+    {
+      "build": 2,
+      "version": "2.3.0.2.0",
+      "shortVersion": "2.3.0.2.0",
+      "date": "2026-11-26T13:24:53.960Z",
+      "commit": "0e6a2dbdc25517512def10c77a8879bf664b3b14",
+      "message": "Feature - Add 90-day Remember me sign-in, PlektVR stop webhook parser, and automatic held tracker rechecks",
+      "author": "Lasikiewicz",
+      "details": [
+        "Feature: Add 90-day Remember me sign-in, PlektVR stop webhook parser, and automatic held tracker rechecks",
+        "Feature: Added a Remember me for 90 days checkbox on the sign-in screen that extends browser sessions from 7 days to 90 days while keeping sign-out revocation and user-switching expiry intact",
+        "Feature: Enabled standard password manager autofill on the sign-in form and refined sign-in panel heading alignment, spacing, and input height",
+        "Feature: Added support for PlektVR headset stop webhooks, marking titles watched at the 90% threshold and passing through IMDb, TMDB, and TVDB identifiers alongside season, episode, position, duration, and device details",
+        "Feature: Added automatic 6-hour background verification for held Trakt watch updates alongside Simkl so confirmed watches clear without manual checks",
+        "Feature: Added a read-only Simkl history delta check when Simkl's primary watched check reports an episode as unwatched, confirming episodes Simkl filed into a secondary watch-through record when the watch timestamp matches to the second",
+        "Feature: Closed unsent Trakt watch updates immediately when skipped for missing IDs or sync policy, cleaned up previously leaked unsent skipped holds, and labelled unsent Trakt holds accurately",
+        "Feature: Updated the Watch updates on hold panel copy to note automatic 6-hour rechecks for both Trakt and Simkl"
+      ],
+      "sections": {
+        "newFeatures": [
+          "Add 90-day Remember me sign-in, PlektVR stop webhook parser, and automatic held tracker rechecks",
+          "Added a Remember me for 90 days checkbox on the sign-in screen that extends browser sessions from 7 days to 90 days while keeping sign-out revocation and user-switching expiry intact",
+          "Enabled standard password manager autofill on the sign-in form and refined sign-in panel heading alignment, spacing, and input height",
+          "Added support for PlektVR headset stop webhooks, marking titles watched at the 90% threshold and passing through IMDb, TMDB, and TVDB identifiers alongside season, episode, position, duration, and device details",
+          "Added automatic 6-hour background verification for held Trakt watch updates alongside Simkl so confirmed watches clear without manual checks",
+          "Added a read-only Simkl history delta check when Simkl's primary watched check reports an episode as unwatched, confirming episodes Simkl filed into a secondary watch-through record when the watch timestamp matches to the second",
+          "Closed unsent Trakt watch updates immediately when skipped for missing IDs or sync policy, cleaned up previously leaked unsent skipped holds, and labelled unsent Trakt holds accurately",
+          "Updated the Watch updates on hold panel copy to note automatic 6-hour rechecks for both Trakt and Simkl"
+        ],
+        "majorBugFixes": [],
+        "tweaks": []
+      },
+      "sectionGroups": {
+        "newFeatures": [
+          {
+            "title": "Sync & connection recovery",
+            "details": [
+              "Add 90-day Remember me sign-in, PlektVR stop webhook parser, and automatic held tracker rechecks",
+              "Added a Remember me for 90 days checkbox on the sign-in screen that extends browser sessions from 7 days to 90 days while keeping sign-out revocation and user-switching expiry intact",
+              "Enabled standard password manager autofill on the sign-in form and refined sign-in panel heading alignment, spacing, and input height",
+              "Added support for PlektVR headset stop webhooks, marking titles watched at the 90% threshold and passing through IMDb, TMDB, and TVDB identifiers alongside season, episode, position, duration, and device details",
+              "Added automatic 6-hour background verification for held Trakt watch updates alongside Simkl so confirmed watches clear without manual checks",
+              "Added a read-only Simkl history delta check when Simkl's primary watched check reports an episode as unwatched, confirming episodes Simkl filed into a secondary watch-through record when the watch timestamp matches to the second",
+              "Closed unsent Trakt watch updates immediately when skipped for missing IDs or sync policy, cleaned up previously leaked unsent skipped holds, and labelled unsent Trakt holds accurately",
+              "Updated the Watch updates on hold panel copy to note automatic 6-hour rechecks for both Trakt and Simkl"
+            ]
+          }
+        ],
+        "majorBugFixes": [],
+        "tweaks": []
+      }
+    },
     {
       "build": 1,
       "version": "2.3.0.1.0",
@@ -214,5 +266,5 @@
       ]
     }
   ],
-  "shortVersion": "2.3.0.1.0"
+  "shortVersion": "2.3.0.2.0"
 }
